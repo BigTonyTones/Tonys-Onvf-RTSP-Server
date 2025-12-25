@@ -87,13 +87,15 @@ WantedBy=multi-user.target
             return True, "Service not installed"
 
         try:
-            print(f"🧹 Uninstalling systemd service...")
-            subprocess.run(['sudo', 'systemctl', 'stop', self.SERVICE_NAME], check=False)
+            print(f"🧹 Disabling systemd service (removing from boot)...")
+            # Only disable and remove the file. DO NOT 'stop' here, 
+            # or the server will kill itself while trying to respond to the web request.
             subprocess.run(['sudo', 'systemctl', 'disable', self.SERVICE_NAME], check=False)
-            subprocess.run(['sudo', 'rm', self.service_path], check=True)
+            if os.path.exists(self.service_path):
+                subprocess.run(['sudo', 'rm', self.service_path], check=True)
             subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
             
-            return True, "Service uninstalled successfully"
+            return True, "Service removed from system boot"
         except subprocess.CalledProcessError as e:
             return False, f"Failed to uninstall service: {e}"
         except Exception as e:
