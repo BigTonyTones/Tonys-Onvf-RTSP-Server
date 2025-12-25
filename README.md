@@ -2,6 +2,13 @@
 
 A robust Virtual ONVIF-RTSP Gateway designed to bridge incompatible cameras into NVRs like UniFi Protect. 
 
+> [!IMPORTANT]
+> **Platform Optimization & Limitations:**
+> * **Ubuntu 25.04 Optimized**: This application is specifically optimized for Ubuntu 25.04.
+> * **Linux Exclusive Features**: The **Virtual NIC (Unique IP & MAC Address)** feature uses `macvlan` and is **ONLY available on Linux**.
+> * **Windows Limitation**: The Virtual NIC feature is **NOT available on Windows**. Multiple cameras will share the same host IP on Windows.
+> * **Virtualization Requirement**: If you are running this server inside a Virtual Machine (ESXi, Proxmox, VirtualBox, etc.), you **MUST enable Promiscuous Mode** on the network interface and port group for `macvlan` (Virtual NIC) to function correctly.
+
 ## 🌟 Key Features
 - **NVR Compatibility**: Specifically optimized for UniFi Protect, providing the unique MAC addresses and Serial Numbers required for seamless integration.
 - **Unique Virtual NICs**: Full support for Linux MACVLAN to assign unique hardware identities to each virtual camera.
@@ -58,6 +65,8 @@ To make your ONVIF server start automatically when your Ubuntu machine restarts:
 1. Ensure Python 3.7+ is installed and in your PATH.
 2. Run `start_onvif_server.bat`.
 3. The script will automatically download the Windows versions of MediaMTX and FFmpeg if they are not present.
+
+**Note**: The "Virtual NIC" (Unique IP/MAC) feature is not supported on Windows. All virtual cameras will be accessed via the host's IP address on different ONVIF ports.
 
 ---
 
