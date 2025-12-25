@@ -91,3 +91,5 @@ To ensure Ubiquiti Protect treats your virtual cameras as separate devices:
 
 ## 🛠️ Credits
 Built with ❤️ for the surveillance community. Utilizing [MediaMTX](https://github.com/bluenviron/mediamtx) and [FFmpeg](https://ffmpeg.org/).
+
+<a href="https://buymeacoffee.com/tonytones" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
