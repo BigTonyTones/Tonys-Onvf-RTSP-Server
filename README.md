@@ -1,4 +1,6 @@
-# Tonys Onvif-RTSP Server v4.0
+# 🎥 Tonys Onvif-RTSP Server v4.0
+
+![Dashboard Screenshot](assets/dashboard_screenshot.png)
 
 A robust Virtual ONVIF-RTSP Gateway designed to bridge incompatible cameras into NVRs like UniFi Protect. 
 
@@ -20,6 +22,7 @@ The application also enables reliable rebroadcasting of a single RTSP stream. Ma
 > * **Windows Limitation**: The Virtual NIC feature is **NOT available on Windows**. Multiple cameras will share the same host IP on Windows.
 > * **Virtualization Requirement**: If you are running this server inside a Virtual Machine (ESXi, Proxmox, VirtualBox, etc.), you **MUST enable Promiscuous Mode** on the network interface and port group for `macvlan` (Virtual NIC) to function correctly.
 > * **Transcoding Alert**: Enabling live transcoding is **extremely resource-intensive** (high CPU usage) and is **not recommended** for multiple cameras unless strictly required for codec compatibility.
+> * **Manual Restart**: It is recommended to **manually restart the server** after adding or updating custom network settings (IP/MAC) to ensure clean initialization.
 
 ## 🌟 Key Features
 - **NVR Compatibility**: Specifically optimized for UniFi Protect, providing the unique MAC addresses and Serial Numbers required for seamless integration.
@@ -85,6 +88,7 @@ To make your ONVIF server start automatically when your Ubuntu machine restarts:
 ## 🌐 Networking & UniFi Protect
 To ensure Ubiquiti Protect treats your virtual cameras as separate devices:
 - **On Linux**: Use the "Virtual NIC" feature in the camera settings. This uses `macvlan` to grant each camera its own IP and MAC address on your physical network.
+- **Restart Recommendation**: It is highly recommended to **completely restart the program manually** after adding or modifying any custom IP addresses or MAC addresses to ensure all network interfaces are correctly initialized.
 - **I-Frame Intervals**: If you see "segment duration changed" warnings in your logs, disable "Smart Codec" or "H.264+" on your physical cameras and set a fixed I-Frame interval (GOP) that matches your frame rate.
 
 ---
