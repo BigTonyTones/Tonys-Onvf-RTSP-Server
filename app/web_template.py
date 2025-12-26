@@ -103,29 +103,31 @@ def get_web_ui_html(current_settings=None):
         }}
 
         body.theme-dracula {{
-            --primary-bg: #282a36;
-            --body-bg: #282a36;
-            --card-bg: #44475a;
-            --header-bg: #44475a;
+            --primary-bg: radial-gradient(circle at 10% 20%, #282a36 0%, #1e1f29 90%);
+            --body-bg: #1e1f29;
+            --card-bg: #282a36;
+            --header-bg: #282a36;
             --text-title: #f8f8f2;
-            --text-body: #bd93f9;
+            --text-body: #e2e2e9;
             --text-muted: #6272a4;
-            --btn-primary: #ff79c6;
-            --btn-primary-hover: #bd93f9;
+            --btn-primary: #bd93f9;
+            --btn-primary-hover: #ff79c6;
             --btn-success: #50fa7b;
-            --btn-success-hover: #8be9fd;
+            --btn-success-hover: #40e06a;
             --btn-danger: #ff5555;
-            --btn-danger-hover: #ffb86c;
-            --border-color: #6272a4;
-            --card-border: #6272a4;
-            --input-bg: #282a36;
+            --btn-danger-hover: #ff6e6e;
+            --border-color: #44475a;
+            --card-border: #6272a444;
+            --shadow: 0 12px 40px rgba(0,0,0,0.5);
+            --input-bg: #1e1f29;
             --input-text: #f8f8f2;
-            --input-border: #6272a4;
-            --alert-info-bg: #282a36;
-            --alert-info-text: #bd93f9;
+            --input-border: #44475a;
+            --alert-info-bg: #21222c;
+            --alert-info-text: #8be9fd;
+            --toggle-bg: #44475a;
             --toggle-active: #50fa7b;
-            --modal-bg: #44475a;
-            --text-code: #50fa7b;
+            --modal-bg: #282a36;
+            --text-code: #8be9fd;
         }}
 
         body.theme-solar-light {{
@@ -323,20 +325,61 @@ def get_web_ui_html(current_settings=None):
         .header p {{ color: var(--text-body); font-size: 14px; }}
         .actions {{ display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }}
         .btn {{
-            padding: 12px 24px;
-            border: none;
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--card-bg);
+            color: var(--text-title);
         }}
-        .btn-primary {{ background: var(--btn-primary); color: white; }}
-        .btn-primary:hover {{ background: var(--btn-primary-hover); transform: translateY(-2px); }}
-        .btn-success {{ background: var(--btn-success); color: white; }}
-        .btn-success:hover {{ background: var(--btn-success-hover); }}
-        .btn-danger {{ background: var(--btn-danger); color: white; }}
-        .btn-danger:hover {{ background: var(--btn-danger-hover); }}
+        .btn:hover {{
+            background: var(--body-bg);
+            border-color: var(--btn-primary);
+            color: var(--btn-primary);
+            transform: translateY(-1px);
+        }}
+        .btn-primary {{ 
+            background: var(--btn-primary); 
+            color: white; 
+            border-color: var(--btn-primary);
+        }}
+        .btn-primary:hover {{ 
+            background: var(--btn-primary-hover); 
+            border-color: var(--btn-primary-hover);
+            color: white;
+        }}
+        .btn-success {{ 
+            background: var(--btn-primary); 
+            color: white; 
+            border-color: var(--btn-primary);
+        }}
+        .btn-success:hover {{ 
+            background: var(--btn-primary-hover); 
+            border-color: var(--btn-primary-hover);
+        }}
+        .btn-danger {{ 
+            background: transparent; 
+            color: var(--text-body);
+            border-color: var(--border-color);
+        }}
+        .btn-danger:hover {{ 
+            background: #fee2e2; 
+            color: #dc2626; 
+            border-color: #fca5a5;
+        }}
+        body.theme-dark .btn-danger:hover,
+        body.theme-dracula .btn-danger:hover {{
+            background: #450a0a;
+            color: #f87171;
+            border-color: #991b1b;
+        }}
         .camera-grid {{ 
             display: grid; 
             gap: 20px; 
@@ -348,6 +391,11 @@ def get_web_ui_html(current_settings=None):
             padding: 24px;
             box-shadow: var(--shadow);
             border-left: 4px solid var(--card-border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }}
+        .camera-card:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
         }}
         .camera-card.running {{ border-left-color: var(--btn-success); }}
         .camera-header {{
@@ -788,7 +836,7 @@ def get_web_ui_html(current_settings=None):
                         <option value="classic">Classic</option>
                         <option value="dark">Modern Dark</option>
                         <option value="nord">Nordic</option>
-                        <option value="dracula">Dracula</option>
+                        <option value="dracula">Dracula (Pro Dark)</option>
                         <option value="solar-light">Solarized</option>
                         <option value="midnight">Midnight</option>
                         <option value="emerald">Emerald</option>
@@ -802,15 +850,15 @@ def get_web_ui_html(current_settings=None):
             </div>
             <h1>🎥 Tonys Onvif-RTSP Server v4.1</h1>
             <div class="actions">
-                <button class="btn btn-success" onclick="openAddModal()">➕ Add Camera</button>
-                <button class="btn btn-primary" onclick="startAll()">▶️ Start All</button>
-                <button class="btn btn-danger" onclick="stopAll()">⏹️ Stop All</button>
-                <button class="btn view-toggle-btn" onclick="toggleMatrixView(true)">🖥️ Matrix View</button>
-                <button class="btn btn-primary" onclick="openSettingsModal()">⚙️ Settings</button>
-                <button class="btn btn-primary" onclick="restartServer()" style="background: #f59e0b;">🔄 Restart Server</button>
+                <button class="btn btn-primary" onclick="openAddModal()">➕ Add Camera</button>
+                <button class="btn" onclick="startAll()">▶️ Start All</button>
+                <button class="btn" onclick="stopAll()">⏹️ Stop All</button>
+                <button class="btn" onclick="toggleMatrixView(true)">🖥️ Matrix View</button>
+                <button class="btn" onclick="openSettingsModal()">⚙️ Settings</button>
+                <button class="btn" onclick="restartServer()">🔄 Restart Server</button>
+                <button class="btn" onclick="openAboutModal()">ℹ️ About</button>
                 <button class="btn btn-danger" onclick="stopServer()">⏹️ Stop Server</button>
-                <button class="btn btn-primary" onclick="openAboutModal()">ℹ️ About</button>
-                <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background: #4a5568; display: none;">🚪 Logout</a>
+                <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">🚪 Logout</a>
             </div>
         </div>
         
@@ -1143,7 +1191,7 @@ def get_web_ui_html(current_settings=None):
                         <option value="classic">Classic (Purple Gradient)</option>
                         <option value="dark">Modern Dark (Blue Contrast)</option>
                         <option value="nord">Nordic Frost (Arctic Blue)</option>
-                        <option value="dracula">Dracula (Vampire Dark)</option>
+                        <option value="dracula">Dracula (Pro Dark)</option>
                         <option value="solar-light">Solarized Light (Earthy Warmth)</option>
                         <option value="midnight">Midnight Ocean (Deep Blue)</option>
                         <option value="emerald">Emerald Forest (Nature Green)</option>
