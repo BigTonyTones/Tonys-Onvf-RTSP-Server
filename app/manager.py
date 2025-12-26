@@ -197,7 +197,8 @@ class CameraManager:
     def add_camera(self, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                    main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                    main_framerate=30, sub_framerate=15, onvif_port=None,
-                   onvif_username='admin', onvif_password='admin', transcode_sub=False, transcode_main=False,
+                   onvif_username='admin', onvif_password='admin', stream_username='', stream_password='',
+                   transcode_sub=False, transcode_main=False,
                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                    static_ip='', netmask='24', gateway=''):
         """Add a new camera"""
@@ -257,6 +258,8 @@ class CameraManager:
             'subFramerate': sub_framerate,
             'onvifUsername': onvif_username,
             'onvifPassword': onvif_password,
+            'streamUsername': stream_username,
+            'streamPassword': stream_password,
             'transcodeSub': transcode_sub,
             'transcodeMain': transcode_main,
             'useVirtualNic': use_virtual_nic,
@@ -282,7 +285,8 @@ class CameraManager:
     def update_camera(self, camera_id, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                       main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                       main_framerate=30, sub_framerate=15, onvif_port=None,
-                      onvif_username='admin', onvif_password='admin', transcode_sub=False, transcode_main=False,
+                      onvif_username='admin', onvif_password='admin', stream_username='', stream_password='',
+                      transcode_sub=False, transcode_main=False,
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway=''):
         """Update an existing camera"""
@@ -350,6 +354,8 @@ class CameraManager:
         camera.sub_framerate = sub_framerate
         camera.onvif_username = onvif_username
         camera.onvif_password = onvif_password
+        camera.stream_username = stream_username
+        camera.stream_password = stream_password
         camera.transcode_sub = transcode_sub
         camera.transcode_main = transcode_main
         camera.use_virtual_nic = use_virtual_nic

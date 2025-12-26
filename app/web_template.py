@@ -1057,7 +1057,6 @@ def get_web_ui_html(current_settings=None):
                         Default: Auto-assigned starting from 8001
                     </small>
                 </div>
-
                 <div class="form-row">
                     <div class="form-col">
                         <div class="form-group">
@@ -1071,6 +1070,28 @@ def get_web_ui_html(current_settings=None):
                             <input type="text" class="form-input" id="onvifPassword" placeholder="admin" value="admin">
                         </div>
                     </div>
+                </div>
+                <div style="background: rgba(255, 121, 198, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--btn-primary); margin-bottom: 20px;">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--btn-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span>🔒 Optional: RTSP Stream Password Protection</span>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">👤 Stream Username</label>
+                                <input type="text" class="form-input" id="streamUsername" placeholder="Optional">
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">🔑 Stream Password</label>
+                                <input type="text" class="form-input" id="streamPassword" placeholder="Optional">
+                            </div>
+                        </div>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 11px; margin-top: 8px; display: block;">
+                        If set, these credentials will be required to view the RTSP streams from this camera.
+                    </small>
                 </div>
                 
                 <div class="form-group">
@@ -1583,14 +1604,14 @@ def get_web_ui_html(current_settings=None):
                 <div class="info-section">
                     <div class="info-label">🎬 RTSP Main Stream (Full Quality)</div>
                     <div class="info-value">
-                        rtsp://${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">📋 Copy</button>
+                        rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">📋 Copy</button>
                     </div>
                     
                     <div class="info-label">📱 RTSP Sub Stream (Lower Quality)</div>
                     <div class="info-value">
-                        rtsp://${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">📋 Copy</button>
+                        rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">📋 Copy</button>
                     </div>
                     
                     <div class="info-label">🔌 ONVIF Service URL</div>
@@ -1648,9 +1669,16 @@ def get_web_ui_html(current_settings=None):
                 serverIp = window.location.hostname;
             }}
             
+            // Get credentials if set
+            let credentials = '';
+            const cam = cameras.find(c => c.id == cameraId);
+            if (cam && cam.streamUsername && cam.streamPassword) {{
+                credentials = `?user=${{encodeURIComponent(cam.streamUsername)}}&pass=${{encodeURIComponent(cam.streamPassword)}}`;
+            }}
+            
             // Construct stream URL - Use current protocol if possible to support reverse proxies
             const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-            const streamUrl = `http://${{serverIp}}:8888/${{pathName}}_sub/index.m3u8`;
+            const streamUrl = `http://${{serverIp}}:8888/${{pathName}}_sub/index.m3u8${{credentials}}`;
             
             if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {{
                 // Native HLS support (Safari)
@@ -1819,6 +1847,8 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('subHeight').value = camera.subHeight || 480;
                 document.getElementById('mainFramerate').value = camera.mainFramerate || 30;
                 document.getElementById('subFramerate').value = camera.subFramerate || 15;
+                document.getElementById('streamUsername').value = camera.streamUsername || '';
+                document.getElementById('streamPassword').value = camera.streamPassword || '';
                 
                 // Don't copy ONVIF port (it needs to be unique)
                 document.getElementById('onvifPort').value = ''; 
@@ -1932,6 +1962,9 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('nicMac').value = '';
             document.getElementById('ipMode').value = 'dhcp';
             document.getElementById('staticIp').value = '';
+            document.getElementById('streamUsername').value = '';
+            document.getElementById('streamPassword').value = '';
+            
             document.getElementById('netmask').value = '24';
             document.getElementById('gateway').value = '';
             
@@ -1992,6 +2025,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('onvifPort').value = camera.onvifPort || '';
             document.getElementById('onvifUsername').value = camera.onvifUsername || 'admin';
             document.getElementById('onvifPassword').value = camera.onvifPassword || 'admin';
+            document.getElementById('streamUsername').value = camera.streamUsername || '';
+            document.getElementById('streamPassword').value = camera.streamPassword || '';
             
             // Populate Network fields
             document.getElementById('useVirtualNic').checked = camera.useVirtualNic || false;
@@ -2062,6 +2097,8 @@ def get_web_ui_html(current_settings=None):
                 transcodeMain: document.getElementById('transcodeMain').checked,
                 onvifUsername: document.getElementById('onvifUsername').value,
                 onvifPassword: document.getElementById('onvifPassword').value,
+                streamUsername: document.getElementById('streamUsername').value,
+                streamPassword: document.getElementById('streamPassword').value,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 

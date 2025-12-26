@@ -300,7 +300,7 @@ class MediaMTXManager:
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp {safe_dest}'
                     )
                     
-                    config['paths'][f'{camera.path_name}_main'] = {
+                    main_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
                         'runOnInitRestart': True,
@@ -309,7 +309,7 @@ class MediaMTXManager:
                         'disablePublisherOverride': False,
                     }
                 else:
-                    config['paths'][f'{camera.path_name}_main'] = {
+                    main_path_cfg = {
                         'source': main_source,
                         'rtspTransport': 'tcp',
                         'sourceOnDemand': False,
@@ -319,6 +319,13 @@ class MediaMTXManager:
                         'disablePublisherOverride': False,
                         'fallback': '',
                     }
+                
+                # Add authentication if set
+                if getattr(camera, 'stream_username', '') and getattr(camera, 'stream_password', ''):
+                    main_path_cfg['readUser'] = camera.stream_username
+                    main_path_cfg['readPass'] = camera.stream_password
+                
+                config['paths'][f'{camera.path_name}_main'] = main_path_cfg
                 
                 # ===== SUB STREAM - Lower Quality, Optimized for Viewing =====
                 
@@ -357,7 +364,7 @@ class MediaMTXManager:
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp {safe_dest}'
                     )
                     
-                    config['paths'][f'{camera.path_name}_sub'] = {
+                    sub_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
                         'runOnInitRestart': True,
@@ -367,7 +374,7 @@ class MediaMTXManager:
                     }
                 else:
                     # Standard Proxy Mode
-                    config['paths'][f'{camera.path_name}_sub'] = {
+                    sub_path_cfg = {
                         'source': sub_source,
                         'rtspTransport': 'tcp',
                         
@@ -383,6 +390,13 @@ class MediaMTXManager:
                         'disablePublisherOverride': False,
                         'fallback': '',
                     }
+                
+                # Add authentication if set
+                if getattr(camera, 'stream_username', '') and getattr(camera, 'stream_password', ''):
+                    sub_path_cfg['readUser'] = camera.stream_username
+                    sub_path_cfg['readPass'] = camera.stream_password
+                
+                config['paths'][f'{camera.path_name}_sub'] = sub_path_cfg
                 
                 print(f"  ✓ Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
         

@@ -19,6 +19,8 @@ class VirtualONVIFCamera:
         self.path_name = config.get('pathName', f'camera{self.id}')
         self.username = config.get('username', 'admin')
         self.password = config.get('password', '')
+        self.stream_username = config.get('streamUsername', '')
+        self.stream_password = config.get('streamPassword', '')
         self.auto_start = config.get('autoStart', False)
         # Resolution settings
         self.main_width = config.get('mainWidth', 1920)
@@ -139,6 +141,8 @@ class VirtualONVIFCamera:
             'pathName': self.path_name,
             'username': self.username,
             'password': self.password,
+            'streamUsername': self.stream_username,
+            'streamPassword': self.stream_password,
             'autoStart': self.auto_start,
             'status': self.status,
             'mainWidth': self.main_width,
@@ -174,6 +178,8 @@ class VirtualONVIFCamera:
             'pathName': self.path_name,
             'username': self.username,
             'password': self.password,
+            'streamUsername': self.stream_username,
+            'streamPassword': self.stream_password,
             'autoStart': self.auto_start,
             # NOTE: status is NOT saved - it's runtime only
             # This ensures autoStart setting is respected on server restart
