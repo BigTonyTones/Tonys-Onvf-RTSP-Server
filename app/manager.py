@@ -3,71 +3,20 @@ import os
 import sys
 import threading
 import tempfile
-import re
+import secrets
+import string
 from pathlib import Path
 from urllib.parse import quote
+from werkzeug.security import generate_password_hash, check_password_hash
 from .config import CONFIG_FILE, MEDIAMTX_PORT
 from .camera import VirtualONVIFCamera
 from .onvif_service import ONVIFService
 from .mediamtx_manager import MediaMTXManager
 from .linux_service import LinuxServiceManager
-from .logging_config import get_logger
-
-logger = get_logger(__name__)
-
-
-# Input validation patterns for security-sensitive fields
-# MAC address: XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX
-MAC_ADDRESS_PATTERN = re.compile(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$')
-
-# Interface name: alphanumeric and underscore, 1-15 chars (Linux IFNAMSIZ limit)
-INTERFACE_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_]{1,15}$')
-
-# IPv4 address: standard dotted decimal notation
-IPV4_ADDRESS_PATTERN = re.compile(
-    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
-    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-)
-
-# Netmask: either CIDR notation (0-32) or dotted decimal
-NETMASK_PATTERN = re.compile(
-    r'^(?:[0-9]|[1-2][0-9]|3[0-2])$|'  # CIDR: 0-32
-    r'^(?:(?:255|254|252|248|240|224|192|128|0)\.){3}'
-    r'(?:255|254|252|248|240|224|192|128|0)$'  # Dotted decimal
-)
-
-
-def validate_mac_address(mac):
-    """Validate MAC address format. Returns True if valid."""
-    if not mac:
-        return True  # Empty is allowed (optional field)
-    return bool(MAC_ADDRESS_PATTERN.match(mac))
-
-
-def validate_interface_name(name):
-    """Validate network interface name. Returns True if valid."""
-    if not name:
-        return True  # Empty is allowed (optional field)
-    return bool(INTERFACE_NAME_PATTERN.match(name))
-
-
-def validate_ipv4_address(ip):
-    """Validate IPv4 address format. Returns True if valid."""
-    if not ip:
-        return True  # Empty is allowed (optional field)
-    return bool(IPV4_ADDRESS_PATTERN.match(ip))
-
-
-def validate_netmask(netmask):
-    """Validate netmask (CIDR or dotted decimal). Returns True if valid."""
-    if not netmask:
-        return True  # Empty is allowed (optional field)
-    return bool(NETMASK_PATTERN.match(str(netmask)))
-
 
 class CameraManager:
     """Manages multiple virtual ONVIF cameras"""
-
+    
     def __init__(self, config_file=CONFIG_FILE):
         self.config_file = config_file
         self.cameras = []
@@ -76,69 +25,91 @@ class CameraManager:
         self.mediamtx = MediaMTXManager()
         self.service_mgr = LinuxServiceManager()
         self._lock = threading.Lock()
+        
+        # Auth settings
+        self.auth_enabled = False
+        self.username = None
+        self.password_hash = None
+        self.session_token = None
+        
         self.load_config()
-
+        
     def load_config(self):
         """Load camera configuration"""
         if Path(self.config_file).exists():
             with open(self.config_file, 'r') as f:
                 config = json.load(f)
-
+                
             for cam_config in config.get('cameras', []):
                 camera = VirtualONVIFCamera(cam_config)
                 self.cameras.append(camera)
-
+                
                 if cam_config['id'] >= self.next_id:
                     self.next_id = cam_config['id'] + 1
                 if cam_config.get('onvifPort', 0) >= self.next_onvif_port:
                     self.next_onvif_port = cam_config['onvifPort'] + 1
-
+            
             # Load settings
             self.server_ip = config.get('settings', {}).get('serverIp', 'localhost')
             self.open_browser = config.get('settings', {}).get('openBrowser', True)
-            self.theme = config.get('settings', {}).get('theme', 'dark')
+            self.theme = config.get('settings', {}).get('theme', 'dracula')
             self.grid_columns = config.get('settings', {}).get('gridColumns', 3)
             self.rtsp_port = config.get('settings', {}).get('rtspPort', 8554)
             self.auto_boot = config.get('settings', {}).get('autoBoot', False)
+            self.global_username = config.get('settings', {}).get('globalUsername', 'admin')
+            self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
+            self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
+            
+            # Load auth settings
+            auth = config.get('auth', {})
+            self.auth_enabled = auth.get('enabled', False)
+            self.username = auth.get('username')
+            self.password_hash = auth.get('password_hash')
         else:
             self.server_ip = 'localhost'
             self.open_browser = True
-            self.theme = 'dark'
+            self.theme = 'dracula'
             self.grid_columns = 3
             self.rtsp_port = 8554
             self.auto_boot = False
+            self.global_username = 'admin'
+            self.global_password = 'admin'
+            self.rtsp_auth_enabled = False
             self.save_config()
-
+            
     def save_config(self):
-        """Save configuration to file"""
+        """Save configuration to file atomically"""
         config = {
             'cameras': [cam.to_config_dict() for cam in self.cameras],  # Use to_config_dict() to exclude status
             'settings': {
                 'serverIp': getattr(self, 'server_ip', 'localhost'),
                 'openBrowser': getattr(self, 'open_browser', True),
-                'theme': getattr(self, 'theme', 'dark'),
+                'theme': getattr(self, 'theme', 'dracula'),
                 'gridColumns': getattr(self, 'grid_columns', 3),
                 'rtspPort': getattr(self, 'rtsp_port', 8554),
-                'autoBoot': getattr(self, 'auto_boot', False)
+                'autoBoot': getattr(self, 'auto_boot', False),
+                'globalUsername': getattr(self, 'global_username', 'admin'),
+                'globalPassword': getattr(self, 'global_password', 'admin'),
+                'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False)
+            },
+            'auth': {
+                'enabled': getattr(self, 'auth_enabled', False),
+                'username': getattr(self, 'username', None),
+                'password_hash': getattr(self, 'password_hash', None)
             }
         }
-
+        
         with self._lock:
             try:
-                # Try atomic write first (works on local filesystem)
+                # Use a temporary file for atomic write
                 fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(self.config_file)), text=True)
                 with os.fdopen(fd, 'w') as f:
                     json.dump(config, f, indent=2)
-
-                try:
-                    os.replace(temp_path, self.config_file)
-                except OSError:
-                    # Atomic rename fails on Docker volume mounts, fall back to direct write
-                    os.remove(temp_path)
-                    with open(self.config_file, 'w') as f:
-                        json.dump(config, f, indent=2)
+                
+                # Atomic rename
+                os.replace(temp_path, self.config_file)
             except Exception as e:
-                logger.error("Error saving config: %s", e)
+                print(f"❌ Error saving config: {e}")
                 if 'temp_path' in locals() and os.path.exists(temp_path):
                     os.remove(temp_path)
 
@@ -154,32 +125,57 @@ class CameraManager:
                         if new_ip:
                             self.server_ip = new_ip
                         self.open_browser = settings.get('openBrowser', True)
-                        self.theme = settings.get('theme', 'dark')
+                        self.theme = settings.get('theme', 'dracula')
                         self.grid_columns = settings.get('gridColumns', 3)
                         self.rtsp_port = settings.get('rtspPort', 8554)
                         self.auto_boot = settings.get('autoBoot', False)
+                        self.global_username = settings.get('globalUsername', 'admin')
+                        self.global_password = settings.get('globalPassword', 'admin')
+                        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
                 except Exception as e:
-                    # If reading fails (e.g. file busy), we just fall back to the last known
+                    # If reading fails (e.g. file busy), we just fall back to the last known 
                     # value stored in self.server_ip, which is much safer.
-                    logger.warning("Could not read config file for settings: %s", e)
-
+                    print(f"⚠️ Warning: Could not read config file for settings: {e}")
+        
         return {
-            'serverIp': self.server_ip,
-            'openBrowser': self.open_browser,
-            'theme': self.theme,
+            'serverIp': self.server_ip, 
+            'openBrowser': self.open_browser, 
+            'theme': self.theme, 
             'gridColumns': self.grid_columns,
             'rtspPort': self.rtsp_port,
-            'autoBoot': self.auto_boot
+            'autoBoot': self.auto_boot,
+            'globalUsername': getattr(self, 'global_username', 'admin'),
+            'globalPassword': getattr(self, 'global_password', 'admin'),
+            'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
+            'authEnabled': self.auth_enabled,
+            'username': self.username
         }
-
+    
     def save_settings(self, settings):
         """Save settings to config"""
         self.server_ip = settings.get('serverIp', 'localhost')
         self.open_browser = settings.get('openBrowser', True)
         self.theme = settings.get('theme', self.theme)
         self.grid_columns = int(settings.get('gridColumns', self.grid_columns))
+        old_rtsp_port = self.rtsp_port
+        old_global_username = getattr(self, 'global_username', 'admin')
+        old_global_password = getattr(self, 'global_password', 'admin')
+        old_rtsp_auth_enabled = getattr(self, 'rtsp_auth_enabled', False)
+        
+        # Update values
         self.rtsp_port = int(settings.get('rtspPort', self.rtsp_port))
-
+        self.global_username = settings.get('globalUsername', 'admin')
+        self.global_password = settings.get('globalPassword', 'admin')
+        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+        
+        # Check for changes that require MediaMTX restart
+        rtsp_needs_restart = (
+            old_rtsp_port != self.rtsp_port or
+            old_global_username != self.global_username or
+            old_global_password != self.global_password or
+            old_rtsp_auth_enabled != self.rtsp_auth_enabled
+        )
+        
         # Handle auto-boot setting (Linux only)
         new_auto_boot = settings.get('autoBoot', False)
         if new_auto_boot != self.auto_boot:
@@ -194,53 +190,68 @@ class CameraManager:
                         raise Exception(f"Failed to disable auto-boot: {msg}")
             self.auto_boot = new_auto_boot
 
+        # Handle Auth toggle
+        new_auth_enabled = settings.get('authEnabled', False)
+        new_username = settings.get('username')
+        new_password = settings.get('password')
+        
+        if new_auth_enabled:
+            if new_username:
+                self.username = new_username
+            if new_password:
+                self.password_hash = generate_password_hash(new_password)
+            
+            # If still no username/password after potential update, can't enable
+            if not self.username or not self.password_hash:
+                 new_auth_enabled = False
+        
+        self.auth_enabled = new_auth_enabled
+        
         self.save_config()
+        
+        # Restart MediaMTX if needed
+        if rtsp_needs_restart:
+            print("🔄 RTSP settings changed, restarting MediaMTX...")
+            # Pass credentials only if auth is enabled
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+            
         return {
-            'serverIp': self.server_ip,
-            'openBrowser': self.open_browser,
-            'theme': self.theme,
-            'gridColumns': self.grid_columns,
+            'serverIp': self.server_ip, 
+            'openBrowser': self.open_browser, 
+            'theme': self.theme, 
+            'gridColumns': self.grid_columns, 
             'rtspPort': self.rtsp_port,
-            'autoBoot': self.auto_boot
+            'autoBoot': self.auto_boot,
+            'globalUsername': self.global_username,
+            'globalPassword': self.global_password,
+            'rtspAuthEnabled': self.rtsp_auth_enabled,
+            'authEnabled': self.auth_enabled,
+            'username': self.username
         }
-
+    
     def is_port_available(self, port, exclude_camera_id=None):
         """Check if an ONVIF port is available (not used by other cameras)"""
         for camera in self.cameras:
             if camera.id != exclude_camera_id and camera.onvif_port == port:
                 return False
         return True
-
+    
     def add_camera(self, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                    main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                    main_framerate=30, sub_framerate=15, onvif_port=None,
-                   onvif_username='admin', onvif_password='admin', transcode_sub=False, transcode_main=False,
-                   use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp',
+                   transcode_sub=False, transcode_main=False,
+                   use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                    static_ip='', netmask='24', gateway=''):
         """Add a new camera"""
-        # Validate security-sensitive fields to prevent command injection
-        if not validate_mac_address(nic_mac):
-            raise ValueError(f"Invalid MAC address format: {nic_mac}")
-        if not validate_interface_name(parent_interface):
-            raise ValueError(f"Invalid interface name format: {parent_interface}")
-        if not validate_ipv4_address(static_ip):
-            raise ValueError(f"Invalid static IP address format: {static_ip}")
-        if not validate_ipv4_address(gateway):
-            raise ValueError(f"Invalid gateway IP address format: {gateway}")
-        if not validate_ipv4_address(host):
-            # Host can be either IP or hostname - validate if it looks like an IP
-            if re.match(r'^\d+\.\d+\.\d+\.\d+$', host) and not validate_ipv4_address(host):
-                raise ValueError(f"Invalid host IP address format: {host}")
-        if not validate_netmask(netmask):
-            raise ValueError(f"Invalid netmask format: {netmask}")
-
         if not main_path.startswith('/'):
             main_path = '/' + main_path
         if not sub_path.startswith('/'):
             sub_path = '/' + sub_path
-
+        
         rtsp_port = str(rtsp_port)
-
+        
         # Handle ONVIF port assignment
         if onvif_port is not None:
             onvif_port = int(onvif_port)
@@ -249,11 +260,11 @@ class CameraManager:
         else:
             # Auto-assign port
             onvif_port = self.next_onvif_port
-
+        
         # URL-encode credentials
         username_encoded = quote(username, safe='') if username else ''
         password_encoded = quote(password, safe='') if password else ''
-
+        
         # Build RTSP URLs
         if username_encoded and password_encoded:
             main_url = f"rtsp://{username_encoded}:{password_encoded}@{host}:{rtsp_port}{main_path}"
@@ -264,15 +275,13 @@ class CameraManager:
         else:
             main_url = f"rtsp://{host}:{rtsp_port}{main_path}"
             sub_url = f"rtsp://{host}:{rtsp_port}{sub_path}"
-
+        
         # Create safe path name
         path_name = name.lower().replace(' ', '_').replace('-', '_')
         path_name = ''.join(c for c in path_name if c.isalnum() or c == '_')
-        # Collapse multiple consecutive underscores
-        path_name = re.sub(r'_+', '_', path_name)
-
-        logger.info("Adding camera: %s", name)
-
+        
+        print(f"\n📹 Adding camera: {name}")
+        
         config = {
             'id': self.next_id,
             'name': name,
@@ -290,8 +299,8 @@ class CameraManager:
             'subHeight': sub_height,
             'mainFramerate': main_framerate,
             'subFramerate': sub_framerate,
-            'onvifUsername': onvif_username,
-            'onvifPassword': onvif_password,
+            'onvifUsername': self.global_username,
+            'onvifPassword': self.global_password,
             'transcodeSub': transcode_sub,
             'transcodeMain': transcode_main,
             'useVirtualNic': use_virtual_nic,
@@ -302,52 +311,36 @@ class CameraManager:
             'netmask': netmask,
             'gateway': gateway
         }
-
+        
         camera = VirtualONVIFCamera(config)
         self.cameras.append(camera)
-
+        
         self.next_id += 1
         # Update next_onvif_port to be higher than any used port
         if onvif_port >= self.next_onvif_port:
             self.next_onvif_port = onvif_port + 1
-
+        
         self.save_config()
         return camera
-
+    
     def update_camera(self, camera_id, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                       main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                       main_framerate=30, sub_framerate=15, onvif_port=None,
-                      onvif_username='admin', onvif_password='admin', transcode_sub=False, transcode_main=False,
-                      use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp',
+                      transcode_sub=False, transcode_main=False,
+                      use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway=''):
         """Update an existing camera"""
-        # Validate security-sensitive fields to prevent command injection
-        if not validate_mac_address(nic_mac):
-            raise ValueError(f"Invalid MAC address format: {nic_mac}")
-        if not validate_interface_name(parent_interface):
-            raise ValueError(f"Invalid interface name format: {parent_interface}")
-        if not validate_ipv4_address(static_ip):
-            raise ValueError(f"Invalid static IP address format: {static_ip}")
-        if not validate_ipv4_address(gateway):
-            raise ValueError(f"Invalid gateway IP address format: {gateway}")
-        if not validate_ipv4_address(host):
-            # Host can be either IP or hostname - validate if it looks like an IP
-            if re.match(r'^\d+\.\d+\.\d+\.\d+$', host) and not validate_ipv4_address(host):
-                raise ValueError(f"Invalid host IP address format: {host}")
-        if not validate_netmask(netmask):
-            raise ValueError(f"Invalid netmask format: {netmask}")
-
         camera = self.get_camera(camera_id)
         if not camera:
             return None
-
+        
         # Check if camera is running
         was_running = camera.status == "running"
-
+        
         # Stop camera if running
         if was_running:
             camera.stop()
-
+        
         # Validate ONVIF port if provided
         if onvif_port is not None:
             onvif_port = int(onvif_port)
@@ -356,19 +349,19 @@ class CameraManager:
         else:
             # Keep existing port if not specified
             onvif_port = camera.onvif_port
-
+        
         # Ensure paths start with /
         if not main_path.startswith('/'):
             main_path = '/' + main_path
         if not sub_path.startswith('/'):
             sub_path = '/' + sub_path
-
+        
         rtsp_port = str(rtsp_port)
-
+        
         # URL-encode credentials
         username_encoded = quote(username, safe='') if username else ''
         password_encoded = quote(password, safe='') if password else ''
-
+        
         # Build RTSP URLs
         if username_encoded and password_encoded:
             main_url = f"rtsp://{username_encoded}:{password_encoded}@{host}:{rtsp_port}{main_path}"
@@ -379,13 +372,11 @@ class CameraManager:
         else:
             main_url = f"rtsp://{host}:{rtsp_port}{main_path}"
             sub_url = f"rtsp://{host}:{rtsp_port}{sub_path}"
-
+        
         # Create safe path name
         path_name = name.lower().replace(' ', '_').replace('-', '_')
         path_name = ''.join(c for c in path_name if c.isalnum() or c == '_')
-        # Collapse multiple consecutive underscores
-        path_name = re.sub(r'_+', '_', path_name)
-
+        
         # Update camera properties
         camera.name = name
         camera.main_stream_url = main_url
@@ -401,8 +392,8 @@ class CameraManager:
         camera.sub_height = sub_height
         camera.main_framerate = main_framerate
         camera.sub_framerate = sub_framerate
-        camera.onvif_username = onvif_username
-        camera.onvif_password = onvif_password
+        camera.onvif_username = self.global_username
+        camera.onvif_password = self.global_password
         camera.transcode_sub = transcode_sub
         camera.transcode_main = transcode_main
         camera.use_virtual_nic = use_virtual_nic
@@ -412,19 +403,21 @@ class CameraManager:
         camera.static_ip = static_ip
         camera.netmask = netmask
         camera.gateway = gateway
-
-        logger.info("Updated camera: %s", name)
-
+        
+        print(f"\n✏️ Updated camera: {name}")
+        
         # Save config
         self.save_config()
-
+        
         # Restart camera if it was running
         if was_running:
             camera.start()
-            self.mediamtx.restart(self.cameras)
-
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+        
         return camera
-
+    
     def delete_camera(self, camera_id):
         """Delete a camera"""
         camera = self.get_camera(camera_id)
@@ -432,25 +425,77 @@ class CameraManager:
             camera.stop()
             self.cameras = [c for c in self.cameras if c.id != camera_id]
             self.save_config()
-            self.mediamtx.restart(self.cameras)
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
             return True
         return False
-
+    
     def get_camera(self, camera_id):
         """Get camera by ID"""
         for camera in self.cameras:
             if camera.id == camera_id:
                 return camera
         return None
-
+    
     def start_all(self):
         """Start all cameras"""
         for camera in self.cameras:
             camera.start()
-        self.mediamtx.restart(self.cameras)
-
+        rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+        rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+    
     def stop_all(self):
         """Stop all cameras"""
         for camera in self.cameras:
             camera.stop()
-        self.mediamtx.restart(self.cameras)
+        rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+        rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+
+    # --- Authentication Methods ---
+    
+    def is_setup_required(self):
+        """Returns True if no preference is stored at all"""
+        # We'll use a hidden setting to track if the user has ever seen the setup
+        if hasattr(self, 'setup_shown'):
+            return False
+            
+        settings_file = Path(self.config_file)
+        if settings_file.exists():
+            with open(settings_file, 'r') as f:
+                config = json.load(f)
+                if 'auth' in config:
+                    return False
+        return True
+
+    def skip_setup(self):
+        """Disable auth and mark setup as completed"""
+        self.auth_enabled = False
+        self.username = None
+        self.password_hash = None
+        self.save_config()
+        return True
+
+    def setup_user(self, username, password):
+        """Initial setup of username and password"""
+        self.username = username
+        self.password_hash = generate_password_hash(password)
+        self.auth_enabled = True
+        self.save_config()
+        return True
+
+    def verify_login(self, username, password):
+        """Verify login credentials"""
+        if not self.auth_enabled:
+            return True
+            
+        if username == self.username and check_password_hash(self.password_hash, password):
+            return True
+        return False
+
+    def generate_session_token(self):
+        """Generate a random session token"""
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(32))

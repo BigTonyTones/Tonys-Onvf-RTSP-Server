@@ -44,7 +44,7 @@ def run_server(options=None):
 
     print("""
     ============================================================
-              Tonys Onvif-RTSP Server v4.0
+              Tonys Onvif-RTSP Server v4.3
     ============================================================
     """)
 
@@ -80,10 +80,15 @@ def run_server(options=None):
     if options.get('rtsp_port') is None:
         rtsp_port = settings.get('rtspPort', MEDIAMTX_PORT)
 
+    # Get credentials only if RTSP auth is enabled
+    rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+    rtsp_username = settings.get('globalUsername', 'admin') if rtsp_auth_enabled else ''
+    rtsp_password = settings.get('globalPassword', 'admin') if rtsp_auth_enabled else ''
+
     # Start MediaMTX
     # Pass manager.cameras so it can generate config
     logger.info("Initializing MediaMTX RTSP Server...")
-    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port):
+    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password):
         logger.error("Failed to start MediaMTX. Exiting...")
         sys.exit(1)
 

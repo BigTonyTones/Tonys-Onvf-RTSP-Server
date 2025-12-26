@@ -134,8 +134,8 @@ class FFmpegManager:
         else:
             logger.error("Unsupported operating system: %s", system)
             return False
-
         logger.info("Platform: %s %s", system, machine)
+        logger.info("Note: These are the official recommended static builds linked from ffmpeg.org")
         logger.info("Downloading from: %s", url)
 
         try:
