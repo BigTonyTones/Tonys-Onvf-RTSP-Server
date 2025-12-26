@@ -3,6 +3,13 @@
 # Tonys Onvif Server - Ubuntu 25.04 Startup Script
 # This script installs dependencies, sets up a virtual environment, and starts the server.
 
+# 0. Check for sudo privileges
+if [ "$EUID" -ne 0 ]; then
+    echo "❌ Error: This script must be run with sudo."
+    echo "   Please use: sudo ./start_ubuntu_25.sh"
+    exit 1
+fi
+
 echo "============================================================"
 echo "🚀 Tonys Onvif-RTSP Server - Ubuntu Development Setup"
 echo "============================================================"
