@@ -50,7 +50,7 @@ The project includes a startup script that automates the installation of Python 
 
 Give the script permission to execute:
 ```bash
-chmod +x start_ubuntu_25.sh
+sudo chmod +x start_ubuntu_25.sh
 ```
 
 ### 3. Start the Server
