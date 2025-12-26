@@ -56,7 +56,7 @@ chmod +x start_ubuntu_25.sh
 ### 3. Start the Server
 Run the script to initialize the environment and launch the application:
 ```bash
-./start_ubuntu_25.sh
+sudo ./start_ubuntu_25.sh
 ```
 
 **What this script handles for you:**
