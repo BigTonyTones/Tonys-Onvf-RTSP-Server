@@ -390,14 +390,14 @@ def get_web_ui_html(current_settings=None):
             border-radius: 12px;
             padding: 24px;
             box-shadow: var(--shadow);
-            border-left: 4px solid var(--card-border);
+            border: 1px solid var(--card-border);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }}
         .camera-card:hover {{
             transform: translateY(-4px);
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
         }}
-        .camera-card.running {{ border-left-color: var(--btn-success); }}
+
         .camera-header {{
             display: flex;
             justify-content: space-between;
@@ -848,7 +848,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>🎥 Tonys Onvif-RTSP Server v4.2</h1>
+            <h1>Tonys Onvif-RTSP Server v4.2</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">➕ Add Camera</button>
                 <button class="btn" onclick="startAll()">▶️ Start All</button>
@@ -1057,41 +1057,7 @@ def get_web_ui_html(current_settings=None):
                         Default: Auto-assigned starting from 8001
                     </small>
                 </div>
-                <div class="form-row">
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label class="form-label">👤 ONVIF Username</label>
-                            <input type="text" class="form-input" id="onvifUsername" placeholder="admin" value="admin">
-                        </div>
-                    </div>
-                    <div class="form-col">
-                        <div class="form-group">
-                            <label class="form-label">🔑 ONVIF Password</label>
-                            <input type="text" class="form-input" id="onvifPassword" placeholder="admin" value="admin">
-                        </div>
-                    </div>
-                </div>
-                <div style="background: rgba(255, 121, 198, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--btn-primary); margin-bottom: 20px;">
-                    <div style="font-size: 14px; font-weight: 600; color: var(--btn-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                        <span>🔒 Optional: RTSP Stream Password Protection</span>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">👤 Stream Username</label>
-                                <input type="text" class="form-input" id="streamUsername" placeholder="Optional">
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">🔑 Stream Password</label>
-                                <input type="text" class="form-input" id="streamPassword" placeholder="Optional">
-                            </div>
-                        </div>
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 11px; margin-top: 8px; display: block;">
-                        If set, these credentials will be required to view the RTSP streams from this camera.
-                    </small>
+
                 </div>
                 
                 <div class="form-group">
@@ -1204,6 +1170,37 @@ def get_web_ui_html(current_settings=None):
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.
                     </small>
+                </div>
+                
+                <div class="form-group" style="background: rgba(255, 121, 198, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span>🔒 Global RTSP & ONVIF Credentials</span>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">👤 Global Username</label>
+                                <input type="text" class="form-input" id="globalUsername" placeholder="admin" value="admin">
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">🔑 Global Password</label>
+                                <input type="text" class="form-input" id="globalPassword" placeholder="admin" value="admin">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="rtspAuthEnabled" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0; color: var(--text-body);">Enable RTSP Authentication</span>
+                        </label>
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                            If enabled, RTSP streams will require the Global Username/Password above. Disabling will allow anonymous RTSP access.
+                        </small>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1599,19 +1596,20 @@ def get_web_ui_html(current_settings=None):
                             <div>Camera Stopped</div>
                            </div>`
                     }}
+
                 </div>
                 
                 <div class="info-section">
                     <div class="info-label">🎬 RTSP Main Stream (Full Quality)</div>
                     <div class="info-value">
-                        rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">📋 Copy</button>
+                        rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">📋 Copy</button>
                     </div>
                     
                     <div class="info-label">📱 RTSP Sub Stream (Lower Quality)</div>
                     <div class="info-value">
-                        rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{cam.streamUsername && cam.streamPassword ? encodeURIComponent(cam.streamUsername) + ':' + encodeURIComponent(cam.streamPassword) + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">📋 Copy</button>
+                        rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">📋 Copy</button>
                     </div>
                     
                     <div class="info-label">🔌 ONVIF Service URL</div>
@@ -1620,7 +1618,7 @@ def get_web_ui_html(current_settings=None):
                             <span>${{displayIp}}:${{cam.onvifPort}}</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="font-size: 11px; color: var(--text-muted); background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">
-                                    👤 ${{cam.onvifUsername}} / 🔑 ${{cam.onvifPassword}}
+                                    👤 ${{settings.globalUsername || 'admin'}} / 🔑 ${{settings.globalPassword || 'admin'}}
                                 </div>
                                 <button class="copy-btn" onclick="copyToClipboard('${{displayIp}}:${{cam.onvifPort}}')">📋 Copy</button>
                             </div>
@@ -1638,8 +1636,27 @@ def get_web_ui_html(current_settings=None):
             `;
         }}
         
-        function copyToClipboard(text) {{
-            navigator.clipboard.writeText(text);
+        async function copyToClipboard(text) {{
+            try {{
+                await navigator.clipboard.writeText(text);
+                // Optional: Show a toast or small visual feedback here if desired
+            }} catch (err) {{
+                console.error('Failed to copy: ', err);
+                // Fallback for older browsers or insecure contexts
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";  // Avoid scrolling to bottom
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {{
+                    document.execCommand('copy');
+                }} catch (e) {{
+                    console.error('Fallback copy failed', e);
+                    alert('Could not copy text. Please select and copy manually.');
+                }}
+                document.body.removeChild(textArea);
+            }}
         }}
         
         // Global HLS player management
@@ -1648,19 +1665,17 @@ def get_web_ui_html(current_settings=None):
         
         function initVideoPlayer(cameraId, pathName, explicitId = null) {{
             const videoId = explicitId || `player-${{cameraId}}`;
+            
+            // If a player for this videoId already exists, do not re-initialize it.
+            // The existing player will continue to run.
+            if (hlsPlayers.has(videoId)) {{
+                return;
+            }}
+
             const videoElement = document.getElementById(videoId);
             if (!videoElement) return;
             
-            // Clean up existing player if any
-            const existingPlayer = hlsPlayers.get(videoId);
-            if (existingPlayer) {{
-                try {{
-                    existingPlayer.destroy();
-                }} catch (e) {{
-                    console.warn('Error destroying existing player:', e);
-                }}
-                hlsPlayers.delete(videoId);
-            }}
+
             
             let serverIp = settings.serverIp || window.location.hostname || 'localhost';
             
@@ -1669,11 +1684,13 @@ def get_web_ui_html(current_settings=None):
                 serverIp = window.location.hostname;
             }}
             
-            // Get credentials if set
+            // Get credentials if RTSP auth is enabled
             let credentials = '';
-            const cam = cameras.find(c => c.id == cameraId);
-            if (cam && cam.streamUsername && cam.streamPassword) {{
-                credentials = `?user=${{encodeURIComponent(cam.streamUsername)}}&pass=${{encodeURIComponent(cam.streamPassword)}}`;
+            if (settings.rtspAuthEnabled && settings.globalUsername && settings.globalPassword) {{
+                // Ensure credentials are URL encoded
+                const u = encodeURIComponent(settings.globalUsername);
+                const p = encodeURIComponent(settings.globalPassword);
+                credentials = `?user=${{u}}&pass=${{p}}`;
             }}
             
             // Construct stream URL - Use current protocol if possible to support reverse proxies
@@ -1685,50 +1702,27 @@ def get_web_ui_html(current_settings=None):
                 videoElement.src = streamUrl;
             }} else if (typeof Hls !== 'undefined') {{
                 // Optimized HLS.js configuration for multiple cameras
-                const hls = new Hls({{
+                const hlsConfig = {{
                     debug: false,
                     enableWorker: true,
-                    
-                    // Reduced buffer settings to prevent memory bloat with multiple streams
-                    maxBufferLength: 10,              // Reduced from 30 - max buffer in seconds
-                    maxMaxBufferLength: 20,            // Reduced from 60 - absolute max
-                    maxBufferSize: 20 * 1000 * 1000,  // Reduced from 60MB - 20MB max per stream
-                    maxBufferHole: 0.3,                // Reduced tolerance for gaps
-                    
-                    // Back buffer management
-                    backBufferLength: 5,               // Reduced from 30 - keep minimal back buffer
-                    
-                    // Live stream sync settings
-                    liveSyncDurationCount: 2,          // Reduced from 3 - stay closer to live edge
-                    liveMaxLatencyDurationCount: 6,    // Reduced from 10 - max latency tolerance
-                    
-                    // Loading timeouts - increased for stability
-                    manifestLoadingTimeOut: 15000,     // Increased from 10s
-                    manifestLoadingMaxRetry: 4,        // Reduced retries
-                    manifestLoadingRetryDelay: 1000,   // 1s between retries
-                    manifestLoadingMaxRetryTimeout: 64000,
-                    
-                    levelLoadingTimeOut: 15000,        // Increased from 10s
-                    levelLoadingMaxRetry: 4,           // Reduced retries
-                    levelLoadingRetryDelay: 1000,
-                    levelLoadingMaxRetryTimeout: 64000,
-                    
-                    fragLoadingTimeOut: 20000,         // Keep at 20s
-                    fragLoadingMaxRetry: 4,            // Reduced retries
-                    fragLoadingRetryDelay: 1000,
-                    fragLoadingMaxRetryTimeout: 64000,
-                    
-                    // Low latency mode disabled for stability
                     lowLatencyMode: false,
-                    
-                    // Progressive loading
-                    progressive: true,
-                    
-                    // Abort on slow connections
-                    abrEwmaDefaultEstimate: 500000,    // 500 kbps default estimate
-                    abrBandWidthFactor: 0.95,
-                    abrBandWidthUpFactor: 0.7,
-                }});
+                    backBufferLength: 5,
+                }};
+
+                // Hook to inject credentials into every segment request
+                if (settings.rtspAuthEnabled && settings.globalUsername && settings.globalPassword) {{
+                    console.log(`[HLS] Configuring auth for ${{String(videoId)}}`);
+                    hlsConfig.xhrSetup = function(xhr, url) {{
+                        let accessUrl = url;
+                        if (url.indexOf('user=') === -1) {{
+                            const separator = url.indexOf('?') === -1 ? '?' : '&';
+                            accessUrl = url + separator + `user=${{encodeURIComponent(settings.globalUsername)}}&pass=${{encodeURIComponent(settings.globalPassword)}}`;
+                        }}
+                        xhr.open('GET', accessUrl, true);
+                    }};
+                }}
+
+                const hls = new Hls(hlsConfig);
                 
                 // Store player reference
                 hlsPlayers.set(videoId, hls);
@@ -1847,8 +1841,7 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('subHeight').value = camera.subHeight || 480;
                 document.getElementById('mainFramerate').value = camera.mainFramerate || 30;
                 document.getElementById('subFramerate').value = camera.subFramerate || 15;
-                document.getElementById('streamUsername').value = camera.streamUsername || '';
-                document.getElementById('streamPassword').value = camera.streamPassword || '';
+
                 
                 // Don't copy ONVIF port (it needs to be unique)
                 document.getElementById('onvifPort').value = ''; 
@@ -1962,8 +1955,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('nicMac').value = '';
             document.getElementById('ipMode').value = 'dhcp';
             document.getElementById('staticIp').value = '';
-            document.getElementById('streamUsername').value = '';
-            document.getElementById('streamPassword').value = '';
+            document.getElementById('staticIp').value = '';
+
             
             document.getElementById('netmask').value = '24';
             document.getElementById('gateway').value = '';
@@ -2023,10 +2016,6 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('transcodeSub').checked = camera.transcodeSub || false;
             document.getElementById('transcodeMain').checked = camera.transcodeMain || false;
             document.getElementById('onvifPort').value = camera.onvifPort || '';
-            document.getElementById('onvifUsername').value = camera.onvifUsername || 'admin';
-            document.getElementById('onvifPassword').value = camera.onvifPassword || 'admin';
-            document.getElementById('streamUsername').value = camera.streamUsername || '';
-            document.getElementById('streamPassword').value = camera.streamPassword || '';
             
             // Populate Network fields
             document.getElementById('useVirtualNic').checked = camera.useVirtualNic || false;
@@ -2095,10 +2084,6 @@ def get_web_ui_html(current_settings=None):
                 subFramerate: parseInt(document.getElementById('subFramerate').value),
                 transcodeSub: document.getElementById('transcodeSub').checked,
                 transcodeMain: document.getElementById('transcodeMain').checked,
-                onvifUsername: document.getElementById('onvifUsername').value,
-                onvifPassword: document.getElementById('onvifPassword').value,
-                streamUsername: document.getElementById('streamUsername').value,
-                streamPassword: document.getElementById('streamPassword').value,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 
@@ -2373,11 +2358,18 @@ def get_web_ui_html(current_settings=None):
                     const autoBootField = document.getElementById('autoBoot');
                     if (autoBootField) autoBootField.checked = settings.autoBoot === true;
                     
+                    
+                    const globalUserField = document.getElementById('globalUsername');
+                    if (globalUserField) globalUserField.value = settings.globalUsername || 'admin';
+                    
+                    const globalPassField = document.getElementById('globalPassword');
+                    if (globalPassField) globalPassField.value = settings.globalPassword || 'admin';
+                    
+                    const rtspAuthField = document.getElementById('rtspAuthEnabled');
+                    if (rtspAuthField) rtspAuthField.checked = settings.rtspAuthEnabled === true;
+                    
                     const authEnabledField = document.getElementById('authEnabled');
                     if (authEnabledField) authEnabledField.checked = settings.authEnabled === true;
-                    
-                    const authUsernameField = document.getElementById('authUsername');
-                    if (authUsernameField) authUsernameField.value = settings.username || '';
                     
                     toggleAuthFields();
                     
@@ -2427,6 +2419,10 @@ def get_web_ui_html(current_settings=None):
                 gridColumns: parseInt(document.getElementById('gridColumnsSelect').value),
                 rtspPort: parseInt(document.getElementById('rtspPortSettings').value || 8554),
                 autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
+                autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
+                globalUsername: document.getElementById('globalUsername').value,
+                globalPassword: document.getElementById('globalPassword').value,
+                rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
                 authEnabled: document.getElementById('authEnabled').checked,
                 username: document.getElementById('authUsername').value,
                 password: document.getElementById('authPassword').value
@@ -2514,6 +2510,7 @@ def get_web_ui_html(current_settings=None):
 
         // Initialize on load
         async function init() {{
+            await loadSettings();
             await loadData();
             if (settings.theme) applyTheme(settings.theme);
             if (settings.gridColumns) applyGridLayout(settings.gridColumns);

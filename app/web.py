@@ -133,7 +133,7 @@ def create_web_app(manager):
             print("Stopping MediaMTX...")
             manager.mediamtx.stop()
             print("Restarting MediaMTX...")
-            manager.mediamtx.start(manager.cameras)
+            manager.mediamtx.start(manager.cameras, manager.rtsp_port, manager.rtsp_username, manager.rtsp_password)
             print("✓ Server restarted successfully!\n")
             
         # Run restart in background thread
@@ -225,8 +225,6 @@ def create_web_app(manager):
                 onvif_port=data.get('onvifPort'),
                 onvif_username=data.get('onvifUsername', 'admin'),
                 onvif_password=data.get('onvifPassword', 'admin'),
-                stream_username=data.get('streamUsername', ''),
-                stream_password=data.get('streamPassword', ''),
                 transcode_sub=data.get('transcodeSub', False),
                 transcode_main=data.get('transcodeMain', False),
                 use_virtual_nic=data.get('useVirtualNic', False),
@@ -267,8 +265,6 @@ def create_web_app(manager):
                 onvif_port=data.get('onvifPort'),
                 onvif_username=data.get('onvifUsername', 'admin'),
                 onvif_password=data.get('onvifPassword', 'admin'),
-                stream_username=data.get('streamUsername', ''),
-                stream_password=data.get('streamPassword', ''),
                 transcode_sub=data.get('transcodeSub', False),
                 transcode_main=data.get('transcodeMain', False),
                 use_virtual_nic=data.get('useVirtualNic', False),

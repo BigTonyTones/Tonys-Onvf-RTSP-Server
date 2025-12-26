@@ -45,10 +45,16 @@ def main():
     settings = manager.load_settings()
     rtsp_port = settings.get('rtspPort', MEDIAMTX_PORT)
     
+    # Get credentials only if RTSP auth is enabled
+    rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+    rtsp_username = settings.get('globalUsername', 'admin') if rtsp_auth_enabled else ''
+    rtsp_password = settings.get('globalPassword', 'admin') if rtsp_auth_enabled else ''
+    
     # Start MediaMTX
     # Pass manager.cameras so it can generate config
     print("\n📦 Initializing MediaMTX RTSP Server...")
-    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port):
+    # Pass authentication details to start()
+    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password):
         print("\n❌ Failed to start MediaMTX. Exiting...")
         sys.exit(1)
     

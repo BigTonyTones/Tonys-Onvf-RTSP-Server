@@ -56,6 +56,9 @@ class CameraManager:
             self.grid_columns = config.get('settings', {}).get('gridColumns', 3)
             self.rtsp_port = config.get('settings', {}).get('rtspPort', 8554)
             self.auto_boot = config.get('settings', {}).get('autoBoot', False)
+            self.global_username = config.get('settings', {}).get('globalUsername', 'admin')
+            self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
+            self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             
             # Load auth settings
             auth = config.get('auth', {})
@@ -69,6 +72,9 @@ class CameraManager:
             self.grid_columns = 3
             self.rtsp_port = 8554
             self.auto_boot = False
+            self.global_username = 'admin'
+            self.global_password = 'admin'
+            self.rtsp_auth_enabled = False
             self.save_config()
             
     def save_config(self):
@@ -81,7 +87,10 @@ class CameraManager:
                 'theme': getattr(self, 'theme', 'dracula'),
                 'gridColumns': getattr(self, 'grid_columns', 3),
                 'rtspPort': getattr(self, 'rtsp_port', 8554),
-                'autoBoot': getattr(self, 'auto_boot', False)
+                'autoBoot': getattr(self, 'auto_boot', False),
+                'globalUsername': getattr(self, 'global_username', 'admin'),
+                'globalPassword': getattr(self, 'global_password', 'admin'),
+                'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False)
             },
             'auth': {
                 'enabled': getattr(self, 'auth_enabled', False),
@@ -120,6 +129,9 @@ class CameraManager:
                         self.grid_columns = settings.get('gridColumns', 3)
                         self.rtsp_port = settings.get('rtspPort', 8554)
                         self.auto_boot = settings.get('autoBoot', False)
+                        self.global_username = settings.get('globalUsername', 'admin')
+                        self.global_password = settings.get('globalPassword', 'admin')
+                        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
                 except Exception as e:
                     # If reading fails (e.g. file busy), we just fall back to the last known 
                     # value stored in self.server_ip, which is much safer.
@@ -132,6 +144,9 @@ class CameraManager:
             'gridColumns': self.grid_columns,
             'rtspPort': self.rtsp_port,
             'autoBoot': self.auto_boot,
+            'globalUsername': getattr(self, 'global_username', 'admin'),
+            'globalPassword': getattr(self, 'global_password', 'admin'),
+            'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
             'authEnabled': self.auth_enabled,
             'username': self.username
         }
@@ -142,7 +157,24 @@ class CameraManager:
         self.open_browser = settings.get('openBrowser', True)
         self.theme = settings.get('theme', self.theme)
         self.grid_columns = int(settings.get('gridColumns', self.grid_columns))
+        old_rtsp_port = self.rtsp_port
+        old_global_username = getattr(self, 'global_username', 'admin')
+        old_global_password = getattr(self, 'global_password', 'admin')
+        old_rtsp_auth_enabled = getattr(self, 'rtsp_auth_enabled', False)
+        
+        # Update values
         self.rtsp_port = int(settings.get('rtspPort', self.rtsp_port))
+        self.global_username = settings.get('globalUsername', 'admin')
+        self.global_password = settings.get('globalPassword', 'admin')
+        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+        
+        # Check for changes that require MediaMTX restart
+        rtsp_needs_restart = (
+            old_rtsp_port != self.rtsp_port or
+            old_global_username != self.global_username or
+            old_global_password != self.global_password or
+            old_rtsp_auth_enabled != self.rtsp_auth_enabled
+        )
         
         # Handle auto-boot setting (Linux only)
         new_auto_boot = settings.get('autoBoot', False)
@@ -176,6 +208,15 @@ class CameraManager:
         self.auth_enabled = new_auth_enabled
         
         self.save_config()
+        
+        # Restart MediaMTX if needed
+        if rtsp_needs_restart:
+            print("🔄 RTSP settings changed, restarting MediaMTX...")
+            # Pass credentials only if auth is enabled
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+            
         return {
             'serverIp': self.server_ip, 
             'openBrowser': self.open_browser, 
@@ -183,6 +224,9 @@ class CameraManager:
             'gridColumns': self.grid_columns, 
             'rtspPort': self.rtsp_port,
             'autoBoot': self.auto_boot,
+            'globalUsername': self.global_username,
+            'globalPassword': self.global_password,
+            'rtspAuthEnabled': self.rtsp_auth_enabled,
             'authEnabled': self.auth_enabled,
             'username': self.username
         }
@@ -197,7 +241,6 @@ class CameraManager:
     def add_camera(self, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                    main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                    main_framerate=30, sub_framerate=15, onvif_port=None,
-                   onvif_username='admin', onvif_password='admin', stream_username='', stream_password='',
                    transcode_sub=False, transcode_main=False,
                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                    static_ip='', netmask='24', gateway=''):
@@ -256,10 +299,8 @@ class CameraManager:
             'subHeight': sub_height,
             'mainFramerate': main_framerate,
             'subFramerate': sub_framerate,
-            'onvifUsername': onvif_username,
-            'onvifPassword': onvif_password,
-            'streamUsername': stream_username,
-            'streamPassword': stream_password,
+            'onvifUsername': self.global_username,
+            'onvifPassword': self.global_password,
             'transcodeSub': transcode_sub,
             'transcodeMain': transcode_main,
             'useVirtualNic': use_virtual_nic,
@@ -285,7 +326,6 @@ class CameraManager:
     def update_camera(self, camera_id, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                       main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                       main_framerate=30, sub_framerate=15, onvif_port=None,
-                      onvif_username='admin', onvif_password='admin', stream_username='', stream_password='',
                       transcode_sub=False, transcode_main=False,
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway=''):
@@ -352,10 +392,8 @@ class CameraManager:
         camera.sub_height = sub_height
         camera.main_framerate = main_framerate
         camera.sub_framerate = sub_framerate
-        camera.onvif_username = onvif_username
-        camera.onvif_password = onvif_password
-        camera.stream_username = stream_username
-        camera.stream_password = stream_password
+        camera.onvif_username = self.global_username
+        camera.onvif_password = self.global_password
         camera.transcode_sub = transcode_sub
         camera.transcode_main = transcode_main
         camera.use_virtual_nic = use_virtual_nic
@@ -374,7 +412,9 @@ class CameraManager:
         # Restart camera if it was running
         if was_running:
             camera.start()
-            self.mediamtx.restart(self.cameras)
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
         
         return camera
     
@@ -385,7 +425,9 @@ class CameraManager:
             camera.stop()
             self.cameras = [c for c in self.cameras if c.id != camera_id]
             self.save_config()
-            self.mediamtx.restart(self.cameras)
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
             return True
         return False
     
@@ -400,13 +442,17 @@ class CameraManager:
         """Start all cameras"""
         for camera in self.cameras:
             camera.start()
-        self.mediamtx.restart(self.cameras)
+        rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+        rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
     
     def stop_all(self):
         """Stop all cameras"""
         for camera in self.cameras:
             camera.stop()
-        self.mediamtx.restart(self.cameras)
+        rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+        rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
 
     # --- Authentication Methods ---
     

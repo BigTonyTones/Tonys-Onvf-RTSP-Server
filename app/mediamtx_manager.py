@@ -193,12 +193,15 @@ class MediaMTXManager:
             traceback.print_exc()
             return False
     
-    def create_config(self, cameras, rtsp_port=None):
+    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None):
         """Create MediaMTX configuration optimized for multiple cameras and viewers"""
         if rtsp_port is None:
             rtsp_port = MEDIAMTX_PORT
+        
+        print(f"DEBUG: create_config called with user='{rtsp_username}', pass={'*' * len(rtsp_password) if rtsp_password else 'None'}")
             
         config = {
+
             # ===== NETWORK SETTINGS =====
             'rtspAddress': f':{rtsp_port}',
             'rtpAddress': ':18000',
@@ -234,7 +237,7 @@ class MediaMTXManager:
             
             # ===== MEMORY MANAGEMENT =====
             # Reduce log verbosity to save CPU
-            'logLevel': 'warn',  # Reduce log verbosity (info/warn/error)
+            'logLevel': 'error',  # Only show errors, suppress warnings (info/warn/error)
             
             # ===== CONNECTION HANDLING =====
             'runOnConnect': '',
@@ -257,7 +260,37 @@ class MediaMTXManager:
         print(f"   Using FFmpeg: {ffmpeg_exe}")
         
         import platform
+        import secrets
+        
         system = platform.system().lower()
+        
+        # Check if GLOBAL authentication is enabled
+        enable_global_auth = bool(rtsp_username and rtsp_password)
+        
+        auth_users_map = {} # (user, pass) -> list of permissions
+        sys_user = "internal_publisher"
+        sys_pass = secrets.token_hex(16)
+        
+        # Ensure strings
+        rtsp_username = str(rtsp_username) if rtsp_username else ""
+        rtsp_password = str(rtsp_password) if rtsp_password else ""
+        
+        if enable_global_auth:
+            print(f"    🔒 Global Authentication Enabled (User: {rtsp_username})")
+            # Add system publisher with full rights (publish and read everywhere)
+            # Use ~^.*$ for regex matching all paths
+            auth_users_map[(sys_user, sys_pass)] = [
+                {'action': 'publish', 'path': '~^.*$'}, 
+                {'action': 'read', 'path': '~^.*$'},
+                {'action': 'api', 'path': '~^.*$'},
+                {'action': 'metrics', 'path': '~^.*$'},
+                {'action': 'pprof', 'path': '~^.*$'}
+            ]
+            
+            # Add the user defined global listener
+            auth_users_map[(rtsp_username, rtsp_password)] = [
+                {'action': 'read', 'path': '~^.*$'}
+            ]
 
         # Only add paths for RUNNING cameras
         running_count = 0
@@ -275,7 +308,12 @@ class MediaMTXManager:
                     tgt_w = getattr(camera, 'main_width', 1920)
                     tgt_h = getattr(camera, 'main_height', 1080)
                     tgt_fps = getattr(camera, 'main_framerate', 30)
-                    dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}_main"
+                    
+                    # Inject credentials if global auth is on
+                    if enable_global_auth:
+                        dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{camera.path_name}_main"
+                    else:
+                        dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}_main"
                     
                     # Command for main stream (Baseline profile, strict GOP, NAL-HRD)
                     if system == "windows":
@@ -320,10 +358,7 @@ class MediaMTXManager:
                         'fallback': '',
                     }
                 
-                # Add authentication if set
-                if getattr(camera, 'stream_username', '') and getattr(camera, 'stream_password', ''):
-                    main_path_cfg['readUser'] = camera.stream_username
-                    main_path_cfg['readPass'] = camera.stream_password
+
                 
                 config['paths'][f'{camera.path_name}_main'] = main_path_cfg
                 
@@ -337,12 +372,16 @@ class MediaMTXManager:
                     print(f"    ℹ️  Transcoding enabled for {camera.name} sub-stream")
                     
                     # Target resolution and frame rate
+                    # Target resolution and frame rate
                     tgt_w = getattr(camera, 'sub_width', 640)
                     tgt_h = getattr(camera, 'sub_height', 480)
                     tgt_fps = getattr(camera, 'sub_framerate', 15)
                     
                     # Destination URL (Local MediaMTX)
-                    dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}_sub"
+                    if enable_global_auth:
+                        dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{camera.path_name}_sub"
+                    else:
+                        dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}_sub"
                     
                     # Build FFmpeg command (Baseline profile, strict GOP, NAL-HRD)
                     if system == "windows":
@@ -391,28 +430,35 @@ class MediaMTXManager:
                         'fallback': '',
                     }
                 
-                # Add authentication if set
-                if getattr(camera, 'stream_username', '') and getattr(camera, 'stream_password', ''):
-                    sub_path_cfg['readUser'] = camera.stream_username
-                    sub_path_cfg['readPass'] = camera.stream_password
-                
                 config['paths'][f'{camera.path_name}_sub'] = sub_path_cfg
                 
                 print(f"  ✓ Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
         
         print("\n" + "-" * 40)
         print(f"  Total running cameras: {running_count}")
+        print(f"  Total running cameras: {running_count}")
         print(f"  Total streams: {running_count * 2} (main + sub)")
+        
+        # Populate authInternalUsers if enabled
+        if enable_global_auth and auth_users_map:
+            config['authMethod'] = 'internal'
+            config['authInternalUsers'] = []
+            for (user, passwd), perms in auth_users_map.items():
+                config['authInternalUsers'].append({
+                    'user': user,
+                    'pass': passwd,
+                    'permissions': perms
+                })
         
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
-    def start(self, cameras, rtsp_port=None):
+    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None):
         """Start MediaMTX server"""
         if not self.download_mediamtx():
             return False
         
-        self.create_config(cameras, rtsp_port=rtsp_port)
+        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password)
         
         print("\n🚀 Starting MediaMTX RTSP Server...")
         
@@ -457,9 +503,9 @@ class MediaMTXManager:
             self.process = None
             print("✓ MediaMTX stopped")
     
-    def restart(self, cameras):
+    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None):
         """Restart MediaMTX with new configuration"""
         print("\n🔄 Restarting MediaMTX...")
         self.stop()
         time.sleep(3)
-        return self.start(cameras)
+        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password)
