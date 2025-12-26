@@ -4,11 +4,19 @@ import time
 import socket
 import struct
 import threading
+import hashlib
+import base64
+import re
+import logging
 from pathlib import Path
 from flask import Flask, request, Response
 from flask_cors import CORS
 from datetime import datetime, timezone
 import sys
+
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Try to import zoneinfo
 if sys.version_info >= (3, 9):
@@ -25,29 +33,118 @@ else:
 
 from .config import CONFIG_FILE
 
+# Allowed CORS origins - can be configured via environment variable
+import os
+ALLOWED_CORS_ORIGINS = os.environ.get(
+    'ONVIF_CORS_ORIGINS',
+    'http://localhost:5552,http://127.0.0.1:5552'
+).split(',')
+
+
 class ONVIFService:
     def __init__(self, camera):
         self.camera = camera
         self.app = None
-        
+
+    def _verify_ws_username_token(self, data, expected_username, expected_password):
+        """
+        Verify WS-UsernameToken authentication.
+        Supports both PasswordDigest and PasswordText modes.
+
+        PasswordDigest = Base64(SHA1(Nonce + Created + Password))
+        """
+        # Extract Username
+        username_match = re.search(
+            r'<(?:[^:>]+:)?Username>([^<]+)</(?:[^:>]+:)?Username>',
+            data
+        )
+        if not username_match:
+            return False
+        username = username_match.group(1)
+
+        if username != expected_username:
+            return False
+
+        # Check for PasswordDigest (more secure)
+        password_digest_match = re.search(
+            r'<(?:[^:>]+:)?Password[^>]*Type="[^"]*#PasswordDigest"[^>]*>([^<]+)</(?:[^:>]+:)?Password>',
+            data
+        )
+        if not password_digest_match:
+            # Try alternate format where Type comes after
+            password_digest_match = re.search(
+                r'<(?:[^:>]+:)?Password>([^<]+)</(?:[^:>]+:)?Password>',
+                data
+            )
+            # Check if this is a PasswordDigest by looking at the Type attribute nearby
+            type_match = re.search(r'Type="[^"]*#PasswordDigest"', data)
+            if password_digest_match and type_match:
+                pass  # It's a digest
+            elif password_digest_match:
+                # Check for PasswordText mode
+                password_text_match = re.search(
+                    r'<(?:[^:>]+:)?Password[^>]*>([^<]+)</(?:[^:>]+:)?Password>',
+                    data
+                )
+                if password_text_match:
+                    password_text = password_text_match.group(1)
+                    # Direct password comparison for PasswordText
+                    return password_text == expected_password
+                return False
+
+        if password_digest_match:
+            received_digest = password_digest_match.group(1)
+
+            # Extract Nonce (Base64 encoded)
+            nonce_match = re.search(
+                r'<(?:[^:>]+:)?Nonce[^>]*>([^<]+)</(?:[^:>]+:)?Nonce>',
+                data
+            )
+            if not nonce_match:
+                return False
+            nonce_b64 = nonce_match.group(1)
+
+            # Extract Created timestamp
+            created_match = re.search(
+                r'<(?:[^:>]+:)?Created>([^<]+)</(?:[^:>]+:)?Created>',
+                data
+            )
+            if not created_match:
+                return False
+            created = created_match.group(1)
+
+            try:
+                # Decode nonce from Base64
+                nonce = base64.b64decode(nonce_b64)
+
+                # Calculate expected digest: Base64(SHA1(Nonce + Created + Password))
+                digest_input = nonce + created.encode('utf-8') + expected_password.encode('utf-8')
+                expected_digest = base64.b64encode(
+                    hashlib.sha1(digest_input).digest()
+                ).decode('utf-8')
+
+                return received_digest == expected_digest
+            except Exception:
+                return False
+
+        return False
+
     def create_app(self):
         """Create the Flask app for ONVIF service"""
         app = Flask(f"onvif_camera_{self.camera.id}")
-        CORS(app)
+        CORS(app, origins=ALLOWED_CORS_ORIGINS)
         self.app = app
-        
+
         # Disable Flask logging to reduce overhead
-        import logging
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
-        
+
         # Disable Flask development server warnings
-        import os
         os.environ['FLASK_ENV'] = 'production'
-        
+
         # Get correct local IP for ONVIF URLs (Use assigned IP for Virtual NICs)
         local_ip = self.camera.assigned_ip if self.camera.assigned_ip else socket.gethostbyname(socket.gethostname())
-        
+
         # Authentication decorator for ONVIF endpoints
         def require_auth(f):
             from functools import wraps
@@ -55,38 +152,29 @@ class ONVIFService:
             def decorated(*args, **kwargs):
                 # Check for Basic Auth
                 auth = request.authorization
-                
-                if auth:
-                    pass_len = len(auth.password) if auth.password else 0
-                else:
-                    pass
-                
+
                 # Allow if credentials match Basic Auth
                 if auth and auth.username == self.camera.onvif_username and auth.password == self.camera.onvif_password:
                     return f(*args, **kwargs)
-                
+
                 # Check for SOAP WS-UsernameToken (Found in body)
                 data = request.get_data(as_text=True)
-                
-                # More robust check for UsernameToken
-                if 'UsernameToken' in data and f'>{self.camera.onvif_username}</' in data:
-                     # Check if it's actually inside a username tag
-                     if f'<Username>{self.camera.onvif_username}</Username>' in data or \
-                        f':Username>{self.camera.onvif_username}</' in data:
-                         return f(*args, **kwargs)
-                     return f(*args, **kwargs)
-                
-                if 'Authorization' in request.headers and 'Digest' in request.headers['Authorization']:
-                     pass
-                else:
-                     pass
-                
+
+                # Verify WS-UsernameToken with proper password digest validation
+                if 'UsernameToken' in data:
+                    if self._verify_ws_username_token(
+                        data,
+                        self.camera.onvif_username,
+                        self.camera.onvif_password
+                    ):
+                        return f(*args, **kwargs)
+
                 return Response(
                     'Authentication required', 401,
                     {'WWW-Authenticate': 'Basic realm="ONVIF"'}
                 )
             return decorated
-        
+
         # ONVIF Device Management
         @app.route('/onvif/device_service', methods=['GET', 'POST'], endpoint=f'device_service_{self.camera.id}')
         @require_auth
@@ -94,94 +182,76 @@ class ONVIFService:
             try:
                 if request.method == 'GET':
                     return self._get_device_wsdl()
-                
+
                 # Parse SOAP request
                 soap_body = request.data.decode('utf-8')
-                
+
                 # GetDeviceInformation
                 if 'GetDeviceInformation' in soap_body:
                     return self._handle_get_device_info()
-                
+
                 # GetCapabilities
                 elif 'GetCapabilities' in soap_body:
                     return self._handle_get_capabilities(local_ip)
-                
+
                 # GetServices
                 elif 'GetServices' in soap_body:
                     return self._handle_get_services(local_ip)
-                
+
                 # GetSystemDateAndTime
                 elif 'GetSystemDateAndTime' in soap_body:
                     return self._handle_get_system_date_time()
-                
+
                 # GetNetworkInterfaces
                 elif 'GetNetworkInterfaces' in soap_body:
                     return self._handle_get_network_interfaces()
-                
+
                 # Default response
                 return self._handle_get_device_info()
-                
+
             except Exception as e:
-                print(f"  ❌ Error handling request: {e}")
+                logger.error("Error handling request: %s", e)
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
-            
+
         # Root Route: Handle ONVIF Device Service at the root for convenience
         @app.route('/', methods=['GET', 'POST'], endpoint=f'root_service_{self.camera.id}')
         def root_service():
             return device_service()
 
-        # ONVIF Media Service
-        @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}_v1')
-        def media_service_v1():
-            if request.method == 'GET':
-                return self._get_media_wsdl()
-            
-            soap_body = request.data.decode('utf-8')
-            
-            # GetProfiles
-            if 'GetProfiles' in soap_body:
-                return self._handle_get_profiles()
-            
-            # GetStreamUri
-            elif 'GetStreamUri' in soap_body:
-                return self._handle_get_stream_uri(local_ip)
-            
-            return self._handle_get_profiles()
-        
-        # ONVIF Media Service (separate endpoint for ODM compatibility)
-        @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}_v2')
+        # ONVIF Media Service (with authentication)
+        @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}')
         @require_auth
-        def media_service_v2():
+        def media_service():
             try:
                 if request.method == 'GET':
                     return self._get_media_wsdl()
-                
+
                 # Parse SOAP request
                 soap_body = request.data.decode('utf-8')
-                
+
                 # GetProfiles
                 if 'GetProfiles' in soap_body:
                     return self._handle_get_profiles()
-                
+
                 # GetStreamUri
                 elif 'GetStreamUri' in soap_body:
                     return self._handle_get_stream_uri(local_ip)
-                
+
                 # GetVideoSources
                 elif 'GetVideoSources' in soap_body:
                     return self._handle_get_video_sources()
-                
+
                 # Default: return profiles
                 return self._handle_get_profiles()
-                
+
             except Exception as e:
-                print(f"  ❌ Error in media service: {e}")
+                logger.error("Error in media service: %s", e)
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
-                
+
         return app
 
     def start_discovery_service(self, local_ip):
@@ -189,30 +259,32 @@ class ONVIFService:
         # Check if discovery is already running for this camera
         if hasattr(self, '_discovery_thread') and self._discovery_thread and self._discovery_thread.is_alive():
             return
-        
+
         def discovery_responder():
             MCAST_GRP = '239.255.255.250'
             MCAST_PORT = 3702
-            
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.settimeout(2.0)
-            
+
             try:
                 sock.bind(('', MCAST_PORT))
                 mreq = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-                print(f"  ✓ WS-Discovery listener started for {self.camera.name} on {local_ip}:{self.camera.onvif_port}")
+                logger.info("WS-Discovery listener started for %s on %s:%s",
+                           self.camera.name, local_ip, self.camera.onvif_port)
             except Exception as e:
-                print(f"  ⚠️ Discovery service error: {e}")
-                print(f"  ℹ️ You can still add camera manually in ODM: {local_ip}:{self.camera.onvif_port}")
+                logger.warning("Discovery service error: %s", e)
+                logger.info("You can still add camera manually in ODM: %s:%s",
+                           local_ip, self.camera.onvif_port)
                 return
-            
+
             while self.camera.status == "running":
                 try:
                     data, addr = sock.recvfrom(10240)
                     message = data.decode('utf-8', errors='ignore')
-                    
+
                     # Respond to any Probe request
                     if 'Probe' in message or 'probe' in message.lower():
                         # Extract MessageID if present
@@ -225,7 +297,7 @@ class ONVIFService:
                                     msg_id = message[start:end]
                             except:
                                 pass
-                        
+
                         response = f'''<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:SOAP-ENC="http://www.w3.org/2003/05/soap-encoding"
@@ -252,24 +324,24 @@ class ONVIFService:
         </d:ProbeMatches>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>'''
-                        
+
                         try:
                             sock.sendto(response.encode('utf-8'), addr)
                         except Exception as e:
-                            print(f"  ✗ Failed to send response: {e}")
-                        
+                            logger.error("Failed to send response: %s", e)
+
                 except socket.timeout:
                     continue
                 except Exception as e:
                     if self.camera.status == "running":
-                        print(f"  Discovery error: {e}")
+                        logger.debug("Discovery error: %s", e)
                     break
-            
+
             try:
                 sock.close()
             except:
                 pass
-        
+
         # Start discovery thread and store reference
         self._discovery_thread = threading.Thread(target=discovery_responder, daemon=True)
         self._discovery_thread.start()
@@ -289,7 +361,7 @@ class ONVIFService:
         </tds:GetDeviceInformationResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_capabilities(self, local_ip):
@@ -372,7 +444,7 @@ class ONVIFService:
         </tds:GetCapabilitiesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_services(self, local_ip):
@@ -401,7 +473,7 @@ class ONVIFService:
         </tds:GetServicesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_system_date_time(self):
@@ -409,7 +481,7 @@ class ONVIFService:
         now = datetime.now(timezone.utc)
         utc_now = now
         tz_string = "UTC"
-        
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
@@ -450,13 +522,13 @@ class ONVIFService:
         </tds:GetSystemDateAndTimeResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_network_interfaces(self):
         """Handle GetNetworkInterfaces request"""
         mac = self.camera.mac_address
-        
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
@@ -484,7 +556,7 @@ class ONVIFService:
         </tds:GetNetworkInterfacesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_profiles(self):
@@ -554,19 +626,19 @@ class ONVIFService:
         </trt:GetProfilesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_stream_uri(self, local_ip):
         """Handle GetStreamUri request"""
         # Parse the SOAP request to determine which profile is being requested
         soap_body = request.data.decode('utf-8')
-        
+
         # Check which profile token is requested
         stream_path = f"{self.camera.path_name}_main"  # Default to main stream
         if 'profile_2' in soap_body or 'subStream' in soap_body or 'SubStream' in soap_body:
             stream_path = f"{self.camera.path_name}_sub"
-        
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
@@ -582,13 +654,13 @@ class ONVIFService:
         </trt:GetStreamUriResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _get_device_wsdl(self):
         """Return device service WSDL"""
         local_ip = self.camera.assigned_ip if self.camera.assigned_ip else socket.gethostbyname(socket.gethostname())
-        
+
         wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
              xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
@@ -605,7 +677,7 @@ class ONVIFService:
     def _get_media_wsdl(self):
         """Return media service WSDL"""
         local_ip = self.camera.assigned_ip if self.camera.assigned_ip else socket.gethostbyname(socket.gethostname())
-        
+
         wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
              xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
@@ -644,5 +716,5 @@ class ONVIFService:
         </trt:GetVideoSourcesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')

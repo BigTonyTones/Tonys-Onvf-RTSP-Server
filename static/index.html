@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tonys Onvif-RTSP Server</title>
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 min-h-screen transition-colors duration-300">
+    <div class="container mx-auto px-4 py-6 max-w-7xl">
+        <!-- Header -->
+        <header class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 mb-6 transition-colors duration-300">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
+                        <span class="text-3xl">&#127909;</span>
+                        Tonys Onvif-RTSP Server
+                        <span class="text-sm font-normal bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">v4.0</span>
+                    </h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Virtual ONVIF camera management dashboard</p>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Stats Badge -->
+                    <div id="server-stats" class="hidden sm:flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-700 rounded-lg text-sm font-mono text-slate-600 dark:text-slate-300">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                        <span>CPU: --% | MEM: --MB</span>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors" title="Toggle theme">
+                        <svg class="w-5 h-5 text-slate-600 dark:text-slate-300 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                        <svg class="w-5 h-5 text-slate-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 mt-6">
+                <button onclick="openAddModal()" class="btn-primary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Add Camera
+                </button>
+                <button onclick="startAll()" class="btn-success">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/></svg>
+                    Start All
+                </button>
+                <button onclick="stopAll()" class="btn-danger">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+                    Stop All
+                </button>
+                <button onclick="toggleMatrixView(true)" class="btn-secondary bg-purple-600 hover:bg-purple-700 text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    Matrix View
+                </button>
+                <button onclick="openSettingsModal()" class="btn-secondary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Settings
+                </button>
+                <button onclick="restartServer()" class="btn-secondary bg-amber-500 hover:bg-amber-600 text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Restart
+                </button>
+                <button onclick="stopServer()" class="btn-danger">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                    Stop Server
+                </button>
+                <button onclick="openAboutModal()" class="btn-secondary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    About
+                </button>
+            </div>
+        </header>
+
+        <!-- Camera Grid -->
+        <div id="camera-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-12 text-center transition-colors duration-300">
+            <div class="text-6xl mb-4">&#128249;</div>
+            <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">No Cameras Configured</h2>
+            <p class="text-slate-500 dark:text-slate-400 mb-6">Add your first virtual ONVIF camera to get started</p>
+            <button onclick="openAddModal()" class="btn-primary">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Your First Camera
+            </button>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 py-6 text-center border-t border-slate-200 dark:border-slate-700">
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-3">&copy; 2025 Tonys Onvif-RTSP Server v4.0 - Created by Tony</p>
+            <a href="https://buymeacoffee.com/tonytones" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-all hover:scale-105 shadow-lg">
+                &#9749; Buy Tony a coffee
+            </a>
+        </footer>
+    </div>
+
+    <!-- Matrix View Overlay -->
+    <div id="matrix-overlay" class="fixed inset-0 bg-black z-50 hidden flex-col p-4">
+        <div class="flex justify-between items-center mb-4">
+            <span class="text-slate-400 text-sm">F11 for Full Screen - ESC to Exit</span>
+            <div class="flex gap-3">
+                <button onclick="toggleFullScreen()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+                    &#9974; Full Screen
+                </button>
+                <button onclick="toggleMatrixView(false)" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+                    &#10006; Close Matrix
+                </button>
+            </div>
+        </div>
+        <div id="matrix-grid" class="flex-1 grid gap-2"></div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="camera-modal" class="modal">
+        <div class="modal-content max-w-4xl">
+            <div class="modal-header">
+                <h2 id="modal-title" class="text-xl font-bold text-slate-800 dark:text-white">Add New Camera</h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">&times;</button>
+            </div>
+
+            <div class="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-4 rounded-r-lg mb-6">
+                <p class="text-amber-800 dark:text-amber-200 text-sm">
+                    <strong>&#9888; Special Characters:</strong> Passwords with # @ : / etc. are automatically URL-encoded
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+                <button class="tab active" onclick="switchAddMode('manual')" id="tab-manual">Manual Entry</button>
+                <button class="tab" onclick="switchAddMode('onvif')" id="tab-onvif">Import from ONVIF</button>
+            </div>
+
+            <!-- ONVIF Probe Form -->
+            <div id="onvif-probe-form" class="hidden">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label">Camera IP / Host</label>
+                        <input type="text" class="form-input" id="probeHost" placeholder="192.168.1.50">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ONVIF Port</label>
+                        <input type="number" class="form-input" id="probePort" value="80">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" id="probeUser" value="admin">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="probePass">
+                    </div>
+                </div>
+                <button type="button" class="btn-primary w-full" onclick="probeOnvif()" id="btnProbe">
+                    &#128269; Scan Camera
+                </button>
+                <div id="probe-results" class="mt-6"></div>
+            </div>
+
+            <!-- Camera Form -->
+            <form id="camera-form" onsubmit="saveCamera(event)">
+                <input type="hidden" id="camera-id" value="">
+
+                <!-- Copy From Dropdown -->
+                <div class="form-group" id="copy-from-group">
+                    <label class="form-label">&#128203; Copy Settings From</label>
+                    <select class="form-input" id="copyFrom" onchange="copyCameraSettings(this.value)">
+                        <option value="">Select a camera to copy...</option>
+                    </select>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Select an existing camera to automatically fill in the details below</p>
+                </div>
+
+                <hr class="my-6 border-slate-200 dark:border-slate-700">
+
+                <div class="form-group">
+                    <label class="form-label">Camera Name</label>
+                    <input type="text" class="form-input" id="name" placeholder="Front Door" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label">Camera IP/Host</label>
+                        <input type="text" class="form-input" id="host" placeholder="192.168.1.100" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">RTSP Port</label>
+                        <input type="number" class="form-input" id="rtspPort" value="554" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" id="username" value="admin">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="password">
+                    </div>
+                </div>
+
+                <!-- Stream Settings -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 my-6 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                    <!-- Main Stream -->
+                    <div class="space-y-4">
+                        <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                            &#127909; Main Stream Settings
+                        </h3>
+                        <div class="form-group">
+                            <label class="form-label">Stream Path</label>
+                            <input type="text" class="form-input" id="mainPath" placeholder="/stream1" value="/stream1" required>
+                        </div>
+                        <div class="p-4 bg-white dark:bg-slate-800 rounded-lg space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-slate-600 dark:text-slate-300">&#128260; Transcode Main</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="transcodeMain">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="number" class="form-input" id="mainWidth" placeholder="Width" value="1920" required>
+                                <input type="number" class="form-input" id="mainHeight" placeholder="Height" value="1080" required>
+                            </div>
+                            <input type="number" class="form-input" id="mainFramerate" placeholder="FPS" value="30" required>
+                        </div>
+                        <button type="button" class="btn-secondary w-full text-sm" onclick="fetchStreamInfo('main')">
+                            &#128269; Fetch Main Stream Info
+                        </button>
+                    </div>
+
+                    <!-- Sub Stream -->
+                    <div class="space-y-4">
+                        <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                            &#128249; Sub Stream Settings
+                        </h3>
+                        <div class="form-group">
+                            <label class="form-label">Stream Path</label>
+                            <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2" required>
+                        </div>
+                        <div class="p-4 bg-white dark:bg-slate-800 rounded-lg space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-slate-600 dark:text-slate-300">&#128260; Transcode Sub</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="transcodeSub">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640" required>
+                                <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480" required>
+                            </div>
+                            <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15" required>
+                        </div>
+                        <button type="button" class="btn-secondary w-full text-sm" onclick="fetchStreamInfo('sub')">
+                            &#128269; Fetch Sub Stream Info
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ONVIF Settings -->
+                <div class="form-group">
+                    <label class="form-label">&#128268; ONVIF Port (leave empty for auto-assign)</label>
+                    <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Default: Auto-assigned starting from 8001</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label">&#128100; ONVIF Username</label>
+                        <input type="text" class="form-input" id="onvifUsername" value="admin">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">&#128273; ONVIF Password</label>
+                        <input type="text" class="form-input" id="onvifPassword" value="admin">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="autoStart" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">Auto-start camera on server startup</span>
+                    </label>
+                </div>
+
+                <!-- Linux Network Settings -->
+                <div id="linux-network-section" class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+                        &#127760; Network Settings (Linux Only)
+                    </h3>
+
+                    <div class="form-group">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="useVirtualNic" onchange="toggleNetworkFields()" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm text-slate-700 dark:text-slate-300">Use Virtual Network Interface (MACVLAN)</span>
+                        </label>
+                    </div>
+
+                    <div id="vnic-fields" class="hidden space-y-4 mt-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div class="form-group">
+                            <label class="form-label">&#128268; Parent Interface</label>
+                            <select class="form-input" id="parentInterface" onchange="toggleManualInterface()">
+                                <option value="">Detecting interfaces...</option>
+                            </select>
+                            <div id="manual-interface-container" class="hidden mt-2">
+                                <input type="text" class="form-input" id="parentInterfaceManual" placeholder="Type interface name (e.g. ens34)">
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter the exact name from 'ip link' command</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">&#127380; Virtual MAC Address</label>
+                            <div class="flex gap-2">
+                                <input type="text" class="form-input flex-1" id="nicMac" placeholder="00:00:00:00:00:00">
+                                <button type="button" class="btn-secondary px-4" onclick="randomizeMac()">&#127922;</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">&#128225; IP Configuration</label>
+                            <select class="form-input" id="ipMode" onchange="toggleStaticFields()">
+                                <option value="dhcp">DHCP (Automatic)</option>
+                                <option value="static">Static IP</option>
+                            </select>
+                        </div>
+
+                        <div id="static-ip-fields" class="hidden space-y-4">
+                            <div class="form-group">
+                                <label class="form-label">&#128205; Static IP Address</label>
+                                <input type="text" class="form-input" id="staticIp" placeholder="192.168.1.50">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label class="form-label">&#129521; Netmask (CIDR)</label>
+                                    <input type="text" class="form-input" id="netmask" value="24" placeholder="24">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">&#127753; Gateway</label>
+                                    <input type="text" class="form-input" id="gateway" placeholder="192.168.1.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Common Formats Info -->
+                <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <strong>Common formats:</strong><br>
+                        Hikvision: /Streaming/Channels/101<br>
+                        Reolink: /h264Preview_01_main<br>
+                        Dahua: /cam/realmonitor?channel=1&amp;subtype=0
+                    </p>
+                </div>
+
+                <button type="submit" class="btn-success w-full mt-6">
+                    &#128190; Save Camera
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content max-w-lg">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold text-slate-800 dark:text-white">Server Settings</h2>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">&times;</button>
+            </div>
+
+            <form onsubmit="saveSettings(event)" class="space-y-4">
+                <div class="form-group">
+                    <label class="form-label">&#127760; Server IP / Hostname</label>
+                    <input type="text" class="form-input" id="serverIp" placeholder="192.168.1.10">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Leave as 'localhost' for local access, or enter your server's IP address</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">&#128268; RTSP Server Port</label>
+                    <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">&#127912; UI Theme</label>
+                    <select class="form-input" id="themeSelect">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">&#128208; Dashboard Layout</label>
+                    <select class="form-input" id="gridColumnsSelect">
+                        <option value="2">2 Columns (Large Cards)</option>
+                        <option value="3">3 Columns (Compact View)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="openBrowser" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">Open Browser on Startup</span>
+                    </label>
+                </div>
+
+                <div class="form-group linux-only">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="autoBoot" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">Auto-start on System Boot (Ubuntu Service)</span>
+                    </label>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 ml-7">Creates and enables a systemd service to start this server automatically</p>
+                </div>
+
+                <button type="submit" class="btn-success w-full">
+                    &#128190; Save Settings
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="about-modal" class="modal">
+        <div class="modal-content max-w-3xl">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold text-slate-800 dark:text-white">About Tonys Onvif-RTSP Server</h2>
+                <button onclick="closeAboutModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">&times;</button>
+            </div>
+
+            <div class="prose dark:prose-invert max-w-none">
+                <p class="text-slate-600 dark:text-slate-300 mb-4">
+                    Hello, my name is <strong class="text-slate-800 dark:text-white">Tony</strong>. This program was developed to address two primary needs:
+                </p>
+
+                <div class="bg-slate-50 dark:bg-slate-700/50 p-6 rounded-xl border-l-4 border-blue-500 space-y-4">
+                    <div>
+                        <h3 class="font-semibold text-slate-800 dark:text-white mb-2">1. Ubiquiti Protect NVR Compatibility</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-300">
+                            The Ubiquiti Protect NVR platform has limited compatibility with many generic ONVIF cameras.
+                            This tool bridges that gap by allowing incompatible RTSP streams to be imported and presented
+                            as fully compliant virtual ONVIF cameras.
+                        </p>
+                        <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">
+                            Additionally, Ubiquiti Protect requires a <strong>unique MAC address</strong> for each camera, which can be achieved through:
+                        </p>
+                        <ul class="text-sm text-slate-600 dark:text-slate-300 list-disc list-inside mt-2 space-y-1">
+                            <li>Running in a virtualized environment with multiple virtual NICs</li>
+                            <li>Installing additional physical network interface cards</li>
+                            <li>Using Linux macvlan networking (fully supported and tested on Ubuntu 25)</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-slate-800 dark:text-white mb-2">2. Stream Rebroadcasting and Performance Optimization</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-300">
+                            Many physical cameras struggle to handle multiple concurrent connections, often resulting in lag or instability.
+                            This server functions as a high-performance proxy, efficiently managing multiple viewers while minimizing load
+                            on the original camera hardware.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center gap-4 mt-6">
+                    <div class="flex gap-4">
+                        <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank"
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-lg transition-all hover:scale-105">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                            View on GitHub
+                        </a>
+                        <a href="https://buymeacoffee.com/tonytones" target="_blank"
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg transition-all hover:scale-105">
+                            &#9749; Buy me a coffee
+                        </a>
+                    </div>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Built with &#10084; for the surveillance community.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black/50 z-[100] hidden items-center justify-center">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-8 flex flex-col items-center gap-4">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="text-slate-600 dark:text-slate-300" id="loading-text">Loading...</p>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

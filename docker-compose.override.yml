@@ -1,0 +1,148 @@
+# =============================================================================
+# Tonys Onvif-RTSP Server - Docker Compose Override (Development)
+# =============================================================================
+# This file automatically extends docker-compose.yml when both files exist.
+# It provides development-specific configuration:
+# - Live code reloading via volume mounts
+# - Debug settings and verbose logging
+# - Relaxed resource limits for debugging
+#
+# Usage:
+#   Development (auto-uses override):
+#     docker compose up
+#
+#   Production (ignore override):
+#     docker compose -f docker-compose.yml up
+#
+#   Or rename this file to docker-compose.dev.yml and use:
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# =============================================================================
+
+services:
+  onvif-rtsp-server:
+    # -------------------------------------------------------------------------
+    # Build Configuration for Development
+    # -------------------------------------------------------------------------
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Add build arguments for development
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+
+    # -------------------------------------------------------------------------
+    # Development Volume Mounts
+    # -------------------------------------------------------------------------
+    # Mount source code for live reloading without rebuilding the image
+    volumes:
+      # Mount the entire app directory for live code changes
+      # Changes to Python files will be reflected immediately
+      - ./app:/app/app:ro
+
+      # Mount the entry point script
+      - ./run.py:/app/run.py:ro
+
+      # Camera configuration (read-write for runtime changes)
+      - ./camera_config.json:/app/camera_config.json
+
+      # Binary storage (persistent across restarts)
+      - onvif-binaries:/app/bin
+
+      # Mount assets directory (for dashboard screenshot, etc.)
+      - ./assets:/app/assets:ro
+
+    # -------------------------------------------------------------------------
+    # Development Environment Variables
+    # -------------------------------------------------------------------------
+    environment:
+      # Python settings for development
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+      # Enable Flask debug mode
+      # WARNING: Never use debug mode in production!
+      - FLASK_DEBUG=1
+      - FLASK_ENV=development
+
+      # Application debug mode (verbose logging)
+      - ONVIF_DEBUG=true
+      - LOG_LEVEL=DEBUG
+
+      # Disable browser auto-open in container
+      - ONVIF_NO_BROWSER=true
+
+      # Timezone
+      - TZ=UTC
+
+    # -------------------------------------------------------------------------
+    # Development Resource Limits
+    # -------------------------------------------------------------------------
+    # More relaxed limits for development/debugging
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # -------------------------------------------------------------------------
+    # Development Logging
+    # -------------------------------------------------------------------------
+    # More verbose logging for development
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+    # -------------------------------------------------------------------------
+    # Development Labels
+    # -------------------------------------------------------------------------
+    labels:
+      - "com.tonys.environment=development"
+      - "com.tonys.debug=true"
+
+    # -------------------------------------------------------------------------
+    # Standard Input/TTY
+    # -------------------------------------------------------------------------
+    # Enable interactive mode for debugging
+    stdin_open: true
+    tty: true
+
+# =============================================================================
+# Development Workflow Tips
+# =============================================================================
+#
+# 1. Start with live reload:
+#    docker compose up
+#
+# 2. View logs in real-time:
+#    docker compose logs -f
+#
+# 3. Access container shell for debugging:
+#    docker compose exec onvif-rtsp-server /bin/bash
+#
+# 4. Run Python interactively inside container:
+#    docker compose exec onvif-rtsp-server python
+#
+# 5. Run tests inside container:
+#    docker compose exec onvif-rtsp-server pytest
+#
+# 6. Rebuild after Dockerfile or requirements.txt changes:
+#    docker compose build
+#    docker compose up
+#
+# 7. Clean restart (remove volumes):
+#    docker compose down -v
+#    docker compose up --build
+#
+# 8. Check container resource usage:
+#    docker stats onvif-rtsp-server
+#
+# 9. Inspect container:
+#    docker compose exec onvif-rtsp-server ps aux
+#    docker compose exec onvif-rtsp-server netstat -tlnp
+#
+# =============================================================================
