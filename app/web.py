@@ -1,13 +1,12 @@
-
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-import threading
-import subprocess 
 import json
 import os
 import sys
 import psutil
 import time
+import functools
+from datetime import timedelta
+from flask import Flask, jsonify, request, session, redirect, url_for, make_response
+from flask_cors import CORS
 
 from .web_template import get_web_ui_html
 
@@ -21,6 +20,10 @@ def create_web_app(manager):
     app = Flask(__name__)
     CORS(app)
     
+    # Session configuration
+    app.secret_key = getattr(manager, 'secret_key', os.urandom(24))
+    app.permanent_session_lifetime = timedelta(days=30)
+    
     # Initialize stats tracking
     app.stats_last_time = time.time()
     app.stats_last_cpu = 0
@@ -29,7 +32,77 @@ def create_web_app(manager):
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
 
+    # --- Authentication Decorator ---
+    def login_required(f):
+        @functools.wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not manager.auth_enabled:
+                return f(*args, **kwargs)
+                
+            if 'authenticated' not in session:
+                if request.is_json:
+                    return jsonify({'error': 'Authentication required'}), 401
+                return redirect(url_for('login'))
+            return f(*args, **kwargs)
+        return decorated_function
+
+    # --- Auth Routes ---
+    
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if manager.is_setup_required():
+            return redirect(url_for('setup'))
+            
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            remember = request.form.get('remember') == 'true'
+            
+            if manager.verify_login(username, password):
+                session.permanent = remember
+                session['authenticated'] = True
+                return jsonify({'success': True})
+            return jsonify({'success': False, 'error': 'Invalid username or password'}), 401
+            
+        from .web_template import get_login_html
+        return get_login_html()
+
+    @app.route('/setup', methods=['GET', 'POST'])
+    def setup():
+        if not manager.is_setup_required():
+            return redirect(url_for('login'))
+            
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            if not username or not password:
+                return jsonify({'success': False, 'error': 'Username and password required'}), 400
+                
+            manager.setup_user(username, password)
+            session.permanent = True
+            session['authenticated'] = True
+            return jsonify({'success': True})
+            
+        from .web_template import get_setup_html
+        return get_setup_html()
+
+    @app.route('/setup/skip', methods=['POST'])
+    def skip_setup():
+        if not manager.is_setup_required():
+            return jsonify({'success': False, 'error': 'Setup already completed'}), 400
+            
+        manager.skip_setup()
+        session['authenticated'] = True # Mark as "logged in" for this session
+        return jsonify({'success': True})
+
+    @app.route('/logout')
+    def logout():
+        session.pop('authenticated', None)
+        return redirect(url_for('login'))
+
     @app.route('/api/onvif/probe', methods=['POST'])
+    @login_required
     def probe_onvif():
         """Probe an ONVIF camera for profiles"""
         data = request.json
@@ -50,6 +123,7 @@ def create_web_app(manager):
             return jsonify(result), 400
 
     @app.route('/api/server/restart', methods=['POST'])
+    @login_required
     def restart_server():
         """Restart the RTSP server"""
         def do_restart():
@@ -113,6 +187,7 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     @app.route('/')
+    @login_required
     def index():
         settings = manager.load_settings()
         response = app.make_response(get_web_ui_html(settings))
@@ -123,10 +198,12 @@ def create_web_app(manager):
         return response
     
     @app.route('/api/cameras', methods=['GET'])
+    @login_required
     def get_cameras():
         return jsonify([cam.to_dict() for cam in manager.cameras])
     
     @app.route('/api/cameras', methods=['POST'])
+    @login_required
     def add_camera():
         data = request.json
         try:
@@ -165,6 +242,7 @@ def create_web_app(manager):
             return jsonify({'error': str(e)}), 400
     
     @app.route('/api/cameras/<int:camera_id>', methods=['PUT'])
+    @login_required
     def update_camera(camera_id):
         data = request.json
         try:
@@ -206,12 +284,14 @@ def create_web_app(manager):
             return jsonify({'error': str(e)}), 400
     
     @app.route('/api/cameras/<int:camera_id>', methods=['DELETE'])
+    @login_required
     def delete_camera(camera_id):
         if manager.delete_camera(camera_id):
             return '', 204
         return jsonify({'error': 'Camera not found'}), 404
     
     @app.route('/api/cameras/<int:camera_id>/start', methods=['POST'])
+    @login_required
     def start_camera(camera_id):
         camera = manager.get_camera(camera_id)
         if camera:
@@ -225,6 +305,7 @@ def create_web_app(manager):
         return jsonify({'error': 'Camera not found'}), 404
     
     @app.route('/api/cameras/<int:camera_id>/stop', methods=['POST'])
+    @login_required
     def stop_camera(camera_id):
         camera = manager.get_camera(camera_id)
         if camera:
@@ -238,16 +319,19 @@ def create_web_app(manager):
         return jsonify({'error': 'Camera not found'}), 404
     
     @app.route('/api/cameras/start-all', methods=['POST'])
+    @login_required
     def start_all():
         manager.start_all()
         return jsonify([cam.to_dict() for cam in manager.cameras])
     
     @app.route('/api/cameras/stop-all', methods=['POST'])
+    @login_required
     def stop_all():
         manager.stop_all()
         return jsonify([cam.to_dict() for cam in manager.cameras])
     
     @app.route('/api/cameras/<int:camera_id>/fetch-stream-info', methods=['POST'])
+    @login_required
     def fetch_stream_info(camera_id):
         """Fetch stream information using FFprobe"""
         data = request.json
@@ -357,6 +441,7 @@ def create_web_app(manager):
             return jsonify({'error': f'Failed to fetch stream info: {str(e)}'}), 500
     
     @app.route('/api/cameras/<int:camera_id>/auto-start', methods=['POST'])
+    @login_required
     def toggle_auto_start(camera_id):
         """Toggle auto-start setting for a camera"""
         data = request.json
@@ -381,6 +466,7 @@ def create_web_app(manager):
 
     
     @app.route('/api/server/stop', methods=['POST'])
+    @login_required
     def stop_server():
         """Stop the entire server"""
         def do_stop():
@@ -405,10 +491,12 @@ def create_web_app(manager):
         return jsonify({'message': 'Server stop initiated'})
     
     @app.route('/api/settings', methods=['GET'])
+    @login_required
     def get_settings():
         return jsonify(manager.load_settings())
     
     @app.route('/api/settings', methods=['POST'])
+    @login_required
     def save_settings():
         data = request.json
         try:
@@ -418,6 +506,7 @@ def create_web_app(manager):
             return jsonify({'error': str(e)}), 400
     
     @app.route('/api/network/interfaces')
+    @login_required
     def get_network_interfaces():
         """Get list of physical network interfaces (Linux only)"""
         if not LinuxNetworkManager.is_linux():

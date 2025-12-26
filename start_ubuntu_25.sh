@@ -10,9 +10,16 @@ echo "============================================================"
 # 1. Install system-level Python dependencies (only if missing)
 echo "📦 Checking system dependencies..."
 if ! python3 -c "import venv" &> /dev/null; then
-    echo "  🔧 Installing missing system dependencies..."
-    sudo apt update
-    sudo apt install -y python3-full python3-venv
+    echo "  ⚠️  Missing system dependencies: python3-full, python3-venv"
+    echo "  These are required to create a Python virtual environment."
+    read -p "  ❓ Would you like to install them now via apt? (y/n): " confirm
+    if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+        sudo apt update
+        sudo apt install -y python3-full python3-venv
+    else
+        echo "  ❌ Installation skipped. Please install them manually to continue."
+        exit 1
+    fi
 else
     echo "  ✅ System dependencies already installed."
 fi
@@ -32,8 +39,15 @@ source venv/bin/activate
 # 4. Install initial required Python packages
 echo "📥 Checking Python packages..."
 if ! python3 -c "import flask" &> /dev/null; then
-    echo "  📥 Installing missing core Python packages..."
-    pip install flask flask-cors requests pyyaml psutil
+    echo "  ⚠️  Missing core Python packages: flask, flask-cors, requests, pyyaml, psutil"
+    read -p "  ❓ Would you like to install them now via pip? (y/n): " confirm
+    if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+        echo "  📥 Installing packages..."
+        pip install flask flask-cors requests pyyaml psutil
+    else
+        echo "  ❌ Installation skipped. Please install dependencies manually."
+        exit 1
+    fi
 else
     echo "  ✅ Core Python packages already installed."
 fi

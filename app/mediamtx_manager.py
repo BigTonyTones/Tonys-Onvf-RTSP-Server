@@ -127,6 +127,17 @@ class MediaMTXManager:
         print(f"  Platform: {system} {machine}")
         print(f"  Downloading from: {url}")
         
+        # Ask for confirmation
+        try:
+            confirm = input(f"\n❓ Would you like to download and install MediaMTX {version}? (y/n): ")
+            if confirm.lower() not in ['y', 'yes']:
+                print("❌ Installation cancelled by user.")
+                return False
+        except EOFError:
+            # Handle non-interactive environments
+            print("⚠️  Non-interactive environment detected, proceeding with download...")
+            pass
+        
         try:
             # Download with progress
             response = requests.get(url, stream=True)

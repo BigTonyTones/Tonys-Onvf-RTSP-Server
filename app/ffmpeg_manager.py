@@ -65,7 +65,20 @@ class FFmpegManager:
             return False
         
         print(f"  Platform: {system} {machine}")
+        print(f"  Note: These are the official recommended static builds linked from ffmpeg.org")
         print(f"  Downloading from: {url}")
+        
+        # Ask for confirmation
+        try:
+            confirm = input(f"\n❓ Would you like to download and install FFmpeg from this source? (y/n): ")
+            if confirm.lower() not in ['y', 'yes']:
+                print("❌ Installation cancelled by user.")
+                return False
+        except EOFError:
+            # Handle non-interactive environments
+            print("⚠️  Non-interactive environment detected, proceeding with download...")
+            pass
+        
         
         try:
             # Download with progress

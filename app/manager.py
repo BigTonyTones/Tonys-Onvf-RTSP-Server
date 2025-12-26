@@ -3,8 +3,11 @@ import os
 import sys
 import threading
 import tempfile
+import secrets
+import string
 from pathlib import Path
 from urllib.parse import quote
+from werkzeug.security import generate_password_hash, check_password_hash
 from .config import CONFIG_FILE, MEDIAMTX_PORT
 from .camera import VirtualONVIFCamera
 from .onvif_service import ONVIFService
@@ -22,6 +25,13 @@ class CameraManager:
         self.mediamtx = MediaMTXManager()
         self.service_mgr = LinuxServiceManager()
         self._lock = threading.Lock()
+        
+        # Auth settings
+        self.auth_enabled = False
+        self.username = None
+        self.password_hash = None
+        self.session_token = None
+        
         self.load_config()
         
     def load_config(self):
@@ -46,6 +56,12 @@ class CameraManager:
             self.grid_columns = config.get('settings', {}).get('gridColumns', 3)
             self.rtsp_port = config.get('settings', {}).get('rtspPort', 8554)
             self.auto_boot = config.get('settings', {}).get('autoBoot', False)
+            
+            # Load auth settings
+            auth = config.get('auth', {})
+            self.auth_enabled = auth.get('enabled', False)
+            self.username = auth.get('username')
+            self.password_hash = auth.get('password_hash')
         else:
             self.server_ip = 'localhost'
             self.open_browser = True
@@ -66,6 +82,11 @@ class CameraManager:
                 'gridColumns': getattr(self, 'grid_columns', 3),
                 'rtspPort': getattr(self, 'rtsp_port', 8554),
                 'autoBoot': getattr(self, 'auto_boot', False)
+            },
+            'auth': {
+                'enabled': getattr(self, 'auth_enabled', False),
+                'username': getattr(self, 'username', None),
+                'password_hash': getattr(self, 'password_hash', None)
             }
         }
         
@@ -110,7 +131,9 @@ class CameraManager:
             'theme': self.theme, 
             'gridColumns': self.grid_columns,
             'rtspPort': self.rtsp_port,
-            'autoBoot': self.auto_boot
+            'autoBoot': self.auto_boot,
+            'authEnabled': self.auth_enabled,
+            'username': self.username
         }
     
     def save_settings(self, settings):
@@ -134,6 +157,23 @@ class CameraManager:
                     if not success:
                         raise Exception(f"Failed to disable auto-boot: {msg}")
             self.auto_boot = new_auto_boot
+
+        # Handle Auth toggle
+        new_auth_enabled = settings.get('authEnabled', False)
+        new_username = settings.get('username')
+        new_password = settings.get('password')
+        
+        if new_auth_enabled:
+            if new_username:
+                self.username = new_username
+            if new_password:
+                self.password_hash = generate_password_hash(new_password)
+            
+            # If still no username/password after potential update, can't enable
+            if not self.username or not self.password_hash:
+                 new_auth_enabled = False
+        
+        self.auth_enabled = new_auth_enabled
         
         self.save_config()
         return {
@@ -142,7 +182,9 @@ class CameraManager:
             'theme': self.theme, 
             'gridColumns': self.grid_columns, 
             'rtspPort': self.rtsp_port,
-            'autoBoot': self.auto_boot
+            'autoBoot': self.auto_boot,
+            'authEnabled': self.auth_enabled,
+            'username': self.username
         }
     
     def is_port_available(self, port, exclude_camera_id=None):
@@ -359,3 +401,49 @@ class CameraManager:
         for camera in self.cameras:
             camera.stop()
         self.mediamtx.restart(self.cameras)
+
+    # --- Authentication Methods ---
+    
+    def is_setup_required(self):
+        """Returns True if no preference is stored at all"""
+        # We'll use a hidden setting to track if the user has ever seen the setup
+        if hasattr(self, 'setup_shown'):
+            return False
+            
+        settings_file = Path(self.config_file)
+        if settings_file.exists():
+            with open(settings_file, 'r') as f:
+                config = json.load(f)
+                if 'auth' in config:
+                    return False
+        return True
+
+    def skip_setup(self):
+        """Disable auth and mark setup as completed"""
+        self.auth_enabled = False
+        self.username = None
+        self.password_hash = None
+        self.save_config()
+        return True
+
+    def setup_user(self, username, password):
+        """Initial setup of username and password"""
+        self.username = username
+        self.password_hash = generate_password_hash(password)
+        self.auth_enabled = True
+        self.save_config()
+        return True
+
+    def verify_login(self, username, password):
+        """Verify login credentials"""
+        if not self.auth_enabled:
+            return True
+            
+        if username == self.username and check_password_hash(self.password_hash, password):
+            return True
+        return False
+
+    def generate_session_token(self):
+        """Generate a random session token"""
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(32))

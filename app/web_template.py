@@ -800,7 +800,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>🎥 Tonys Onvif-RTSP Server v4.0</h1>
+            <h1>🎥 Tonys Onvif-RTSP Server v4.1</h1>
             <div class="actions">
                 <button class="btn btn-success" onclick="openAddModal()">➕ Add Camera</button>
                 <button class="btn btn-primary" onclick="startAll()">▶️ Start All</button>
@@ -810,6 +810,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn btn-primary" onclick="restartServer()" style="background: #f59e0b;">🔄 Restart Server</button>
                 <button class="btn btn-danger" onclick="stopServer()">⏹️ Stop Server</button>
                 <button class="btn btn-primary" onclick="openAboutModal()">ℹ️ About</button>
+                <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background: #4a5568; display: none;">🚪 Logout</a>
             </div>
         </div>
         
@@ -822,7 +823,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">➕ Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2025 Tonys Onvif-RTSP Server v4.0 • Created by Tony</p>
+            <p>© 2025 Tonys Onvif-RTSP Server v4.1 • Created by Tony</p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 ☕ Buy Tony a coffee
             </a>
@@ -1178,6 +1179,29 @@ def get_web_ui_html(current_settings=None):
                         Creates and enables a systemd service to start this server automatically when the computer turns on.
                     </small>
                 </div>
+
+                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="authEnabled" style="width: auto; cursor: pointer;" onchange="toggleAuthFields()">
+                            <span class="form-label" style="margin: 0; color: #667eea; font-weight: 700;">🔐 Enable Web Interface Login</span>
+                        </label>
+                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                            Require a username and password to access this dashboard.
+                        </small>
+                    </div>
+                    
+                    <div id="auth-settings-fields" style="display: none; padding: 15px; background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px dashed #667eea;">
+                        <div class="form-group">
+                            <label class="form-label">Admin Username</label>
+                            <input type="text" class="form-input" id="authUsername" placeholder="admin">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">New Password (leave blank to keep current)</label>
+                            <input type="password" class="form-input" id="authPassword" placeholder="••••••••">
+                        </div>
+                    </div>
+                </div>
                 
                 <button type="submit" class="btn btn-success" style="width:100%">💾 Save Settings</button>
             </form>
@@ -1284,6 +1308,12 @@ def get_web_ui_html(current_settings=None):
                 renderCameras();
                 if (matrixActive) {{
                     renderMatrix();
+                }}
+                
+                // Handle logout button visibility
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {{
+                    logoutBtn.style.display = settings.authEnabled ? 'flex' : 'none';
                 }}
             }} catch (error) {{
                 console.error('Error loading data:', error);
@@ -2070,6 +2100,11 @@ def get_web_ui_html(current_settings=None):
         }}
         
         
+        function toggleAuthFields() {{
+            const enabled = document.getElementById('authEnabled').checked;
+            document.getElementById('auth-settings-fields').style.display = enabled ? 'block' : 'none';
+        }}
+        
         async function toggleAutoStart(id, autoStart) {{
             console.log(`[v2025-12-23] Toggling auto-start for camera ${{id}} to ${{autoStart}}`);
             
@@ -2253,6 +2288,14 @@ def get_web_ui_html(current_settings=None):
                     const autoBootField = document.getElementById('autoBoot');
                     if (autoBootField) autoBootField.checked = settings.autoBoot === true;
                     
+                    const authEnabledField = document.getElementById('authEnabled');
+                    if (authEnabledField) authEnabledField.checked = settings.authEnabled === true;
+                    
+                    const authUsernameField = document.getElementById('authUsername');
+                    if (authUsernameField) authUsernameField.value = settings.username || '';
+                    
+                    toggleAuthFields();
+                    
                     applyTheme(settings.theme);
                     applyGridLayout(settings.gridColumns || 3);
                 }}
@@ -2298,7 +2341,10 @@ def get_web_ui_html(current_settings=None):
                 theme: document.getElementById('themeSelect').value,
                 gridColumns: parseInt(document.getElementById('gridColumnsSelect').value),
                 rtspPort: parseInt(document.getElementById('rtspPortSettings').value || 8554),
-                autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false
+                autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
+                authEnabled: document.getElementById('authEnabled').checked,
+                username: document.getElementById('authUsername').value,
+                password: document.getElementById('authPassword').value
             }};
             
             try {{
@@ -2513,6 +2559,285 @@ def get_web_ui_html(current_settings=None):
                 }}
             }}
         }}
+    </script>
+</body>
+</html>
+"""
+
+def get_login_html():
+    """Generate Login Page HTML"""
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Tonys Onvif Server</title>
+    <style>
+        :root {{
+            --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: #ffffff;
+            --text-title: #2d3748;
+            --text-body: #718096;
+            --btn-primary: #667eea;
+            --btn-hover: #5a67d8;
+            --border: #e2e8f0;
+        }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-bg);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-title);
+        }}
+        .login-card {{
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }}
+        h1 {{ font-size: 24px; margin-bottom: 8px; }}
+        p {{ color: var(--text-body); font-size: 14px; margin-bottom: 30px; }}
+        .form-group {{ margin-bottom: 20px; text-align: left; }}
+        label {{ display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--text-body); }}
+        input[type="text"], input[type="password"] {{
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }}
+        input:focus {{ border-color: var(--btn-primary); }}
+        .checkbox-group {{ display: flex; align-items: center; gap: 8px; margin-bottom: 25px; cursor: pointer; }}
+        .btn {{
+            width: 100%;
+            padding: 14px;
+            background: var(--btn-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }}
+        .btn:hover {{ background: var(--btn-hover); }}
+        .error {{ color: #e53e3e; font-size: 13px; margin-top: 15px; display: none; }}
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>Welcome Back</h1>
+        <p>Login to manage your ONVIF cameras</p>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
+            <div class="checkbox-group" onclick="document.getElementById('remember').click()">
+                <input type="checkbox" id="remember" name="remember">
+                <label style="margin-bottom: 0; text-transform: none; cursor: pointer;">Stay logged in for 30 days</label>
+            </div>
+            <button type="submit" class="btn">Login</button>
+        </form>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').onsubmit = async (e) => {{
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            formData.append('remember', document.getElementById('remember').checked);
+            
+            const errorDiv = document.getElementById('error');
+            errorDiv.style.display = 'none';
+            
+            try {{
+                const res = await fetch('/login', {{
+                    method: 'POST',
+                    body: formData
+                }});
+                const data = await res.json();
+                if (data.success) {{
+                    window.location.href = '/';
+                }} else {{
+                    errorDiv.textContent = data.error || 'Login failed';
+                    errorDiv.style.display = 'block';
+                }}
+            }} catch (err) {{
+                errorDiv.textContent = 'Connection error';
+                errorDiv.style.display = 'block';
+            }}
+        }};
+    </script>
+</body>
+</html>
+"""
+
+def get_setup_html():
+    """Generate Setup Page HTML"""
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initial Setup - Tonys Onvif Server</title>
+    <style>
+        :root {{
+            --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            --card-bg: #ffffff;
+            --text-title: #2d3748;
+            --text-body: #718096;
+            --btn-primary: #38a169;
+            --btn-hover: #2f855a;
+            --border: #e2e8f0;
+        }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--primary-bg);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-title);
+        }}
+        .setup-card {{
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }}
+        h1 {{ font-size: 24px; margin-bottom: 8px; }}
+        p {{ color: var(--text-body); font-size: 14px; margin-bottom: 30px; }}
+        .form-group {{ margin-bottom: 20px; text-align: left; }}
+        label {{ display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--text-body); }}
+        input[type="text"], input[type="password"] {{
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }}
+        input:focus {{ border-color: var(--btn-primary); }}
+        .btn {{
+            width: 100%;
+            padding: 14px;
+            background: var(--btn-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }}
+        .btn:hover {{ background: var(--btn-hover); }}
+        .error {{ color: #e53e3e; font-size: 13px; margin-top: 15px; display: none; }}
+        .info-box {{
+            background: #f0fff4;
+            border: 1px solid #c6f6d5;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #276749;
+            margin-bottom: 25px;
+            text-align: left;
+        }}
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <h1>🚀 First-Time Setup</h1>
+        <p>Create your administrator account</p>
+        
+        <div class="info-box">
+            This account will be used to access the web interface and manage your cameras.
+        </div>
+
+        <form id="setupForm">
+            <div class="form-group">
+                <label>Admin Username</label>
+                <input type="text" name="username" required placeholder="e.g. admin">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required placeholder="Choose a strong password">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="confirm" required placeholder="Re-enter password">
+            </div>
+            <button type="submit" class="btn">Complete Setup</button>
+            <button type="button" onclick="skipSetup()" class="btn" style="background: transparent; color: var(--btn-primary); margin-top: 10px; border: 1px solid var(--btn-primary);">Use Without Login</button>
+        </form>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        async function skipSetup() {{
+            if (!confirm('Are you sure? You can always enable login later in the Settings menu.')) return;
+            
+            try {{
+                const res = await fetch('/setup/skip', {{ method: 'POST' }});
+                const data = await res.json();
+                if (data.success) {{
+                    window.location.href = '/';
+                }}
+            }} catch (err) {{
+                alert('Connection error');
+            }}
+        }}
+
+        document.getElementById('setupForm').onsubmit = async (e) => {{
+            e.preventDefault();
+            const password = e.target.password.value;
+            const confirm = document.getElementById('confirm').value;
+            const errorDiv = document.getElementById('error');
+            
+            errorDiv.style.display = 'none';
+            
+            if (password !== confirm) {{
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }}
+            
+            const formData = new FormData(e.target);
+            try {{
+                const res = await fetch('/setup', {{
+                    method: 'POST',
+                    body: formData
+                }});
+                const data = await res.json();
+                if (data.success) {{
+                    window.location.href = '/';
+                }} else {{
+                    errorDiv.textContent = data.error || 'Setup failed';
+                    errorDiv.style.display = 'block';
+                }}
+            }} catch (err) {{
+                errorDiv.textContent = 'Connection error';
+                errorDiv.style.display = 'block';
+            }}
+        }};
     </script>
 </body>
 </html>
