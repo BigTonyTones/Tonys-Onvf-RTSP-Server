@@ -848,7 +848,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>🎥 Tonys Onvif-RTSP Server v4.1</h1>
+            <h1>🎥 Tonys Onvif-RTSP Server v4.2</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">➕ Add Camera</button>
                 <button class="btn" onclick="startAll()">▶️ Start All</button>
@@ -871,7 +871,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">➕ Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2025 Tonys Onvif-RTSP Server v4.1 • Created by Tony</p>
+            <p>© 2025 Tonys Onvif-RTSP Server v4.2 • Created by Tony</p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 ☕ Buy Tony a coffee
             </a>
