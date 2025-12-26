@@ -1,0 +1,180 @@
+# =============================================================================
+# Docker Ignore File for Tonys Onvif-RTSP Server
+# =============================================================================
+# This file specifies which files and directories should be excluded when
+# building Docker images. This reduces build context size, speeds up builds,
+# and prevents sensitive or unnecessary files from being included in images.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Version Control
+# -----------------------------------------------------------------------------
+# Git repository data is not needed in the container
+.git
+.gitignore
+.gitattributes
+.github
+
+# -----------------------------------------------------------------------------
+# Python Artifacts
+# -----------------------------------------------------------------------------
+# Compiled Python files - these are regenerated at runtime
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python egg files
+*.egg
+*.egg-info/
+.eggs/
+
+# Distribution/packaging
+dist/
+build/
+*.manifest
+*.spec
+
+# Virtual environments - we use a fresh venv in the Docker build
+venv/
+.venv/
+ENV/
+env/
+.env/
+
+# Pip cache
+pip-log.txt
+pip-delete-this-directory.txt
+
+# -----------------------------------------------------------------------------
+# IDE and Editor Files
+# -----------------------------------------------------------------------------
+# These are developer-specific and not needed in production
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# Testing and Coverage
+# -----------------------------------------------------------------------------
+# Test artifacts are not needed in production images
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+tests/
+test_*.py
+
+# -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+# Documentation files increase image size unnecessarily
+docs/
+*.md
+!README.md
+LICENSE
+CHANGELOG*
+CONTRIBUTING*
+
+# -----------------------------------------------------------------------------
+# Docker-related Files
+# -----------------------------------------------------------------------------
+# Don't include Docker configs in the image itself
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
+.docker/
+.dockerignore
+
+# -----------------------------------------------------------------------------
+# OS-generated Files
+# -----------------------------------------------------------------------------
+# Operating system artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Windows shortcuts
+*.lnk
+
+# -----------------------------------------------------------------------------
+# Local Configuration and Secrets
+# -----------------------------------------------------------------------------
+# These should never be in a Docker image
+*.env
+.env*
+!.env.example
+secrets/
+*.pem
+*.key
+*.crt
+credentials*
+
+# Local camera configuration (mounted as volume instead)
+camera_config.json
+
+# -----------------------------------------------------------------------------
+# Binary Downloads
+# -----------------------------------------------------------------------------
+# These are downloaded at runtime or mounted as volumes
+bin/
+ffmpeg*
+mediamtx*
+*.exe
+*.tar.gz
+*.zip
+
+# -----------------------------------------------------------------------------
+# Logs and Temporary Files
+# -----------------------------------------------------------------------------
+# Runtime artifacts should not be in the image
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+*.bak
+
+# -----------------------------------------------------------------------------
+# Assets (Optional - comment out if needed in image)
+# -----------------------------------------------------------------------------
+# Large assets may not be needed in production
+# Uncomment if you need the dashboard screenshot
+# assets/
+
+# -----------------------------------------------------------------------------
+# Scripts Not Needed in Container
+# -----------------------------------------------------------------------------
+# Platform-specific startup scripts
+start_onvif_server.bat
+start_ubuntu_25.sh
+*.bat
+*.sh
+
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
+# Jupyter notebooks (if any)
+*.ipynb
+.ipynb_checkpoints/
+
+# mypy cache
+.mypy_cache/
+
+# Profiling data
+*.prof

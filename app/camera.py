@@ -5,10 +5,14 @@ import time
 from .config import MEDIAMTX_PORT
 from .onvif_service import ONVIFService
 from .linux_network import LinuxNetworkManager
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class VirtualONVIFCamera:
     """Represents a virtual ONVIF camera"""
-    
+
     def __init__(self, config):
         self.id = config['id']
         self.name = config['name']
@@ -28,13 +32,13 @@ class VirtualONVIFCamera:
         # Frame rate settings
         self.main_framerate = config.get('mainFramerate', 30)
         self.sub_framerate = config.get('subFramerate', 15)
-        
+
         # ONVIF authentication credentials
         self.onvif_username = config.get('onvifUsername', 'admin')
         self.onvif_password = config.get('onvifPassword', 'admin')
         self.transcode_sub = config.get('transcodeSub', False)
         self.transcode_main = config.get('transcodeMain', False)
-        
+
         # Network settings (Linux only)
         self.use_virtual_nic = config.get('useVirtualNic', False)
         self.parent_interface = config.get('parentInterface', '')
@@ -45,7 +49,7 @@ class VirtualONVIFCamera:
         self.gateway = config.get('gateway', '')
         self.assigned_ip = None
         self.network_mgr = LinuxNetworkManager() if LinuxNetworkManager.is_linux() else None
-        
+
         self.status = "stopped"
         self.flask_app = None
         self.flask_thread = None
@@ -56,77 +60,79 @@ class VirtualONVIFCamera:
         """Get the MAC address for this camera (Virtual NIC or generated)"""
         if self.nic_mac and ':' in self.nic_mac:
             return self.nic_mac.lower()
-        
+
         # Generate a stable MAC based on camera ID if none provided
         # Use locally administered address range (x2:xx:xx:xx:xx:xx)
         return f"02:00:00:00:00:{self.id:02x}"
-        
+
     def start(self):
         """Mark camera as running and start ONVIF service"""
         self.status = "running"
-        
+
         # Setup Virtual NIC if requested (Linux only)
         if self.use_virtual_nic and self.network_mgr:
             vnic_name = f"vnic_{self.path_name[:10]}"
             if self.network_mgr.create_macvlan(self.parent_interface, vnic_name, self.nic_mac):
                 self.assigned_ip = self.network_mgr.setup_ip(
-                    vnic_name, 
-                    self.ip_mode, 
-                    self.static_ip, 
-                    self.netmask, 
+                    vnic_name,
+                    self.ip_mode,
+                    self.static_ip,
+                    self.netmask,
                     self.gateway
                 )
             # Give the system and router a moment to stabilize
             time.sleep(0.5)
-        
+
         self._start_onvif_service()
-        
+
     def stop(self):
         """Mark camera as stopped and cleanup networking"""
         self.status = "stopped"
-        
+
         # Cleanup Virtual NIC
         if self.use_virtual_nic and self.network_mgr:
             vnic_name = f"vnic_{self.path_name[:10]}"
             self.network_mgr.remove_interface(vnic_name)
-            self.assigned_ip = None
-        
+
+        # Always clear assigned IP when stopping
+        self.assigned_ip = None
+
     def _start_onvif_service(self):
         """Start the ONVIF web service"""
         # Check if already running
         if self.flask_thread and self.flask_thread.is_alive():
-            print(f"  ℹ️  ONVIF service already running on port {self.onvif_port}")
+            logger.info("ONVIF service already running on port %d", self.onvif_port)
             return
-            
+
         self.onvif_service = ONVIFService(self)
         app = self.onvif_service.create_app()
         self.flask_app = app
-        
+
         # Use assigned IP if available, otherwise 0.0.0.0
         bind_ip = self.assigned_ip if self.assigned_ip else '0.0.0.0'
-        
+
         # Run Flask in a separate thread with threading enabled for stability
         self.flask_thread = threading.Thread(
             target=lambda: app.run(
-                host=bind_ip, 
-                port=self.onvif_port, 
-                debug=False, 
+                host=bind_ip,
+                port=self.onvif_port,
+                debug=False,
                 use_reloader=False,
                 threaded=True  # Enable threading for concurrent requests
             ),
             daemon=True
         )
         self.flask_thread.start()
-        
+
         # Start WS-Discovery
         # Use assigned IP for discovery if virtual NIC is active
         local_ip = self.assigned_ip if self.assigned_ip else socket.gethostbyname(socket.gethostname())
-        
+
         self.onvif_service.start_discovery_service(local_ip)
-        
-        print(f"  ✓ ONVIF service started on port {self.onvif_port}")
-        print(f"  ℹ️  Add manually in ODM: {local_ip}:{self.onvif_port}\n")
-        
+
+        logger.info("ONVIF service started on port %d", self.onvif_port)
+        logger.info("Add manually in ODM: %s:%d", local_ip, self.onvif_port)
+
     def to_dict(self):
         """Convert to dictionary for API"""
         return {
@@ -161,7 +167,7 @@ class VirtualONVIFCamera:
             'assignedIp': self.assigned_ip,
             'macAddress': self.mac_address
         }
-    
+
     def to_config_dict(self):
         """Convert to dictionary for config file (excludes runtime status)"""
         return {

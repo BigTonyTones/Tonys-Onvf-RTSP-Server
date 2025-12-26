@@ -1,0 +1,88 @@
+# =============================================================================
+# Tonys Onvif-RTSP Server - Python Dependencies
+# =============================================================================
+# All dependencies are pinned to specific versions for reproducible builds.
+# Update versions periodically to get security fixes and improvements.
+#
+# To update dependencies:
+#   pip install pip-tools
+#   pip-compile requirements.in --upgrade
+#
+# Or manually check for updates:
+#   pip list --outdated
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Web Framework
+# -----------------------------------------------------------------------------
+# Flask: Lightweight WSGI web application framework
+# Used for the web UI dashboard and REST API
+Flask==3.1.0
+
+# Flask-CORS: Cross-Origin Resource Sharing support
+# Enables API access from different origins (useful for development)
+Flask-Cors==5.0.0
+
+# Flask-Limiter: Rate limiting for Flask applications
+# Protects API endpoints from abuse and DoS attacks
+Flask-Limiter==3.8.0
+
+# -----------------------------------------------------------------------------
+# HTTP Client
+# -----------------------------------------------------------------------------
+# Requests: HTTP library for Python
+# Used for ONVIF communication and external API calls
+requests==2.32.3
+
+# -----------------------------------------------------------------------------
+# Configuration
+# -----------------------------------------------------------------------------
+# PyYAML: YAML parser and emitter
+# Used for MediaMTX configuration file handling
+PyYAML==6.0.2
+
+# -----------------------------------------------------------------------------
+# System Monitoring
+# -----------------------------------------------------------------------------
+# psutil: Cross-platform process and system utilities
+# Used for CPU/memory monitoring in the dashboard stats
+psutil==6.1.0
+
+# -----------------------------------------------------------------------------
+# Testing (Development)
+# -----------------------------------------------------------------------------
+# pytest: Testing framework
+# Install with: pip install -r requirements.txt
+# Run tests with: pytest
+pytest==8.3.4
+
+# pytest-cov: Coverage reporting for pytest
+pytest-cov==6.0.0
+
+# -----------------------------------------------------------------------------
+# Optional Dependencies (uncomment if needed)
+# -----------------------------------------------------------------------------
+# Gunicorn: Production WSGI server (alternative to Flask's dev server)
+# gunicorn==23.0.0
+
+# Watchdog: Filesystem events monitoring (for development auto-reload)
+# watchdog==6.0.0
+
+# python-dotenv: Load environment variables from .env files
+# python-dotenv==1.0.1
+
+# -----------------------------------------------------------------------------
+# Timezone Support (Python 3.9+)
+# -----------------------------------------------------------------------------
+# tzdata provides timezone data for the zoneinfo module
+# Required for timezone-aware datetime operations
+tzdata==2024.2
+
+# =============================================================================
+# Security Notes
+# =============================================================================
+# - Always use HTTPS in production (configure reverse proxy)
+# - Keep dependencies updated for security patches
+# - Review Flask-Limiter settings for your use case
+# - Consider using Gunicorn instead of Flask's dev server in production
+# =============================================================================

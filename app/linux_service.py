@@ -3,11 +3,16 @@ import getpass
 import subprocess
 from pathlib import Path
 
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
 class LinuxServiceManager:
     """Manages the systemd service for the ONVIF server on Linux"""
-    
+
     SERVICE_NAME = "tony-onvif-server.service"
-    
+
     @staticmethod
     def is_linux():
         import platform
@@ -30,7 +35,7 @@ class LinuxServiceManager:
         if not self.is_linux() or not self.is_service_installed():
             return False
         try:
-            result = subprocess.run(['systemctl', 'is-enabled', self.SERVICE_NAME], 
+            result = subprocess.run(['systemctl', 'is-enabled', self.SERVICE_NAME],
                                   capture_output=True, text=True)
             return result.stdout.strip() == 'enabled'
         except:
@@ -56,22 +61,22 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 """
-        
+
         try:
             # Create a temporary service file
             temp_path = "/tmp/tony-onvif.service"
             with open(temp_path, "w") as f:
                 f.write(service_content)
-            
+
             # Move to /etc/systemd/system (requires sudo)
-            print(f"📦 Installing systemd service to {self.service_path}...")
+            logger.info("Installing systemd service to %s", self.service_path)
             subprocess.run(['sudo', 'mv', temp_path, self.service_path], check=True)
             subprocess.run(['sudo', 'chmod', '644', self.service_path], check=True)
-            
+
             # Reload, enable and start
             subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
             subprocess.run(['sudo', 'systemctl', 'enable', self.SERVICE_NAME], check=True)
-            
+
             return True, "Service installed and enabled successfully"
         except subprocess.CalledProcessError as e:
             return False, f"Failed to install service: {e}"
@@ -82,19 +87,19 @@ WantedBy=multi-user.target
         """Stop, disable and remove the systemd service"""
         if not self.is_linux():
             return False, "Not running on Linux"
-            
+
         if not self.is_service_installed():
             return True, "Service not installed"
 
         try:
-            print(f"🧹 Disabling systemd service (removing from boot)...")
-            # Only disable and remove the file. DO NOT 'stop' here, 
+            logger.info("Disabling systemd service (removing from boot)")
+            # Only disable and remove the file. DO NOT 'stop' here,
             # or the server will kill itself while trying to respond to the web request.
             subprocess.run(['sudo', 'systemctl', 'disable', self.SERVICE_NAME], check=False)
             if os.path.exists(self.service_path):
                 subprocess.run(['sudo', 'rm', self.service_path], check=True)
             subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
-            
+
             return True, "Service removed from system boot"
         except subprocess.CalledProcessError as e:
             return False, f"Failed to uninstall service: {e}"

@@ -1,0 +1,206 @@
+# =============================================================================
+# Tonys Onvif-RTSP Server - Docker Compose Configuration
+# =============================================================================
+# Note: The 'version' field is deprecated in modern Docker Compose (v2+)
+# and should NOT be included. Docker Compose automatically detects the format.
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Main Application Service
+  # ===========================================================================
+  onvif-rtsp-server:
+    # -------------------------------------------------------------------------
+    # Build Configuration
+    # -------------------------------------------------------------------------
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Pull latest base image on build
+      pull: true
+
+    # Container name for easy identification
+    container_name: onvif-rtsp-server
+
+    # -------------------------------------------------------------------------
+    # Network Mode
+    # -------------------------------------------------------------------------
+    # Using host network mode is REQUIRED for:
+    # - ONVIF device discovery (multicast/broadcast)
+    # - macvlan Virtual NIC functionality
+    # - Direct access to network interfaces
+    #
+    # Alternative: Use bridge mode with port mapping if you don't need
+    # Virtual NIC features. See the commented section below.
+    # -------------------------------------------------------------------------
+    network_mode: host
+
+    # -------------------------------------------------------------------------
+    # Alternative: Bridge Network with Port Mapping
+    # Uncomment this section and comment out 'network_mode: host' above
+    # if you don't need Virtual NIC/macvlan features
+    # -------------------------------------------------------------------------
+    # ports:
+    #   # Web UI
+    #   - "5552:5552"
+    #   # RTSP streaming
+    #   - "8554:8554"
+    #   # MediaMTX API
+    #   - "9997:9997"
+    #   # ONVIF ports range (one per camera)
+    #   - "8001-8100:8001-8100"
+    #   # RTSP UDP ports (if using UDP transport)
+    #   - "8000:8000/udp"
+    #   - "8001:8001/udp"
+
+    # -------------------------------------------------------------------------
+    # Volume Mounts
+    # -------------------------------------------------------------------------
+    volumes:
+      # Camera configuration persistence
+      # This file stores all your camera settings and survives container restarts
+      - ./camera_config.json:/app/camera_config.json
+
+      # Binary storage (ffmpeg and mediamtx)
+      # Mounting this prevents re-downloading binaries on each container start
+      # The app auto-downloads these if not present
+      - onvif-binaries:/app/bin
+
+      # Optional: Mount for custom mediamtx configuration
+      # - ./mediamtx.yml:/app/mediamtx.yml:ro
+
+    # -------------------------------------------------------------------------
+    # Environment Variables
+    # -------------------------------------------------------------------------
+    environment:
+      # Python optimization for containers
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+      # Timezone configuration (change to your timezone)
+      # List: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+      - TZ=UTC
+
+      # =======================================================================
+      # Application Configuration (uncomment to override defaults)
+      # =======================================================================
+      #
+      # Web UI port (default: 5552)
+      # - ONVIF_WEB_PORT=5552
+      #
+      # RTSP streaming port (default: 8554)
+      # - ONVIF_RTSP_PORT=8554
+      #
+      # MediaMTX API port (default: 9997)
+      # - ONVIF_API_PORT=9997
+      #
+      # Path to camera config file inside container (default: camera_config.json)
+      # - ONVIF_CONFIG_FILE=camera_config.json
+      #
+      # Enable debug mode for verbose logging (default: false)
+      # - ONVIF_DEBUG=false
+      #
+      # Disable auto-opening browser - useful in containers (default: false)
+      # Note: Browser won't open in container anyway, but this suppresses the attempt
+      - ONVIF_NO_BROWSER=true
+
+    # -------------------------------------------------------------------------
+    # Restart Policy
+    # -------------------------------------------------------------------------
+    # 'unless-stopped' ensures the container restarts on failure and host reboot
+    # but respects manual stops (docker stop)
+    restart: unless-stopped
+
+    # -------------------------------------------------------------------------
+    # Resource Limits
+    # -------------------------------------------------------------------------
+    # These limits prevent runaway resource usage, especially important
+    # when transcoding is enabled (very CPU intensive)
+    deploy:
+      resources:
+        limits:
+          # Maximum CPU usage (2 cores)
+          # Increase if running many cameras with transcoding
+          cpus: '2.0'
+          # Maximum memory (2GB)
+          # Increase for many concurrent streams
+          memory: 2G
+        reservations:
+          # Guaranteed minimum resources
+          cpus: '0.5'
+          memory: 256M
+
+    # -------------------------------------------------------------------------
+    # Logging Configuration
+    # -------------------------------------------------------------------------
+    # Using json-file driver with rotation to prevent disk filling
+    logging:
+      driver: json-file
+      options:
+        # Maximum size of each log file
+        max-size: "10m"
+        # Maximum number of log files to keep
+        max-file: "3"
+        # Add timestamps to log entries
+        tag: "{{.Name}}/{{.ID}}"
+
+    # -------------------------------------------------------------------------
+    # Security Options
+    # -------------------------------------------------------------------------
+    # Required capabilities for network operations (macvlan, dhclient)
+    cap_add:
+      - NET_ADMIN      # Required for macvlan interface creation
+      - NET_RAW        # Required for DHCP client
+
+    # -------------------------------------------------------------------------
+    # Additional Settings
+    # -------------------------------------------------------------------------
+    # Set hostname for easier identification in logs
+    hostname: onvif-server
+
+    # DNS: Uses host's DNS resolver by default (network_mode: host)
+    # Uncomment below only if you need to override:
+    # dns:
+    #   - 8.8.8.8
+    #   - 8.8.4.4
+
+    # Health check is defined in Dockerfile, but can be overridden here
+    # healthcheck:
+    #   test: ["CMD", "curl", "--fail", "http://localhost:5552/"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 60s
+
+# =============================================================================
+# Named Volumes
+# =============================================================================
+# Named volumes persist data across container restarts and rebuilds
+volumes:
+  # Stores downloaded ffmpeg and mediamtx binaries
+  # This prevents re-downloading on every container start
+  onvif-binaries:
+    driver: local
+
+# =============================================================================
+# Usage Examples
+# =============================================================================
+# Start the server:
+#   docker compose up -d
+#
+# View logs:
+#   docker compose logs -f
+#
+# Stop the server:
+#   docker compose down
+#
+# Rebuild after code changes:
+#   docker compose build --no-cache
+#   docker compose up -d
+#
+# Access shell inside container:
+#   docker compose exec onvif-rtsp-server /bin/bash
+#
+# Check resource usage:
+#   docker stats onvif-rtsp-server
+# =============================================================================
