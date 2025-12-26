@@ -7,6 +7,7 @@ import yaml
 import zipfile
 import tarfile
 import shlex
+import shutil
 from pathlib import Path
 from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT
 from .logging_config import get_logger
@@ -71,6 +72,8 @@ class MediaMTXManager:
         self.process = None
         self.config_file = "mediamtx.yml"
         self.executable = self._get_executable_name()
+        # Check environment variable to disable auto-downloads (security best practice)
+        self._allow_downloads = os.environ.get('ONVIF_ALLOW_BINARY_DOWNLOADS', 'false').lower() in ('true', '1', 'yes')
 
     def _get_executable_name(self):
         """Get the correct executable name for the platform"""
@@ -104,10 +107,34 @@ class MediaMTXManager:
             if late < curr: return False
         return False
 
+    def _get_executable_path(self):
+        """Get the path to mediamtx (system PATH first, then local)"""
+        # 1. Check system PATH first (preferred - for Docker/system installs)
+        system_path = shutil.which('mediamtx')
+        if system_path:
+            logger.debug("Found mediamtx in system PATH: %s", system_path)
+            return system_path
+
+        # 2. Fall back to local directory
+        if Path(self.executable).exists():
+            logger.debug("Found mediamtx in local directory: %s", self.executable)
+            return os.path.abspath(self.executable)
+
+        return None
+
     def download_mediamtx(self):
         """Download MediaMTX if not present or update if newer version available"""
         latest_version = self._get_latest_version()
 
+        # Check system PATH first (preferred for Docker/system installs)
+        system_path = shutil.which('mediamtx')
+        if system_path:
+            logger.info("Using system-installed mediamtx: %s", system_path)
+            # Update executable to use system path
+            self.executable = system_path
+            return True
+
+        # Check if already installed locally
         if Path(self.executable).exists():
             # Check current version
             try:
@@ -134,7 +161,18 @@ class MediaMTXManager:
                 logger.warning("Could not check MediaMTX version: %s", e)
                 return True
         else:
-            logger.info("MediaMTX not found. Downloading latest version: %s", latest_version)
+            logger.info("MediaMTX not found.")
+            # Security: Auto-downloads are disabled by default
+            if not self._allow_downloads:
+                logger.error("MediaMTX auto-download is disabled (security). Set ONVIF_ALLOW_BINARY_DOWNLOADS=true to enable.")
+                logger.info("Or manually download MediaMTX from: https://github.com/bluenviron/mediamtx/releases")
+                return False
+            logger.info("Downloading latest version: %s", latest_version)
+
+        # Security check for updates too
+        if not self._allow_downloads:
+            logger.warning("MediaMTX update available but auto-downloads disabled. Current version will be used.")
+            return True
 
         version = latest_version
         logger.info("Installing MediaMTX %s...", version)

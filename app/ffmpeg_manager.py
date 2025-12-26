@@ -66,6 +66,8 @@ class FFmpegManager:
     def __init__(self):
         self.ffprobe_executable = self._get_ffprobe_name()
         self.ffmpeg_dir = "ffmpeg"
+        # Check environment variable to disable auto-downloads (security best practice)
+        self._allow_downloads = os.environ.get('ONVIF_ALLOW_BINARY_DOWNLOADS', 'false').lower() in ('true', '1', 'yes')
 
     def _get_ffprobe_name(self):
         """Get the correct ffprobe executable name for the platform"""
@@ -75,14 +77,28 @@ class FFmpegManager:
         return "ffprobe"
 
     def is_ffprobe_available(self):
-        """Check if ffprobe is available ONLY in local directory"""
+        """Check if ffprobe is available (system PATH first, then local directory)"""
+        # 1. Check system PATH first (preferred - uses system-installed ffprobe)
+        system_path = shutil.which('ffprobe')
+        if system_path:
+            logger.debug("Found ffprobe in system PATH: %s", system_path)
+            return system_path
+
+        # 2. Fall back to local directory
         local_path = os.path.join(self.ffmpeg_dir, self.ffprobe_executable)
         if os.path.exists(local_path):
+            logger.debug("Found ffprobe in local directory: %s", local_path)
             return local_path
         return None
 
     def download_ffmpeg(self):
-        """Download FFmpeg if not present"""
+        """Download FFmpeg if not present and downloads are allowed"""
+        # Security: Auto-downloads are disabled by default
+        if not self._allow_downloads:
+            logger.warning("FFmpeg auto-download is disabled (security). Set ONVIF_ALLOW_BINARY_DOWNLOADS=true to enable.")
+            logger.info("Recommended: Install ffmpeg via your system package manager (apt, brew, choco)")
+            return False
+
         logger.info("Downloading FFmpeg...")
 
         system = platform.system().lower()
@@ -209,35 +225,42 @@ class FFmpegManager:
             return False
 
     def get_ffmpeg_path(self):
-        """Get the path to ffmpeg, strictly using local directory"""
+        """Get the path to ffmpeg (system PATH first, then local, then download if allowed)"""
         system = platform.system().lower()
         executable = "ffmpeg.exe" if system == "windows" else "ffmpeg"
 
-        # 1. Check local directory ONLY
+        # 1. Check system PATH first (preferred - uses system-installed ffmpeg)
+        system_path = shutil.which('ffmpeg')
+        if system_path:
+            logger.debug("Using system ffmpeg: %s", system_path)
+            return system_path
+
+        # 2. Check local directory
         local_path = os.path.join(self.ffmpeg_dir, executable)
         if os.path.exists(local_path):
+            logger.debug("Using local ffmpeg: %s", local_path)
             return local_path
 
-        # 2. Try to download if missing (Windows and Linux)
+        # 3. Try to download if missing and allowed (Windows and Linux only)
         if system in ["windows", "linux"]:
-            logger.warning("Local FFmpeg not found. Attempting to download for %s...", system)
+            logger.warning("FFmpeg not found in system PATH or local directory.")
             if self.download_ffmpeg():
                 return os.path.join(self.ffmpeg_dir, executable)
 
-        return local_path # Return the expected local path even if missing
+        return None  # Return None if not found (caller should handle this)
 
     def get_ffprobe_path(self):
-        """Get the path to ffprobe, downloading if necessary"""
+        """Get the path to ffprobe (system PATH first, then local, then download if allowed)"""
         ffprobe_path = self.is_ffprobe_available()
 
         if ffprobe_path:
             return ffprobe_path
 
-        # Try to download
+        # Try to download if allowed
         system = platform.system().lower()
         if system in ["windows", "linux"]:
-            logger.warning("FFprobe not found. Attempting to download for %s...", system)
+            logger.warning("FFprobe not found in system PATH or local directory.")
             if self.download_ffmpeg():
                 return os.path.join(self.ffmpeg_dir, self.ffprobe_executable)
 
-        return self.ffprobe_executable # Fallback
+        return None  # Return None if not found (caller should handle this)

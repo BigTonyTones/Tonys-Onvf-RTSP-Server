@@ -45,9 +45,6 @@ services:
       # Camera configuration (read-write for runtime changes)
       - ./camera_config.json:/app/camera_config.json
 
-      # Binary storage (persistent across restarts)
-      - onvif-binaries:/app/bin
-
       # Mount assets directory (for dashboard screenshot, etc.)
       - ./assets:/app/assets:ro
 
@@ -73,6 +70,10 @@ services:
 
       # Timezone
       - TZ=UTC
+
+      # Allow binary downloads in development (disabled by default for security)
+      # Useful for testing different ffmpeg/mediamtx versions
+      # - ONVIF_ALLOW_BINARY_DOWNLOADS=true
 
     # -------------------------------------------------------------------------
     # Development Resource Limits

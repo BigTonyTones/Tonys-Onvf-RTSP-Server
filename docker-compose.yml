@@ -61,11 +61,6 @@ services:
       # This file stores all your camera settings and survives container restarts
       - ./camera_config.json:/app/camera_config.json
 
-      # Binary storage (ffmpeg and mediamtx)
-      # Mounting this prevents re-downloading binaries on each container start
-      # The app auto-downloads these if not present
-      - onvif-binaries:/app/bin
-
       # Optional: Mount for custom mediamtx configuration
       # - ./mediamtx.yml:/app/mediamtx.yml:ro
 
@@ -103,6 +98,15 @@ services:
       # Disable auto-opening browser - useful in containers (default: false)
       # Note: Browser won't open in container anyway, but this suppresses the attempt
       - ONVIF_NO_BROWSER=true
+      #
+      # =======================================================================
+      # Security Configuration
+      # =======================================================================
+      #
+      # Allow runtime binary downloads (default: false - DISABLED for security)
+      # The Docker image includes ffmpeg and mediamtx pre-installed at build time.
+      # Only enable this if you need to use non-bundled binaries.
+      # - ONVIF_ALLOW_BINARY_DOWNLOADS=false
 
     # -------------------------------------------------------------------------
     # Restart Policy
@@ -175,12 +179,8 @@ services:
 # =============================================================================
 # Named Volumes
 # =============================================================================
-# Named volumes persist data across container restarts and rebuilds
-volumes:
-  # Stores downloaded ffmpeg and mediamtx binaries
-  # This prevents re-downloading on every container start
-  onvif-binaries:
-    driver: local
+# Note: Binary volumes are no longer needed as ffmpeg and mediamtx are
+# installed at build time for improved security (no runtime downloads).
 
 # =============================================================================
 # Usage Examples

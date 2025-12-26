@@ -71,6 +71,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean
 
 # =============================================================================
+# Download and Install MediaMTX at Build Time (Security Best Practice)
+# =============================================================================
+# Installing at build time rather than runtime:
+# - Avoids downloading binaries at runtime (security concern)
+# - Makes builds reproducible with a known version
+# - Faster container startup
+# =============================================================================
+ARG MEDIAMTX_VERSION=v1.15.5
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) MEDIAMTX_ARCH="linux_amd64" ;; \
+        arm64) MEDIAMTX_ARCH="linux_arm64v8" ;; \
+        armhf) MEDIAMTX_ARCH="linux_armv7" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -L "https://github.com/bluenviron/mediamtx/releases/download/${MEDIAMTX_VERSION}/mediamtx_${MEDIAMTX_VERSION}_${MEDIAMTX_ARCH}.tar.gz" \
+        -o /tmp/mediamtx.tar.gz && \
+    tar -xzf /tmp/mediamtx.tar.gz -C /usr/local/bin mediamtx && \
+    chmod +x /usr/local/bin/mediamtx && \
+    rm /tmp/mediamtx.tar.gz && \
+    mediamtx --version
+
+# =============================================================================
 # Create Non-Root User
 # =============================================================================
 # Running as non-root is a security best practice
@@ -102,12 +125,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONFAULTHANDLER=1
 
 # =============================================================================
-# Create Directories for Persistent Data and Binaries
+# Create Directories for Persistent Data
 # =============================================================================
-# - /app/bin: For ffmpeg and mediamtx binaries (can be mounted as volume)
 # - /app/config: For camera_config.json persistence
+# Note: ffmpeg and mediamtx are now installed at build time in /usr/bin and
+#       /usr/local/bin respectively, eliminating runtime binary downloads.
 # =============================================================================
-RUN mkdir -p /app/bin /app/config && \
+RUN mkdir -p /app/config && \
     chown -R onvif:onvif /app
 
 # =============================================================================
@@ -118,7 +142,7 @@ RUN mkdir -p /app/bin /app/config && \
 COPY --chown=onvif:onvif . /app/
 
 # Ensure the config directory has correct permissions
-RUN chown -R onvif:onvif /app/config /app/bin
+RUN chown -R onvif:onvif /app/config
 
 # =============================================================================
 # Port Exposure Documentation
