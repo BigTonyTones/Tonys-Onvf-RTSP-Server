@@ -133,7 +133,10 @@ def create_web_app(manager):
             print("Stopping MediaMTX...")
             manager.mediamtx.stop()
             print("Restarting MediaMTX...")
-            manager.mediamtx.start(manager.cameras, manager.rtsp_port, manager.rtsp_username, manager.rtsp_password)
+            # Use global credentials if RTSP auth is enabled
+            rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
+            rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
+            manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
             print("✓ Server restarted successfully!\n")
             
         # Run restart in background thread
@@ -223,8 +226,6 @@ def create_web_app(manager):
                 main_framerate=data.get('mainFramerate', 30),
                 sub_framerate=data.get('subFramerate', 15),
                 onvif_port=data.get('onvifPort'),
-                onvif_username=data.get('onvifUsername', 'admin'),
-                onvif_password=data.get('onvifPassword', 'admin'),
                 transcode_sub=data.get('transcodeSub', False),
                 transcode_main=data.get('transcodeMain', False),
                 use_virtual_nic=data.get('useVirtualNic', False),
@@ -263,8 +264,6 @@ def create_web_app(manager):
                 main_framerate=data.get('mainFramerate', 30),
                 sub_framerate=data.get('subFramerate', 15),
                 onvif_port=data.get('onvifPort'),
-                onvif_username=data.get('onvifUsername', 'admin'),
-                onvif_password=data.get('onvifPassword', 'admin'),
                 transcode_sub=data.get('transcodeSub', False),
                 transcode_main=data.get('transcodeMain', False),
                 use_virtual_nic=data.get('useVirtualNic', False),
@@ -300,7 +299,9 @@ def create_web_app(manager):
             camera.start()
             manager.save_config()
             if not was_running:
-                manager.mediamtx.restart(manager.cameras)
+                rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
     
@@ -314,7 +315,9 @@ def create_web_app(manager):
             camera.stop()
             manager.save_config()
             if was_running:
-                manager.mediamtx.restart(manager.cameras)
+                rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
     
