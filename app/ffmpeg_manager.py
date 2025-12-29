@@ -28,7 +28,7 @@ class FFmpegManager:
     
     def download_ffmpeg(self):
         """Download FFmpeg if not present"""
-        print("📥 Downloading FFmpeg...")
+        print("  Downloading FFmpeg...")
         
         system = platform.system().lower()
         machine = platform.machine().lower()
@@ -40,11 +40,11 @@ class FFmpegManager:
                 url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
                 archive_name = "ffmpeg-release-essentials.zip"
             else:
-                print("❌ Unsupported Windows architecture:", machine)
+                print("  Unsupported Windows architecture:", machine)
                 return False
                 
         elif system == "darwin":  # macOS
-            print("ℹ️  For macOS, please install FFmpeg using Homebrew:")
+            print("  For macOS, please install FFmpeg using Homebrew:")
             print("    brew install ffmpeg")
             return False
             
@@ -58,10 +58,10 @@ class FFmpegManager:
                 url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
                 archive_name = "ffmpeg-release-amd64-static.tar.xz"
             else:
-                print("❌ Unsupported Linux architecture:", machine)
+                print("  Unsupported Linux architecture:", machine)
                 return False
         else:
-            print(f"❌ Unsupported operating system: {system}")
+            print(f"  Unsupported operating system: {system}")
             return False
         
         print(f"  Platform: {system} {machine}")
@@ -70,13 +70,13 @@ class FFmpegManager:
         
         # Ask for confirmation
         try:
-            confirm = input(f"\n❓ Would you like to download and install FFmpeg from this source? (y/n): ")
+            confirm = input(f"\n  Would you like to download and install FFmpeg from this source? (y/n): ")
             if confirm.lower() not in ['y', 'yes']:
-                print("❌ Installation cancelled by user.")
+                print("  Installation cancelled by user.")
                 return False
         except EOFError:
             # Handle non-interactive environments
-            print("⚠️  Non-interactive environment detected, proceeding with download...")
+            print("  Non-interactive environment detected, proceeding with download...")
             pass
         
         
@@ -97,7 +97,7 @@ class FFmpegManager:
                         percent = (downloaded / total_size) * 100
                         print(f"\r  Progress: {percent:.1f}%", end='', flush=True)
             
-            print("\n✓ Downloaded FFmpeg")
+            print("\n  Downloaded FFmpeg")
             
             # Extract
             print("  Extracting...")
@@ -116,7 +116,7 @@ class FFmpegManager:
                                 src = os.path.join(root, file)
                                 dst = os.path.join(self.ffmpeg_dir, file)
                                 shutil.copy2(src, dst)
-                                print(f"  ✓ Extracted {file}")
+                                print(f"  Extracted {file}")
                 
                 # Cleanup
                 shutil.rmtree('ffmpeg_temp')
@@ -134,11 +134,11 @@ class FFmpegManager:
                             shutil.copy2(src, dst)
                             # Make executable
                             os.chmod(dst, 0o755)
-                            print(f"  ✓ Extracted {file}")
+                            print(f"  Extracted {file}")
                 
                 shutil.rmtree('ffmpeg_temp')
             
-            print("✓ Extracted FFmpeg")
+            print("  Extracted FFmpeg")
             
             # Cleanup archive
             os.remove(archive_name)
@@ -146,24 +146,106 @@ class FFmpegManager:
             # Verify extraction
             ffprobe_path = os.path.join(self.ffmpeg_dir, self.ffprobe_executable)
             if not os.path.exists(ffprobe_path):
-                print(f"❌ FFprobe not found after extraction: {ffprobe_path}")
+                print(f"  FFprobe not found after extraction: {ffprobe_path}")
                 return False
             
-            print(f"✓ FFmpeg ready: {self.ffmpeg_dir}")
+            print(f"  FFmpeg ready: {self.ffmpeg_dir}")
             return True
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ Download failed: {e}")
+            print(f"  Download failed: {e}")
             return False
         except Exception as e:
-            print(f"❌ Installation failed: {e}")
+            print(f"  Installation failed: {e}")
             import traceback
             traceback.print_exc()
             return False
     
+    def install_system_ffmpeg(self):
+        """Install FFmpeg using system package manager (Linux only)"""
+        if platform.system().lower() != "linux":
+            return False
+            
+        print("  Attempting to install FFmpeg via system package manager...")
+        
+        # Package managers: (name, update_cmd, install_cmd)
+        managers = [
+            ("apt-get", ["apt-get", "update"], ["apt-get", "install", "-y", "ffmpeg"]),
+            ("dnf", None, ["dnf", "install", "-y", "ffmpeg"]),
+            ("pacman", None, ["pacman", "-S", "--noconfirm", "ffmpeg"]),
+            ("yum", None, ["yum", "install", "-y", "ffmpeg"]),
+            ("apk", None, ["apk", "add", "--no-cache", "ffmpeg"]),
+            ("zypper", None, ["zypper", "install", "-y", "ffmpeg"])
+        ]
+        
+        for mgr, update_cmd, install_cmd in managers:
+            if shutil.which(mgr):
+                print(f"  Found package manager: {mgr}")
+                
+                # Ask for confirmation
+                try:
+                    print(f"  System FFmpeg is missing.")
+                    confirm = input(f"  Would you like to install it using {mgr}? (y/n): ")
+                    if confirm.lower() not in ['y', 'yes']:
+                        print("  Installation cancelled by user.")
+                        return False
+                except EOFError:
+                    # Handle non-interactive environments
+                    print("  Non-interactive environment detected, proceeding with installation...")
+                    pass
+                
+                try:
+                    # Check if likely running as root or need sudo
+                    # os.geteuid() is available on Unix
+                    is_root = os.geteuid() == 0
+                    prefix = [] if is_root else ["sudo"]
+                    
+                    if update_cmd:
+                        print(f"  Running system update...")
+                        try:
+                            subprocess.run(prefix + update_cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        except Exception:
+                            pass # Update failure shouldn't necessarily block install
+                        
+                    print(f"  Installing...")
+                    subprocess.check_call(prefix + install_cmd)
+                    print("  FFmpeg installed successfully")
+                    return True
+                except subprocess.CalledProcessError as e:
+                    print(f"  Failed to install using {mgr}: {e}")
+                    # Continue to next manager? Unlikely to have multiple valid ones but possible.
+                except Exception as e:
+                    print(f"  Error: {e}")
+                    
+        print("  No supported package manager found or installation failed.")
+        return False
+
     def get_ffmpeg_path(self):
-        """Get the path to ffmpeg, strictly using local directory"""
+        """Get the path to ffmpeg"""
         system = platform.system().lower()
+        
+        # Linux: Prioritize system-wide FFmpeg
+        if system == "linux":
+            # 1. Check system path
+            if shutil.which("ffmpeg"):
+                return "ffmpeg"
+                
+            # 2. Try to install
+            if self.install_system_ffmpeg():
+                # Check again
+                if shutil.which("ffmpeg"):
+                    return "ffmpeg"
+            
+            # 3. Fallback to local check (optional, but good for backward compat if user manually placed it)
+            executable = "ffmpeg"
+            local_path = os.path.join(self.ffmpeg_dir, executable)
+            if os.path.exists(local_path):
+                return local_path
+                
+            print("  FFmpeg not found locally or in system path.")
+            return "ffmpeg" # Return default and let it fail
+            
+        # Windows/Other: Strict local management (Existing logic)
         executable = "ffmpeg.exe" if system == "windows" else "ffmpeg"
         
         # 1. Check local directory ONLY
@@ -171,25 +253,36 @@ class FFmpegManager:
         if os.path.exists(local_path):
             return local_path
             
-        # 2. Try to download if missing (Windows and Linux)
-        if system in ["windows", "linux"]:
-            print(f"\n⚠️  Local FFmpeg not found. Attempting to download for {system}...")
+        # 2. Try to download if missing
+        if system == "windows":
+            print(f"\n  Local FFmpeg not found. Attempting to download for {system}...")
             if self.download_ffmpeg():
                 return os.path.join(self.ffmpeg_dir, executable)
         
         return local_path # Return the expected local path even if missing
 
     def get_ffprobe_path(self):
-        """Get the path to ffprobe, downloading if necessary"""
-        ffprobe_path = self.is_ffprobe_available()
+        """Get the path to ffprobe"""
+        system = platform.system().lower()
         
+        # Linux: Check system path
+        if system == "linux":
+            if shutil.which("ffprobe"):
+                return "ffprobe"
+            # Attempt install if missing (although ffmpeg install usually covers it)
+            if self.install_system_ffmpeg():
+                 if shutil.which("ffprobe"):
+                     return "ffprobe"
+            return "ffprobe"
+
+        # Windows/Existing logic
+        ffprobe_path = self.is_ffprobe_available()
         if ffprobe_path:
             return ffprobe_path
         
         # Try to download
-        system = platform.system().lower()
-        if system in ["windows", "linux"]:
-            print(f"\n⚠️  FFprobe not found. Attempting to download for {system}...")
+        if system == "windows":
+            print(f"\n  FFprobe not found. Attempting to download for {system}...")
             if self.download_ffmpeg():
                 return os.path.join(self.ffmpeg_dir, self.ffprobe_executable)
         
