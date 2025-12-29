@@ -109,8 +109,8 @@ class MediaMTXManager:
                 
         elif system == "linux" or True:  # Defaulting to linux logic for other unix
             if "aarch64" in machine or "arm64" in machine:
-                url = base_url + f"mediamtx_{version}_linux_arm64v8.tar.gz"
-                archive_name = f"mediamtx_{version}_linux_arm64v8.tar.gz"
+                url = base_url + f"mediamtx_{version}_linux_arm64.tar.gz"
+                archive_name = f"mediamtx_{version}_linux_arm64.tar.gz"
             elif "arm" in machine:
                 url = base_url + f"mediamtx_{version}_linux_armv7.tar.gz"
                 archive_name = f"mediamtx_{version}_linux_armv7.tar.gz"
