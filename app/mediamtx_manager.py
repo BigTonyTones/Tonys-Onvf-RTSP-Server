@@ -7,6 +7,7 @@ import yaml
 import zipfile
 import tarfile
 import shlex
+import secrets
 from pathlib import Path
 from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT
 
@@ -259,9 +260,6 @@ class MediaMTXManager:
             
         print(f"   Using FFmpeg: {ffmpeg_exe}")
         
-        import platform
-        import secrets
-        
         system = platform.system().lower()
         
         # Check if GLOBAL authentication is enabled
@@ -320,7 +318,6 @@ class MediaMTXManager:
                         safe_source = f'"{main_source}"'
                         safe_dest = f'"{dest_url}"'
                     else:
-                        import shlex
                         safe_source = shlex.quote(main_source)
                         safe_dest = shlex.quote(dest_url)
                     
@@ -388,7 +385,6 @@ class MediaMTXManager:
                         safe_source = f'"{sub_source}"'
                         safe_dest = f'"{dest_url}"'
                     else:
-                        import shlex
                         safe_source = shlex.quote(sub_source)
                         safe_dest = shlex.quote(dest_url)
                     
