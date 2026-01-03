@@ -18,7 +18,7 @@ def main():
         net_mgr = LinuxNetworkManager()
         net_mgr.cleanup_all_vnics()
 
-    print("\nTonys Onvif-RTSP Server v5.3\n")
+    print("\nTonys Onvif-RTSP Server v5.3.1\n")
     
     manager = CameraManager()
     
