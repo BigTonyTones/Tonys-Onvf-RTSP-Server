@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import platform
 import subprocess
@@ -8,6 +9,7 @@ import zipfile
 import tarfile
 import shlex
 import secrets
+import threading
 from pathlib import Path
 from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT
 
@@ -68,23 +70,23 @@ class MediaMTXManager:
                     current_version = 'v' + current_version
                 
                 if current_version == latest_version:
-                    print(f"✓ MediaMTX is up to date ({current_version})")
+                    print(f"MediaMTX is up to date ({current_version})")
                     return True
                 elif self._version_is_newer(current_version, latest_version):
-                    print(f"🔄 Newer MediaMTX version available: {current_version} -> {latest_version}")
-                    print("📥 Preparing to update...")
+                    print(f"Newer MediaMTX version available: {current_version} -> {latest_version}")
+                    print("Preparing to update...")
                 else:
                     # Current version is actually newer or equal
-                    print(f"✓ MediaMTX is up to date ({current_version})")
+                    print(f"MediaMTX is up to date ({current_version})")
                     return True
             except Exception as e:
-                print(f"⚠️ Could not check MediaMTX version: {e}")
+                print(f"Could not check MediaMTX version: {e}")
                 return True
         else:
-            print(f"📥 MediaMTX not found. Downloading latest version: {latest_version}")
+            print(f"MediaMTX not found. Downloading latest version: {latest_version}")
         
         version = latest_version
-        print(f"🚀 Installing MediaMTX {version}...")
+        print(f"Installing MediaMTX {version}...")
         
         system = platform.system().lower()
         machine = platform.machine().lower()
@@ -97,7 +99,7 @@ class MediaMTXManager:
                 url = base_url + f"mediamtx_{version}_windows_amd64.zip"
                 archive_name = f"mediamtx_{version}_windows_amd64.zip"
             else:
-                print("❌ Unsupported Windows architecture:", machine)
+                print("Unsupported Windows architecture:", machine)
                 return False
                 
         elif system == "darwin":  # macOS
@@ -122,7 +124,7 @@ class MediaMTXManager:
                 url = base_url + f"mediamtx_{version}_linux_386.tar.gz"
                 archive_name = f"mediamtx_{version}_linux_386.tar.gz"
         else:
-            print(f"❌ Unsupported operating system: {system}")
+            print(f"Unsupported operating system: {system}")
             return False
         
         print(f"  Platform: {system} {machine}")
@@ -130,13 +132,13 @@ class MediaMTXManager:
         
         # Ask for confirmation
         try:
-            confirm = input(f"\n❓ Would you like to download and install MediaMTX {version}? (y/n): ")
+            confirm = input(f"\nWould you like to download and install MediaMTX {version}? (y/n): ")
             if confirm.lower() not in ['y', 'yes']:
-                print("❌ Installation cancelled by user.")
+                print("Installation cancelled by user.")
                 return False
         except EOFError:
             # Handle non-interactive environments
-            print("⚠️  Non-interactive environment detected, proceeding with download...")
+            print("Non-interactive environment detected, proceeding with download...")
             pass
         
         try:
@@ -156,7 +158,7 @@ class MediaMTXManager:
                         percent = (downloaded / total_size) * 100
                         print(f"\r  Progress: {percent:.1f}%", end='', flush=True)
             
-            print("\n✓ Downloaded MediaMTX")
+            print("\nDownloaded MediaMTX")
             
             # Extract
             print("  Extracting...")
@@ -167,34 +169,34 @@ class MediaMTXManager:
                 with tarfile.open(archive_name, 'r:gz') as tar_ref:
                     tar_ref.extractall('.')
             
-            print("✓ Extracted MediaMTX")
+            print("Extracted MediaMTX")
             
             # Make executable on Unix-like systems
             if system in ["darwin", "linux"]:
                 os.chmod(self.executable, 0o755)
-                print("✓ Set executable permissions")
+                print("Set executable permissions")
             
             # Cleanup archive
             os.remove(archive_name)
             
             # Verify extraction
             if not Path(self.executable).exists():
-                print(f"❌ Executable not found after extraction: {self.executable}")
+                print(f"Executable not found after extraction: {self.executable}")
                 return False
             
-            print(f"✓ MediaMTX ready: {self.executable}")
+            print(f"MediaMTX ready: {self.executable}")
             return True
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ Download failed: {e}")
+            print(f"Download failed: {e}")
             return False
         except Exception as e:
-            print(f"❌ Installation failed: {e}")
+            print(f"Installation failed: {e}")
             import traceback
             traceback.print_exc()
             return False
     
-    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None):
+    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False):
         """Create MediaMTX configuration optimized for multiple cameras and viewers"""
         if rtsp_port is None:
             rtsp_port = MEDIAMTX_PORT
@@ -240,7 +242,7 @@ class MediaMTXManager:
             
             # ===== MEMORY MANAGEMENT =====
             # Reduce log verbosity to save CPU
-            'logLevel': 'error',  # Only show errors, suppress warnings (info/warn/error)
+            'logLevel': 'info' if debug_mode else 'error',  # Show more info if debug mode is on
             
             # ===== CONNECTION HANDLING =====
             'runOnConnect': '',
@@ -264,10 +266,9 @@ class MediaMTXManager:
             if system in ["linux", "darwin"]:
                 try:
                     if not os.access(ffmpeg_exe, os.X_OK):
-                        print(f"   ⚠️ Fixing permissions for FFmpeg: {ffmpeg_exe}")
-                        os.chmod(ffmpeg_exe, 0o755)
+                        print(f"   Fixing permissions for FFmpeg: {ffmpeg_exe}")
                 except Exception as e:
-                    print(f"   ⚠️ Could not set execution permissions on FFmpeg: {e}")
+                    print(f"   Could not set execution permissions on FFmpeg: {e}")
             
         print(f"   Using FFmpeg: {ffmpeg_exe}")
         
@@ -284,7 +285,7 @@ class MediaMTXManager:
         rtsp_password = str(rtsp_password) if rtsp_password else ""
         
         if enable_global_auth:
-            print(f"    🔒 Global Authentication Enabled (User: {rtsp_username})")
+            print(f"    Global Authentication Enabled (User: {rtsp_username})")
             # Add system publisher with full rights (publish and read everywhere)
             # Use ~^.*$ for regex matching all paths
             auth_users_map[(sys_user, sys_pass)] = [
@@ -312,7 +313,7 @@ class MediaMTXManager:
                 transcode_main = getattr(camera, 'transcode_main', False)
                 main_source = camera.main_stream_url
                 if transcode_main:
-                    print(f"    ℹ️  Transcoding enabled for {camera.name} main-stream")
+                    print(f"    Transcoding enabled for {camera.name} main-stream")
                     tgt_w = getattr(camera, 'main_width', 1920)
                     tgt_h = getattr(camera, 'main_height', 1080)
                     tgt_fps = getattr(camera, 'main_framerate', 30)
@@ -376,7 +377,7 @@ class MediaMTXManager:
                 sub_source = camera.sub_stream_url
                 
                 if transcode_sub:
-                    print(f"    ℹ️  Transcoding enabled for {camera.name} sub-stream")
+                    print(f"    Transcoding enabled for {camera.name} sub-stream")
                     
                     # Target resolution and frame rate
                     # Target resolution and frame rate
@@ -438,11 +439,12 @@ class MediaMTXManager:
                 
                 config['paths'][f'{camera.path_name}_sub'] = sub_path_cfg
                 
-                print(f"  ✓ Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
+                print(f"  Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
         
         print("-" * 40)
         print(f"  Total running cameras: {running_count}")
         print(f"  Total streams: {running_count * 2} (main + sub)")
+        print("-" * 40)
 
         # ===== GRIDFUSION COMPOSITE STREAM =====
         # ===== GRIDFUSION COMPOSITE STREAM (Multi-Layout Support) =====
@@ -456,7 +458,7 @@ class MediaMTXManager:
                 grid_fusion_layouts = [grid_fusion]
 
         if grid_fusion_layouts:
-            print(f"    🚀 Configuring GridFusion Composite Streams ({len(grid_fusion_layouts)} layouts)...")
+            print(f"    Configuring GridFusion Composite Streams ({len(grid_fusion_layouts)} layouts)...")
             
             for layout in grid_fusion_layouts:
                 if not layout.get('enabled'):
@@ -556,7 +558,7 @@ class MediaMTXManager:
                             'runOnInit': gf_cmd,
                             'runOnInitRestart': True,
                         }
-                        print(f"      ✓ {layout_name} stream added at /{layout_id} ({res})")
+                        print(f"      {layout_name} stream added at /{layout_id} ({res})")
 
         
         # Populate authInternalUsers if enabled
@@ -573,14 +575,14 @@ class MediaMTXManager:
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
-    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None):
+    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False):
         """Start MediaMTX server"""
         if not self.download_mediamtx():
             return False
         
-        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion)
+        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode)
         
-        print("\n🚀 Starting MediaMTX RTSP Server...")
+        print("\nStarting MediaMTX RTSP Server...")
         
         try:
             # Use absolute path for executable
@@ -592,22 +594,34 @@ class MediaMTXManager:
             
             self.process = subprocess.Popen(
                 [exe_path, config_path],
-                stdout=None,
-                stderr=None,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1  # Line buffered
             )
+            
+            # Start thread to capture output and send to our Logger
+            def capture_output(process):
+                for line in process.stdout:
+                    if line:
+                        # Write to sys.stdout so our Logger captures it
+                        sys.stdout.write(line)
+                        sys.stdout.flush()
+            
+            output_thread = threading.Thread(target=capture_output, args=(self.process,), daemon=True)
+            output_thread.start()
             
             time.sleep(3)
             
             if self.process.poll() is None:
-                print(f"✓ MediaMTX running on RTSP port {MEDIAMTX_PORT}")
+                print(f"MediaMTX running on RTSP port {MEDIAMTX_PORT}")
                 return True
             else:
-                print("❌ MediaMTX failed to start. Check console output above.")
+                print("MediaMTX failed to start. Check console output above.")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error starting MediaMTX: {e}")
+            print(f"Error starting MediaMTX: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -621,11 +635,11 @@ class MediaMTXManager:
             except:
                 self.process.kill()
             self.process = None
-            print("✓ MediaMTX stopped")
+            print("MediaMTX stopped")
     
-    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None):
+    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False):
         """Restart MediaMTX with new configuration"""
-        print("\n🔄 Restarting MediaMTX...")
+        print("\nRestarting MediaMTX...")
         self.stop()
         time.sleep(3)
-        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion)
+        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode)

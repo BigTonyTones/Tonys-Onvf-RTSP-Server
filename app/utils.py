@@ -2,6 +2,52 @@ import sys
 import subprocess
 import importlib.util
 import platform
+import collections
+import threading
+
+class Logger:
+    def __init__(self, max_lines=2000):
+        self._buffer = collections.deque(maxlen=max_lines)
+        self._lock = threading.Lock()
+        self._stdout = sys.stdout
+        self._stderr = sys.stderr
+
+    def write(self, message):
+        if not message:
+            return
+            
+        # Handle cases where message might be bytes (e.g. from Flask/Click in some environments)
+        if isinstance(message, bytes):
+            try:
+                message = message.decode('utf-8', errors='replace')
+            except:
+                message = str(message)
+                
+        with self._lock:
+            self._buffer.append(message)
+        self._stdout.write(message)
+
+    def flush(self):
+        self._stdout.flush()
+
+    def get_logs(self):
+        with self._lock:
+            return "".join(self._buffer)
+
+_logger_instance = None
+
+def init_logger():
+    global _logger_instance
+    if _logger_instance is None:
+        _logger_instance = Logger()
+        sys.stdout = _logger_instance
+        sys.stderr = _logger_instance
+    return _logger_instance
+
+def get_captured_logs():
+    if _logger_instance:
+        return _logger_instance.get_logs()
+    return ""
 
 # Auto-install requirements
 def check_and_install_requirements():
@@ -37,9 +83,9 @@ def check_and_install_requirements():
         for package in missing_packages:
             try:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-                print(f"✓ Installed {package}")
+                print(f"Installed {package}")
             except subprocess.CalledProcessError as e:
-                print(f"✗ Failed to install {package}: {e}")
+                print(f"Failed to install {package}: {e}")
                 sys.exit(1)
         print("\nAll dependencies installed successfully!\n")
     else:
@@ -58,7 +104,7 @@ def check_and_install_system_dependencies():
         pass
 
     print("Checking system dependencies (Linux)...")
-    print("⚠️  'dhclient' is missing. It's required for Virtual NIC DHCP support.")
+    print("'dhclient' is missing. It's required for Virtual NIC DHCP support.")
     
     # Try to install based on package manager
     managers = [
@@ -76,12 +122,12 @@ def check_and_install_system_dependencies():
                 subprocess.run(update_cmd, check=False)
             
             subprocess.run(install_cmd, check=True)
-            print("  ✓ System dependency installed successfully!")
+            print("  System dependency installed successfully!")
             return
         except (subprocess.CalledProcessError, FileNotFoundError):
             continue
 
-    print("  ❌ Could not automatically install 'dhclient'.")
+    print("  Could not automatically install 'dhclient'.")
     print("     Please install it manually: sudo apt-get install isc-dhcp-client")
 
 def cleanup_stale_processes():
@@ -94,7 +140,7 @@ def cleanup_stale_processes():
             if "mediamtx.exe" in output:
                 print("  Found stale mediamtx.exe, terminating...")
                 subprocess.run("taskkill /F /IM mediamtx.exe", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print("  ✓ Stale mediamtx.exe terminated")
+                print("  Stale mediamtx.exe terminated")
         else:
             # Linux/Mac
             try:
@@ -102,7 +148,7 @@ def cleanup_stale_processes():
                 subprocess.check_call(["pgrep", "mediamtx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 print("  Found stale mediamtx, terminating...")
                 subprocess.run(["pkill", "-9", "mediamtx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print("  ✓ Stale mediamtx terminated")
+                print("  Stale mediamtx terminated")
             except subprocess.CalledProcessError:
                 pass  # Not running
             

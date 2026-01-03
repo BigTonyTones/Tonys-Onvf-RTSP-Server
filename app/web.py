@@ -13,6 +13,7 @@ from .web_template import get_web_ui_html
 from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
 from .linux_network import LinuxNetworkManager
+from .utils import get_captured_logs
 import subprocess
 import tempfile
 import shutil
@@ -33,7 +34,10 @@ def create_web_app(manager):
     
     import logging
     log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
+    if getattr(manager, 'debug_mode', False):
+        log.setLevel(logging.INFO)
+    else:
+        log.setLevel(logging.ERROR)
 
     # --- Authentication Decorator ---
     def login_required(f):
@@ -132,7 +136,7 @@ def create_web_app(manager):
         def do_restart():
             import time
             time.sleep(2)  # Give time for response to be sent
-            print("\n\n🔄 Server restart requested from web UI...")
+            print("\n\nServer restart requested from web UI...")
             print("Stopping MediaMTX...")
             manager.mediamtx.stop()
             print("Restarting MediaMTX...")
@@ -140,7 +144,7 @@ def create_web_app(manager):
             rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
             rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
             manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
-            print("✓ Server restarted successfully!\n")
+            print("Server restarted successfully!\n")
             
         # Run restart in background thread
         import threading
@@ -390,7 +394,7 @@ def create_web_app(manager):
             
             if result.returncode != 0:
                 # Log the error for debugging
-                print(f"  ❌ FFprobe failed with return code {result.returncode}")
+                print(f"  FFprobe failed with return code {result.returncode}")
                 print(f"  stderr: {result.stderr}")
                 print(f"  stdout: {result.stdout}")
                 
@@ -470,11 +474,11 @@ def create_web_app(manager):
             camera.auto_start = auto_start
             manager.save_config()
             
-            print(f"  ✓ Updated auto-start for {camera.name}: {auto_start}")
+            print(f"  Updated auto-start for {camera.name}: {auto_start}")
             
             return jsonify(camera.to_dict())
         except Exception as e:
-            print(f"  ❌ Error updating auto-start: {e}")
+            print(f"  Error updating auto-start: {e}")
             return jsonify({'error': str(e)}), 500
     
 
@@ -487,13 +491,13 @@ def create_web_app(manager):
             import time
             import os
             time.sleep(2)  # Give time for response to be sent
-            print("\n\n⏹️ Server stop requested from web UI...")
+            print("\n\nServer stop requested from web UI...")
             print("Stopping MediaMTX...")
             manager.mediamtx.stop()
             print("Stopping all cameras...")
             for camera in manager.cameras:
                 camera.stop()
-            print("✓ Server stopped successfully!")
+            print("Server stopped successfully!")
             print("\nTo restart, run the script again.\n")
             os._exit(0)  # Force exit
         
@@ -518,6 +522,12 @@ def create_web_app(manager):
             return jsonify(settings)
         except Exception as e:
             return jsonify({'error': str(e)}), 400
+    
+    @app.route('/api/logs', methods=['GET'])
+    @login_required
+    def get_logs():
+        """Retrieve captured terminal logs"""
+        return jsonify({'logs': get_captured_logs()})
     
     @app.route('/api/network/interfaces')
     @login_required
@@ -567,11 +577,11 @@ def create_web_app(manager):
                 stream_url = f"rtsp://{user}:{pw}@localhost:{rtsp_port}/{camera.path_name}_sub"
             else:
                 stream_url = f"rtsp://localhost:{rtsp_port}/{camera.path_name}_sub"
-            print(f"  📸 Capture: Using local stream for {camera.name}")
+            print(f"  Capture: Using local stream for {camera.name}")
         else:
             # Fallback to direct camera URL (use sub stream for speed)
             stream_url = camera.sub_stream_url
-            print(f"  📸 Capture: Using direct stream for {camera.name}")
+            print(f"  Capture: Using direct stream for {camera.name}")
         
         ffmpeg_mgr = FFmpegManager()
         ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
@@ -596,7 +606,13 @@ def create_web_app(manager):
             ]
             
             # Use a timeout of 10 seconds
-            subprocess.run(cmd, check=True, timeout=10)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            # Write output to sys.stdout so it's captured in our logs
+            if result.stdout:
+                sys.stdout.write(result.stdout)
+            if result.stderr:
+                sys.stderr.write(result.stderr)
             
             # Send file content
             with open(path, 'rb') as f:
@@ -608,7 +624,7 @@ def create_web_app(manager):
             return response
             
         except Exception as e:
-            print(f"  ❌ Error capturing snapshot for {camera.name}: {e}")
+            print(f"  Error capturing snapshot for {camera.name}: {e}")
             return jsonify({'error': str(e)}), 500
         finally:
             if os.path.exists(path):

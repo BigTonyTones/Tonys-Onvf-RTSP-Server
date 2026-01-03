@@ -37,11 +37,11 @@ class LinuxNetworkManager:
         if not self.is_linux():
             return False
             
-        print(f"\n🌐 Creating Virtual NIC {name} on {parent_if} with MAC {mac}")
+        print(f"\nCreating Virtual NIC {name} on {parent_if} with MAC {mac}")
         
         # 0. Check if parent interface exists
         if not os.path.exists(f'/sys/class/net/{parent_if}'):
-            print(f"❌ Error: Parent interface '{parent_if}' does not exist.")
+            print(f"Error: Parent interface '{parent_if}' does not exist.")
             # List available interfaces for the user
             available = self.get_physical_interfaces()
             if available:
@@ -50,7 +50,7 @@ class LinuxNetworkManager:
 
         try:
             # 1. Enable promiscuous mode on parent (often required for MACVLAN to work)
-            print(f"  🔧 Enabling promiscuous mode on {parent_if}...")
+            print(f"  Enabling promiscuous mode on {parent_if}...")
             subprocess.run(['sudo', 'ip', 'link', 'set', parent_if, 'promisc', 'on'], check=False)
 
             # 2. Check if interface already exists and remove it
@@ -72,7 +72,7 @@ class LinuxNetworkManager:
             
             return True
         except subprocess.CalledProcessError as e:
-            print(f"❌ Error creating MACVLAN: {e}")
+            print(f"Error creating MACVLAN: {e}")
             return False
 
     def setup_ip(self, name, mode, ip=None, mask=None, gw=None):
@@ -82,7 +82,7 @@ class LinuxNetworkManager:
             
         try:
             if mode == 'dhcp':
-                print(f"  📡 Requesting DHCP for {name} (timeout 15s)...")
+                print(f"  Requesting DHCP for {name} (timeout 15s)...")
                 
                 # Try dhclient with a custom config to prevent it from touching host DNS/Routes
                 try:
@@ -105,7 +105,7 @@ class LinuxNetworkManager:
                         match = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', result.stdout)
                         if match:
                             assigned_ip = match.group(1)
-                            print(f"  ✓ IP assigned: {assigned_ip}")
+                            print(f"  IP assigned: {assigned_ip}")
                             # Clean up temp conf
                             try: os.remove(conf_path)
                             except: pass
@@ -116,11 +116,11 @@ class LinuxNetworkManager:
                     try: os.remove(conf_path)
                     except: pass
                 except Exception as e:
-                    print(f"  ⚠️ 'dhclient' attempt failed: {e}")
+                    print(f"  'dhclient' attempt failed: {e}")
 
                 # Try udhcpc if dhclient isolated attempt fails
                 try:
-                    print(f"  ⚠️ Isolated DHCP failed, trying 'udhcpc' fallback...")
+                    print(f"  Isolated DHCP failed, trying 'udhcpc' fallback...")
                     subprocess.run(['sudo', 'udhcpc', '-i', name, '-n', '-q', '-T', '1', '-t', '5', '-s', '/bin/true'], check=True, timeout=7)
                 except:
                     pass
@@ -130,7 +130,7 @@ class LinuxNetworkManager:
                 result = subprocess.run(['ip', '-4', 'addr', 'show', name], capture_output=True, text=True)
                 if not re.search(r'inet \d+', result.stdout):
                     try:
-                        print(f"  ⚠️ Standard DHCP attempts failed. Trying plain 'dhclient' (User Success Mode)...")
+                        print(f"  Standard DHCP attempts failed. Trying plain 'dhclient' (User Success Mode)...")
                         subprocess.run(['sudo', 'dhclient', '-nw', name], check=False)
                         # Wait a bit
                         for _ in range(3):
@@ -148,12 +148,12 @@ class LinuxNetworkManager:
                     print(f"  ✓ IP assigned: {assigned_ip}")
                     return assigned_ip
                 
-                print(f"  ❌ DHCP failed to acquire address in time.")
+                print(f"  DHCP failed to acquire address in time.")
                 print(f"     Tip: Try 'Static IP' mode instead if your router is slow to respond.")
                 return None
                     
             elif mode == 'static' and ip:
-                print(f"  📍 Setting static IP {ip} for {name}...")
+                print(f"  Setting static IP {ip} for {name}...")
                 full_ip = f"{ip}/{mask}" if mask else ip
                 # Add the IP address
                 subprocess.run(['sudo', 'ip', 'addr', 'add', full_ip, 'dev', name], check=True)
@@ -166,7 +166,7 @@ class LinuxNetworkManager:
                 return ip
                 
         except subprocess.CalledProcessError as e:
-            print(f"❌ Error setting up IP: {e}")
+            print(f"Error setting up IP: {e}")
             
         return None
 
@@ -175,7 +175,7 @@ class LinuxNetworkManager:
         if not self.is_linux():
             return
             
-        print(f"🌐 Removing Virtual NIC {name}...")
+        print(f"Removing Virtual NIC {name}...")
         try:
             # Release DHCP
             try:
@@ -185,14 +185,14 @@ class LinuxNetworkManager:
             # Delete link
             subprocess.run(['sudo', 'ip', 'link', 'delete', name], check=False)
         except Exception as e:
-            print(f"⚠️ Error cleaning up NIC {name}: {e}")
+            print(f"Error cleaning up NIC {name}: {e}")
 
     def cleanup_all_vnics(self):
         """Global cleanup of all vnic_ interfaces at startup"""
         if not self.is_linux():
             return
             
-        print("🧹 Cleaning up old virtual network interfaces...")
+        print("Cleaning up old virtual network interfaces...")
         try:
             # Get list of all interfaces
             result = subprocess.run(['ip', 'link', 'show'], capture_output=True, text=True)
@@ -207,8 +207,8 @@ class LinuxNetworkManager:
                     cleaned.append(vnic)
             
             if cleaned:
-                print(f"  ✓ Cleaned up {len(cleaned)} stale virtual interfaces.")
+                print(f"  Cleaned up {len(cleaned)} stale virtual interfaces.")
             else:
-                print("  ✓ No stale virtual interfaces found.")
+                print("  No stale virtual interfaces found.")
         except Exception as e:
-            print(f"  ⚠️ Error during global NIC cleanup: {e}")
+            print(f"  Error during global NIC cleanup: {e}")

@@ -43,6 +43,7 @@ class VirtualONVIFCamera:
         self.static_ip = config.get('staticIp', '')
         self.netmask = config.get('netmask', '24')
         self.gateway = config.get('gateway', '')
+        self.debug_mode = config.get('debugMode', False)
         self.assigned_ip = None
         self.network_mgr = LinuxNetworkManager() if LinuxNetworkManager.is_linux() else None
         
@@ -95,7 +96,7 @@ class VirtualONVIFCamera:
         """Start the ONVIF web service"""
         # Check if already running
         if self.flask_thread and self.flask_thread.is_alive():
-            print(f"  ℹ️  ONVIF service already running on port {self.onvif_port}")
+            print(f"  ONVIF service already running on port {self.onvif_port}")
             return
             
         self.onvif_service = ONVIFService(self)
@@ -124,8 +125,8 @@ class VirtualONVIFCamera:
         
         self.onvif_service.start_discovery_service(local_ip)
         
-        print(f"  ✓ ONVIF service started on port {self.onvif_port}")
-        print(f"  ℹ️  Add manually in ODM: {local_ip}:{self.onvif_port}\n")
+        print(f"  ONVIF service started on port {self.onvif_port}")
+        print(f"  Add manually in ODM: {local_ip}:{self.onvif_port}\n")
         
     def to_dict(self):
         """Convert to dictionary for API"""
@@ -159,7 +160,8 @@ class VirtualONVIFCamera:
             'netmask': self.netmask,
             'gateway': self.gateway,
             'assignedIp': self.assigned_ip,
-            'macAddress': self.mac_address
+            'macAddress': self.mac_address,
+            'debugMode': self.debug_mode
         }
     
     def to_config_dict(self):
@@ -193,5 +195,6 @@ class VirtualONVIFCamera:
             'ipMode': self.ip_mode,
             'staticIp': self.static_ip,
             'netmask': self.netmask,
-            'gateway': self.gateway
+            'gateway': self.gateway,
+            'debugMode': self.debug_mode
         }

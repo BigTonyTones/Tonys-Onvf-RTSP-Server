@@ -36,10 +36,13 @@ class ONVIFService:
         CORS(app)
         self.app = app
         
-        # Disable Flask logging to reduce overhead
+        # Disable Flask logging if not in debug mode
         import logging
         log = logging.getLogger('werkzeug')
-        log.setLevel(logging.ERROR)
+        if getattr(self.camera, 'debug_mode', False):
+            log.setLevel(logging.INFO)
+        else:
+            log.setLevel(logging.ERROR)
         
         # Disable Flask development server warnings
         import os
@@ -122,7 +125,7 @@ class ONVIFService:
                 return self._handle_get_device_info()
                 
             except Exception as e:
-                print(f"  ❌ Error handling request: {e}")
+                print(f"  Error handling request: {e}")
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
@@ -177,7 +180,7 @@ class ONVIFService:
                 return self._handle_get_profiles()
                 
             except Exception as e:
-                print(f"  ❌ Error in media service: {e}")
+                print(f"  Error in media service: {e}")
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
@@ -202,10 +205,10 @@ class ONVIFService:
                 sock.bind(('', MCAST_PORT))
                 mreq = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
                 sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-                print(f"  ✓ WS-Discovery listener started for {self.camera.name} on {local_ip}:{self.camera.onvif_port}")
+                print(f"  WS-Discovery listener started for {self.camera.name} on {local_ip}:{self.camera.onvif_port}")
             except Exception as e:
-                print(f"  ⚠️ Discovery service error: {e}")
-                print(f"  ℹ️ You can still add camera manually in ODM: {local_ip}:{self.camera.onvif_port}")
+                print(f"  Discovery service error: {e}")
+                print(f"  You can still add camera manually in ODM: {local_ip}:{self.camera.onvif_port}")
                 return
             
             while self.camera.status == "running":
@@ -256,7 +259,7 @@ class ONVIFService:
                         try:
                             sock.sendto(response.encode('utf-8'), addr)
                         except Exception as e:
-                            print(f"  ✗ Failed to send response: {e}")
+                            print(f"  Failed to send response: {e}")
                         
                 except socket.timeout:
                     continue

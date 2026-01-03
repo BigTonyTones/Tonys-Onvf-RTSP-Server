@@ -18,11 +18,7 @@ def main():
         net_mgr = LinuxNetworkManager()
         net_mgr.cleanup_all_vnics()
 
-    print("""
-    ╔═══════════════════════════════════════════════════════════╗
-    ║          Tonys Onvif-RTSP Server v5.2            ║
-    ╚═══════════════════════════════════════════════════════════╝
-    """)
+    print("\nTonys Onvif-RTSP Server v5.2.5\n")
     
     manager = CameraManager()
     
@@ -31,14 +27,14 @@ def main():
     # This ensures cameras start fresh based on their auto-start preference
     auto_start_cameras = [cam for cam in manager.cameras if cam.auto_start]
     if auto_start_cameras:
-        print(f"\n🚀 Auto-starting {len(auto_start_cameras)} camera(s)...")
+        print(f"\nAuto-starting {len(auto_start_cameras)} camera(s)...")
         for camera in auto_start_cameras:
             camera.start()
-            print(f"  ✓ Started: {camera.name}")
+            print(f"  Started: {camera.name}")
             print("-" * 40)
         print("\n" + "=" * 60)
     else:
-        print("\n  ℹ️  No cameras configured for auto-start")
+        print("\n  No cameras configured for auto-start")
         print("=" * 60)
     
     # Load settings to get RTSP port
@@ -52,15 +48,15 @@ def main():
     
     # Start MediaMTX
     # Pass manager.cameras so it can generate config
-    print("\n📦 Initializing MediaMTX RTSP Server...")
+    print("\nInitializing MediaMTX RTSP Server...")
     # Pass authentication details to start()
     if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=manager.get_grid_fusion()):
-        print("\n❌ Failed to start MediaMTX. Exiting...")
+        print("\nFailed to start MediaMTX. Exiting...")
         sys.exit(1)
     
     web_app = create_web_app(manager)
     
-    print(f"\n🌐 Starting Web UI on http://localhost:{WEB_UI_PORT}")
+    print(f"\nStarting Web UI on http://localhost:{WEB_UI_PORT}")
     web_thread = threading.Thread(
         target=lambda: web_app.run(
             host='0.0.0.0', 
@@ -75,24 +71,24 @@ def main():
     
     time.sleep(2)
     
-    print(f"✓ Web UI started!")
+    print(f"Web UI started!")
     
     # Check settings to see if we should open the browser
     settings = manager.load_settings()
     if settings.get('openBrowser', True) is not False:
-        print(f"✓ Opening browser...\n")
+        print(f"Opening browser...\n")
         try:
             webbrowser.open(f'http://localhost:{WEB_UI_PORT}')
         except:
             pass
     
-    print("="*60)
+    print("=" * 60)
     print("SERVER RUNNING")
-    print("="*60)
+    print("=" * 60)
     print(f"Web Interface: http://localhost:{WEB_UI_PORT}")
     print(f"RTSP Server: rtsp://localhost:{rtsp_port}")
     print("Press Ctrl+C to stop the server")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
     
     try:
         while True:

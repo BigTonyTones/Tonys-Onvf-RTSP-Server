@@ -64,6 +64,7 @@ class CameraManager:
             self.global_username = config.get('settings', {}).get('globalUsername', 'admin')
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
+            self.debug_mode = config.get('settings', {}).get('debugMode', False)
             
             # Load GridFusion settings (Support multiple layouts)
             grid_fusion = config.get('gridFusion', {})
@@ -74,7 +75,7 @@ class CameraManager:
             else:
                 # Migrate legacy single layout to new structure
                 if grid_fusion.get('cameras') or grid_fusion.get('enabled'):
-                    print("  ℹ️  Migrating GridFusion config to multi-layout structure...")
+                    print("  Migrating GridFusion config to multi-layout structure...")
                     self.grid_fusion_layouts = [{
                         'id': 'matrix',
                         'name': 'Default Layout',
@@ -113,6 +114,7 @@ class CameraManager:
             self.global_username = 'admin'
             self.global_password = 'admin'
             self.rtsp_auth_enabled = False
+            self.debug_mode = False
             # Default layouts if config missing
             self.grid_fusion_layouts = [{
                 'id': 'matrix',
@@ -139,7 +141,8 @@ class CameraManager:
                 'autoBoot': getattr(self, 'auto_boot', False),
                 'globalUsername': getattr(self, 'global_username', 'admin'),
                 'globalPassword': getattr(self, 'global_password', 'admin'),
-                'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False)
+                'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
+                'debugMode': getattr(self, 'debug_mode', False)
             },
             'auth': {
                 'enabled': getattr(self, 'auth_enabled', False),
@@ -161,7 +164,7 @@ class CameraManager:
                 # Atomic rename
                 os.replace(temp_path, self.config_file)
             except Exception as e:
-                print(f"❌ Error saving config: {e}")
+                print(f"Error saving config: {e}")
                 if 'temp_path' in locals() and os.path.exists(temp_path):
                     os.remove(temp_path)
 
@@ -184,10 +187,11 @@ class CameraManager:
                         self.global_username = settings.get('globalUsername', 'admin')
                         self.global_password = settings.get('globalPassword', 'admin')
                         self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+                        self.debug_mode = settings.get('debugMode', False)
                 except Exception as e:
                     # If reading fails (e.g. file busy), we just fall back to the last known 
                     # value stored in self.server_ip, which is much safer.
-                    print(f"⚠️ Warning: Could not read config file for settings: {e}")
+                    print(f"Warning: Could not read config file for settings: {e}")
         
         return {
             'serverIp': self.server_ip, 
@@ -199,6 +203,7 @@ class CameraManager:
             'globalUsername': getattr(self, 'global_username', 'admin'),
             'globalPassword': getattr(self, 'global_password', 'admin'),
             'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
+            'debugMode': getattr(self, 'debug_mode', False),
             'authEnabled': self.auth_enabled,
             'username': self.username
         }
@@ -213,19 +218,22 @@ class CameraManager:
         old_global_username = getattr(self, 'global_username', 'admin')
         old_global_password = getattr(self, 'global_password', 'admin')
         old_rtsp_auth_enabled = getattr(self, 'rtsp_auth_enabled', False)
+        old_debug_mode = getattr(self, 'debug_mode', False)
         
         # Update values
         self.rtsp_port = int(settings.get('rtspPort', self.rtsp_port))
         self.global_username = settings.get('globalUsername', 'admin')
         self.global_password = settings.get('globalPassword', 'admin')
         self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+        self.debug_mode = settings.get('debugMode', False)
         
         # Check for changes that require MediaMTX restart
         rtsp_needs_restart = (
             old_rtsp_port != self.rtsp_port or
             old_global_username != self.global_username or
             old_global_password != self.global_password or
-            old_rtsp_auth_enabled != self.rtsp_auth_enabled
+            old_rtsp_auth_enabled != self.rtsp_auth_enabled or
+            old_debug_mode != self.debug_mode
         )
         
         # Handle auto-boot setting (Linux only)
@@ -263,11 +271,11 @@ class CameraManager:
         
         # Restart MediaMTX if needed
         if rtsp_needs_restart:
-            print("🔄 RTSP settings changed, restarting MediaMTX...")
+            print("RTSP settings changed, restarting MediaMTX...")
             # Pass credentials only if auth is enabled
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode)
             
         return {
             'serverIp': self.server_ip, 
@@ -279,6 +287,7 @@ class CameraManager:
             'globalUsername': self.global_username,
             'globalPassword': self.global_password,
             'rtspAuthEnabled': self.rtsp_auth_enabled,
+            'debugMode': self.debug_mode,
             'authEnabled': self.auth_enabled,
             'username': self.username
         }
@@ -332,7 +341,7 @@ class CameraManager:
             return [{k: v for k, v in l.items() if k in ['id', 'enabled', 'resolution', 'cameras']} for l in layouts]
             
         if extract_stream_config(old_layouts) != extract_stream_config(self.grid_fusion_layouts):
-            print("🔄 GridFusion layouts changed, restarting MediaMTX...")
+            print("GridFusion layouts changed, restarting MediaMTX...")
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
             self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
@@ -388,7 +397,7 @@ class CameraManager:
         path_name = name.lower().replace(' ', '_').replace('-', '_')
         path_name = ''.join(c for c in path_name if c.isalnum() or c == '_')
         
-        print(f"\n📹 Adding camera: {name}")
+        print(f"\nAdding camera: {name}")
         
         config = {
             'id': self.next_id,
@@ -417,7 +426,8 @@ class CameraManager:
             'ipMode': ip_mode,
             'staticIp': static_ip,
             'netmask': netmask,
-            'gateway': gateway
+            'gateway': gateway,
+            'debugMode': getattr(self, 'debug_mode', False)
         }
         
         camera = VirtualONVIFCamera(config)
@@ -512,7 +522,7 @@ class CameraManager:
         camera.netmask = netmask
         camera.gateway = gateway
         
-        print(f"\n✏️ Updated camera: {name}")
+        print(f"\nUpdated camera: {name}")
         
         # Save config
         self.save_config()

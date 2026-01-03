@@ -1027,7 +1027,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.2</h1>
+            <h1>Tonys Onvif-RTSP Server v5.2.5</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1037,6 +1037,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn" onclick="openSettingsModal()">Settings</button>
                 <button class="btn" onclick="restartServer()">Restart Server</button>
                 <button class="btn" onclick="openAboutModal()">About</button>
+                <button class="btn" onclick="openLogsModal()">Logs</button>
                 <button class="btn btn-danger" onclick="stopServer()">Stop Server</button>
                 <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">Logout</a>
             </div>
@@ -1051,7 +1052,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.2</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.2.5</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 Buy Tony a coffee
             </a>
@@ -1068,6 +1069,28 @@ def get_web_ui_html(current_settings=None):
             <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: #f56565;">Close Matrix</button>
         </div>
         <div id="matrix-grid" class="matrix-grid"></div>
+    </div>
+    
+    <div id="logs-modal" class="modal">
+        <div class="modal-content" style="max-width: 1200px; width: 95%;">
+            <div class="modal-header">
+                <div class="modal-title">Terminal Logs</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" onclick="refreshLogs()">Refresh</button>
+                    <button class="close-btn" onclick="closeLogsModal()">×</button>
+                </div>
+            </div>
+            <div id="logs-container" style="background: #0d1117; color: #e6f1ff; padding: 20px; border-radius: 8px; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.5; max-height: 600px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d;">
+                Loading logs...
+            </div>
+            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 12px;">
+                <span>Total 2,000 lines captured in memory</span>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="autoScrollLogs" checked style="width: auto; cursor: pointer;">
+                    <span>Auto-scroll to bottom</span>
+                </label>
+            </div>
+        </div>
     </div>
     
     <div id="camera-modal" class="modal">
@@ -1414,6 +1437,16 @@ def get_web_ui_html(current_settings=None):
                     </label>
                 </div>
 
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="debugMode" style="width: auto; cursor: pointer;">
+                        <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Debug Mode (Show detailed logs)</span>
+                    </label>
+                    <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                        Enables verbose MediaMTX logging. Helpful for troubleshooting stream issues.
+                    </small>
+                </div>
+
                 <div class="form-group linux-only">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="autoBoot" style="width: auto; cursor: pointer;">
@@ -1513,6 +1546,45 @@ def get_web_ui_html(current_settings=None):
                 if (linuxSection) linuxSection.style.display = 'none';
             }}
         }});
+
+        let logInterval = null;
+
+        function openLogsModal() {{
+            document.getElementById('logs-modal').classList.add('active');
+            refreshLogs();
+            // Auto-refresh logs every 3 seconds while open
+            if (logInterval) clearInterval(logInterval);
+            logInterval = setInterval(refreshLogs, 3000);
+        }}
+
+        function closeLogsModal() {{
+            document.getElementById('logs-modal').classList.remove('active');
+            if (logInterval) {{
+                clearInterval(logInterval);
+                logInterval = null;
+            }}
+        }}
+
+        async function refreshLogs() {{
+            try {{
+                const response = await fetch('/api/logs');
+                if (response.ok) {{
+                    const data = await response.json();
+                    const container = document.getElementById('logs-container');
+                    
+                    // Simple ANSI escape code stripping (common in terminal output)
+                    const cleanLogs = data.logs.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
+                    
+                    container.textContent = cleanLogs || "No logs available.";
+                    
+                    if (document.getElementById('autoScrollLogs').checked) {{
+                        container.scrollTop = container.scrollHeight;
+                    }}
+                }}
+            }} catch (error) {{
+                console.error('Error fetching logs:', error);
+            }}
+        }}
         
         async function loadData() {{
             try {{
@@ -2544,6 +2616,9 @@ def get_web_ui_html(current_settings=None):
                     
                     const rtspAuthField = document.getElementById('rtspAuthEnabled');
                     if (rtspAuthField) rtspAuthField.checked = settings.rtspAuthEnabled === true;
+
+                    const debugModeField = document.getElementById('debugMode');
+                    if (debugModeField) debugModeField.checked = settings.debugMode === true;
                     
                     const authEnabledField = document.getElementById('authEnabled');
                     if (authEnabledField) authEnabledField.checked = settings.authEnabled === true;
@@ -2599,6 +2674,7 @@ def get_web_ui_html(current_settings=None):
                 globalUsername: document.getElementById('globalUsername').value,
                 globalPassword: document.getElementById('globalPassword').value,
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
+                debugMode: document.getElementById('debugMode').checked,
                 authEnabled: document.getElementById('authEnabled').checked,
                 username: document.getElementById('authUsername').value,
                 password: document.getElementById('authPassword').value

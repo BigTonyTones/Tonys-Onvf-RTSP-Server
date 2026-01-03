@@ -9,9 +9,12 @@ import os
 # Ensure the current directory is in sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.utils import check_and_install_requirements
+from app.utils import check_and_install_requirements, init_logger
 
 if __name__ == "__main__":
+    # Initialize log capturing as early as possible
+    init_logger()
+    
     # Check dependencies first
     check_and_install_requirements()
     
