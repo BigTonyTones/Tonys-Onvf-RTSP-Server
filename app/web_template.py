@@ -2032,8 +2032,11 @@ def get_web_ui_html(current_settings=None):
                 const hlsConfig = {{
                     debug: false,
                     enableWorker: true,
-                    lowLatencyMode: false,
-                    backBufferLength: 5,
+                    lowLatencyMode: true,
+                    backBufferLength: 30,
+                    liveSyncDurationCount: 2,
+                    liveMaxLatencyDurationCount: 3,
+                    maxLiveSyncPlaybackRate: 1.5,
                 }};
 
                 // Hook to inject credentials into every segment request
@@ -2664,18 +2667,18 @@ def get_web_ui_html(current_settings=None):
         
         function resetAdvancedSettings() {{
             if (confirm('Are you sure you want to reset all MediaMTX and FFmpeg settings to their factory defaults?')) {{
-                // MediaMTX Defaults
+                document.getElementById('mediamtx_id').value = 4096;
                 document.getElementById('mediamtx_writeQueueSize').value = 4096;
                 document.getElementById('mediamtx_readTimeout').value = '30s';
                 document.getElementById('mediamtx_writeTimeout').value = '30s';
                 document.getElementById('mediamtx_udpMaxPayloadSize').value = 1472;
-                document.getElementById('mediamtx_hlsSegmentCount').value = 10;
+                document.getElementById('mediamtx_hlsSegmentCount').value = 3;
                 document.getElementById('mediamtx_hlsSegmentDuration').value = '1s';
                 document.getElementById('mediamtx_hlsPartDuration').value = '200ms';
                 
                 // FFmpeg Defaults
                 document.getElementById('ffmpeg_globalArgs').value = '-hide_banner -loglevel error';
-                document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
+                document.getElementById('ffmpeg_inputArgs').value = '-fflags nobuffer -flags low_delay -rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
                 document.getElementById('ffmpeg_processArgs').value = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
                 
                 showToast('Settings reset to defaults. Click "Save Settings" to apply.');

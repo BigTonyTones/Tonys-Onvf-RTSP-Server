@@ -43,7 +43,7 @@ class CameraManager:
                 'readTimeout': '30s',
                 'writeTimeout': '30s',
                 'udpMaxPayloadSize': 1472,
-                'hlsSegmentCount': 10,
+                'hlsSegmentCount': 3,
                 'hlsSegmentDuration': '1s',
                 'hlsPartDuration': '200ms',
             },
