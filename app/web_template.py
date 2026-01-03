@@ -1930,13 +1930,13 @@ def get_web_ui_html(current_settings=None):
                     <div class="info-label">RTSP Main Stream (Full Quality)</div>
                     <div class="info-value">
                         rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main', this)">Copy</button>
                     </div>
                     
                     <div class="info-label">RTSP Sub Stream (Lower Quality)</div>
                     <div class="info-value">
                         rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub', this)">Copy</button>
                     </div>
                     
                     <div class="info-label">ONVIF Service URL</div>
@@ -1947,7 +1947,7 @@ def get_web_ui_html(current_settings=None):
                                 <div style="font-size: 11px; color: var(--text-muted); background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">
                                     ${{settings.globalUsername || 'admin'}} / ${{settings.globalPassword || 'admin'}}
                                 </div>
-                                <button class="copy-btn" onclick="copyToClipboard('${{displayIp}}:${{cam.onvifPort}}')">Copy</button>
+                                <button class="copy-btn" onclick="copyToClipboard('${{displayIp}}:${{cam.onvifPort}}', this)">Copy</button>
                             </div>
                         </div>
                     </div>
@@ -1963,10 +1963,28 @@ def get_web_ui_html(current_settings=None):
             `;
         }}
         
-        async function copyToClipboard(text) {{
+        async function copyToClipboard(text, btn) {{
+            // Attempt to resolve button if not passed explicitly (for backward compatibility)
+            if (!btn && window.event) btn = window.event.target;
+            
             try {{
                 await navigator.clipboard.writeText(text);
-                // Optional: Show a toast or small visual feedback here if desired
+                
+                if (btn) {{
+                    const originalText = btn.textContent;
+                    const originalBg = btn.style.backgroundColor; // Store inline style if any
+                    
+                    btn.textContent = 'Copied!';
+                    btn.style.backgroundColor = '#48bb78'; // Green success color
+                    btn.style.color = '#ffffff';
+                    
+                    // Revert after 2 seconds
+                    setTimeout(() => {{ 
+                        btn.textContent = originalText;
+                        btn.style.backgroundColor = originalBg; 
+                        btn.style.color = ''; // Remove inline color to revert to CSS
+                    }}, 2000);
+                }}
             }} catch (err) {{
                 console.error('Failed to copy: ', err);
                 // Fallback for older browsers or insecure contexts
@@ -1978,6 +1996,15 @@ def get_web_ui_html(current_settings=None):
                 textArea.select();
                 try {{
                     document.execCommand('copy');
+                    if (btn) {{
+                        const originalText = btn.textContent;
+                        btn.textContent = 'Copied!';
+                        btn.style.backgroundColor = '#48bb78';
+                        setTimeout(() => {{ 
+                            btn.textContent = originalText;
+                            btn.style.backgroundColor = '';
+                        }}, 2000);
+                    }}
                 }} catch (e) {{
                     console.error('Fallback copy failed', e);
                     alert('Could not copy text. Please select and copy manually.');
@@ -3047,9 +3074,18 @@ def get_web_ui_html(current_settings=None):
             const text = el.textContent || el.value;
             navigator.clipboard.writeText(text).then(() => {{
                 const btn = event.target;
-                const oldText = btn.textContent;
+                const originalText = btn.textContent;
+                const originalBg = btn.style.backgroundColor;
+                
                 btn.textContent = 'Copied!';
-                setTimeout(() => btn.textContent = oldText, 2000);
+                btn.style.backgroundColor = '#48bb78'; // Green
+                btn.style.color = '#ffffff';
+                
+                setTimeout(() => {{ 
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = originalBg;
+                    btn.style.color = '';
+                }}, 2000);
             }});
         }}
     </script>

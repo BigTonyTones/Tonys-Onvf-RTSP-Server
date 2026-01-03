@@ -767,7 +767,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                     <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); margin-left: 0.5rem;">
                         <span style="font-size: 10px; color: var(--text-secondary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">RTSP URL</span>
                         <code id="rtsp-url-display" style="font-size: 11px; color: var(--accent-color); font-weight: 600; font-family: 'JetBrains Mono', monospace; background: transparent; padding: 0;">rtsp://localhost:8554/matrix</code>
-                        <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 10px; height: 22px; line-height: 1;" onclick="copyRTSPUrl()">Copy</button>
+                        <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 10px; height: 22px; line-height: 1;" onclick="copyRTSPUrl(this)">Copy</button>
                     </div>
                 </div>
             </div>
@@ -787,19 +787,26 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
     </div>
 
     <script>
-        function copyRTSPUrl() {{
+        function copyRTSPUrl(btn) {{
             const url = document.getElementById('rtsp-url-display').textContent;
             navigator.clipboard.writeText(url).then(() => {{
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = 'Copied!';
-                btn.style.backgroundColor = 'var(--success)';
-                btn.style.color = 'white';
-                setTimeout(() => {{
-                    btn.textContent = originalText;
-                    btn.style.backgroundColor = '';
-                    btn.style.color = '';
-                }}, 2000);
+                // Fallback if btn not passed
+                if (!btn && window.event) btn = window.event.target;
+                
+                if (btn) {{
+                    const originalText = btn.textContent;
+                    const originalBg = btn.style.backgroundColor;
+                    
+                    btn.textContent = 'Copied!';
+                    btn.style.backgroundColor = '#48bb78'; // Green
+                    btn.style.color = 'white';
+                    
+                    setTimeout(() => {{
+                        btn.textContent = originalText;
+                        btn.style.backgroundColor = originalBg;
+                        btn.style.color = '';
+                    }}, 2000);
+                }}
             }});
         }}
 
