@@ -101,7 +101,8 @@ class CameraManager:
                         'cameras': grid_fusion.get('cameras', []),
                         'snapToGrid': grid_fusion.get('snapToGrid', True),
                         'showGrid': grid_fusion.get('showGrid', True),
-                        'showSnapshots': grid_fusion.get('showSnapshots', True)
+                        'showSnapshots': grid_fusion.get('showSnapshots', True),
+                        'outputFramerate': grid_fusion.get('outputFramerate', 5)
                     }]
                 else:
                      # Default empty layout
@@ -113,7 +114,8 @@ class CameraManager:
                         'cameras': [],
                         'snapToGrid': True,
                         'showGrid': True,
-                        'showSnapshots': True
+                        'showSnapshots': True,
+                        'outputFramerate': 5
                     }]
             
             # Load advanced settings
@@ -144,7 +146,8 @@ class CameraManager:
                 'cameras': [],
                 'snapToGrid': True,
                 'showGrid': True,
-                'showSnapshots': True
+                'showSnapshots': True,
+                'outputFramerate': 5
             }]
             self.save_config()
             
@@ -346,7 +349,8 @@ class CameraManager:
                      'cameras': data.get('cameras', []),
                      'snapToGrid': data.get('snapToGrid', True),
                      'showGrid': data.get('showGrid', True),
-                     'showSnapshots': data.get('showSnapshots', True)
+                     'showSnapshots': data.get('showSnapshots', True),
+                     'outputFramerate': data.get('outputFramerate', 5)
                  }]
              else:
                  # Update index 0
@@ -357,6 +361,7 @@ class CameraManager:
                  l['snapToGrid'] = data.get('snapToGrid', True)
                  l['showGrid'] = data.get('showGrid', True)
                  l['showSnapshots'] = data.get('showSnapshots', True)
+                 l['outputFramerate'] = data.get('outputFramerate', 5)
         
         self.save_config()
 
@@ -366,7 +371,7 @@ class CameraManager:
         # For simplicity, we compare the JSON representation of relevant fields
         
         def extract_stream_config(layouts):
-            return [{k: v for k, v in l.items() if k in ['id', 'enabled', 'resolution', 'cameras']} for l in layouts]
+            return [{k: v for k, v in l.items() if k in ['id', 'enabled', 'resolution', 'cameras', 'outputFramerate']} for l in layouts]
             
         if extract_stream_config(old_layouts) != extract_stream_config(self.grid_fusion_layouts):
             print("GridFusion layouts changed, restarting MediaMTX...")
