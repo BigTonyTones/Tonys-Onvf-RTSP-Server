@@ -227,14 +227,16 @@ class FFmpegManager:
         # Linux: Prioritize system-wide FFmpeg
         if system == "linux":
             # 1. Check system path
-            if shutil.which("ffmpeg"):
-                return "ffmpeg"
+            system_path = shutil.which("ffmpeg")
+            if system_path:
+                return os.path.abspath(system_path)
                 
             # 2. Try to install
             if self.install_system_ffmpeg():
                 # Check again
-                if shutil.which("ffmpeg"):
-                    return "ffmpeg"
+                system_path = shutil.which("ffmpeg")
+                if system_path:
+                    return os.path.abspath(system_path)
             
             # 3. Fallback to local check (optional, but good for backward compat if user manually placed it)
             executable = "ffmpeg"
@@ -267,12 +269,15 @@ class FFmpegManager:
         
         # Linux: Check system path
         if system == "linux":
-            if shutil.which("ffprobe"):
-                return "ffprobe"
+            # 1. Check system path
+            system_path = shutil.which("ffprobe")
+            if system_path:
+                return os.path.abspath(system_path)
             # Attempt install if missing (although ffmpeg install usually covers it)
             if self.install_system_ffmpeg():
-                 if shutil.which("ffprobe"):
-                     return "ffprobe"
+                 system_path = shutil.which("ffprobe")
+                 if system_path:
+                     return os.path.abspath(system_path)
             return "ffprobe"
 
         # Windows/Existing logic

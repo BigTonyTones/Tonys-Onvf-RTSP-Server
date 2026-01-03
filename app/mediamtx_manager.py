@@ -201,6 +201,8 @@ class MediaMTXManager:
         
         print(f"DEBUG: create_config called with user='{rtsp_username}', pass={'*' * len(rtsp_password) if rtsp_password else 'None'}")
             
+        system = platform.system().lower()
+
         config = {
 
             # ===== NETWORK SETTINGS =====
@@ -258,9 +260,17 @@ class MediaMTXManager:
         if os.path.exists(ffmpeg_exe):
             ffmpeg_exe = os.path.abspath(ffmpeg_exe)
             
+            # Ensure execution permissions on Unix-like systems
+            if system in ["linux", "darwin"]:
+                try:
+                    if not os.access(ffmpeg_exe, os.X_OK):
+                        print(f"   ⚠️ Fixing permissions for FFmpeg: {ffmpeg_exe}")
+                        os.chmod(ffmpeg_exe, 0o755)
+                except Exception as e:
+                    print(f"   ⚠️ Could not set execution permissions on FFmpeg: {e}")
+            
         print(f"   Using FFmpeg: {ffmpeg_exe}")
         
-        system = platform.system().lower()
         
         # Check if GLOBAL authentication is enabled
         enable_global_auth = bool(rtsp_username and rtsp_password)
@@ -469,7 +479,8 @@ class MediaMTXManager:
                     else:
                         safe_src = shlex.quote(src_url)
                     
-                    inputs.append(f'-rtsp_transport tcp -i {safe_src}')
+                    # -thread_queue_size is vital on Linux for multi-input compositing
+                    inputs.append(f'-rtsp_transport tcp -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -i {safe_src}')
                     
                     # Scale according to layout
                     w = int(gf_cam.get('w', 640))
@@ -480,6 +491,7 @@ class MediaMTXManager:
                 
                 if inputs:
                     # Construct overlay chain
+                    # r=20 provides a smooth baseline for composition
                     overlay_chain = f'color=black:s={res_w}x{res_h}:r=20[base];'
                     last_label = '[base]'
                     for i in range(len(active_gf_cams)):
@@ -488,7 +500,8 @@ class MediaMTXManager:
                         y = int(gf_cam.get('y', 0))
                         
                         next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
-                        overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass{next_label};'
+                        # repeatlast=1 ensures the matrix doesn't stall if one camera drops frames
+                        overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label};'
                         last_label = next_label
                     
                     filter_complex = ";".join(filters) + ";" + overlay_chain
@@ -503,8 +516,8 @@ class MediaMTXManager:
                     else:
                         safe_dest = shlex.quote(dest_url)
                         
-                    # Final command - optimized for low latency and stability
-                    # We use -f rtsp and then -rtsp_transport tcp BEFORE the destination to force TCP publish
+                    # Final command - optimized for low latency and stability on Linux
+                    # -vsync vfr helps when input cameras have varying clock speeds
                     gf_cmd = (
                         f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
                         f'-fflags +genpts+igndts '
@@ -513,7 +526,7 @@ class MediaMTXManager:
                         f'-map "[outv]" -c:v libx264 -preset ultrafast -tune zerolatency '
                         f'-profile:v high -level 4.2 '
                         f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 40 '
-                        f'-f rtsp -rtsp_transport tcp {safe_dest}'
+                        f'-vsync vfr -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
                     config['paths']['matrix'] = {

@@ -63,6 +63,9 @@ fi
 if [ -f "mediamtx" ]; then
     chmod +x mediamtx
 fi
+if [ -f "ffmpeg" ]; then
+    chmod +x ffmpeg
+fi
 
 # 6. Increase file descriptor limit
 # This is crucial when running many virtual cameras as each uses multiple sockets and files
