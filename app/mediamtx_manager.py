@@ -365,7 +365,7 @@ class MediaMTXManager:
                     main_path_cfg = {
                         'source': main_source,
                         'rtspTransport': 'tcp',
-                        'sourceOnDemand': False,
+                        'sourceOnDemand': True,
                         'sourceOnDemandStartTimeout': '10s',
                         'sourceOnDemandCloseAfter': '10s',
                         'record': False,
@@ -433,7 +433,7 @@ class MediaMTXManager:
                         'rtspTransport': 'tcp',
                         
                         # On-demand disabled for multiple simultaneous viewers
-                        'sourceOnDemand': False,
+                        'sourceOnDemand': True,
                         'sourceOnDemandStartTimeout': '10s',
                         'sourceOnDemandCloseAfter': '10s',
                         
