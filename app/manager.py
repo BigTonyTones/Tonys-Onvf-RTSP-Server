@@ -39,7 +39,7 @@ class CameraManager:
         # Advanced Settings
         self.advanced_settings = {
             'mediamtx': {
-                'writeQueueSize': 4096,
+                'writeQueueSize': 16384,
                 'readTimeout': '30s',
                 'writeTimeout': '30s',
                 'udpMaxPayloadSize': 1472,

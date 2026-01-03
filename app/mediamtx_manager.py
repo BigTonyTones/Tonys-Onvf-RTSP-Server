@@ -237,7 +237,7 @@ class MediaMTXManager:
             'writeTimeout': advanced_settings.get('mediamtx', {}).get('writeTimeout', '30s') if advanced_settings else '30s',
             
             # Buffer and queue settings
-            'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 4096) if advanced_settings else 4096,
+            'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 16384) if advanced_settings else 16384,
             'udpMaxPayloadSize': advanced_settings.get('mediamtx', {}).get('udpMaxPayloadSize', 1472) if advanced_settings else 1472,
             
             # ===== MEMORY MANAGEMENT =====
@@ -511,20 +511,20 @@ class MediaMTXManager:
                         else:
                             safe_src = shlex.quote(src_url)
                         
-                        # -thread_queue_size is vital on Linux for multi-input compositing
-                        inputs.append(f'-rtsp_transport tcp -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -i {safe_src}')
+                        # Optimized for low-latency local ingestion with wallclock sync
+                        inputs.append(f'-fflags nobuffer -flags low_delay -rtsp_transport tcp -probesize 1M -analyzeduration 1M -thread_queue_size 4096 -use_wallclock_as_timestamps 1 -i {safe_src}')
                         
-                        # Scale according to layout
+                        # Scale and normalize timestamps to prevent sync-induced jumping
                         w = int(gf_cam.get('w', 640))
                         h = int(gf_cam.get('h', 480))
-                        filters.append(f'[{input_idx}:v]scale={w}:{h}[v{input_idx}]')
+                        filters.append(f'[{input_idx}:v]scale={w}:{h},setpts=PTS-STARTPTS[v{input_idx}]')
                         active_gf_cams.append(gf_cam)
                         input_idx += 1
                     
                     if inputs:
                         # Construct overlay chain
-                        # r=20 provides a smooth baseline for composition
-                        overlay_chain = f'color=black:s={res_w}x{res_h}:r=20[base];'
+                        # Force a constant 15fps baseline
+                        overlay_chain = f'color=black:s={res_w}x{res_h}:r=15[base];'
                         last_label = '[base]'
                         for i in range(len(active_gf_cams)):
                             gf_cam = active_gf_cams[i]
@@ -532,7 +532,7 @@ class MediaMTXManager:
                             y = int(gf_cam.get('y', 0))
                             
                             next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
-                            # repeatlast=1 ensures the matrix doesn't stall if one camera drops frames
+                            # repeatlast=1 is critical: if one input stops, the others keep flowing
                             overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label};'
                             last_label = next_label
                         
@@ -548,17 +548,16 @@ class MediaMTXManager:
                         else:
                             safe_dest = shlex.quote(dest_url)
                             
-                        # Final command - optimized for low latency and stability on Linux
-                        # -vsync vfr helps when input cameras have varying clock speeds
+                        # Final command - optimized for extreme stability and low-latency jumping prevention
                         gf_cmd = (
                             f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                            f'-fflags +genpts+igndts '
                             f'{" ".join(inputs)} '
                             f'-filter_complex "{filter_complex}" '
                             f'-map "[outv]" {ff_process} '
                             f'-profile:v high -level 4.2 '
-                            f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 30 '
-                            f'-vsync vfr -f rtsp -rtsp_transport tcp {safe_dest}'
+                            f'-preset ultrafast -tune zerolatency '
+                            f'-b:v 2500k -maxrate 2500k -bufsize 5000k -g 15 '
+                            f'-r 15 -vsync cfr -max_delay 500000 -f rtsp -rtsp_transport tcp {safe_dest}'
                         )
                         
                         config['paths'][layout_id] = {

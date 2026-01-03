@@ -1027,7 +1027,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.3.1</h1>
+            <h1>Tonys Onvif-RTSP Server v5.3.5</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1052,7 +1052,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.1</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.5</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 Buy Tony a coffee
             </a>
@@ -1651,7 +1651,7 @@ def get_web_ui_html(current_settings=None):
                     const container = document.getElementById('logs-container');
                     
                     // Simple ANSI escape code stripping (common in terminal output)
-                    const cleanLogs = data.logs.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
+                    const cleanLogs = data.logs.replace(/\u001b\\[[0-9;]*[a-zA-Z]/g, '');
                     
                     container.textContent = cleanLogs || "No logs available.";
                     
@@ -2034,14 +2034,13 @@ def get_web_ui_html(current_settings=None):
                     enableWorker: true,
                     lowLatencyMode: true,
                     backBufferLength: 30,
-                    liveSyncDurationCount: 2,
-                    liveMaxLatencyDurationCount: 3,
-                    maxLiveSyncPlaybackRate: 1.5,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 5,
+                    maxLiveSyncPlaybackRate: 1.25
                 }};
 
                 // Hook to inject credentials into every segment request
                 if (settings.rtspAuthEnabled && settings.globalUsername && settings.globalPassword) {{
-                    console.log(`[HLS] Configuring auth for ${{String(videoId)}}`);
                     hlsConfig.xhrSetup = function(xhr, url) {{
                         let accessUrl = url;
                         if (url.indexOf('user=') === -1) {{
@@ -2072,11 +2071,11 @@ def get_web_ui_html(current_settings=None):
                         switch(data.type) {{
                             case Hls.ErrorTypes.NETWORK_ERROR:
                                 console.log(`Network error on ${{videoId}}, attempt ${{attempts + 1}}/${{maxAttempts}}`);
-                                if (attempts \u003c maxAttempts) {{
+                                if (attempts < maxAttempts) {{
                                     recoveryAttempts.set(videoId, attempts + 1);
                                     // Exponential backoff: 1s, 2s, 4s, 8s, 16s
                                     const delay = Math.min(1000 * Math.pow(2, attempts), 16000);
-                                    setTimeout(() =\u003e {{
+                                    setTimeout(() => {{
                                         console.log(`Retrying network connection for ${{videoId}}...`);
                                         hls.startLoad();
                                     }}, delay);
@@ -2090,7 +2089,7 @@ def get_web_ui_html(current_settings=None):
                                 
                             case Hls.ErrorTypes.MEDIA_ERROR:
                                 console.log(`Media error on ${{videoId}}, attempting recovery...`);
-                                if (attempts \u003c maxAttempts) {{
+                                if (attempts < maxAttempts) {{
                                     recoveryAttempts.set(videoId, attempts + 1);
                                     hls.recoverMediaError();
                                 }} else {{
@@ -2668,7 +2667,7 @@ def get_web_ui_html(current_settings=None):
         function resetAdvancedSettings() {{
             if (confirm('Are you sure you want to reset all MediaMTX and FFmpeg settings to their factory defaults?')) {{
                 document.getElementById('mediamtx_id').value = 4096;
-                document.getElementById('mediamtx_writeQueueSize').value = 4096;
+                document.getElementById('mediamtx_writeQueueSize').value = 16384;
                 document.getElementById('mediamtx_readTimeout').value = '30s';
                 document.getElementById('mediamtx_writeTimeout').value = '30s';
                 document.getElementById('mediamtx_udpMaxPayloadSize').value = 1472;
