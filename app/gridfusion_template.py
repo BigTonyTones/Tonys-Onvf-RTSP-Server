@@ -687,8 +687,16 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 <div class="toolbar-group">
                     <span class="toolbar-label">Resolution</span>
                     <select class="select-input" id="resolution-select" onchange="handleResolutionChange(this.value)">
-                        <optgroup label="HD Standards">
+                        <optgroup label="Standard Definition (SD)">
+                            <option value="640x360">640x360 (nHD)</option>
+                            <option value="854x480">854x480 (FWVGA)</option>
+                            <option value="960x540">960x540 (qHD)</option>
+                            <option value="1024x576">1024x576 (WSVGA)</option>
+                        </optgroup>
+                        <optgroup label="High Definition (HD)">
                             <option value="1280x720">1280x720 (720p HD)</option>
+                            <option value="1366x768">1366x768 (FWXGA)</option>
+                            <option value="1600x900">1600x900 (HD+)</option>
                             <option value="1920x1080" selected>1920x1080 (1080p FHD)</option>
                         </optgroup>
                         <optgroup label="Quad HD (2K)">
@@ -1044,8 +1052,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             document.getElementById('gf-enabled').checked = gfConfig.enabled;
             
             const standardRes = [
-                '1920x1080', '2560x1440', '3840x2160', '5120x2880', '7680x4320', 
-                '10240x4320', '1280x720', '2048x1080', '4096x2160', '1600x1200', '1024x768'
+                '640x360', '854x480', '960x540', '1024x576',
+                '1280x720', '1366x768', '1600x900', '1920x1080', 
+                '2560x1440', '2048x1080', '3840x2160', '4096x2160', 
+                '5120x2880', '7680x4320', '10240x4320',
+                '1600x1200', '1024x768'
             ];
             
             if (gfConfig.resolution) {{
