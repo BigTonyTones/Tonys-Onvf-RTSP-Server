@@ -553,7 +553,6 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         input:checked + .slider {{
             background-color: var(--success);
         }}
-
         input:checked + .slider:before {{
             transform: translateX(20px);
         }}
@@ -567,6 +566,38 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             color: var(--text-secondary);
             border-top: 1px solid var(--border);
         }}
+        
+        .btn-xs {{
+            padding: 2px 6px;
+            font-size: 10px;
+            background: var(--bg-accent);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            cursor: pointer;
+        }}
+        .btn-xs:hover {{ background: var(--bg-hover); }}
+        .btn-xs-danger {{
+            padding: 2px 6px;
+            font-size: 10px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            border-radius: 4px;
+            cursor: pointer;
+        }}
+        .btn-xs-danger:hover {{ background: var(--danger); color: white; }}
+        
+        .btn-xs-primary {{
+            padding: 2px 6px;
+            font-size: 10px;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+            border-radius: 4px;
+            cursor: pointer;
+        }}
+        .btn-xs-primary:hover {{ background: var(--success); color: white; }}
     </style>
 </head>
 <body>
@@ -588,6 +619,20 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
     <div class="main-container">
         <div class="sidebar">
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border); background: var(--bg-hover);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                    <div class="sidebar-title">Layouts</div>
+                    <div style="display:flex; gap: 5px;">
+                        <button class="btn-xs-primary" onclick="createNewLayout()" title="New Layout">Add</button>
+                        <button class="btn-xs-danger" onclick="deleteCurrentLayout()" title="Delete Layout">Del</button>
+                    </div>
+                </div>
+                <select id="layout-select" onchange="switchLayout(this.value)" style="width:100%; background: var(--bg-primary); color: white; border: 1px solid var(--border); padding: 5px; border-radius: 4px; margin-bottom: 5px;">
+                    <!-- Populated via JS -->
+                </select>
+                <input type="text" id="layout-name-edit" style="width:100%; background: rgba(0,0,0,0.2); color: var(--text-secondary); border: 1px solid transparent; padding: 4px; border-radius: 4px; font-size: 11px;" placeholder="Layout Name" onchange="updateLayoutName(this.value)">
+            </div>
+
             <div class="sidebar-header">
                 <div class="sidebar-title">Available Cameras</div>
             </div>
@@ -759,7 +804,36 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
 
         let cameras = [];
-        let gfConfig = {json.dumps(grid_fusion_config) if grid_fusion_config else '{ "enabled": false, "resolution": "1920x1080", "cameras": [], "snapToGrid": true, "showGrid": true, "showSnapshots": true }'};
+        // Load full config data
+        let gfData = {json.dumps(grid_fusion_config) if grid_fusion_config else '{ "layouts": [] }'};
+        
+        // Initialize layouts array
+        let gfLayouts = gfData.layouts || [];
+        
+        // Fallback or legacy handling
+        if (gfLayouts.length === 0) {{
+            // Check if legacy single-layout config exists
+            if (gfData.cameras) {{
+                gfData.id = 'matrix';
+                gfData.name = 'Default Layout';
+                gfLayouts.push(gfData);
+            }} else {{
+                // Create default if completely empty
+                gfLayouts.push({{
+                    id: 'matrix',
+                    name: 'Default Layout',
+                    enabled: false,
+                    resolution: '1920x1080',
+                    cameras: [],
+                    snapToGrid: true,
+                    showGrid: true,
+                    showSnapshots: true
+                }});
+            }}
+        }}
+
+        // Set current layout
+        let gfConfig = gfLayouts[0]; // Active working copy reference
         let appSettings = {json.dumps(current_settings) if current_settings else '{ "rtspPort": 8554 }'};
         
         let snapshots = {{}};
@@ -770,6 +844,86 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         let dragOffset = {{ x: 0, y: 0 }};
         let lastMousePos = {{ x: 0, y: 0 }};
         let raftId = null;
+
+        // Layout Management Functions
+        function updateLayoutSelector() {{
+            const select = document.getElementById('layout-select');
+            select.innerHTML = '';
+            gfLayouts.forEach(l => {{
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = l.name || l.id;
+                if (l.id === gfConfig.id) opt.selected = true;
+                select.appendChild(opt);
+            }});
+            
+            // Update name edit field
+            document.getElementById('layout-name-edit').value = gfConfig.name || gfConfig.id;
+            
+            // Update RTSP URL display
+            const port = appSettings.rtspPort || 8554;
+            const hostname = window.location.hostname;
+            const url = `rtsp://${{hostname}}:${{port}}/${{gfConfig.id}}`;
+            document.getElementById('rtsp-url-display').textContent = url;
+            
+            // Update stats bar
+            // document.getElementById('current-grid-name').textContent = gfConfig.name || gfConfig.id;
+        }}
+
+        function switchLayout(id) {{
+            const layout = gfLayouts.find(l => l.id === id);
+            if (layout) {{
+                gfConfig = layout;
+                selectedIdx = -1;
+                syncUI(); // Re-render everything
+            }}
+        }}
+
+        function createNewLayout() {{
+            const name = prompt("Enter new layout name:", "New Layout");
+            if (!name) return;
+            
+            const id = 'matrix_' + Math.floor(Math.random() * 10000);
+            const newLayout = {{
+                id: id,
+                name: name,
+                enabled: true,
+                resolution: '1920x1080',
+                cameras: [],
+                snapToGrid: true,
+                showGrid: true,
+                showSnapshots: true
+            }};
+            
+            gfLayouts.push(newLayout);
+            gfConfig = newLayout;
+            selectedIdx = -1;
+            syncUI();
+        }}
+        
+        function deleteCurrentLayout() {{
+            if (gfLayouts.length <= 1) {{
+                alert("Cannot delete the last layout.");
+                return;
+            }}
+            
+            if (!confirm(`Delete layout "${{gfConfig.name}}"? This cannot be undone.`)) return;
+            
+            const idx = gfLayouts.findIndex(l => l.id === gfConfig.id);
+            if (idx !== -1) {{
+                gfLayouts.splice(idx, 1);
+                gfConfig = gfLayouts[0]; // Switch to first available
+                selectedIdx = -1;
+                syncUI();
+            }}
+        }}
+
+        function updateLayoutName(newName) {{
+            if (newName) {{
+                gfConfig.name = newName;
+                updateLayoutSelector(); // Refresh list names
+            }}
+        }}
 
         // Initialize
         async function init() {{
@@ -863,6 +1017,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
 
         function syncUI() {{
+            updateLayoutSelector();
             document.getElementById('gf-enabled').checked = gfConfig.enabled;
             
             const standardRes = [
@@ -887,14 +1042,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             document.getElementById('gf-show-grid').checked = gfConfig.showGrid !== false;
             document.getElementById('gf-show-snapshots').checked = gfConfig.showSnapshots !== false;
             
-            const host = appSettings.serverIp || window.location.hostname || 'localhost';
-            const rtspPort = appSettings.rtspPort || 8554;
-            const url = `rtsp://${{host}}:${{rtspPort}}/matrix`;
-            const rtspEl = document.getElementById('rtsp-url-display');
-            if (rtspEl) rtspEl.textContent = url;
-            
             toggleGridOverlay();
             updateCanvasSize();
+            renderGrid();
         }}
 
         function updateCanvasSize() {{
@@ -1227,7 +1377,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const resp = await fetch('/api/gridfusion', {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify(gfConfig)
+                    body: JSON.stringify({{ layouts: gfLayouts }})
                 }});
                 
                 if (resp.ok) {{
