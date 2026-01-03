@@ -721,6 +721,20 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 </div>
 
                 <div class="toolbar-group">
+                    <span class="toolbar-label">FPS</span>
+                    <select class="select-input" id="fps-select" style="width: 90px;" onchange="handleFpsChange(this.value)">
+                        <option value="1">1 FPS</option>
+                        <option value="5" selected>5 FPS</option>
+                        <option value="10">10 FPS</option>
+                        <option value="15">15 FPS</option>
+                        <option value="20">20 FPS</option>
+                        <option value="25">25 FPS</option>
+                        <option value="30">30 FPS</option>
+                        <option value="60">60 FPS</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-group">
                     <span class="toolbar-label">Grid Layout</span>
                     <div class="grid-select-wrapper">
                         <div class="grid-select-trigger" onclick="toggleGridOptions()">
@@ -834,7 +848,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                     cameras: [],
                     snapToGrid: true,
                     showGrid: true,
-                    showSnapshots: true
+                    showSnapshots: true,
+                    outputFramerate: 5
                 }});
             }}
         }}
@@ -899,7 +914,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 cameras: [],
                 snapToGrid: true,
                 showGrid: true,
-                showSnapshots: true
+                showSnapshots: true,
+                outputFramerate: 5
             }};
             
             gfLayouts.push(newLayout);
@@ -1048,6 +1064,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             document.getElementById('gf-snap').checked = gfConfig.snapToGrid !== false;
             document.getElementById('gf-show-grid').checked = gfConfig.showGrid !== false;
             document.getElementById('gf-show-snapshots').checked = gfConfig.showSnapshots !== false;
+            document.getElementById('fps-select').value = gfConfig.outputFramerate || 5;
             
             toggleGridOverlay();
             updateCanvasSize();
@@ -1156,6 +1173,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             }} else {{
                 alert("Please enter valid width and height");
             }}
+        }}
+
+        function handleFpsChange(val) {{
+            gfConfig.outputFramerate = parseInt(val);
         }}
 
         function addCamera(id) {{
@@ -1379,6 +1400,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             gfConfig.snapToGrid = document.getElementById('gf-snap').checked;
             gfConfig.showGrid = document.getElementById('gf-show-grid').checked;
             gfConfig.showSnapshots = document.getElementById('gf-show-snapshots').checked;
+            gfConfig.outputFramerate = parseInt(document.getElementById('fps-select').value);
 
             try {{
                 const resp = await fetch('/api/gridfusion', {{

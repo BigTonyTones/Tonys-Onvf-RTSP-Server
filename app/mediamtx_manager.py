@@ -475,6 +475,7 @@ class MediaMTXManager:
                 layout_id = layout.get('id', 'matrix')
                 layout_name = layout.get('name', 'Matrix')
                 res = layout.get('resolution', '1920x1080')
+                fps = int(layout.get('outputFramerate', 5))
                 
                 try:
                     res_w, res_h = map(int, res.split('x'))
@@ -523,8 +524,8 @@ class MediaMTXManager:
                     
                     if inputs:
                         # Construct overlay chain
-                        # Force a constant 15fps baseline
-                        overlay_chain = f'color=black:s={res_w}x{res_h}:r=15[base];'
+                        # Force a constant baseline framerate
+                        overlay_chain = f'color=black:s={res_w}x{res_h}:r={fps}[base];'
                         last_label = '[base]'
                         for i in range(len(active_gf_cams)):
                             gf_cam = active_gf_cams[i]
@@ -556,8 +557,8 @@ class MediaMTXManager:
                             f'-map "[outv]" {ff_process} '
                             f'-profile:v high -level 4.2 '
                             f'-preset ultrafast -tune zerolatency '
-                            f'-b:v 2500k -maxrate 2500k -bufsize 5000k -g 15 '
-                            f'-r 15 -vsync cfr -max_delay 500000 -f rtsp -rtsp_transport tcp {safe_dest}'
+                            f'-b:v 2500k -maxrate 2500k -bufsize 5000k -g {fps} '
+                            f'-r {fps} -vsync cfr -max_delay 500000 -f rtsp -rtsp_transport tcp {safe_dest}'
                         )
                         
                         config['paths'][layout_id] = {
