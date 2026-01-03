@@ -24,7 +24,12 @@ class CameraManager:
         self.next_onvif_port = 8001
         self.mediamtx = MediaMTXManager()
         self.service_mgr = LinuxServiceManager()
+        self.service_mgr = LinuxServiceManager()
         self._lock = threading.Lock()
+        
+        # GridFusion Layouts
+        self.grid_fusion_layouts = []
+
         
         # Auth settings
         self.auth_enabled = False
@@ -60,14 +65,38 @@ class CameraManager:
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             
-            # Load GridFusion settings
+            # Load GridFusion settings (Support multiple layouts)
             grid_fusion = config.get('gridFusion', {})
-            self.grid_fusion_enabled = grid_fusion.get('enabled', False)
-            self.grid_fusion_resolution = grid_fusion.get('resolution', '1920x1080')
-            self.grid_fusion_cameras = grid_fusion.get('cameras', [])
-            self.grid_fusion_snap = grid_fusion.get('snapToGrid', True)
-            self.grid_fusion_show_grid = grid_fusion.get('showGrid', True)
-            self.grid_fusion_show_snapshots = grid_fusion.get('showSnapshots', True)
+            
+            # Check for new 'layouts' structure
+            if 'layouts' in grid_fusion:
+                self.grid_fusion_layouts = grid_fusion.get('layouts', [])
+            else:
+                # Migrate legacy single layout to new structure
+                if grid_fusion.get('cameras') or grid_fusion.get('enabled'):
+                    print("  ℹ️  Migrating GridFusion config to multi-layout structure...")
+                    self.grid_fusion_layouts = [{
+                        'id': 'matrix',
+                        'name': 'Default Layout',
+                        'enabled': grid_fusion.get('enabled', False),
+                        'resolution': grid_fusion.get('resolution', '1920x1080'),
+                        'cameras': grid_fusion.get('cameras', []),
+                        'snapToGrid': grid_fusion.get('snapToGrid', True),
+                        'showGrid': grid_fusion.get('showGrid', True),
+                        'showSnapshots': grid_fusion.get('showSnapshots', True)
+                    }]
+                else:
+                     # Default empty layout
+                     self.grid_fusion_layouts = [{
+                        'id': 'matrix',
+                        'name': 'Default Layout',
+                        'enabled': False,
+                        'resolution': '1920x1080',
+                        'cameras': [],
+                        'snapToGrid': True,
+                        'showGrid': True,
+                        'showSnapshots': True
+                    }]
             
             # Load auth settings
             auth = config.get('auth', {})
@@ -84,12 +113,17 @@ class CameraManager:
             self.global_username = 'admin'
             self.global_password = 'admin'
             self.rtsp_auth_enabled = False
-            self.grid_fusion_enabled = False
-            self.grid_fusion_resolution = '1920x1080'
-            self.grid_fusion_cameras = []
-            self.grid_fusion_snap = True
-            self.grid_fusion_show_grid = True
-            self.grid_fusion_show_snapshots = True
+            # Default layouts if config missing
+            self.grid_fusion_layouts = [{
+                'id': 'matrix',
+                'name': 'Default Layout',
+                'enabled': False,
+                'resolution': '1920x1080',
+                'cameras': [],
+                'snapToGrid': True,
+                'showGrid': True,
+                'showSnapshots': True
+            }]
             self.save_config()
             
     def save_config(self):
@@ -113,12 +147,7 @@ class CameraManager:
                 'password_hash': getattr(self, 'password_hash', None)
             },
             'gridFusion': {
-                'enabled': getattr(self, 'grid_fusion_enabled', False),
-                'resolution': getattr(self, 'grid_fusion_resolution', '1920x1080'),
-                'cameras': getattr(self, 'grid_fusion_cameras', []),
-                'snapToGrid': getattr(self, 'grid_fusion_snap', True),
-                'showGrid': getattr(self, 'grid_fusion_show_grid', True),
-                'showSnapshots': getattr(self, 'grid_fusion_show_snapshots', True)
+                'layouts': getattr(self, 'grid_fusion_layouts', [])
             }
         }
         
@@ -255,39 +284,55 @@ class CameraManager:
         }
 
     def get_grid_fusion(self):
-        """Get GridFusion configuration"""
+        """Get GridFusion configuration (updated for multi-layout)"""
         return {
-            'enabled': getattr(self, 'grid_fusion_enabled', False),
-            'resolution': getattr(self, 'grid_fusion_resolution', '1920x1080'),
-            'cameras': getattr(self, 'grid_fusion_cameras', []),
-            'snapToGrid': getattr(self, 'grid_fusion_snap', True),
-            'showGrid': getattr(self, 'grid_fusion_show_grid', True),
-            'showSnapshots': getattr(self, 'grid_fusion_show_snapshots', True)
+            'layouts': getattr(self, 'grid_fusion_layouts', [])
         }
 
     def save_grid_fusion(self, data):
-        """Save GridFusion configuration"""
-        old_enabled = getattr(self, 'grid_fusion_enabled', False)
-        old_res = getattr(self, 'grid_fusion_resolution', '1920x1080')
-        old_cams = getattr(self, 'grid_fusion_cameras', [])
-
-        self.grid_fusion_enabled = data.get('enabled', False)
-        self.grid_fusion_resolution = data.get('resolution', '1920x1080')
-        self.grid_fusion_cameras = data.get('cameras', [])
-        self.grid_fusion_snap = data.get('snapToGrid', True)
-        self.grid_fusion_show_grid = data.get('showGrid', True)
-        self.grid_fusion_show_snapshots = data.get('showSnapshots', True)
+        """Save GridFusion configuration (multi-layout)"""
+        old_layouts = getattr(self, 'grid_fusion_layouts', [])
+        
+        # Expecting data to contain 'layouts' list
+        # If receiving legacy single-layout update, wrap it (backward compat, though UI should be updated)
+        if 'layouts' in data:
+            self.grid_fusion_layouts = data['layouts']
+        else:
+             # This might happen if old UI sends data
+             # Update the first layout or create one
+             if not self.grid_fusion_layouts:
+                 self.grid_fusion_layouts = [{
+                     'id': 'matrix',
+                     'name': 'Default Layout',
+                     'enabled': data.get('enabled', False),
+                     'resolution': data.get('resolution', '1920x1080'),
+                     'cameras': data.get('cameras', []),
+                     'snapToGrid': data.get('snapToGrid', True),
+                     'showGrid': data.get('showGrid', True),
+                     'showSnapshots': data.get('showSnapshots', True)
+                 }]
+             else:
+                 # Update index 0
+                 l = self.grid_fusion_layouts[0]
+                 l['enabled'] = data.get('enabled', False)
+                 l['resolution'] = data.get('resolution', '1920x1080')
+                 l['cameras'] = data.get('cameras', [])
+                 l['snapToGrid'] = data.get('snapToGrid', True)
+                 l['showGrid'] = data.get('showGrid', True)
+                 l['showSnapshots'] = data.get('showSnapshots', True)
         
         self.save_config()
 
-        # Restart MediaMTX if the stream setup changed and is enabled
-        needs_restart = (
-            old_enabled != self.grid_fusion_enabled or
-            (self.grid_fusion_enabled and (old_res != self.grid_fusion_resolution or old_cams != self.grid_fusion_cameras))
-        )
-
-        if needs_restart:
-            print("🔄 GridFusion configuration changed, restarting MediaMTX...")
+        # Restart MediaMTX if crucial settings changed
+        # Simple check: if layouts changed in a way that affects streams (enabled, resolution, cameras, id)
+        # We'll just define that ANY change to the layout structure warrants a check
+        # For simplicity, we compare the JSON representation of relevant fields
+        
+        def extract_stream_config(layouts):
+            return [{k: v for k, v in l.items() if k in ['id', 'enabled', 'resolution', 'cameras']} for l in layouts]
+            
+        if extract_stream_config(old_layouts) != extract_stream_config(self.grid_fusion_layouts):
+            print("🔄 GridFusion layouts changed, restarting MediaMTX...")
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
             self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())

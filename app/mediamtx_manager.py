@@ -445,100 +445,118 @@ class MediaMTXManager:
         print(f"  Total streams: {running_count * 2} (main + sub)")
 
         # ===== GRIDFUSION COMPOSITE STREAM =====
-        if grid_fusion and grid_fusion.get('enabled'):
-            print(f"    🚀 Configuring GridFusion Composite Stream...")
-            res = grid_fusion.get('resolution', '1920x1080')
-            try:
-                res_w, res_h = map(int, res.split('x'))
-            except:
-                res_w, res_h = 1920, 1080
+        # ===== GRIDFUSION COMPOSITE STREAM (Multi-Layout Support) =====
+        grid_fusion_layouts = []
+        if grid_fusion:
+            if 'layouts' in grid_fusion:
+                grid_fusion_layouts = grid_fusion.get('layouts', [])
+            elif grid_fusion.get('enabled'):
+                # Legacy single layout (backward compat)
+                grid_fusion['id'] = 'matrix'
+                grid_fusion_layouts = [grid_fusion]
+
+        if grid_fusion_layouts:
+            print(f"    🚀 Configuring GridFusion Composite Streams ({len(grid_fusion_layouts)} layouts)...")
             
-            gf_cams = grid_fusion.get('cameras', [])
-            if gf_cams:
-                # Build FFmpeg command for composition
-                inputs = []
-                filters = []
-                active_gf_cams = []
+            for layout in grid_fusion_layouts:
+                if not layout.get('enabled'):
+                    continue
+                    
+                layout_id = layout.get('id', 'matrix')
+                layout_name = layout.get('name', 'Matrix')
+                res = layout.get('resolution', '1920x1080')
                 
-                # Filter and prepare active cameras
-                input_idx = 0
-                for gf_cam in gf_cams:
-                    cam_id = gf_cam.get('id')
-                    cam = next((c for c in cameras if c.id == cam_id), None)
-                    if not cam or cam.status != "running":
-                        continue
-                    
-                    # Determine stream type (default to sub if not specified)
-                    stream_type = gf_cam.get('stream_type', 'sub')
-                    suffix = "_main" if stream_type == "main" else "_sub"
-                    
-                    # Source is the local MediaMTX stream
-                    if enable_global_auth:
-                        src_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{cam.path_name}{suffix}"
-                    else:
-                        src_url = f"rtsp://127.0.0.1:{rtsp_port}/{cam.path_name}{suffix}"
-                    
-                    if system == "windows":
-                        safe_src = f'"{src_url}"'
-                    else:
-                        safe_src = shlex.quote(src_url)
-                    
-                    # -thread_queue_size is vital on Linux for multi-input compositing
-                    inputs.append(f'-rtsp_transport tcp -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -i {safe_src}')
-                    
-                    # Scale according to layout
-                    w = int(gf_cam.get('w', 640))
-                    h = int(gf_cam.get('h', 480))
-                    filters.append(f'[{input_idx}:v]scale={w}:{h}[v{input_idx}]')
-                    active_gf_cams.append(gf_cam)
-                    input_idx += 1
+                try:
+                    res_w, res_h = map(int, res.split('x'))
+                except:
+                    res_w, res_h = 1920, 1080
                 
-                if inputs:
-                    # Construct overlay chain
-                    # r=20 provides a smooth baseline for composition
-                    overlay_chain = f'color=black:s={res_w}x{res_h}:r=20[base];'
-                    last_label = '[base]'
-                    for i in range(len(active_gf_cams)):
-                        gf_cam = active_gf_cams[i]
-                        x = int(gf_cam.get('x', 0))
-                        y = int(gf_cam.get('y', 0))
-                        
-                        next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
-                        # repeatlast=1 ensures the matrix doesn't stall if one camera drops frames
-                        overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label};'
-                        last_label = next_label
+                gf_cams = layout.get('cameras', [])
+                if gf_cams:
+                    # Build FFmpeg command for composition
+                    inputs = []
+                    filters = []
+                    active_gf_cams = []
                     
-                    filter_complex = ";".join(filters) + ";" + overlay_chain
-                    
-                    if enable_global_auth:
-                        dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/matrix"
-                    else:
-                        dest_url = f"rtsp://127.0.0.1:{rtsp_port}/matrix"
+                    # Filter and prepare active cameras
+                    input_idx = 0
+                    for gf_cam in gf_cams:
+                        cam_id = gf_cam.get('id')
+                        cam = next((c for c in cameras if c.id == cam_id), None)
+                        if not cam or cam.status != "running":
+                            continue
                         
-                    if system == "windows":
-                        safe_dest = f'"{dest_url}"'
-                    else:
-                        safe_dest = shlex.quote(dest_url)
+                        # Determine stream type (default to sub if not specified)
+                        stream_type = gf_cam.get('stream_type', 'sub')
+                        suffix = "_main" if stream_type == "main" else "_sub"
                         
-                    # Final command - optimized for low latency and stability on Linux
-                    # -vsync vfr helps when input cameras have varying clock speeds
-                    gf_cmd = (
-                        f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
-                        f'-fflags +genpts+igndts '
-                        f'{" ".join(inputs)} '
-                        f'-filter_complex "{filter_complex}" '
-                        f'-map "[outv]" -c:v libx264 -preset ultrafast -tune zerolatency '
-                        f'-profile:v high -level 4.2 '
-                        f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 40 '
-                        f'-vsync vfr -f rtsp -rtsp_transport tcp {safe_dest}'
-                    )
+                        # Source is the local MediaMTX stream
+                        if enable_global_auth:
+                            src_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{cam.path_name}{suffix}"
+                        else:
+                            src_url = f"rtsp://127.0.0.1:{rtsp_port}/{cam.path_name}{suffix}"
+                        
+                        if system == "windows":
+                            safe_src = f'"{src_url}"'
+                        else:
+                            safe_src = shlex.quote(src_url)
+                        
+                        # -thread_queue_size is vital on Linux for multi-input compositing
+                        inputs.append(f'-rtsp_transport tcp -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -i {safe_src}')
+                        
+                        # Scale according to layout
+                        w = int(gf_cam.get('w', 640))
+                        h = int(gf_cam.get('h', 480))
+                        filters.append(f'[{input_idx}:v]scale={w}:{h}[v{input_idx}]')
+                        active_gf_cams.append(gf_cam)
+                        input_idx += 1
                     
-                    config['paths']['matrix'] = {
-                        'source': 'publisher',
-                        'runOnInit': gf_cmd,
-                        'runOnInitRestart': True,
-                    }
-                    print(f"      ✓ Matrix stream added at /matrix ({res})")
+                    if inputs:
+                        # Construct overlay chain
+                        # r=20 provides a smooth baseline for composition
+                        overlay_chain = f'color=black:s={res_w}x{res_h}:r=20[base];'
+                        last_label = '[base]'
+                        for i in range(len(active_gf_cams)):
+                            gf_cam = active_gf_cams[i]
+                            x = int(gf_cam.get('x', 0))
+                            y = int(gf_cam.get('y', 0))
+                            
+                            next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
+                            # repeatlast=1 ensures the matrix doesn't stall if one camera drops frames
+                            overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label};'
+                            last_label = next_label
+                        
+                        filter_complex = ";".join(filters) + ";" + overlay_chain
+                        
+                        if enable_global_auth:
+                            dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{layout_id}"
+                        else:
+                            dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{layout_id}"
+                            
+                        if system == "windows":
+                            safe_dest = f'"{dest_url}"'
+                        else:
+                            safe_dest = shlex.quote(dest_url)
+                            
+                        # Final command - optimized for low latency and stability on Linux
+                        # -vsync vfr helps when input cameras have varying clock speeds
+                        gf_cmd = (
+                            f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
+                            f'-fflags +genpts+igndts '
+                            f'{" ".join(inputs)} '
+                            f'-filter_complex "{filter_complex}" '
+                            f'-map "[outv]" -c:v libx264 -preset ultrafast -tune zerolatency '
+                            f'-profile:v high -level 4.2 '
+                            f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 40 '
+                            f'-vsync vfr -f rtsp -rtsp_transport tcp {safe_dest}'
+                        )
+                        
+                        config['paths'][layout_id] = {
+                            'source': 'publisher',
+                            'runOnInit': gf_cmd,
+                            'runOnInitRestart': True,
+                        }
+                        print(f"      ✓ {layout_name} stream added at /{layout_id} ({res})")
 
         
         # Populate authInternalUsers if enabled
