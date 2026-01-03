@@ -237,7 +237,7 @@ class MediaMTXManager:
             'writeTimeout': '30s',  # How long to wait when writing to clients
             
             # Buffer and queue settings
-            'writeQueueSize': 2048,  # Increased from 1024 for multiple viewers
+            'writeQueueSize': 4096,  # Increased to 4096 to resolve "reader is too slow" warnings
             'udpMaxPayloadSize': 1472,  # Standard MTU-safe size
             
             # ===== MEMORY MANAGEMENT =====
