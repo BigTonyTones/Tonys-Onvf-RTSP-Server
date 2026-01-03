@@ -1027,7 +1027,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.2.5</h1>
+            <h1>Tonys Onvif-RTSP Server v5.3</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1052,7 +1052,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.2.5</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 Buy Tony a coffee
             </a>
@@ -1459,67 +1459,75 @@ def get_web_ui_html(current_settings=None):
 
                 <div class="form-group" style="margin-top: 15px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleAdvancedSettings()">
-                        <span class="form-label" style="margin: 0; color: var(--primary-color); font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                        <span class="form-label" style="margin: 0; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 5px;">
                             <i class="fas fa-tools"></i> Advanced Settings (MediaMTX & FFmpeg)
                             <i id="advancedChevron" class="fas fa-chevron-down" style="font-size: 12px; transition: transform 0.3s; margin-left: auto;"></i>
                         </span>
                     </label>
                 </div>
 
-                <div id="advancedSettingsSection" style="display: none; padding: 15px; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div id="advancedSettingsSection" style="display: none; padding: 20px; background: rgba(0,0,0,0.35); border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 25px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                         <div>
-                            <h3 style="font-size: 13px; margin: 0 0 10px 0; color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">MediaMTX Settings</h3>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Write Queue Size</label>
-                                <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 12px; padding: 4px 8px;">
+                            <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-server" style="font-size: 12px; color: var(--primary-color);"></i> MediaMTX Core
+                            </h3>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Queue Size</label>
+                                <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Read Timeout</label>
-                                <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 12px; padding: 4px 8px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Read Timeout (duration)</label>
+                                <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Write Timeout</label>
-                                <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 12px; padding: 4px 8px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Timeout (duration)</label>
+                                <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">UDP Max Payload</label>
-                                <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 12px; padding: 4px 8px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">UDP Max Payload</label>
+                                <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
                         </div>
                         <div>
-                            <h3 style="font-size: 13px; margin: 0 0 10px 0; color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">HLS Buffering</h3>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Segment Count</label>
-                                <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 12px; padding: 4px 8px;">
+                            <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-stream" style="font-size: 12px; color: var(--primary-color);"></i> HLS Optimized
+                            </h3>
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Count</label>
+                                <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Segment Duration</label>
-                                <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 12px; padding: 4px 8px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Duration</label>
+                                <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 8px;">
-                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Part Duration</label>
-                                <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 12px; padding: 4px 8px;">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Part Duration</label>
+                                <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
                             </div>
                         </div>
                     </div>
 
-                    <h3 style="font-size: 13px; margin: 15px 0 10px 0; color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">FFmpeg Transcoding Parameters</h3>
-                    <div class="form-group" style="margin-bottom: 8px;">
-                        <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Global Arguments</label>
-                        <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 12px; padding: 4px 8px; font-family: monospace;">
+                    <h3 style="font-size: 14px; margin: 20px 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-video" style="font-size: 12px; color: var(--primary-color);"></i> FFmpeg Transcoding Global
+                    </h3>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Global Arguments (Flags)</label>
+                        <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
                     </div>
-                    <div class="form-group" style="margin-bottom: 8px;">
-                        <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Input Arguments</label>
-                        <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 12px; padding: 4px 8px; font-family: monospace;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Input Arguments (Before -i)</label>
+                        <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
                     </div>
-                    <div class="form-group" style="margin-bottom: 8px;">
-                        <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Process/Codec Arguments</label>
-                        <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 12px; padding: 4px 8px; font-family: monospace;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Process & Codec Arguments</label>
+                        <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
                     </div>
-                    <small style="color: #ed8936; font-size: 11px; display: block; margin-top: 10px;">
-                        Note: MediaMTX will restart automatically to apply these changes.
-                    </small>
+                    <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-top: 15px; border-radius: 4px;">
+                        <small style="color: #f6ad55; font-size: 11px; font-weight: 600; display: block;">
+                            <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
+                        </small>
+                    </div>
                 </div>
 
                 <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
@@ -2698,9 +2706,9 @@ def get_web_ui_html(current_settings=None):
                     if (debugModeField) debugModeField.checked = settings.debugMode === true;
 
                     // Load Advanced Settings
-                    if (settings.advancedSettings) {
+                    if (settings.advancedSettings) {{
                         const adv = settings.advancedSettings;
-                        if (adv.mediamtx) {
+                        if (adv.mediamtx) {{
                             document.getElementById('mediamtx_writeQueueSize').value = adv.mediamtx.writeQueueSize || 4096;
                             document.getElementById('mediamtx_readTimeout').value = adv.mediamtx.readTimeout || '30s';
                             document.getElementById('mediamtx_writeTimeout').value = adv.mediamtx.writeTimeout || '30s';
@@ -2708,13 +2716,13 @@ def get_web_ui_html(current_settings=None):
                             document.getElementById('mediamtx_hlsSegmentCount').value = adv.mediamtx.hlsSegmentCount || 10;
                             document.getElementById('mediamtx_hlsSegmentDuration').value = adv.mediamtx.hlsSegmentDuration || '1s';
                             document.getElementById('mediamtx_hlsPartDuration').value = adv.mediamtx.hlsPartDuration || '200ms';
-                        }
-                        if (adv.ffmpeg) {
+                        }}
+                        if (adv.ffmpeg) {{
                             document.getElementById('ffmpeg_globalArgs').value = adv.ffmpeg.globalArgs || '';
                             document.getElementById('ffmpeg_inputArgs').value = adv.ffmpeg.inputArgs || '';
                             document.getElementById('ffmpeg_processArgs').value = adv.ffmpeg.processArgs || '';
-                        }
-                    }
+                        }}
+                    }}
                     
                     const authEnabledField = document.getElementById('authEnabled');
                     if (authEnabledField) authEnabledField.checked = settings.authEnabled === true;
@@ -2771,8 +2779,8 @@ def get_web_ui_html(current_settings=None):
                 globalPassword: document.getElementById('globalPassword').value,
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
                 debugMode: document.getElementById('debugMode').checked,
-                advancedSettings: {
-                    mediamtx: {
+                advancedSettings: {{
+                    mediamtx: {{
                         writeQueueSize: parseInt(document.getElementById('mediamtx_writeQueueSize').value),
                         readTimeout: document.getElementById('mediamtx_readTimeout').value,
                         writeTimeout: document.getElementById('mediamtx_writeTimeout').value,
@@ -2780,13 +2788,13 @@ def get_web_ui_html(current_settings=None):
                         hlsSegmentCount: parseInt(document.getElementById('mediamtx_hlsSegmentCount').value),
                         hlsSegmentDuration: document.getElementById('mediamtx_hlsSegmentDuration').value,
                         hlsPartDuration: document.getElementById('mediamtx_hlsPartDuration').value
-                    },
-                    ffmpeg: {
+                    }},
+                    ffmpeg: {{
                         globalArgs: document.getElementById('ffmpeg_globalArgs').value,
                         inputArgs: document.getElementById('ffmpeg_inputArgs').value,
                         processArgs: document.getElementById('ffmpeg_processArgs').value
-                    }
-                },
+                    }}
+                }},
                 authEnabled: document.getElementById('authEnabled').checked,
                 username: document.getElementById('authUsername').value,
                 password: document.getElementById('authPassword').value
