@@ -11,7 +11,7 @@ def get_web_ui_html(current_settings=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tonys Onvif-RTSP Server</title>
+    <title>Tonys Onvif-RTSP Server v5.3.5</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root {{
@@ -3065,7 +3065,7 @@ def get_login_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys Onvif Server</title>
+    <title>Login - Tonys Onvif-RTSP Server v5.3.5</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3187,7 +3187,7 @@ def get_setup_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Initial Setup - Tonys Onvif Server</title>
+    <title>Initial Setup - Tonys Onvif-RTSP Server v5.3.5</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
