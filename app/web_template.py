@@ -850,30 +850,30 @@ def get_web_ui_html(current_settings=None):
             </div>
             <h1>Tonys Onvif-RTSP Server v4.4</h1>
             <div class="actions">
-                <button class="btn btn-primary" onclick="openAddModal()">➕ Add Camera</button>
-                <button class="btn" onclick="startAll()">▶️ Start All</button>
-                <button class="btn" onclick="stopAll()">⏹️ Stop All</button>
-                <button class="btn" onclick="toggleMatrixView(true)">🖥️ Matrix View</button>
-                <button class="btn" onclick="openSettingsModal()">⚙️ Settings</button>
-                <button class="btn" onclick="restartServer()">🔄 Restart Server</button>
-                <button class="btn" onclick="openAboutModal()">ℹ️ About</button>
-                <button class="btn btn-danger" onclick="stopServer()">⏹️ Stop Server</button>
-                <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">🚪 Logout</a>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
+                <button class="btn" onclick="startAll()">Start All</button>
+                <button class="btn" onclick="stopAll()">Stop All</button>
+                <button class="btn" onclick="toggleMatrixView(true)">Matrix View</button>
+                <button class="btn" onclick="openSettingsModal()">Settings</button>
+                <button class="btn" onclick="restartServer()">Restart Server</button>
+                <button class="btn" onclick="openAboutModal()">About</button>
+                <button class="btn btn-danger" onclick="stopServer()">Stop Server</button>
+                <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">Logout</a>
             </div>
         </div>
         
         <div id="camera-list" class="camera-grid"></div>
         
         <div id="empty-state" class="empty-state" style="display:none;">
-            <div class="empty-icon">📹</div>
+            <div class="empty-icon"></div>
             <div class="empty-title">No Cameras Configured</div>
             <div class="empty-text">Add your first virtual ONVIF camera to get started</div>
-            <button class="btn btn-success" onclick="openAddModal()">➕ Add Your First Camera</button>
+            <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
             <p>© 2025 Tonys Onvif-RTSP Server v4.4 • Created by Tony</p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
-                ☕ Buy Tony a coffee
+                Buy Tony a coffee
             </a>
         </div>
     </div>
@@ -884,8 +884,8 @@ def get_web_ui_html(current_settings=None):
             <span style="color: #718096; margin-right: auto; padding-left: 10px; font-size: 14px; align-self: center;">
                 F11 for Full Screen • ESC to Exit
             </span>
-            <button class="btn-matrix" onclick="toggleFullScreen()">⛶ Full Screen</button>
-            <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: #f56565;">❌ Close Matrix</button>
+            <button class="btn-matrix" onclick="toggleFullScreen()">Full Screen</button>
+            <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: #f56565;">Close Matrix</button>
         </div>
         <div id="matrix-grid" class="matrix-grid"></div>
     </div>
@@ -898,7 +898,7 @@ def get_web_ui_html(current_settings=None):
             </div>
             
             <div class="alert alert-warning">
-                <strong>⚠️ Special Characters:</strong><br>
+                <strong>Special Characters:</strong><br>
                 Passwords with # @ : / etc. are automatically URL-encoded
             </div>
             
@@ -930,7 +930,7 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" style="width: 100%;" onclick="probeOnvif()" id="btnProbe">
-                    🔍 Scan Camera
+                    Scan Camera
                 </button>
                 
                 <div id="probe-results" style="margin-top: 20px;"></div>
@@ -940,7 +940,7 @@ def get_web_ui_html(current_settings=None):
                 <input type="hidden" id="camera-id" value="">
                 
                 <div class="form-group" id="copy-from-group">
-                    <label class="form-label">📋 Copy Settings From</label>
+                    <label class="form-label">Copy Settings From</label>
                     <select class="form-input" id="copyFrom" onchange="copyCameraSettings(this.value)">
                         <option value="">Select a camera to copy...</option>
                     </select>
@@ -981,7 +981,7 @@ def get_web_ui_html(current_settings=None):
                 <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
                     <!-- Main Stream Column -->
                     <div class="form-col" style="flex: 1; padding-right: 12px; border-right: 1px solid #e2e8f0;">
-                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">🎥 Main Stream Settings</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">Main Stream Settings</h3>
                         
                         <div class="form-group">
                             <label class="form-label">Main Stream Path</label>
@@ -990,14 +990,14 @@ def get_web_ui_html(current_settings=None):
                         
                         <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
                             <div class="auto-start-row" style="margin-bottom: 15px;">
-                                <span class="auto-start-label" style="font-size: 13px;">🔄 Transcode Main Stream</span>
+                                <span class="auto-start-label" style="font-size: 13px;">Transcode Main Stream</span>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="transcodeMain">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
                             
-                            <label class="form-label">📐 Resolution & FPS</label>
+                            <label class="form-label">Resolution & FPS</label>
                             <div class="form-row" style="margin-bottom: 10px;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <input type="number" class="form-input" id="mainWidth" placeholder="Width" value="1920" required>
@@ -1010,13 +1010,13 @@ def get_web_ui_html(current_settings=None):
                         </div>
                         
                         <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('main')" style="width:100%; margin-top: 12px; font-size: 13px;">
-                            🔍 Fetch Main Stream Info
+                            Fetch Main Stream Info
                         </button>
                     </div>
 
                     <!-- Sub Stream Column -->
                     <div class="form-col" style="flex: 1; padding-left: 12px;">
-                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">📹 Sub Stream Settings</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">Sub Stream Settings</h3>
                         
                         <div class="form-group">
                             <label class="form-label">Sub Stream Path</label>
@@ -1025,14 +1025,14 @@ def get_web_ui_html(current_settings=None):
                         
                         <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
                             <div class="auto-start-row" style="margin-bottom: 15px;">
-                                <span class="auto-start-label" style="font-size: 13px;">🔄 Transcode Substream</span>
+                                <span class="auto-start-label" style="font-size: 13px;">Transcode Substream</span>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="transcodeSub">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
                             
-                            <label class="form-label">📐 Resolution & FPS</label>
+                            <label class="form-label">Resolution & FPS</label>
                             <div class="form-row" style="margin-bottom: 10px;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640" required>
@@ -1045,13 +1045,13 @@ def get_web_ui_html(current_settings=None):
                         </div>
                         
                         <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('sub')" style="width:100%; margin-top: 12px; font-size: 13px;">
-                            🔍 Fetch Sub Stream Info
+                            Fetch Sub Stream Info
                         </button>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">🔌 ONVIF Port (leave empty for auto-assign)</label>
+                    <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
                     <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         Default: Auto-assigned starting from 8001
@@ -1068,7 +1068,7 @@ def get_web_ui_html(current_settings=None):
                 <!-- Network Settings (Linux only) -->
                 <div id="linux-network-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #2d3748;">
                     <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                        <span>🌐 Network Settings (Linux Only)</span>
+                        <span>Network Settings (Linux Only)</span>
                     </div>
 
                     <div class="form-group">
@@ -1080,7 +1080,7 @@ def get_web_ui_html(current_settings=None):
 
                     <div id="vnic-fields" style="display: none;">
                         <div class="form-group">
-                            <label class="form-label">🔌 Parent Interface</label>
+                            <label class="form-label">Parent Interface</label>
                             <select class="form-input" id="parentInterface" onchange="toggleManualInterface()">
                                 <option value="">Detecting interfaces...</option>
                             </select>
@@ -1096,15 +1096,15 @@ def get_web_ui_html(current_settings=None):
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">🆔 Virtual MAC Address</label>
+                            <label class="form-label">Virtual MAC Address</label>
                             <div style="display: flex; gap: 8px;">
                                 <input type="text" class="form-input" id="nicMac" placeholder="00:00:00:00:00:00" style="flex: 1;">
-                                <button type="button" class="btn btn-secondary" onclick="randomizeMac()" style="padding: 0 15px;">🎲</button>
+                                <button type="button" class="btn btn-secondary" onclick="randomizeMac()" style="padding: 0 15px;">Randomize</button>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">📡 IP Configuration</label>
+                            <label class="form-label">IP Configuration</label>
                             <select class="form-input" id="ipMode" onchange="toggleStaticFields()">
                                 <option value="dhcp">DHCP (Automatic)</option>
                                 <option value="static">Static IP</option>
@@ -1113,19 +1113,19 @@ def get_web_ui_html(current_settings=None):
 
                         <div id="static-ip-fields" style="display: none;">
                             <div class="form-group">
-                                <label class="form-label">📍 Static IP Address</label>
+                                <label class="form-label">Static IP Address</label>
                                 <input type="text" class="form-input" id="staticIp" placeholder="192.168.1.50">
                             </div>
                             <div class="form-row">
                                 <div class="form-col">
                                     <div class="form-group">
-                                        <label class="form-label">🧱 Netmask (CIDR)</label>
+                                        <label class="form-label">Netmask (CIDR)</label>
                                         <input type="text" class="form-input" id="netmask" value="24" placeholder="24">
                                     </div>
                                 </div>
                                 <div class="form-col">
                                     <div class="form-group">
-                                        <label class="form-label">🌉 Gateway</label>
+                                        <label class="form-label">Gateway</label>
                                         <input type="text" class="form-input" id="gateway" placeholder="192.168.1.1">
                                     </div>
                                 </div>
@@ -1141,7 +1141,7 @@ def get_web_ui_html(current_settings=None):
                     Dahua: /cam/realmonitor?channel=1&subtype=0
                 </div>
                 
-                <button type="submit" class="btn btn-success" style="width:100%">💾 Save Camera</button>
+                <button type="submit" class="btn btn-success" style="width:100%">Save Camera</button>
             </form>
         </div>
     </div>
@@ -1155,7 +1155,7 @@ def get_web_ui_html(current_settings=None):
             
             <form onsubmit="saveSettings(event)">
                 <div class="form-group">
-                    <label class="form-label">🌐 Server IP / Hostname (for RTSP URLs)</label>
+                    <label class="form-label">Server IP / Hostname (for RTSP URLs)</label>
                     <input type="text" class="form-input" id="serverIp" placeholder="192.168.1.10">
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         Leave as 'localhost' for local access, or enter your server's IP address for network access
@@ -1163,7 +1163,7 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">🔌 RTSP Server Port</label>
+                    <label class="form-label">RTSP Server Port</label>
                     <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554">
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.
@@ -1172,19 +1172,19 @@ def get_web_ui_html(current_settings=None):
                 
                 <div class="form-group" style="background: rgba(255, 121, 198, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color);">
                     <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                        <span>🔒 Global RTSP & ONVIF Credentials</span>
+                        <span>Global RTSP & ONVIF Credentials</span>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-col">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">👤 Global Username</label>
+                                <label class="form-label">Global Username</label>
                                 <input type="text" class="form-input" id="globalUsername" placeholder="admin" value="admin">
                             </div>
                         </div>
                         <div class="form-col">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">🔑 Global Password</label>
+                                <label class="form-label">Global Password</label>
                                 <input type="text" class="form-input" id="globalPassword" placeholder="admin" value="admin">
                             </div>
                         </div>
@@ -1202,7 +1202,7 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">🎨 UI Theme</label>
+                    <label class="form-label">UI Theme</label>
                     <select class="form-input" id="themeSelect">
                         <option value="classic">Classic (Purple Gradient)</option>
                         <option value="dark">Modern Dark (Blue Contrast)</option>
@@ -1220,7 +1220,7 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">📐 Dashboard Layout</label>
+                    <label class="form-label">Dashboard Layout</label>
                     <select class="form-input" id="gridColumnsSelect">
                         <option value="2">2 Columns (Large Cards)</option>
                         <option value="3">3 Columns (Compact View)</option>
@@ -1248,7 +1248,7 @@ def get_web_ui_html(current_settings=None):
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="authEnabled" style="width: auto; cursor: pointer;" onchange="toggleAuthFields()">
-                            <span class="form-label" style="margin: 0; color: #667eea; font-weight: 700;">🔐 Enable Web Interface Login</span>
+                            <span class="form-label" style="margin: 0; color: #667eea; font-weight: 700;">Enable Web Interface Login</span>
                         </label>
                         <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                             Require a username and password to access this dashboard.
@@ -1267,7 +1267,7 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
-                <button type="submit" class="btn btn-success" style="width:100%">💾 Save Settings</button>
+                <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
             </form>
         </div>
     </div>
@@ -1298,11 +1298,9 @@ def get_web_ui_html(current_settings=None):
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
                     <div style="display: flex; gap: 15px;">
                         <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" class="coffee-link" style="background: #24292e; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
-                            <svg height="20" viewBox="0 0 16 16" width="20" style="fill: #ffffff;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
                             <span style="color: white">View on GitHub</span>
                         </a>
                         <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link">
-                            <img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" style="height: 20px;">
                             <span>Buy me a coffee</span>
                         </a>
                     </div>
@@ -1571,26 +1569,26 @@ def get_web_ui_html(current_settings=None):
                             <div class="camera-name">${{cam.name}}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
-                            ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">🌐 ${{cam.assignedIp}}</div>` : ''}}
-                            ${{cam.useVirtualNic && cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--text-muted); color: white;">🆔 ${{cam.nicMac}}</div>` : ''}}
+                            ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
+                            ${{cam.useVirtualNic && cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--text-muted); color: white;">${{cam.nicMac}}</div>` : ''}}
                         </div>
                     </div>
                     <div class="camera-actions">
                         ${{cam.status === 'running' 
-                            ? `<button class="icon-btn" onclick="stopCamera(${{cam.id}})" title="Stop">⏹️</button>`
-                            : `<button class="icon-btn" onclick="startCamera(${{cam.id}})" title="Start">▶️</button>`
+                            ? `<button class="icon-btn" onclick="stopCamera(${{cam.id}})" title="Stop">Stop</button>`
+                            : `<button class="icon-btn" onclick="startCamera(${{cam.id}})" title="Start">Start</button>`
                         }}
-                        <button class="icon-btn" onclick="openEditModal(${{cam.id}})" title="Edit">✏️</button>
-                        <button class="icon-btn" onclick="deleteCamera(${{cam.id}})" title="Delete">🗑️</button>
+                        <button class="icon-btn" onclick="openEditModal(${{cam.id}})" title="Edit">Edit</button>
+                        <button class="icon-btn" onclick="deleteCamera(${{cam.id}})" title="Delete">Delete</button>
                     </div>
                 </div>
                 
                 <div class="video-preview" id="video-${{cam.id}}">
                     ${{cam.status === 'running' 
                         ? `<video id="player-${{cam.id}}" autoplay muted playsinline></video>
-                           <button class="fullscreen-btn" onclick="toggleFullScreenPlayer(${{cam.id}})" title="Maximize">⛶ Full Screen</button>`
+                           <button class="fullscreen-btn" onclick="toggleFullScreenPlayer(${{cam.id}})" title="Maximize">Full Screen</button>`
                         : `<div class="video-placeholder">
-                            <div style="font-size: 48px;">📹</div>
+                            <div style="font-size: 48px;"></div>
                             <div>Camera Stopped</div>
                            </div>`
                     }}
@@ -1598,34 +1596,34 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="info-section">
-                    <div class="info-label">🎬 RTSP Main Stream (Full Quality)</div>
+                    <div class="info-label">RTSP Main Stream (Full Quality)</div>
                     <div class="info-value">
                         rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">📋 Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main')">Copy</button>
                     </div>
                     
-                    <div class="info-label">📱 RTSP Sub Stream (Lower Quality)</div>
+                    <div class="info-label">RTSP Sub Stream (Lower Quality)</div>
                     <div class="info-value">
                         rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
-                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">📋 Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub')">Copy</button>
                     </div>
                     
-                    <div class="info-label">🔌 ONVIF Service URL</div>
+                    <div class="info-label">ONVIF Service URL</div>
                     <div class="info-value">
                         <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                             <span>${{displayIp}}:${{cam.onvifPort}}</span>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="font-size: 11px; color: var(--text-muted); background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">
-                                    👤 ${{settings.globalUsername || 'admin'}} / 🔑 ${{settings.globalPassword || 'admin'}}
+                                    ${{settings.globalUsername || 'admin'}} / ${{settings.globalPassword || 'admin'}}
                                 </div>
-                                <button class="copy-btn" onclick="copyToClipboard('${{displayIp}}:${{cam.onvifPort}}')">📋 Copy</button>
+                                <button class="copy-btn" onclick="copyToClipboard('${{displayIp}}:${{cam.onvifPort}}')">Copy</button>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="auto-start-row">
-                    <span class="auto-start-label">🚀 Auto-start on server startup</span>
+                    <span class="auto-start-label">Auto-start on server startup</span>
                     <label class="toggle-switch">
                         <input type="checkbox" ${{cam.autoStart ? 'checked' : ''}} onchange="toggleAutoStart(${{cam.id}}, this.checked)">
                         <span class="toggle-slider"></span>
@@ -1801,7 +1799,7 @@ def get_web_ui_html(current_settings=None):
             if (container) {{
                 container.innerHTML = `
                     <div class="video-placeholder">
-                        <div style="font-size: 48px;">⚠️</div>
+                        <div style="font-size: 48px;"></div>
                         <div>${{message}}</div>
                         <div style="font-size: 12px; color: #a0aec0;">Check camera connection</div>
                     </div>
@@ -1879,7 +1877,7 @@ def get_web_ui_html(current_settings=None):
                 // Always add manual option
                 const manualOption = document.createElement('option');
                 manualOption.value = "__manual__";
-                manualOption.textContent = "➕ Manual Entry...";
+                manualOption.textContent = "Manual Entry...";
                 select.appendChild(manualOption);
                 
                 // Restore value logic
@@ -1896,7 +1894,7 @@ def get_web_ui_html(current_settings=None):
             }} catch (error) {{
                 console.error('Error detecting interfaces:', error);
                 // Fallback if API fails
-                select.innerHTML = '<option value="">-- Error detecting --</option><option value="__manual__">➕ Manual Entry...</option>';
+                select.innerHTML = '<option value="">-- Error detecting --</option><option value="__manual__">Manual Entry...</option>';
             }}
         }}
 
@@ -2239,13 +2237,13 @@ def get_web_ui_html(current_settings=None):
                 const response = await fetch('/api/server/stop', {{method: 'POST'}});
                 if (response.ok) {{
                     // Show a message since the server will be down
-                    document.body.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #000; color: #fff;\"><h1>⏹️ Server Stopped</h1><p>The ONVIF server has been shut down successfully.</p><p style=\"color: #718096; margin-top: 20px;\">You can safely close this browser tab.</p></div>';
+                    document.body.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #000; color: #fff;\"><h1>Server Stopped</h1><p>The ONVIF server has been shut down successfully.</p><p style=\"color: #718096; margin-top: 20px;\">You can safely close this browser tab.</p></div>';
                 }} else {{
                     alert('Failed to stop server');
                 }}
             }} catch (error) {{
                 // Expected error since server is shutting down
-                document.body.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #000; color: #fff;\"><h1>⏹️ Server Stopped</h1><p>The ONVIF server has been shut down successfully.</p><p style=\"color: #718096; margin-top: 20px;\">You can safely close this browser tab.</p></div>';
+                document.body.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #000; color: #fff;\"><h1>Server Stopped</h1><p>The ONVIF server has been shut down successfully.</p><p style=\"color: #718096; margin-top: 20px;\">You can safely close this browser tab.</p></div>';
             }}
         }}
         
@@ -2272,7 +2270,7 @@ def get_web_ui_html(current_settings=None):
             const button = event.target;
             const originalText = button.textContent;
             button.disabled = true;
-            button.textContent = '⏳ Fetching...';
+            button.textContent = 'Fetching...';
             
             try {{
                 // If editing existing camera, use its ID
@@ -2584,7 +2582,7 @@ def get_web_ui_html(current_settings=None):
                 resultsDiv.innerHTML = `<div class="alert alert-danger">Connection Error: ${{e.message}}</div>`;
             }} finally {{
                 btn.disabled = false;
-                btn.textContent = '🔍 Scan Camera';
+                btn.textContent = 'Scan Camera';
             }}
         }}
         
@@ -2619,7 +2617,7 @@ def get_web_ui_html(current_settings=None):
                 // Visual feedback
                 if (btn) {{
                     const originalText = btn.textContent;
-                    btn.textContent = '✓ Set!';
+                    btn.textContent = 'Set!';
                     btn.style.background = '#48bb78';
                     setTimeout(() => {{ btn.textContent = originalText; btn.style.background = '#667eea'; }}, 2000);
                 }}
@@ -2633,7 +2631,7 @@ def get_web_ui_html(current_settings=None):
                 // Visual feedback
                 if (btn) {{
                     const originalText = btn.textContent;
-                    btn.textContent = '✓ Set!';
+                    btn.textContent = 'Set!';
                     btn.style.background = '#48bb78';
                     setTimeout(() => {{ btn.textContent = originalText; btn.style.background = '#718096'; }}, 2000);
                 }}
@@ -2845,7 +2843,7 @@ def get_setup_html():
 </head>
 <body>
     <div class="setup-card">
-        <h1>🚀 First-Time Setup</h1>
+        <h1>First-Time Setup</h1>
         <p>Create your administrator account</p>
         
         <div class="info-box">
