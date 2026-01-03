@@ -1027,7 +1027,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.3</h1>
+            <h1>Tonys Onvif-RTSP Server v5.3.1</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1052,7 +1052,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.1</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 Buy Tony a coffee
             </a>
@@ -1527,6 +1527,11 @@ def get_web_ui_html(current_settings=None):
                         <small style="color: #f6ad55; font-size: 11px; font-weight: 600; display: block;">
                             <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
                         </small>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn btn-primary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 6px 14px; color: #ffffff;" onclick="resetAdvancedSettings()">
+                            <i class="fas fa-undo"></i> Reset to Defaults
+                        </button>
                     </div>
                 </div>
 
@@ -2657,6 +2662,26 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        function resetAdvancedSettings() {{
+            if (confirm('Are you sure you want to reset all MediaMTX and FFmpeg settings to their factory defaults?')) {{
+                // MediaMTX Defaults
+                document.getElementById('mediamtx_writeQueueSize').value = 4096;
+                document.getElementById('mediamtx_readTimeout').value = '30s';
+                document.getElementById('mediamtx_writeTimeout').value = '30s';
+                document.getElementById('mediamtx_udpMaxPayloadSize').value = 1472;
+                document.getElementById('mediamtx_hlsSegmentCount').value = 10;
+                document.getElementById('mediamtx_hlsSegmentDuration').value = '1s';
+                document.getElementById('mediamtx_hlsPartDuration').value = '200ms';
+                
+                // FFmpeg Defaults
+                document.getElementById('ffmpeg_globalArgs').value = '-hide_banner -loglevel error';
+                document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
+                document.getElementById('ffmpeg_processArgs').value = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
+                
+                showToast('Settings reset to defaults. Click "Save Settings" to apply.');
+            }}
+        }}
+
         function toggleAdvancedSettings() {{
             const section = document.getElementById('advancedSettingsSection');
             const chevron = document.getElementById('advancedChevron');
