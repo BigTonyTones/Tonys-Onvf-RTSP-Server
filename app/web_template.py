@@ -2678,7 +2678,7 @@ def get_web_ui_html(current_settings=None):
                 
                 // FFmpeg Defaults
                 document.getElementById('ffmpeg_globalArgs').value = '-hide_banner -loglevel error';
-                document.getElementById('ffmpeg_inputArgs').value = '-fflags nobuffer -flags low_delay -rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
+                document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
                 document.getElementById('ffmpeg_processArgs').value = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
                 
                 showToast('Settings reset to defaults. Click "Save Settings" to apply.');
