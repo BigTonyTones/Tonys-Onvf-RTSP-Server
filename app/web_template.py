@@ -1457,6 +1457,71 @@ def get_web_ui_html(current_settings=None):
                     </small>
                 </div>
 
+                <div class="form-group" style="margin-top: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleAdvancedSettings()">
+                        <span class="form-label" style="margin: 0; color: var(--primary-color); font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-tools"></i> Advanced Settings (MediaMTX & FFmpeg)
+                            <i id="advancedChevron" class="fas fa-chevron-down" style="font-size: 12px; transition: transform 0.3s; margin-left: auto;"></i>
+                        </span>
+                    </label>
+                </div>
+
+                <div id="advancedSettingsSection" style="display: none; padding: 15px; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <h3 style="font-size: 13px; margin: 0 0 10px 0; color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">MediaMTX Settings</h3>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Write Queue Size</label>
+                                <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Read Timeout</label>
+                                <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Write Timeout</label>
+                                <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">UDP Max Payload</label>
+                                <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 13px; margin: 0 0 10px 0; color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">HLS Buffering</h3>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Segment Count</label>
+                                <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Segment Duration</label>
+                                <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Part Duration</label>
+                                <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 12px; padding: 4px 8px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 13px; margin: 15px 0 10px 0; color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">FFmpeg Transcoding Parameters</h3>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Global Arguments</label>
+                        <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 12px; padding: 4px 8px; font-family: monospace;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Input Arguments</label>
+                        <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 12px; padding: 4px 8px; font-family: monospace;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label class="form-label" style="font-size: 11px; margin-bottom: 2px;">Process/Codec Arguments</label>
+                        <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 12px; padding: 4px 8px; font-family: monospace;">
+                    </div>
+                    <small style="color: #ed8936; font-size: 11px; display: block; margin-top: 10px;">
+                        Note: MediaMTX will restart automatically to apply these changes.
+                    </small>
+                </div>
+
                 <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -2584,6 +2649,18 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        function toggleAdvancedSettings() {{
+            const section = document.getElementById('advancedSettingsSection');
+            const chevron = document.getElementById('advancedChevron');
+            if (section.style.display === 'none') {{
+                section.style.display = 'block';
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            }} else {{
+                section.style.display = 'none';
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            }}
+        }}
+
         async function loadSettings() {{
             try {{
                 const response = await fetch('/api/settings?t=' + new Date().getTime());
@@ -2619,6 +2696,25 @@ def get_web_ui_html(current_settings=None):
 
                     const debugModeField = document.getElementById('debugMode');
                     if (debugModeField) debugModeField.checked = settings.debugMode === true;
+
+                    // Load Advanced Settings
+                    if (settings.advancedSettings) {
+                        const adv = settings.advancedSettings;
+                        if (adv.mediamtx) {
+                            document.getElementById('mediamtx_writeQueueSize').value = adv.mediamtx.writeQueueSize || 4096;
+                            document.getElementById('mediamtx_readTimeout').value = adv.mediamtx.readTimeout || '30s';
+                            document.getElementById('mediamtx_writeTimeout').value = adv.mediamtx.writeTimeout || '30s';
+                            document.getElementById('mediamtx_udpMaxPayloadSize').value = adv.mediamtx.udpMaxPayloadSize || 1472;
+                            document.getElementById('mediamtx_hlsSegmentCount').value = adv.mediamtx.hlsSegmentCount || 10;
+                            document.getElementById('mediamtx_hlsSegmentDuration').value = adv.mediamtx.hlsSegmentDuration || '1s';
+                            document.getElementById('mediamtx_hlsPartDuration').value = adv.mediamtx.hlsPartDuration || '200ms';
+                        }
+                        if (adv.ffmpeg) {
+                            document.getElementById('ffmpeg_globalArgs').value = adv.ffmpeg.globalArgs || '';
+                            document.getElementById('ffmpeg_inputArgs').value = adv.ffmpeg.inputArgs || '';
+                            document.getElementById('ffmpeg_processArgs').value = adv.ffmpeg.processArgs || '';
+                        }
+                    }
                     
                     const authEnabledField = document.getElementById('authEnabled');
                     if (authEnabledField) authEnabledField.checked = settings.authEnabled === true;
@@ -2675,6 +2771,22 @@ def get_web_ui_html(current_settings=None):
                 globalPassword: document.getElementById('globalPassword').value,
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
                 debugMode: document.getElementById('debugMode').checked,
+                advancedSettings: {
+                    mediamtx: {
+                        writeQueueSize: parseInt(document.getElementById('mediamtx_writeQueueSize').value),
+                        readTimeout: document.getElementById('mediamtx_readTimeout').value,
+                        writeTimeout: document.getElementById('mediamtx_writeTimeout').value,
+                        udpMaxPayloadSize: parseInt(document.getElementById('mediamtx_udpMaxPayloadSize').value),
+                        hlsSegmentCount: parseInt(document.getElementById('mediamtx_hlsSegmentCount').value),
+                        hlsSegmentDuration: document.getElementById('mediamtx_hlsSegmentDuration').value,
+                        hlsPartDuration: document.getElementById('mediamtx_hlsPartDuration').value
+                    },
+                    ffmpeg: {
+                        globalArgs: document.getElementById('ffmpeg_globalArgs').value,
+                        inputArgs: document.getElementById('ffmpeg_inputArgs').value,
+                        processArgs: document.getElementById('ffmpeg_processArgs').value
+                    }
+                },
                 authEnabled: document.getElementById('authEnabled').checked,
                 username: document.getElementById('authUsername').value,
                 password: document.getElementById('authPassword').value

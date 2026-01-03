@@ -196,7 +196,7 @@ class MediaMTXManager:
             traceback.print_exc()
             return False
     
-    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False):
+    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
         """Create MediaMTX configuration optimized for multiple cameras and viewers"""
         if rtsp_port is None:
             rtsp_port = MEDIAMTX_PORT
@@ -217,9 +217,9 @@ class MediaMTXManager:
             # ===== HLS SETTINGS - Optimized for multiple viewers =====
             'hlsAlwaysRemux': True,
             'hlsVariant': 'fmp4',  # LL-HLS (fMP4) handles multi-track/Opus better than mpegts
-            'hlsSegmentCount': 10, # Increased buffer for irregular cameras
-            'hlsSegmentDuration': '1s',  # Set to minimum to trigger on every keyframe
-            'hlsPartDuration': '200ms',  # LL-HLS part duration
+            'hlsSegmentCount': advanced_settings.get('mediamtx', {}).get('hlsSegmentCount', 10) if advanced_settings else 10,
+            'hlsSegmentDuration': advanced_settings.get('mediamtx', {}).get('hlsSegmentDuration', '1s') if advanced_settings else '1s',
+            'hlsPartDuration': advanced_settings.get('mediamtx', {}).get('hlsPartDuration', '200ms') if advanced_settings else '200ms',
             'hlsSegmentMaxSize': '50M',  # Max 50MB per segment
             'hlsAllowOrigins': ['*'],       # Allow CORS for web players
             'hlsEncryption': False,      # Clear text for local streaming
@@ -233,12 +233,12 @@ class MediaMTXManager:
             
             # ===== PERFORMANCE TUNING =====
             # Timeout settings - prevent premature disconnects
-            'readTimeout': '30s',  # How long to wait for data from source
-            'writeTimeout': '30s',  # How long to wait when writing to clients
+            'readTimeout': advanced_settings.get('mediamtx', {}).get('readTimeout', '30s') if advanced_settings else '30s',
+            'writeTimeout': advanced_settings.get('mediamtx', {}).get('writeTimeout', '30s') if advanced_settings else '30s',
             
             # Buffer and queue settings
-            'writeQueueSize': 4096,  # Increased to 4096 to resolve "reader is too slow" warnings
-            'udpMaxPayloadSize': 1472,  # Standard MTU-safe size
+            'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 4096) if advanced_settings else 4096,
+            'udpMaxPayloadSize': advanced_settings.get('mediamtx', {}).get('udpMaxPayloadSize', 1472) if advanced_settings else 1472,
             
             # ===== MEMORY MANAGEMENT =====
             # Reduce log verbosity to save CPU
@@ -271,6 +271,12 @@ class MediaMTXManager:
                     print(f"   Could not set execution permissions on FFmpeg: {e}")
             
         print(f"   Using FFmpeg: {ffmpeg_exe}")
+        
+        # Get advanced ffmpeg args
+        ff_advanced = advanced_settings.get('ffmpeg', {}) if advanced_settings else {}
+        ff_global = ff_advanced.get('globalArgs', '-hide_banner -loglevel error')
+        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2')
+        ff_process = ff_advanced.get('processArgs', '-c:v libx264 -preset ultrafast -tune zerolatency -g 30')
         
         
         # Check if GLOBAL authentication is enabled
@@ -336,11 +342,12 @@ class MediaMTXManager:
                     # -threads 2 limits memory footprint per process
                     # -rc-lookahead 0 prevents frame pre-buffering
                     cmd = (
-                        f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
-                        f'-rtsp_transport tcp -use_wallclock_as_timestamps 1 '
+                        f'"{ffmpeg_exe}" {ff_global} -nostdin '
+                        f'{ff_input} '
                         f'-i {safe_source} '
                         f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                        f'-c:v libx264 -preset ultrafast -tune zerolatency -profile:v high -level 4.2 '
+                        f'{ff_process} '
+                        f'-profile:v high -level 4.2 '
                         f'-threads 2 -g {tgt_fps * 2} -sc_threshold 0 '
                         f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp -rtsp_transport tcp {safe_dest}'
@@ -400,11 +407,12 @@ class MediaMTXManager:
                         safe_dest = shlex.quote(dest_url)
                     
                     cmd = (
-                        f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
-                        f'-rtsp_transport tcp -use_wallclock_as_timestamps 1 '
+                        f'"{ffmpeg_exe}" {ff_global} -nostdin '
+                        f'{ff_input} '
                         f'-i {safe_source} '
                         f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                        f'-c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -level 4.1 '
+                        f'{ff_process} '
+                        f'-profile:v baseline -level 4.1 '
                         f'-threads 2 -g {tgt_fps * 2} -sc_threshold 0 '
                         f'-b:v 800k -maxrate 800k -bufsize 1600k '
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp -rtsp_transport tcp {safe_dest}'
@@ -543,11 +551,11 @@ class MediaMTXManager:
                         # Final command - optimized for low latency and stability on Linux
                         # -vsync vfr helps when input cameras have varying clock speeds
                         gf_cmd = (
-                            f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
+                            f'"{ffmpeg_exe}" {ff_global} -nostdin '
                             f'-fflags +genpts+igndts '
                             f'{" ".join(inputs)} '
                             f'-filter_complex "{filter_complex}" '
-                            f'-map "[outv]" -c:v libx264 -preset ultrafast -tune zerolatency '
+                            f'-map "[outv]" {ff_process} '
                             f'-profile:v high -level 4.2 '
                             f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 40 '
                             f'-vsync vfr -f rtsp -rtsp_transport tcp {safe_dest}'
@@ -575,12 +583,12 @@ class MediaMTXManager:
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
-    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False):
+    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
         """Start MediaMTX server"""
         if not self.download_mediamtx():
             return False
         
-        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode)
+        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings)
         
         print("\nStarting MediaMTX RTSP Server...")
         
@@ -637,9 +645,9 @@ class MediaMTXManager:
             self.process = None
             print("MediaMTX stopped")
     
-    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False):
+    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
         """Restart MediaMTX with new configuration"""
         print("\nRestarting MediaMTX...")
         self.stop()
         time.sleep(3)
-        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode)
+        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings)

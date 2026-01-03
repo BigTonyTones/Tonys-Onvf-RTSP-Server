@@ -24,7 +24,6 @@ class CameraManager:
         self.next_onvif_port = 8001
         self.mediamtx = MediaMTXManager()
         self.service_mgr = LinuxServiceManager()
-        self.service_mgr = LinuxServiceManager()
         self._lock = threading.Lock()
         
         # GridFusion Layouts
@@ -36,6 +35,24 @@ class CameraManager:
         self.username = None
         self.password_hash = None
         self.session_token = None
+
+        # Advanced Settings
+        self.advanced_settings = {
+            'mediamtx': {
+                'writeQueueSize': 4096,
+                'readTimeout': '30s',
+                'writeTimeout': '30s',
+                'udpMaxPayloadSize': 1472,
+                'hlsSegmentCount': 10,
+                'hlsSegmentDuration': '1s',
+                'hlsPartDuration': '200ms',
+            },
+            'ffmpeg': {
+                'globalArgs': '-hide_banner -loglevel error',
+                'inputArgs': '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2',
+                'processArgs': '-c:v libx264 -preset ultrafast -tune zerolatency -g 30',
+            }
+        }
         
         self.load_config()
         
@@ -99,6 +116,9 @@ class CameraManager:
                         'showSnapshots': True
                     }]
             
+            # Load advanced settings
+            self.advanced_settings = config.get('advancedSettings', self.advanced_settings)
+            
             # Load auth settings
             auth = config.get('auth', {})
             self.auth_enabled = auth.get('enabled', False)
@@ -149,6 +169,7 @@ class CameraManager:
                 'username': getattr(self, 'username', None),
                 'password_hash': getattr(self, 'password_hash', None)
             },
+            'advancedSettings': getattr(self, 'advanced_settings', {}),
             'gridFusion': {
                 'layouts': getattr(self, 'grid_fusion_layouts', [])
             }
@@ -188,6 +209,7 @@ class CameraManager:
                         self.global_password = settings.get('globalPassword', 'admin')
                         self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
                         self.debug_mode = settings.get('debugMode', False)
+                        self.advanced_settings = config.get('advancedSettings', self.advanced_settings)
                 except Exception as e:
                     # If reading fails (e.g. file busy), we just fall back to the last known 
                     # value stored in self.server_ip, which is much safer.
@@ -205,7 +227,8 @@ class CameraManager:
             'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
             'debugMode': getattr(self, 'debug_mode', False),
             'authEnabled': self.auth_enabled,
-            'username': self.username
+            'username': self.username,
+            'advancedSettings': getattr(self, 'advanced_settings', {})
         }
     
     def save_settings(self, settings):
@@ -233,9 +256,14 @@ class CameraManager:
             old_global_username != self.global_username or
             old_global_password != self.global_password or
             old_rtsp_auth_enabled != self.rtsp_auth_enabled or
-            old_debug_mode != self.debug_mode
+            old_debug_mode != self.debug_mode or
+            settings.get('advancedSettings') != self.advanced_settings
         )
         
+        # Update advanced settings if provided
+        if 'advancedSettings' in settings:
+            self.advanced_settings = settings['advancedSettings']
+            
         # Handle auto-boot setting (Linux only)
         new_auto_boot = settings.get('autoBoot', False)
         if new_auto_boot != self.auto_boot:
@@ -275,7 +303,7 @@ class CameraManager:
             # Pass credentials only if auth is enabled
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode)
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
             
         return {
             'serverIp': self.server_ip, 
@@ -344,7 +372,7 @@ class CameraManager:
             print("GridFusion layouts changed, restarting MediaMTX...")
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
 
         return self.get_grid_fusion()
     
@@ -532,7 +560,7 @@ class CameraManager:
             camera.start()
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
         
         return camera
     
@@ -545,7 +573,7 @@ class CameraManager:
             self.save_config()
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
             return True
         return False
     
@@ -562,7 +590,7 @@ class CameraManager:
             camera.start()
         rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
         rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
     
     def stop_all(self):
         """Stop all cameras"""
@@ -570,7 +598,7 @@ class CameraManager:
             camera.stop()
         rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
         rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
 
     # --- Authentication Methods ---
     
