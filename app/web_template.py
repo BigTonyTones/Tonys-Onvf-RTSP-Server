@@ -823,6 +823,185 @@ def get_web_ui_html(current_settings=None):
         .coffee-link-small:hover {{
             color: var(--btn-primary);
         }}
+
+        /* GridFusion Editor Styles */
+        .gridfusion-container {{
+            display: flex;
+            gap: 20px;
+            height: 700px;
+            margin-top: 10px;
+        }}
+        .gridfusion-sidebar {{
+            width: 250px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }}
+        .gridfusion-canvas-container {{
+            flex: 1;
+            background: #000;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--card-border);
+        }}
+        .gridfusion-canvas {{
+            background: #1a1a1a;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }}
+        .grid-overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: none;
+        }}
+        .gf-camera-item {{
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.2s;
+        }}
+        .gf-camera-item:hover {{
+            transform: scale(1.02);
+            border-color: var(--btn-primary);
+        }}
+        .gf-camera-img {{
+            width: 50px;
+            height: 30px;
+            background: #333;
+            border-radius: 4px;
+            object-fit: cover;
+        }}
+        .gf-camera-name {{
+            font-size: 13px;
+            font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        .gf-add-btn {{
+            background: var(--btn-primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+        }}
+        .gf-placed-camera {{
+            position: absolute;
+            background: #333;
+            border: 2px solid #667eea;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            overflow: hidden;
+        }}
+        .gf-placed-camera.selected {{
+            border-color: #48bb78;
+            box-shadow: 0 0 15px rgba(72, 187, 120, 0.5);
+            z-index: 10;
+        }}
+        .gf-placed-snapshot {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            pointer-events: none;
+        }}
+        .gf-placed-label {{
+            position: absolute;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            max-width: 90%;
+            text-align: center;
+        }}
+        .gf-remove-btn {{
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 11;
+        }}
+        .gf-resizer {{
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: white;
+            border: 1px solid #667eea;
+            bottom: 0;
+            right: 0;
+            cursor: nwse-resize;
+            z-index: 12;
+        }}
+        .gf-toolbar {{
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }}
+        .gf-status-bar {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }}
+        .gf-copy-link {{
+            background: rgba(0,0,0,0.3);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
     </style>
 </head>
 <body>
@@ -848,9 +1027,10 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v4.4</h1>
+            <h1>Tonys Onvif-RTSP Server v5.0</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
+                <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
                 <button class="btn" onclick="startAll()">Start All</button>
                 <button class="btn" onclick="stopAll()">Stop All</button>
                 <button class="btn" onclick="toggleMatrixView(true)">Matrix View</button>
@@ -871,7 +1051,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2025 Tonys Onvif-RTSP Server v4.4 • Created by Tony</p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.0</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 Buy Tony a coffee
             </a>
@@ -1309,6 +1489,7 @@ def get_web_ui_html(current_settings=None):
             </div>
         </div>
     </div>
+    
     <script>
         let cameras = [];
         let matrixActive = false;
@@ -2415,7 +2596,6 @@ def get_web_ui_html(current_settings=None):
                 gridColumns: parseInt(document.getElementById('gridColumnsSelect').value),
                 rtspPort: parseInt(document.getElementById('rtspPortSettings').value || 8554),
                 autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
-                autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
                 globalUsername: document.getElementById('globalUsername').value,
                 globalPassword: document.getElementById('globalPassword').value,
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
@@ -2636,6 +2816,18 @@ def get_web_ui_html(current_settings=None):
                     setTimeout(() => {{ btn.textContent = originalText; btn.style.background = '#718096'; }}, 2000);
                 }}
             }}
+        }}
+
+
+        function copyTextToClipboard(id) {{
+            const el = document.getElementById(id);
+            const text = el.textContent || el.value;
+            navigator.clipboard.writeText(text).then(() => {{
+                const btn = event.target;
+                const oldText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = oldText, 2000);
+            }});
         }}
     </script>
 </body>

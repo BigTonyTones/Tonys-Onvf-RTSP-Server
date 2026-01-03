@@ -60,6 +60,15 @@ class CameraManager:
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             
+            # Load GridFusion settings
+            grid_fusion = config.get('gridFusion', {})
+            self.grid_fusion_enabled = grid_fusion.get('enabled', False)
+            self.grid_fusion_resolution = grid_fusion.get('resolution', '1920x1080')
+            self.grid_fusion_cameras = grid_fusion.get('cameras', [])
+            self.grid_fusion_snap = grid_fusion.get('snapToGrid', True)
+            self.grid_fusion_show_grid = grid_fusion.get('showGrid', True)
+            self.grid_fusion_show_snapshots = grid_fusion.get('showSnapshots', True)
+            
             # Load auth settings
             auth = config.get('auth', {})
             self.auth_enabled = auth.get('enabled', False)
@@ -75,6 +84,12 @@ class CameraManager:
             self.global_username = 'admin'
             self.global_password = 'admin'
             self.rtsp_auth_enabled = False
+            self.grid_fusion_enabled = False
+            self.grid_fusion_resolution = '1920x1080'
+            self.grid_fusion_cameras = []
+            self.grid_fusion_snap = True
+            self.grid_fusion_show_grid = True
+            self.grid_fusion_show_snapshots = True
             self.save_config()
             
     def save_config(self):
@@ -96,6 +111,14 @@ class CameraManager:
                 'enabled': getattr(self, 'auth_enabled', False),
                 'username': getattr(self, 'username', None),
                 'password_hash': getattr(self, 'password_hash', None)
+            },
+            'gridFusion': {
+                'enabled': getattr(self, 'grid_fusion_enabled', False),
+                'resolution': getattr(self, 'grid_fusion_resolution', '1920x1080'),
+                'cameras': getattr(self, 'grid_fusion_cameras', []),
+                'snapToGrid': getattr(self, 'grid_fusion_snap', True),
+                'showGrid': getattr(self, 'grid_fusion_show_grid', True),
+                'showSnapshots': getattr(self, 'grid_fusion_show_snapshots', True)
             }
         }
         
@@ -215,7 +238,7 @@ class CameraManager:
             # Pass credentials only if auth is enabled
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
             
         return {
             'serverIp': self.server_ip, 
@@ -230,6 +253,46 @@ class CameraManager:
             'authEnabled': self.auth_enabled,
             'username': self.username
         }
+
+    def get_grid_fusion(self):
+        """Get GridFusion configuration"""
+        return {
+            'enabled': getattr(self, 'grid_fusion_enabled', False),
+            'resolution': getattr(self, 'grid_fusion_resolution', '1920x1080'),
+            'cameras': getattr(self, 'grid_fusion_cameras', []),
+            'snapToGrid': getattr(self, 'grid_fusion_snap', True),
+            'showGrid': getattr(self, 'grid_fusion_show_grid', True),
+            'showSnapshots': getattr(self, 'grid_fusion_show_snapshots', True)
+        }
+
+    def save_grid_fusion(self, data):
+        """Save GridFusion configuration"""
+        old_enabled = getattr(self, 'grid_fusion_enabled', False)
+        old_res = getattr(self, 'grid_fusion_resolution', '1920x1080')
+        old_cams = getattr(self, 'grid_fusion_cameras', [])
+
+        self.grid_fusion_enabled = data.get('enabled', False)
+        self.grid_fusion_resolution = data.get('resolution', '1920x1080')
+        self.grid_fusion_cameras = data.get('cameras', [])
+        self.grid_fusion_snap = data.get('snapToGrid', True)
+        self.grid_fusion_show_grid = data.get('showGrid', True)
+        self.grid_fusion_show_snapshots = data.get('showSnapshots', True)
+        
+        self.save_config()
+
+        # Restart MediaMTX if the stream setup changed and is enabled
+        needs_restart = (
+            old_enabled != self.grid_fusion_enabled or
+            (self.grid_fusion_enabled and (old_res != self.grid_fusion_resolution or old_cams != self.grid_fusion_cameras))
+        )
+
+        if needs_restart:
+            print("🔄 GridFusion configuration changed, restarting MediaMTX...")
+            rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
+            rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
+
+        return self.get_grid_fusion()
     
     def is_port_available(self, port, exclude_camera_id=None):
         """Check if an ONVIF port is available (not used by other cameras)"""
@@ -414,7 +477,7 @@ class CameraManager:
             camera.start()
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
         
         return camera
     
@@ -427,7 +490,7 @@ class CameraManager:
             self.save_config()
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
             return True
         return False
     
@@ -444,7 +507,7 @@ class CameraManager:
             camera.start()
         rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
         rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
     
     def stop_all(self):
         """Stop all cameras"""
@@ -452,7 +515,7 @@ class CameraManager:
             camera.stop()
         rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
         rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass)
+        self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion())
 
     # --- Authentication Methods ---
     

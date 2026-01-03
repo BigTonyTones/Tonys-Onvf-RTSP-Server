@@ -13,6 +13,9 @@ from .web_template import get_web_ui_html
 from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
 from .linux_network import LinuxNetworkManager
+import subprocess
+import tempfile
+import shutil
 
 
 def create_web_app(manager):
@@ -199,6 +202,14 @@ def create_web_app(manager):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
         return response
+
+    @app.route('/gridfusion')
+    @login_required
+    def gridfusion():
+        settings = manager.load_settings()
+        grid_fusion_config = manager.get_grid_fusion()
+        from .gridfusion_template import get_gridfusion_html
+        return get_gridfusion_html(settings, grid_fusion_config)
     
     @app.route('/api/cameras', methods=['GET'])
     @login_required
@@ -301,7 +312,7 @@ def create_web_app(manager):
             if not was_running:
                 rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
                 rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
+                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
     
@@ -317,7 +328,7 @@ def create_web_app(manager):
             if was_running:
                 rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
                 rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
+                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
     
@@ -517,5 +528,93 @@ def create_web_app(manager):
         
         interfaces = LinuxNetworkManager.get_physical_interfaces()
         return jsonify(interfaces)
+    
+    # --- GridFusion Endpoints ---
+    
+    @app.route('/api/gridfusion', methods=['GET'])
+    @login_required
+    def get_gridfusion():
+        """Get GridFusion configuration"""
+        return jsonify(manager.get_grid_fusion())
+    
+    @app.route('/api/gridfusion', methods=['POST'])
+    @login_required
+    def save_gridfusion():
+        """Save GridFusion configuration"""
+        data = request.json
+        try:
+            result = manager.save_grid_fusion(data)
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/gridfusion/snapshot/<int:camera_id>')
+    @login_required
+    def get_camera_snapshot(camera_id):
+        """Get a single snapshot from a camera stream"""
+        camera = manager.get_camera(camera_id)
+        if not camera:
+            return jsonify({'error': 'Camera not found'}), 404
+            
+        # Optimization: If camera is running, pull from local MediaMTX instead of hitting real camera
+        # This is MUCH faster and avoids overloading physical cameras
+        if camera.status == "running":
+            rtsp_port = getattr(manager, 'rtsp_port', 8554)
+            # Include credentials if RTSP auth is enabled
+            if getattr(manager, 'rtsp_auth_enabled', False):
+                user = quote(getattr(manager, 'global_username', 'admin'))
+                pw = quote(getattr(manager, 'global_password', 'admin'))
+                stream_url = f"rtsp://{user}:{pw}@localhost:{rtsp_port}/{camera.path_name}_sub"
+            else:
+                stream_url = f"rtsp://localhost:{rtsp_port}/{camera.path_name}_sub"
+            print(f"  📸 Capture: Using local stream for {camera.name}")
+        else:
+            # Fallback to direct camera URL (use sub stream for speed)
+            stream_url = camera.sub_stream_url
+            print(f"  📸 Capture: Using direct stream for {camera.name}")
+        
+        ffmpeg_mgr = FFmpegManager()
+        ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
+        
+        # Create a temp file for the snapshot
+        fd, path = tempfile.mkstemp(suffix='.jpg')
+        os.close(fd)
+        
+        try:
+            # Grab one frame
+            # -ss 1 skips the first second to avoid corruption/black frames
+            cmd = [
+                ffmpeg_exe, 
+                '-hide_banner', '-loglevel', 'error',
+                '-rtsp_transport', 'tcp',
+                '-i', stream_url,
+                '-frames:v', '1',
+                '-q:v', '2', # Quality (2-31, lower is better)
+                '-f', 'image2',
+                '-y',
+                path
+            ]
+            
+            # Use a timeout of 10 seconds
+            subprocess.run(cmd, check=True, timeout=10)
+            
+            # Send file content
+            with open(path, 'rb') as f:
+                content = f.read()
+                
+            response = make_response(content)
+            response.headers['Content-Type'] = 'image/jpeg'
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            return response
+            
+        except Exception as e:
+            print(f"  ❌ Error capturing snapshot for {camera.name}: {e}")
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass
     
     return app

@@ -4,6 +4,23 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 ![Dashboard Screenshot](assets/dashboard_screenshot.png)
 
+## 🎬 GridFusion - Multi-Camera Matrix Composer
+
+**GridFusion** lets you combine multiple camera feeds into a single, customizable matrix stream. Perfect for creating security monitoring walls, multi-angle views, or consolidated feeds for your NVR.
+
+![GridFusion Editor](assets/gridfusion_editor_screenshot.png)
+
+### Key Features:
+- **Visual Drag-and-Drop Editor**: Position cameras anywhere on the canvas with pixel-perfect control
+- **Flexible Layouts**: Create any grid configuration - 2x2, 3x3, 4x4, or completely custom arrangements
+- **Custom Resolutions**: Output at standard resolutions (1080p, 4K) or define your own dimensions
+- **Live Preview**: See exactly how your matrix will look before saving
+- **RTSP Output**: The composed matrix is available as a standard RTSP stream that any NVR can consume
+- **Easy Management**: Enable/disable matrix streams without losing your layout configuration
+- **Snapshot Integration**: Visual camera placement using live snapshots from your feeds
+
+Access GridFusion from the dashboard to start building your custom camera matrices.
+
 ## 🐧 Ubuntu Setup (Recommended)
 This server is optimized for Ubuntu 25.04. The **Virtual NIC** feature requires Linux `macvlan`.
 

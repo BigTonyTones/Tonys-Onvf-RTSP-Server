@@ -20,7 +20,7 @@ def main():
 
     print("""
     ╔═══════════════════════════════════════════════════════════╗
-    ║          Tonys Onvif-RTSP Server v4.4            ║
+    ║          Tonys Onvif-RTSP Server v5.0            ║
     ╚═══════════════════════════════════════════════════════════╝
     """)
     
@@ -54,7 +54,7 @@ def main():
     # Pass manager.cameras so it can generate config
     print("\n📦 Initializing MediaMTX RTSP Server...")
     # Pass authentication details to start()
-    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password):
+    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=manager.get_grid_fusion()):
         print("\n❌ Failed to start MediaMTX. Exiting...")
         sys.exit(1)
     

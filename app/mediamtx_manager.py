@@ -193,7 +193,7 @@ class MediaMTXManager:
             traceback.print_exc()
             return False
     
-    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None):
+    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None):
         """Create MediaMTX configuration optimized for multiple cameras and viewers"""
         if rtsp_port is None:
             rtsp_port = MEDIAMTX_PORT
@@ -328,14 +328,14 @@ class MediaMTXManager:
                     # -threads 2 limits memory footprint per process
                     # -rc-lookahead 0 prevents frame pre-buffering
                     cmd = (
-                        f'"{ffmpeg_exe}" -hide_banner -loglevel warning -nostdin '
+                        f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
                         f'-rtsp_transport tcp -use_wallclock_as_timestamps 1 '
                         f'-i {safe_source} '
                         f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                        f'-c:v libx264 -profile:v baseline -level:v 4.0 -preset ultrafast -tune zerolatency '
-                        f'-threads 2 -g {tgt_fps * 4} -keyint_min {tgt_fps} -sc_threshold 0 '
-                        f'-x264-params "force-cfr=1:nal-hrd=vbr:rc-lookahead=0" -bf 0 -b:v 2500k -maxrate 2500k -bufsize 2500k '
-                        f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp {safe_dest}'
+                        f'-c:v libx264 -preset ultrafast -tune zerolatency -profile:v high -level 4.2 '
+                        f'-threads 2 -g {tgt_fps * 2} -sc_threshold 0 '
+                        f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
+                        f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
                     main_path_cfg = {
@@ -344,7 +344,7 @@ class MediaMTXManager:
                         'runOnInitRestart': True,
                         'rtspTransport': 'tcp',
                         'sourceOnDemand': False,
-                        'disablePublisherOverride': False,
+                        'overridePublisher': True,
                     }
                 else:
                     main_path_cfg = {
@@ -354,7 +354,7 @@ class MediaMTXManager:
                         'sourceOnDemandStartTimeout': '10s',
                         'sourceOnDemandCloseAfter': '10s',
                         'record': False,
-                        'disablePublisherOverride': False,
+                        'overridePublisher': True,
                         'fallback': '',
                     }
                 
@@ -393,14 +393,14 @@ class MediaMTXManager:
                         safe_dest = shlex.quote(dest_url)
                     
                     cmd = (
-                        f'"{ffmpeg_exe}" -hide_banner -loglevel warning -nostdin '
+                        f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
                         f'-rtsp_transport tcp -use_wallclock_as_timestamps 1 '
                         f'-i {safe_source} '
                         f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                        f'-c:v libx264 -profile:v baseline -level:v 3.0 -preset ultrafast -tune zerolatency '
-                        f'-threads 2 -g {tgt_fps} -keyint_min {tgt_fps} -sc_threshold 0 '
-                        f'-x264-params "force-cfr=1:nal-hrd=vbr:rc-lookahead=0" -bf 0 -b:v 800k -maxrate 800k -bufsize 800k '
-                        f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp {safe_dest}'
+                        f'-c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -level 4.1 '
+                        f'-threads 2 -g {tgt_fps * 2} -sc_threshold 0 '
+                        f'-b:v 800k -maxrate 800k -bufsize 1600k '
+                        f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
                     sub_path_cfg = {
@@ -409,7 +409,7 @@ class MediaMTXManager:
                         'runOnInitRestart': True,
                         'rtspTransport': 'tcp',
                         'sourceOnDemand': False,
-                        'disablePublisherOverride': False,
+                        'overridePublisher': True,
                     }
                 else:
                     # Standard Proxy Mode
@@ -434,10 +434,99 @@ class MediaMTXManager:
                 
                 print(f"  ✓ Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
         
-        print("\n" + "-" * 40)
-        print(f"  Total running cameras: {running_count}")
+        print("-" * 40)
         print(f"  Total running cameras: {running_count}")
         print(f"  Total streams: {running_count * 2} (main + sub)")
+
+        # ===== GRIDFUSION COMPOSITE STREAM =====
+        if grid_fusion and grid_fusion.get('enabled'):
+            print(f"    🚀 Configuring GridFusion Composite Stream...")
+            res = grid_fusion.get('resolution', '1920x1080')
+            try:
+                res_w, res_h = map(int, res.split('x'))
+            except:
+                res_w, res_h = 1920, 1080
+            
+            gf_cams = grid_fusion.get('cameras', [])
+            if gf_cams:
+                # Build FFmpeg command for composition
+                inputs = []
+                filters = []
+                active_gf_cams = []
+                
+                # Filter and prepare active cameras
+                input_idx = 0
+                for gf_cam in gf_cams:
+                    cam_id = gf_cam.get('id')
+                    cam = next((c for c in cameras if c.id == cam_id), None)
+                    if not cam or cam.status != "running":
+                        continue
+                    
+                    # Source is the local MediaMTX sub stream (best stability)
+                    if enable_global_auth:
+                        src_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{cam.path_name}_sub"
+                    else:
+                        src_url = f"rtsp://127.0.0.1:{rtsp_port}/{cam.path_name}_sub"
+                    
+                    if system == "windows":
+                        safe_src = f'"{src_url}"'
+                    else:
+                        safe_src = shlex.quote(src_url)
+                    
+                    inputs.append(f'-rtsp_transport tcp -i {safe_src}')
+                    
+                    # Scale according to layout
+                    w = int(gf_cam.get('w', 640))
+                    h = int(gf_cam.get('h', 480))
+                    filters.append(f'[{input_idx}:v]scale={w}:{h}[v{input_idx}]')
+                    active_gf_cams.append(gf_cam)
+                    input_idx += 1
+                
+                if inputs:
+                    # Construct overlay chain
+                    overlay_chain = f'color=black:s={res_w}x{res_h}:r=20[base];'
+                    last_label = '[base]'
+                    for i in range(len(active_gf_cams)):
+                        gf_cam = active_gf_cams[i]
+                        x = int(gf_cam.get('x', 0))
+                        y = int(gf_cam.get('y', 0))
+                        
+                        next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
+                        overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass{next_label};'
+                        last_label = next_label
+                    
+                    filter_complex = ";".join(filters) + ";" + overlay_chain
+                    
+                    if enable_global_auth:
+                        dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/matrix"
+                    else:
+                        dest_url = f"rtsp://127.0.0.1:{rtsp_port}/matrix"
+                        
+                    if system == "windows":
+                        safe_dest = f'"{dest_url}"'
+                    else:
+                        safe_dest = shlex.quote(dest_url)
+                        
+                    # Final command - optimized for low latency and stability
+                    # We use -f rtsp and then -rtsp_transport tcp BEFORE the destination to force TCP publish
+                    gf_cmd = (
+                        f'"{ffmpeg_exe}" -hide_banner -loglevel error -nostdin '
+                        f'-fflags +genpts+igndts '
+                        f'{" ".join(inputs)} '
+                        f'-filter_complex "{filter_complex}" '
+                        f'-map "[outv]" -c:v libx264 -preset ultrafast -tune zerolatency '
+                        f'-profile:v high -level 4.2 '
+                        f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 40 '
+                        f'-f rtsp -rtsp_transport tcp {safe_dest}'
+                    )
+                    
+                    config['paths']['matrix'] = {
+                        'source': 'publisher',
+                        'runOnInit': gf_cmd,
+                        'runOnInitRestart': True,
+                    }
+                    print(f"      ✓ Matrix stream added at /matrix ({res})")
+
         
         # Populate authInternalUsers if enabled
         if enable_global_auth and auth_users_map:
@@ -453,12 +542,12 @@ class MediaMTXManager:
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
-    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None):
+    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None):
         """Start MediaMTX server"""
         if not self.download_mediamtx():
             return False
         
-        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password)
+        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion)
         
         print("\n🚀 Starting MediaMTX RTSP Server...")
         
@@ -503,9 +592,9 @@ class MediaMTXManager:
             self.process = None
             print("✓ MediaMTX stopped")
     
-    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None):
+    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None):
         """Restart MediaMTX with new configuration"""
         print("\n🔄 Restarting MediaMTX...")
         self.stop()
         time.sleep(3)
-        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password)
+        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion)
