@@ -348,7 +348,7 @@ class MediaMTXManager:
                         f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
                         f'{ff_process} '
                         f'-profile:v high -level 4.2 '
-                        f'-threads 2 -g {tgt_fps * 2} -sc_threshold 0 '
+                        f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
                         f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
@@ -413,7 +413,7 @@ class MediaMTXManager:
                         f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
                         f'{ff_process} '
                         f'-profile:v baseline -level 4.1 '
-                        f'-threads 2 -g {tgt_fps * 2} -sc_threshold 0 '
+                        f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
                         f'-b:v 800k -maxrate 800k -bufsize 1600k '
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
@@ -557,7 +557,7 @@ class MediaMTXManager:
                             f'-filter_complex "{filter_complex}" '
                             f'-map "[outv]" {ff_process} '
                             f'-profile:v high -level 4.2 '
-                            f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 40 '
+                            f'-b:v 4000k -maxrate 4000k -bufsize 8000k -g 30 '
                             f'-vsync vfr -f rtsp -rtsp_transport tcp {safe_dest}'
                         )
                         
