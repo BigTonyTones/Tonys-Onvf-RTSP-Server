@@ -400,6 +400,26 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             padding: 8px;
         }}
 
+        .stream-switcher {{
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border);
+            color: #f8fafc;
+            font-size: 0.65rem;
+            font-weight: 800;
+            outline: none;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+
+        .stream-switcher:hover {{
+            border-color: var(--accent-color);
+            background: var(--bg-secondary);
+        }}
+
         .remove-btn {{
             position: absolute;
             top: 0.5rem;
@@ -594,6 +614,13 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         <span class="prop-label">Height</span>
                         <input type="number" id="prop-h" class="prop-input" oninput="manualPropUpdate()">
                     </div>
+                    <div class="prop-item" style="grid-column: span 2;">
+                        <span class="prop-label">Stream Type</span>
+                        <select id="prop-stream" class="prop-input" onchange="manualPropUpdate()">
+                            <option value="main">Main (High Res)</option>
+                            <option value="sub">Sub (Low Res)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -732,8 +759,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
 
         let cameras = [];
-        let gfConfig = {json.dumps(grid_fusion_config) if grid_fusion_config else '{{ "enabled": false, "resolution": "1920x1080", "cameras": [], "snapToGrid": true, "showGrid": true, "showSnapshots": true }}'};
-        let appSettings = {json.dumps(current_settings) if current_settings else '{{ "rtspPort": 8554 }}'};
+        let gfConfig = {json.dumps(grid_fusion_config) if grid_fusion_config else '{ "enabled": false, "resolution": "1920x1080", "cameras": [], "snapToGrid": true, "showGrid": true, "showSnapshots": true }'};
+        let appSettings = {json.dumps(current_settings) if current_settings else '{ "rtspPort": 8554 }'};
         
         let snapshots = {{}};
         let selectedIdx = -1;
@@ -927,6 +954,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         <select class="camera-switcher" onchange="changeCameraInBox(${{idx}}, this.value)" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
                             ${{cameras.map(c => `<option value="${{c.id}}" ${{c.id === gfCam.id ? 'selected' : ''}}>${{c.name}}</option>`).join('')}}
                         </select>
+                        <select class="stream-switcher" onchange="changeStreamType(${{idx}}, this.value)" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()" title="Switch Stream">
+                            <option value="main" ${{gfCam.stream_type === 'main' ? 'selected' : ''}}>Main</option>
+                            <option value="sub" ${{gfCam.stream_type !== 'main' ? 'selected' : ''}}>Sub</option>
+                        </select>
                     </div>
                     <div class="remove-btn" onclick="removeCamera(event, ${{idx}})">×</div>
                     <div class="resizer"></div>
@@ -941,6 +972,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         
         function changeCameraInBox(idx, newId) {{
             gfConfig.cameras[idx].id = parseInt(newId);
+            renderGrid();
+        }}
+        
+        function changeStreamType(idx, type) {{
+            gfConfig.cameras[idx].stream_type = type;
             renderGrid();
         }}
         
@@ -975,7 +1011,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 x: 0,
                 y: 0,
                 w: 640,
-                h: 360
+                h: 360,
+                stream_type: 'sub'
             }});
             
             selectedIdx = gfConfig.cameras.length - 1;
@@ -1095,6 +1132,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (document.activeElement.id !== 'prop-y') document.getElementById('prop-y').value = Math.round(cam.y);
             if (document.activeElement.id !== 'prop-w') document.getElementById('prop-w').value = Math.round(cam.w);
             if (document.activeElement.id !== 'prop-h') document.getElementById('prop-h').value = Math.round(cam.h);
+            document.getElementById('prop-stream').value = cam.stream_type || 'sub';
         }}
 
         function manualPropUpdate() {{
@@ -1105,6 +1143,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             cam.y = parseFloat(document.getElementById('prop-y').value) || 0;
             cam.w = parseFloat(document.getElementById('prop-w').value) || 100;
             cam.h = parseFloat(document.getElementById('prop-h').value) || 56;
+            cam.stream_type = document.getElementById('prop-stream').value;
             
             // Clamp to canvas
             const canvas = document.getElementById('canvas');
@@ -1276,37 +1315,37 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
             // Grid logic based on common NVR/VMS layouts
             if (count === 1) {{
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW, h: maxH }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW, h: maxH, stream_type: 'sub' }});
             }}
             else if (count === 2) {{
                 // Side by side
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW/2, h: maxH }});
-                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: maxW/2, y: 0, w: maxW/2, h: maxH }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW/2, h: maxH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: maxW/2, y: 0, w: maxW/2, h: maxH, stream_type: 'sub' }});
             }}
             else if (count === 3) {{
                 // 1 big on left, 2 small on right
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: (maxW*2)/3, h: maxH }});
-                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: (maxW*2)/3, y: 0, w: maxW/3, h: maxH/2 }});
-                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: (maxW*2)/3, y: maxH/2, w: maxW/3, h: maxH/2 }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: (maxW*2)/3, h: maxH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: (maxW*2)/3, y: 0, w: maxW/3, h: maxH/2, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: (maxW*2)/3, y: maxH/2, w: maxW/3, h: maxH/2, stream_type: 'sub' }});
             }}
             else if (count === 4) {{
                 // 2x2
                 for (let i=0; i<4; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%2)*(maxW/2), y: Math.floor(i/2)*(maxH/2), w: maxW/2, h: maxH/2 }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%2)*(maxW/2), y: Math.floor(i/2)*(maxH/2), w: maxW/2, h: maxH/2, stream_type: 'sub' }});
                 }}
             }}
             else if (count === 5 || count === 6) {{
                 // 1 large (2x2 units), rest small (1x1 units) in a 3x3 grid
                 const unitW = maxW/3, unitH = maxH/3;
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*2, h: unitH*2 }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*2, h: unitH*2, stream_type: 'sub' }});
                 // Right Column
-                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: unitW*2, y: 0, w: unitW, h: unitH }});
-                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: unitW*2, y: unitH, w: unitW, h: unitH }});
+                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: unitW*2, y: 0, w: unitW, h: unitH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: unitW*2, y: unitH, w: unitW, h: unitH, stream_type: 'sub' }});
                 // Bottom Column
-                newLayout.push({{ id: availableCams[3 % availableCams.length].id, x: 0, y: unitH*2, w: unitW, h: unitH }});
-                newLayout.push({{ id: availableCams[4 % availableCams.length].id, x: unitW, y: unitH*2, w: unitW, h: unitH }});
+                newLayout.push({{ id: availableCams[3 % availableCams.length].id, x: 0, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[4 % availableCams.length].id, x: unitW, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub' }});
                 if (count === 6) {{
-                    newLayout.push({{ id: availableCams[5 % availableCams.length].id, x: unitW*2, y: unitH*2, w: unitW, h: unitH }});
+                    newLayout.push({{ id: availableCams[5 % availableCams.length].id, x: unitW*2, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub' }});
                 }}
             }}
             else if (count >= 7 && count <= 9) {{
@@ -1314,20 +1353,20 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 3, rows = 3;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
                 }}
             }}
             else if (count >= 10 && count <= 13) {{
                 // 1 big (3x3 units), rest small (1x1 units) in a 4x4 grid
                 const unitW = maxW/4, unitH = maxH/4;
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*3, h: unitH*3 }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*3, h: unitH*3, stream_type: 'sub' }});
                 // Find empty slots in 4x4
                 let idx = 1;
                 for (let r=0; r<4; r++) {{
                     for (let c=0; c<4; c++) {{
                         if (r < 3 && c < 3) continue; // occupied by large
                         if (idx < count) {{
-                            newLayout.push({{ id: availableCams[idx % availableCams.length].id, x: c*unitW, y: r*unitH, w: unitW, h: unitH }});
+                            newLayout.push({{ id: availableCams[idx % availableCams.length].id, x: c*unitW, y: r*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
                             idx++;
                         }}
                     }}
@@ -1338,7 +1377,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 4, rows = 4;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
                 }}
             }}
             else if (count >= 17 && count <= 25) {{
@@ -1346,7 +1385,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 5, rows = 5;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
                 }}
             }}
             else {{
@@ -1354,7 +1393,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 6, rows = 5;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
                 }}
             }}
             
@@ -1381,7 +1420,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 x: x - 100, // Center roughly
                 y: y - 56,
                 w: 200,
-                h: 112
+                h: 112,
+                stream_type: 'sub'
             }});
             renderGrid();
         }};

@@ -468,11 +468,15 @@ class MediaMTXManager:
                     if not cam or cam.status != "running":
                         continue
                     
-                    # Source is the local MediaMTX sub stream (best stability)
+                    # Determine stream type (default to sub if not specified)
+                    stream_type = gf_cam.get('stream_type', 'sub')
+                    suffix = "_main" if stream_type == "main" else "_sub"
+                    
+                    # Source is the local MediaMTX stream
                     if enable_global_auth:
-                        src_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{cam.path_name}_sub"
+                        src_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{cam.path_name}{suffix}"
                     else:
-                        src_url = f"rtsp://127.0.0.1:{rtsp_port}/{cam.path_name}_sub"
+                        src_url = f"rtsp://127.0.0.1:{rtsp_port}/{cam.path_name}{suffix}"
                     
                     if system == "windows":
                         safe_src = f'"{src_url}"'
