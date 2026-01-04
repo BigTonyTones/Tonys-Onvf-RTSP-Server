@@ -18,7 +18,7 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 - **RTSP Output**: The composed matrix is available as a standard RTSP stream that any NVR can consume
 
 
-## 🐧 Ubuntu Setup (Recommended)
+## Ubuntu Setup (Recommended)
 This server is optimized for Ubuntu 25.04. The **Virtual NIC** feature requires Linux `macvlan`.
 
 1. **Clone and enter the folder:**
@@ -39,14 +39,14 @@ This server is optimized for Ubuntu 25.04. The **Virtual NIC** feature requires 
 
 ---
 
-## 🪟 Windows Setup
+## Windows Setup
 1. Install Python 3.7+.
 2. Run `start_onvif_server.bat`.
    *Note: Virtual NICs (unique IP/MAC per camera) are not supported on Windows. All cameras will share the host IP.*
 
 ---
 
-## 🛠 Features & Tips
+## Features & Tips
 - **Unique Identities**: Use the **Virtual NIC** toggle on Linux to give each camera its own IP and MAC address.
 - **UniFi Protect**: Use the ONVIF IP and credentials shown in the dashboard to manually adopt cameras in the Protect app.
 - **Performance**: High-concurrency is handled via MediaMTX. No need for manual configuration.
