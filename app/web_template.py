@@ -13,6 +13,7 @@ def get_web_ui_html(current_settings=None):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tonys Onvif-RTSP Server v5.3.6</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1558,6 +1559,18 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
+                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                            <i class="fas fa-download"></i> Backup Config
+                        </button>
+                        <button type="button" id="restoreBtn" class="btn btn-secondary" onclick="restoreBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                            <i class="fas fa-upload"></i> Restore Config
+                        </button>
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
             </form>
         </div>
@@ -3088,6 +3101,56 @@ def get_web_ui_html(current_settings=None):
                 }}, 2000);
             }});
         }}
+        async function downloadBackup() {{
+            window.location.href = '/api/config/backup';
+        }}
+
+        async function restoreBackup() {{
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = async (e) => {{
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (!confirm('This will overwrite your current configuration and restart the server. Are you sure?')) return;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {{
+                    const btn = document.getElementById('restoreBtn');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Restoring...';
+                    btn.disabled = true;
+                    
+                    const response = await fetch('/api/config/restore', {{
+                        method: 'POST',
+                        body: formData
+                    }});
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {{
+                        alert(result.message);
+                        window.location.reload();
+                    }} else {{
+                        alert('Restore failed: ' + result.error);
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }}
+                }} catch (error) {{
+                    console.error('Error restoring config:', error);
+                    alert('Error restoring configuration');
+                    document.getElementById('restoreBtn').textContent = 'Restore Config';
+                    document.getElementById('restoreBtn').disabled = false;
+                }}
+            }};
+            
+            input.click();
+        }}
+
     </script>
 </body>
 </html>

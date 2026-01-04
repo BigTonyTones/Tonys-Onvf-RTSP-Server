@@ -5,7 +5,7 @@ import psutil
 import time
 import functools
 from datetime import timedelta
-from flask import Flask, jsonify, request, session, redirect, url_for, make_response
+from flask import Flask, jsonify, request, session, redirect, url_for, make_response, send_file
 from flask_cors import CORS
 
 from .web_template import get_web_ui_html
@@ -523,6 +523,68 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 400
     
+    @app.route('/api/config/backup', methods=['GET'])
+    @login_required
+    def backup_config():
+        """Download configuration backup"""
+        try:
+            return send_file(
+                manager.config_file,
+                mimetype='application/json',
+                as_attachment=True,
+                download_name='camera_config.json'
+            )
+        except Exception as e:
+            return jsonify({'error': f'Failed to download config: {str(e)}'}), 500
+
+    @app.route('/api/config/restore', methods=['POST'])
+    @login_required
+    def restore_config():
+        """Restore configuration from backup"""
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+            
+        if file:
+            try:
+                # Read and validate JSON first
+                content = file.read()
+                try:
+                    config_data = json.loads(content)
+                except json.JSONDecodeError:
+                    return jsonify({'error': 'Invalid JSON file'}), 400
+                
+                # Basic validation: Check for 'cameras' or 'settings' keys
+                if 'cameras' not in config_data and 'settings' not in config_data:
+                    return jsonify({'error': 'Invalid configuration file format'}), 400
+
+                # Save file
+                with open(manager.config_file, 'wb') as f:
+                    f.write(content)
+                
+                # Reload config in manager
+                manager.load_config()
+                
+                # Trigger server restart to apply all changes
+                def do_restart():
+                    time.sleep(1)
+                    print("\n\nWait... Config restored. Restarting system...")
+                    manager.mediamtx.stop()
+                    
+                    rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                    rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                    manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
+                
+                import threading
+                threading.Thread(target=do_restart, daemon=True).start()
+                
+                return jsonify({'success': True, 'message': 'Configuration restored. Server restarting...'})
+            except Exception as e:
+                 return jsonify({'error': f'Failed to restore config: {str(e)}'}), 500
+
     @app.route('/api/logs', methods=['GET'])
     @login_required
     def get_logs():
