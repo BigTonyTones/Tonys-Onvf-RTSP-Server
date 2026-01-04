@@ -671,6 +671,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             </a>
         </div>
         <div class="nav-actions">
+            <div id="server-stats" style="margin-right: 20px; font-size: 11px; font-weight: 700; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-family: 'Courier New', monospace;">
+                <i class="fas fa-server" style="color: var(--accent-color);"></i> Loading...
+            </div>
             <div id="save-status" style="display: flex; align-items: center; gap: 10px; margin-right: 20px; font-size: 13px; opacity: 0;">
                 <span style="color: var(--success);">✓ Config Saved</span>
             </div>
@@ -1062,6 +1065,28 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             }}
         }}
 
+        async function updateStats() {{
+            try {{
+                const [statsResp, analyticsResp] = await Promise.all([
+                    fetch('/api/stats'),
+                    fetch('/api/analytics')
+                ]);
+                
+                const stats = await statsResp.json();
+                const analytics = await analyticsResp.json();
+                
+                if (stats.cpu_percent !== undefined) {{
+                    let totalBitrate = 0;
+                    Object.values(analytics).forEach(a => totalBitrate += (a.bitrate || 0));
+                    
+                    document.getElementById('server-stats').innerHTML = 
+                        `<i class="fas fa-server" style="color: var(--accent-color);"></i> CPU: ${{stats.cpu_percent}}% • MEM: ${{stats.memory_mb}}MB • NET: ${{totalBitrate.toFixed(0)}} kbps`;
+                }}
+            }} catch (e) {{
+                console.error("Stats fetch failed:", e);
+            }}
+        }}
+
         // Initialize
         async function init() {{
             await fetchCameras();
@@ -1076,6 +1101,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             
             // Auto refresh snapshots after short delay
             setTimeout(refreshSnapshots, 1000);
+
+            // Stats polling
+            updateStats();
+            setInterval(updateStats, 3000);
         }}
 
         function handleGlobalKeydown(e) {{

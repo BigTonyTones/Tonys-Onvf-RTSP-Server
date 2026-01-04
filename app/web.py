@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from urllib.parse import quote
 import psutil
 import time
 import functools
@@ -194,6 +195,15 @@ def create_web_app(manager):
                 'cpu_percent': min(100.0, round(max(0.0, cpu_percent), 1)),
                 'memory_mb': round(memory_info / (1024 * 1024), 1)
             })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/analytics')
+    @login_required
+    def get_analytics():
+        """Get per-stream analytics from MediaMTX"""
+        try:
+            return jsonify(manager.analytics.get_analytics())
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     @app.route('/')

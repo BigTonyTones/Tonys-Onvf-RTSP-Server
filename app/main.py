@@ -18,9 +18,12 @@ def main():
         net_mgr = LinuxNetworkManager()
         net_mgr.cleanup_all_vnics()
 
-    print("\nTonys Onvif-RTSP Server v5.3.8\n")
+    print("\nTonys Onvif-RTSP Server v5.4\n")
     
     manager = CameraManager()
+    
+    # Check for MediaMTX updates BEFORE starting cameras to ensure prompt is visible
+    manager.mediamtx.download_mediamtx()
     
     # Auto-start cameras that have autoStart enabled
     # Note: We check auto_start setting, NOT the saved status
