@@ -11,7 +11,7 @@ def get_web_ui_html(current_settings=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tonys Onvif-RTSP Server v5.3.6</title>
+    <title>Tonys Onvif-RTSP Server v5.3.7</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1028,7 +1028,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.3.6</h1>
+            <h1>Tonys Onvif-RTSP Server v5.3.7</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1040,6 +1040,13 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn" onclick="openAboutModal()">About</button>
                 <button class="btn" onclick="openLogsModal()">Logs</button>
                 <button class="btn btn-danger" onclick="stopServer()">Stop Server</button>
+                <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Low Latency</span>
+                    <label class="toggle-switch" style="margin: 0; transform: scale(0.8);">
+                        <input type="checkbox" id="latencyToggle" onchange="toggleLatencyMode(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
                 <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">Logout</a>
             </div>
         </div>
@@ -2026,23 +2033,88 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
-        // Global HLS player management
+        // Global HLS/WebRTC player management
         const hlsPlayers = new Map();
+        const webrtcConnections = new Map();
         let recoveryAttempts = new Map();
+
+        const storedLatency = localStorage.getItem('useWebRTC');
+        let useLowLatency = storedLatency === null ? true : storedLatency === 'true';
+
+        window.addEventListener('DOMContentLoaded', () => {{
+            const toggle = document.getElementById('latencyToggle');
+            if (toggle) toggle.checked = useLowLatency;
+        }});
+
+        function toggleLatencyMode(enabled) {{
+            useLowLatency = enabled;
+            localStorage.setItem('useWebRTC', enabled);
+            window.location.reload();
+        }}
+
+        async function initWebRTCPlayer(videoId, cameraId, pathName, serverIp, videoElement) {{
+            console.log(`Initializing WebRTC for ${{videoId}}`);
+            try {{
+                const pc = new RTCPeerConnection({{
+                    iceServers: [{{ urls: 'stun:stun.l.google.com:19302' }}]
+                }});
+                
+                webrtcConnections.set(videoId, pc);
+                
+                pc.addTransceiver('video', {{ direction: 'recvonly' }});
+                pc.addTransceiver('audio', {{ direction: 'recvonly' }});
+                
+                pc.ontrack = (event) => {{
+                    if (videoElement.srcObject !== event.streams[0]) {{
+                        videoElement.srcObject = event.streams[0];
+                    }}
+                }};
+                
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                const whepUrl = `http://${{serverIp}}:8889/${{pathName}}_sub/whep`;
+                
+                const response = await fetch(whepUrl, {{
+                    method: 'POST',
+                    body: offer.sdp,
+                    headers: {{ 'Content-Type': 'application/sdp' }}
+                }});
+                
+                if (!response.ok) throw new Error(`WHEP server responded with ${{response.status}}`);
+                
+                const answerSdp = await response.text();
+                await pc.setRemoteDescription(new RTCSessionDescription({{
+                    type: 'answer',
+                    sdp: answerSdp
+                }}));
+                
+                pc.onconnectionstatechange = () => {{
+                    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {{
+                        showVideoError(cameraId, 'WebRTC Disconnected');
+                    }}
+                }};
+
+            }} catch (err) {{
+                console.error(`WebRTC Error [${{videoId}}]:`, err);
+                showVideoError(cameraId, 'Low Latency failed. Try disabling Low Latency.');
+                if (webrtcConnections.has(videoId)) {{
+                    webrtcConnections.get(videoId).close();
+                    webrtcConnections.delete(videoId);
+                }}
+            }}
+        }}
         
         function initVideoPlayer(cameraId, pathName, explicitId = null) {{
             const videoId = explicitId || `player-${{cameraId}}`;
             
             // If a player for this videoId already exists, do not re-initialize it.
-            // The existing player will continue to run.
-            if (hlsPlayers.has(videoId)) {{
+            if (hlsPlayers.has(videoId) || webrtcConnections.has(videoId)) {{
                 return;
             }}
 
             const videoElement = document.getElementById(videoId);
             if (!videoElement) return;
-            
-
             
             let serverIp = settings.serverIp || window.location.hostname || 'localhost';
             
@@ -2051,6 +2123,11 @@ def get_web_ui_html(current_settings=None):
                 serverIp = window.location.hostname;
             }}
             
+            if (useLowLatency) {{
+                initWebRTCPlayer(videoId, cameraId, pathName, serverIp, videoElement);
+                return;
+            }}
+
             // Get credentials if RTSP auth is enabled
             let credentials = '';
             if (settings.rtspAuthEnabled && settings.globalUsername && settings.globalPassword) {{
