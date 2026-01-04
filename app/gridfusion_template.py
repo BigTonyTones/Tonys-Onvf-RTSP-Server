@@ -12,6 +12,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GridFusion Editor - Tonys Onvif Server</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {{
             --bg-primary: #0f172a;
@@ -809,27 +810,47 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
     </div>
 
     <script>
-        function copyRTSPUrl(btn) {{
-            const url = document.getElementById('rtsp-url-display').textContent;
-            navigator.clipboard.writeText(url).then(() => {{
-                // Fallback if btn not passed
-                if (!btn && window.event) btn = window.event.target;
-                
-                if (btn) {{
-                    const originalText = btn.textContent;
-                    const originalBg = btn.style.backgroundColor;
-                    
-                    btn.textContent = 'Copied!';
-                    btn.style.backgroundColor = '#48bb78'; // Green
-                    btn.style.color = 'white';
-                    
-                    setTimeout(() => {{
-                        btn.textContent = originalText;
-                        btn.style.backgroundColor = originalBg;
-                        btn.style.color = '';
-                    }}, 2000);
+        async function copyRTSPUrl(btn) {{
+            const text = document.getElementById('rtsp-url-display').textContent;
+            try {{
+                await navigator.clipboard.writeText(text);
+                showCopyFeedback(btn);
+            }} catch (err) {{
+                console.error('Failed to copy: ', err);
+                // Fallback for non-secure contexts (HTTP/IP)
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {{
+                    document.execCommand('copy');
+                    showCopyFeedback(btn);
+                }} catch (e) {{
+                    console.error('Fallback failed', e);
                 }}
-            }});
+                document.body.removeChild(textArea);
+            }}
+        }}
+
+        function showCopyFeedback(btn) {{
+            if (!btn && window.event) btn = window.event.target;
+            if (!btn) return;
+
+            const originalText = btn.innerHTML;
+            const originalBg = btn.style.backgroundColor;
+            const originalBorder = btn.style.borderColor;
+            
+            btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            btn.style.backgroundColor = '#22c55e'; // Success color
+            btn.style.borderColor = '#22c55e';
+            btn.style.color = 'white';
+            
+            setTimeout(() => {{
+                btn.innerHTML = originalText;
+                btn.style.backgroundColor = originalBg;
+                btn.style.borderColor = originalBorder;
+                btn.style.color = '';
+            }}, 2000);
         }}
 
         let cameras = [];
