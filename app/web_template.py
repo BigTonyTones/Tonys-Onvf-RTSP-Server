@@ -394,10 +394,6 @@ def get_web_ui_html(current_settings=None):
             border: 1px solid var(--card-border);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }}
-        .camera-card:hover {{
-            transform: translateY(-4px);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-        }}
 
         .camera-header {{
             display: flex;
@@ -423,15 +419,49 @@ def get_web_ui_html(current_settings=None):
         }}
         .camera-actions {{ display: flex; gap: 8px; }}
         .icon-btn {{
-            padding: 8px;
-            background: transparent;
-            border: none;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
             cursor: pointer;
             border-radius: 6px;
             color: var(--text-body);
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }}
-        .icon-btn:hover {{ background: var(--body-bg); color: var(--text-title); }}
+        .icon-btn i {{ font-size: 14px; }}
+        .icon-btn:hover {{ 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }}
+        
+        .icon-btn-start:hover {{
+            background: #2ecc71;
+            color: white;
+            border-color: #27ae60;
+        }}
+        .icon-btn-stop:hover {{
+            background: #f39c12;
+            color: white;
+            border-color: #e67e22;
+        }}
+        .icon-btn-edit:hover {{
+            background: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }}
+        .icon-btn-delete:hover {{
+            background: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }}
+        
+        body.theme-light .icon-btn {{
+            background: rgba(0, 0, 0, 0.03);
+        }}
         .video-preview {{
             width: 100%;
             height: 0;
@@ -1955,11 +1985,11 @@ def get_web_ui_html(current_settings=None):
                     </div>
                     <div class="camera-actions">
                         ${{cam.status === 'running' 
-                            ? `<button class="icon-btn" onclick="stopCamera(${{cam.id}})" title="Stop">Stop</button>`
-                            : `<button class="icon-btn" onclick="startCamera(${{cam.id}})" title="Start">Start</button>`
+                            ? `<button class="icon-btn icon-btn-stop" onclick="stopCamera(${{cam.id}})" title="Stop"><i class="fas fa-stop"></i> Stop</button>`
+                            : `<button class="icon-btn icon-btn-start" onclick="startCamera(${{cam.id}})" title="Start"><i class="fas fa-play"></i> Start</button>`
                         }}
-                        <button class="icon-btn" onclick="openEditModal(${{cam.id}})" title="Edit">Edit</button>
-                        <button class="icon-btn" onclick="deleteCamera(${{cam.id}})" title="Delete">Delete</button>
+                        <button class="icon-btn icon-btn-edit" onclick="openEditModal(${{cam.id}})" title="Edit"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="icon-btn icon-btn-delete" onclick="deleteCamera(${{cam.id}})" title="Delete"><i class="fas fa-trash"></i> Delete</button>
                     </div>
                 </div>
                 
