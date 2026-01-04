@@ -11,7 +11,7 @@ def get_web_ui_html(current_settings=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tonys Onvif-RTSP Server v5.3.7</title>
+    <title>Tonys Onvif-RTSP Server v5.3.8</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -826,33 +826,25 @@ def get_web_ui_html(current_settings=None):
             gap: 10px;
         }}
         .coffee-link {{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #FFDD00;
-            color: #000000 !important;
-            padding: 8px 16px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 14px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 12px rgba(255, 221, 0, 0.2);
+            display: inline-block;
+            transition: transform 0.2s, filter 0.2s;
         }}
         .coffee-link:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(255, 221, 0, 0.3);
+            transform: translateY(-3px);
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.2));
+        }}
+        .coffee-link img {{
+            height: 50px;
         }}
         .coffee-link-small {{
-            text-decoration: none;
-            color: var(--text-muted);
-            transition: color 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            display: inline-block;
+            transition: transform 0.2s;
         }}
         .coffee-link-small:hover {{
-            color: var(--btn-primary);
+            transform: scale(1.05);
+        }}
+        .coffee-link-small img {{
+            height: 35px;
         }}
 
         /* GridFusion Editor Styles */
@@ -1058,7 +1050,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.3.7</h1>
+            <h1>Tonys Onvif-RTSP Server v5.3.8</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1090,9 +1082,9 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.7</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.8</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
-                Buy Tony a coffee
+                <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
             </a>
         </div>
     </div>
@@ -1642,7 +1634,7 @@ def get_web_ui_html(current_settings=None):
                             <span style="color: white">View on GitHub</span>
                         </a>
                         <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link">
-                            <span>Buy me a coffee</span>
+                            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
                         </a>
                     </div>
                     <p style="font-size: 13px; color: var(--text-muted); text-align: center; margin: 0;">Built with ❤️ for the surveillance community.</p>
@@ -3300,7 +3292,7 @@ def get_login_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys Onvif-RTSP Server v5.3.7</title>
+    <title>Login - Tonys Onvif-RTSP Server v5.3.8</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3422,7 +3414,7 @@ def get_setup_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Initial Setup - Tonys Onvif-RTSP Server v5.3.7</title>
+    <title>Initial Setup - Tonys Onvif-RTSP Server v5.3.8</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);

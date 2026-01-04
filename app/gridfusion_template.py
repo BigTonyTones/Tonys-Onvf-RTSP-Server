@@ -106,8 +106,15 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
 
         .btn-danger {{
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }}
+
+        .btn-danger:hover {{
             background-color: var(--danger);
             color: white;
+            transform: translateY(-1px);
         }}
 
         .main-container {{
@@ -444,6 +451,33 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             transform: scale(1.1);
         }}
 
+        .ontop-badge {{
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        .ontop-badge.active {{
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+        }}
+        .ontop-badge:hover {{
+            border-color: var(--accent-color);
+            background: var(--bg-secondary);
+        }}
+        .ontop-badge.active:hover {{
+            background: var(--accent-hover);
+        }}
+
         .resizer {{
             position: absolute;
             width: 12px;
@@ -558,6 +592,34 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             transform: translateX(20px);
         }}
 
+        .kbd-key {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-bottom: 3px solid #475569;
+            color: #f8fafc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            min-width: 20px;
+            height: 20px;
+            font-family: inherit;
+        }}
+        
+        .kbd-hint {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            margin-top: 10px;
+        }}
+
         #stats-bar {{
             background-color: var(--bg-secondary);
             padding: 0.5rem 2rem;
@@ -607,7 +669,6 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             <a href="/" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
                 <div class="logo-text">GridFusion Editor</div>
             </a>
-            <div style="background: var(--bg-accent); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; color: var(--accent-color);">BETA</div>
         </div>
         <div class="nav-actions">
             <div id="save-status" style="display: flex; align-items: center; gap: 10px; margin-right: 20px; font-size: 13px; opacity: 0;">
@@ -667,11 +728,33 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                             <option value="sub">Sub (Low Res)</option>
                         </select>
                     </div>
+                    <div class="prop-item" style="grid-column: span 2; flex-direction: row; align-items: center; gap: 10px; margin-top: 5px;">
+                        <span class="prop-label" style="margin-bottom: 0;">Always on Top</span>
+                        <label class="switch">
+                            <input type="checkbox" id="prop-on-top" onchange="manualPropUpdate()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <div style="padding: 1.25rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.1);">
                 <button class="btn btn-secondary" style="width:100%; justify-content: center;" onclick="refreshSnapshots()">Refresh Snapshots</button>
+                
+                <div class="kbd-hint">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                        <div class="kbd-key" style="background: #6366f1; border-color: #4f46e5; color: white; height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-up"></i></div>
+                        <div style="display: flex; gap: 2px;">
+                            <div class="kbd-key" style="height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-left"></i></div>
+                            <div class="kbd-key" style="height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-down"></i></div>
+                            <div class="kbd-key" style="height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-right"></i></div>
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-secondary); line-height: 1.2;">
+                        <div style="color: var(--text-primary); font-weight: 700;">Arrow keys move cams</div>
+                        <div>Hold <span class="kbd-key" style="font-size: 7px; min-width: 30px; height: 14px; padding: 0 4px; vertical-align: middle;">SHIFT</span> for 10px</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -757,8 +840,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 </div>
 
                 <div class="toolbar-group">
-                    <button class="btn btn-secondary" style="padding: 0.5rem;" title="Clear Canvas" onclick="clearCanvas()">Clear</button>
+                    <button class="btn btn-danger" style="padding: 0.5rem;" title="Clear Canvas" onclick="clearCanvas()">Clear</button>
                 </div>
+
 
                 <div style="flex: 1;"></div>
 
@@ -792,6 +876,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         <code id="rtsp-url-display" style="font-size: 11px; color: var(--accent-color); font-weight: 600; font-family: 'JetBrains Mono', monospace; background: transparent; padding: 0;">rtsp://localhost:8554/matrix</code>
                         <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 10px; height: 22px; line-height: 1;" onclick="copyRTSPUrl(this)">Copy</button>
                     </div>
+
                 </div>
             </div>
 
@@ -1148,6 +1233,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 el.style.height = (gfCam.h * scale) + 'px';
                 el.setAttribute('data-idx', idx);
                 
+                // Set z-index: Always on Top cameras get higher priority
+                let zIndex = gfCam.always_on_top ? 8 : 5;
+                if (selectedIdx === idx) zIndex = 12; // Selected is always on top for editing
+                el.style.zIndex = zIndex;
+                
                 let inner = '';
                 if (showSnaps && snapshots[cam.id]) {{
                     inner += `<img src="${{snapshots[cam.id]}}" class="placed-snapshot">`;
@@ -1164,6 +1254,12 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                             <option value="main" ${{gfCam.stream_type === 'main' ? 'selected' : ''}}>Main</option>
                             <option value="sub" ${{gfCam.stream_type !== 'main' ? 'selected' : ''}}>Sub</option>
                         </select>
+                        <div class="ontop-badge ${{gfCam.always_on_top ? 'active' : ''}}" 
+                             onpointerdown="event.stopPropagation()" 
+                             onclick="toggleOnTop(${{idx}}, event)" 
+                             title="Toggle Always on Top">
+                            ${{gfCam.always_on_top ? 'TOP' : 'LAY'}}
+                        </div>
                     </div>
                     <div class="remove-btn" onclick="removeCamera(event, ${{idx}})">×</div>
                     <div class="resizer"></div>
@@ -1174,6 +1270,13 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 
                 canvas.appendChild(el);
             }});
+        }}
+        
+        function toggleOnTop(idx, e) {{
+            if (e) e.stopPropagation();
+            gfConfig.cameras[idx].always_on_top = !gfConfig.cameras[idx].always_on_top;
+            renderGrid();
+            updatePropsPanel();
         }}
         
         function changeCameraInBox(idx, newId) {{
@@ -1222,7 +1325,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 y: 0,
                 w: 640,
                 h: 360,
-                stream_type: 'sub'
+                stream_type: 'sub',
+                always_on_top: false
             }});
             
             selectedIdx = gfConfig.cameras.length - 1;
@@ -1343,6 +1447,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (document.activeElement.id !== 'prop-w') document.getElementById('prop-w').value = Math.round(cam.w);
             if (document.activeElement.id !== 'prop-h') document.getElementById('prop-h').value = Math.round(cam.h);
             document.getElementById('prop-stream').value = cam.stream_type || 'sub';
+            document.getElementById('prop-on-top').checked = !!cam.always_on_top;
         }}
 
         function manualPropUpdate() {{
@@ -1354,6 +1459,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             cam.w = parseFloat(document.getElementById('prop-w').value) || 100;
             cam.h = parseFloat(document.getElementById('prop-h').value) || 56;
             cam.stream_type = document.getElementById('prop-stream').value;
+            cam.always_on_top = document.getElementById('prop-on-top').checked;
             
             // Clamp to canvas
             const canvas = document.getElementById('canvas');
@@ -1526,37 +1632,37 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
             // Grid logic based on common NVR/VMS layouts
             if (count === 1) {{
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW, h: maxH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW, h: maxH, stream_type: 'sub', always_on_top: false }});
             }}
             else if (count === 2) {{
                 // Side by side
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW/2, h: maxH, stream_type: 'sub' }});
-                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: maxW/2, y: 0, w: maxW/2, h: maxH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: maxW/2, h: maxH, stream_type: 'sub', always_on_top: false }});
+                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: maxW/2, y: 0, w: maxW/2, h: maxH, stream_type: 'sub', always_on_top: false }});
             }}
             else if (count === 3) {{
                 // 1 big on left, 2 small on right
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: (maxW*2)/3, h: maxH, stream_type: 'sub' }});
-                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: (maxW*2)/3, y: 0, w: maxW/3, h: maxH/2, stream_type: 'sub' }});
-                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: (maxW*2)/3, y: maxH/2, w: maxW/3, h: maxH/2, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: (maxW*2)/3, h: maxH, stream_type: 'sub', always_on_top: false }});
+                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: (maxW*2)/3, y: 0, w: maxW/3, h: maxH/2, stream_type: 'sub', always_on_top: false }});
+                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: (maxW*2)/3, y: maxH/2, w: maxW/3, h: maxH/2, stream_type: 'sub', always_on_top: false }});
             }}
             else if (count === 4) {{
                 // 2x2
                 for (let i=0; i<4; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%2)*(maxW/2), y: Math.floor(i/2)*(maxH/2), w: maxW/2, h: maxH/2, stream_type: 'sub' }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%2)*(maxW/2), y: Math.floor(i/2)*(maxH/2), w: maxW/2, h: maxH/2, stream_type: 'sub', always_on_top: false }});
                 }}
             }}
             else if (count === 5 || count === 6) {{
                 // 1 large (2x2 units), rest small (1x1 units) in a 3x3 grid
                 const unitW = maxW/3, unitH = maxH/3;
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*2, h: unitH*2, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*2, h: unitH*2, stream_type: 'sub', always_on_top: false }});
                 // Right Column
-                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: unitW*2, y: 0, w: unitW, h: unitH, stream_type: 'sub' }});
-                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: unitW*2, y: unitH, w: unitW, h: unitH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[1 % availableCams.length].id, x: unitW*2, y: 0, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
+                newLayout.push({{ id: availableCams[2 % availableCams.length].id, x: unitW*2, y: unitH, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 // Bottom Column
-                newLayout.push({{ id: availableCams[3 % availableCams.length].id, x: 0, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub' }});
-                newLayout.push({{ id: availableCams[4 % availableCams.length].id, x: unitW, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[3 % availableCams.length].id, x: 0, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
+                newLayout.push({{ id: availableCams[4 % availableCams.length].id, x: unitW, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 if (count === 6) {{
-                    newLayout.push({{ id: availableCams[5 % availableCams.length].id, x: unitW*2, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub' }});
+                    newLayout.push({{ id: availableCams[5 % availableCams.length].id, x: unitW*2, y: unitH*2, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 }}
             }}
             else if (count >= 7 && count <= 9) {{
@@ -1564,20 +1670,20 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 3, rows = 3;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 }}
             }}
             else if (count >= 10 && count <= 13) {{
                 // 1 big (3x3 units), rest small (1x1 units) in a 4x4 grid
                 const unitW = maxW/4, unitH = maxH/4;
-                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*3, h: unitH*3, stream_type: 'sub' }});
+                newLayout.push({{ id: availableCams[0].id, x: 0, y: 0, w: unitW*3, h: unitH*3, stream_type: 'sub', always_on_top: false }});
                 // Find empty slots in 4x4
                 let idx = 1;
                 for (let r=0; r<4; r++) {{
                     for (let c=0; c<4; c++) {{
                         if (r < 3 && c < 3) continue; // occupied by large
                         if (idx < count) {{
-                            newLayout.push({{ id: availableCams[idx % availableCams.length].id, x: c*unitW, y: r*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
+                            newLayout.push({{ id: availableCams[idx % availableCams.length].id, x: c*unitW, y: r*unitH, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                             idx++;
                         }}
                     }}
@@ -1588,7 +1694,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 4, rows = 4;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 }}
             }}
             else if (count >= 17 && count <= 25) {{
@@ -1596,7 +1702,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 5, rows = 5;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 }}
             }}
             else {{

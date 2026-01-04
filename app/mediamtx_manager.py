@@ -487,16 +487,21 @@ class MediaMTXManager:
                     # Build FFmpeg command for composition
                     inputs = []
                     filters = []
-                    active_gf_cams = []
-                    
-                    # Filter and prepare active cameras
-                    input_idx = 0
+                    active_gf_cams_data = []
                     for gf_cam in gf_cams:
                         cam_id = gf_cam.get('id')
                         cam = next((c for c in cameras if c.id == cam_id), None)
-                        if not cam or cam.status != "running":
-                            continue
-                        
+                        if cam and cam.status == "running":
+                            # Store both for easier access
+                            active_gf_cams_data.append((gf_cam, cam))
+                    
+                    # Sort: False < True, so True (always on top) comes last in the list
+                    # and thus last in the overlay chain (appearing on top)
+                    active_gf_cams_data.sort(key=lambda x: bool(x[0].get('always_on_top', False)))
+
+                    active_gf_cams = []
+                    input_idx = 0
+                    for gf_cam, cam in active_gf_cams_data:
                         # Determine stream type (default to sub if not specified)
                         stream_type = gf_cam.get('stream_type', 'sub')
                         suffix = "_main" if stream_type == "main" else "_sub"

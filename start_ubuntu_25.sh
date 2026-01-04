@@ -11,7 +11,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "============================================================"
-echo "Tonys Onvif-RTSP Server v5.3.7 - Ubuntu Development Setup"
+echo "Tonys Onvif-RTSP Server v5.3.8 - Ubuntu Development Setup"
 echo "============================================================"
 
 # 1. Install system-level Python dependencies (only if missing)
@@ -75,6 +75,6 @@ ulimit -n 65535
 # 7. Start the application
 echo ""
 echo "============================================================"
-echo "Starting Tonys Onvif Server v5.3.7..."
+echo "Starting Tonys Onvif Server v5.3.8..."
 echo "============================================================"
 python run.py
