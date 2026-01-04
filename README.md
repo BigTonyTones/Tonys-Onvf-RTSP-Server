@@ -19,7 +19,7 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 
 ## Ubuntu Setup (Recommended)
-This server is optimized for Ubuntu 25.04. The **Virtual NIC** feature requires Linux `macvlan`.
+This server is optimized for Ubuntu 25.04. The **Virtual NIC** feature requires Linux.
 
 1. **Clone and enter the folder:**
    ```bash
