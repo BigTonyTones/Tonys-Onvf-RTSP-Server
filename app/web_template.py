@@ -1060,7 +1060,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.6</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.7</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 Buy Tony a coffee
             </a>
@@ -1830,6 +1830,27 @@ def get_web_ui_html(current_settings=None):
             }});
         }}
 
+        function destroyPlayer(videoId) {{
+            // Cleanup HLS
+            if (hlsPlayers.has(videoId)) {{
+                const hls = hlsPlayers.get(videoId);
+                hls.destroy();
+                hlsPlayers.delete(videoId);
+            }}
+            
+            // Cleanup WebRTC
+            if (webrtcConnections.has(videoId)) {{
+                const pc = webrtcConnections.get(videoId);
+                pc.close();
+                webrtcConnections.delete(videoId);
+            }}
+            
+            // Cleanup Retry Counters
+            if (recoveryAttempts.has(videoId)) {{
+                recoveryAttempts.delete(videoId);
+            }}
+        }}
+
         function toggleMatrixView(active) {{
             matrixActive = active;
             const overlay = document.getElementById('matrix-overlay');
@@ -1839,7 +1860,12 @@ def get_web_ui_html(current_settings=None):
             }} else {{
                 overlay.classList.remove('active');
                 // Stop any video players in matrix
-                document.getElementById('matrix-grid').innerHTML = '';
+                const grid = document.getElementById('matrix-grid');
+                if (grid) {{
+                    const players = grid.querySelectorAll('video');
+                    players.forEach(el => destroyPlayer(el.id));
+                    grid.innerHTML = '';
+                }}
             }}
         }}
 
@@ -1865,6 +1891,9 @@ def get_web_ui_html(current_settings=None):
             const newMatrixIds = runningCameras.map(c => c.id).join(',');
             
             if (currentMatrixIds === newMatrixIds) return;
+            
+            // Cleanup existing players before re-rendering
+            grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
             
             grid.innerHTML = runningCameras.map(cam => `
                 <div class="matrix-item" data-id="${{cam.id}}">
@@ -3241,7 +3270,7 @@ def get_login_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys Onvif-RTSP Server v5.3.6</title>
+    <title>Login - Tonys Onvif-RTSP Server v5.3.7</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3363,7 +3392,7 @@ def get_setup_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Initial Setup - Tonys Onvif-RTSP Server v5.3.6</title>
+    <title>Initial Setup - Tonys Onvif-RTSP Server v5.3.7</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
