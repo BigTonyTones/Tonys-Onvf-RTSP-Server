@@ -11,7 +11,7 @@ def get_web_ui_html(current_settings=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tonys Onvif-RTSP Server v5.3.8</title>
+    <title>Tonys Onvif-RTSP Server v5.4</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -431,6 +431,49 @@ def get_web_ui_html(current_settings=None):
             display: flex;
             align-items: center;
             gap: 6px;
+        }}
+        .metric-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(4px);
+        }}
+        .metric-badge.live {{
+            background: rgba(46, 204, 113, 0.4);
+            color: #2ecc71;
+            border-color: rgba(46, 204, 113, 0.4);
+        }}
+        .metric-badge.warn {{
+            background: rgba(243, 156, 18, 0.4);
+            color: #f39c12;
+            border-color: rgba(243, 156, 18, 0.4);
+        }}
+        .metric-badge.error {{
+            background: rgba(231, 76, 60, 0.4);
+            color: #e74c3c;
+            border-color: rgba(231, 76, 60, 0.4);
+        }}
+        .metrics-overlay {{
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: none; /* Hidden by default */
+            gap: 6px;
+            z-index: 5;
+            pointer-events: none;
+        }}
+        body.show-bandwidth .metrics-overlay {{
+            display: flex;
         }}
         .icon-btn i {{ font-size: 14px; }}
         .icon-btn:hover {{ 
@@ -1050,7 +1093,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.3.8</h1>
+            <h1>Tonys Onvif-RTSP Server v5.4</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1069,6 +1112,13 @@ def get_web_ui_html(current_settings=None):
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+                <div style="display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Bandwidth</span>
+                    <label class="toggle-switch" style="margin: 0; transform: scale(0.8);">
+                        <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
                 <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">Logout</a>
             </div>
         </div>
@@ -1082,7 +1132,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.3.8</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.4</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
             </a>
@@ -1986,6 +2036,7 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="video-preview" id="video-${{cam.id}}">
+                    <div id="metrics-${{cam.id}}" class="metrics-overlay"></div>
                     ${{cam.status === 'running' 
                         ? `<video id="player-${{cam.id}}" autoplay muted playsinline></video>
                            <button class="fullscreen-btn" onclick="toggleFullScreenPlayer(${{cam.id}})" title="Maximize">Full Screen</button>`
@@ -2092,15 +2143,33 @@ def get_web_ui_html(current_settings=None):
         const storedLatency = localStorage.getItem('useWebRTC');
         let useLowLatency = storedLatency === null ? true : storedLatency === 'true';
 
+        const storedBandwidth = localStorage.getItem('showBandwidth');
+        let showBandwidth = storedBandwidth === 'true'; // Default is false
+
         window.addEventListener('DOMContentLoaded', () => {{
             const toggle = document.getElementById('latencyToggle');
             if (toggle) toggle.checked = useLowLatency;
+
+            const bwToggle = document.getElementById('bandwidthToggle');
+            if (bwToggle) bwToggle.checked = showBandwidth;
+            
+            if (showBandwidth) document.body.classList.add('show-bandwidth');
         }});
 
         function toggleLatencyMode(enabled) {{
             useLowLatency = enabled;
             localStorage.setItem('useWebRTC', enabled);
             window.location.reload();
+        }}
+
+        function toggleBandwidth(enabled) {{
+            showBandwidth = enabled;
+            localStorage.setItem('showBandwidth', enabled);
+            if (enabled) {{
+                document.body.classList.add('show-bandwidth');
+            }} else {{
+                document.body.classList.remove('show-bandwidth');
+            }}
         }}
 
         async function initWebRTCPlayer(videoId, cameraId, pathName, serverIp, videoElement) {{
@@ -3017,12 +3086,66 @@ def get_web_ui_html(current_settings=None):
         
         async function updateStats() {{
             try {{
-                const resp = await fetch('/api/stats');
-                const stats = await resp.json();
+                // Parallel fetch for speed
+                const [statsResp, analyticsResp] = await Promise.all([
+                    fetch('/api/stats'),
+                    fetch('/api/analytics')
+                ]);
+                
+                const stats = await statsResp.json();
+                const analytics = await analyticsResp.json();
+                
+                // Update global server stats
                 if (stats.cpu_percent !== undefined) {{
+                    let totalBitrate = 0;
+                    Object.values(analytics).forEach(a => totalBitrate += (a.bitrate || 0));
+                    
                     document.getElementById('server-stats').innerHTML = 
-                        `CPU: ${{stats.cpu_percent}}% • MEM: ${{stats.memory_mb}}MB`;
+                        `CPU: ${{stats.cpu_percent}}% • MEM: ${{stats.memory_mb}}MB • NET: ${{totalBitrate.toFixed(1)}} kbps`;
                 }}
+                
+                // Update per-camera metrics
+                cameras.forEach(cam => {{
+                    const metricsEl = document.getElementById(`metrics-${{cam.id}}`);
+                    if (!metricsEl) return;
+                    
+                    if (cam.status !== 'running') {{
+                        metricsEl.innerHTML = '';
+                        return;
+                    }}
+                    
+                    // We check both main and sub streams
+                    const pName = cam.pathName || cam.path_name;
+                    const mainStats = analytics[pName + '_main'];
+                    const subStats = analytics[pName + '_sub'];
+                    
+                    let html = '';
+                    
+                    if (mainStats) {{
+                        const statusClass = mainStats.stale ? 'warn' : (mainStats.ready ? 'live' : 'error');
+                        html += `
+                            <div class="metric-badge ${{statusClass}}" title="${{mainStats.stale ? 'Stream Stalled' : 'Main Stream Status'}}" style="min-width: 95px; justify-content: center;">
+                                MAIN: ${{mainStats.bitrate.toFixed(0)}}
+                            </div>
+                        `;
+                    }}
+                    
+                    if (subStats) {{
+                        const statusClass = subStats.stale ? 'warn' : (subStats.ready ? 'live' : 'error');
+                        const viewers = subStats.readers || 0;
+                        html += `
+                            <div class="metric-badge ${{statusClass}}" title="${{subStats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}" style="min-width: 85px; justify-content: center;">
+                                SUB: ${{subStats.bitrate.toFixed(0)}}
+                            </div>
+                            <div class="metric-badge ${{viewers > 0 ? 'live' : ''}}" title="Active Viewers" style="min-width: 40px; justify-content: center;">
+                                <i class="fas fa-users"></i> ${{viewers}}
+                            </div>
+                        `;
+                    }}
+                    
+                    metricsEl.innerHTML = html;
+                }});
+                
             }} catch (e) {{
                 console.error("Stats fetch failed:", e);
             }}
@@ -3292,7 +3415,7 @@ def get_login_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys Onvif-RTSP Server v5.3.8</title>
+    <title>Login - Tonys Onvif-RTSP Server v5.4</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3414,7 +3537,7 @@ def get_setup_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Initial Setup - Tonys Onvif-RTSP Server v5.3.8</title>
+    <title>Initial Setup - Tonys Onvif-RTSP Server v5.4</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);

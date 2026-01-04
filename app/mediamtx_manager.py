@@ -29,11 +29,11 @@ class MediaMTXManager:
         return "mediamtx"
     
     def _get_latest_version(self):
-        """Locked to version v1.15.5 as requested"""
-        return "v1.15.5"
+        """Locked to version v1.15.6 as requested"""
+        return "v1.15.6"
 
     def _parse_version(self, version_str):
-        """Parse version string like 'v1.15.5' into a list of integers [1, 15, 5]"""
+        """Parse version string like 'v1.15.6' into a list of integers [1, 15, 6]"""
         try:
             # Remove 'v' prefix and split by '.'
             parts = version_str.lstrip('v').split('.')

@@ -13,6 +13,7 @@ from .camera import VirtualONVIFCamera
 from .onvif_service import ONVIFService
 from .mediamtx_manager import MediaMTXManager
 from .linux_service import LinuxServiceManager
+from .analytics import AnalyticsManager
 
 class CameraManager:
     """Manages multiple virtual ONVIF cameras"""
@@ -24,7 +25,11 @@ class CameraManager:
         self.next_onvif_port = 8001
         self.mediamtx = MediaMTXManager()
         self.service_mgr = LinuxServiceManager()
+        self.analytics = AnalyticsManager()
         self._lock = threading.Lock()
+        
+        # Start analytics polling
+        self.analytics.start()
         
         # GridFusion Layouts
         self.grid_fusion_layouts = []
