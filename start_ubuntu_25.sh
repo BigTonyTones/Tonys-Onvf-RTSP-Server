@@ -11,7 +11,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "============================================================"
-echo "Tonys Onvif-RTSP Server v5.4 - Ubuntu Development Setup"
+echo "Tonys Onvif-RTSP Server v5.4.1 - Ubuntu Development Setup"
 echo "============================================================"
 
 # 1. Install system-level Python dependencies (only if missing)
@@ -72,9 +72,29 @@ fi
 echo "Increasing file descriptor limit..."
 ulimit -n 65535
 
-# 7. Start the application
+# 7. Start the application with auto-restart support
 echo ""
 echo "============================================================"
-echo "Starting Tonys Onvif Server v5.4..."
+echo "Starting Tonys Onvif Server v5.4.1..."
 echo "============================================================"
-python run.py
+
+# Loop to handle restart requests (exit code 42)
+while true; do
+    python run.py
+    EXIT_CODE=$?
+    
+    # Check if exit code is 42 (restart requested)
+    if [ $EXIT_CODE -eq 42 ]; then
+        echo ""
+        echo "============================================================"
+        echo "Restart requested, restarting server..."
+        echo "============================================================"
+        sleep 1
+        continue
+    else
+        # Any other exit code means intentional shutdown
+        echo ""
+        echo "Server stopped."
+        break
+    fi
+done

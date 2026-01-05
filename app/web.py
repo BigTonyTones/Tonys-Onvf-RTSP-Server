@@ -138,14 +138,31 @@ def create_web_app(manager):
             import time
             time.sleep(2)  # Give time for response to be sent
             print("\n\nServer restart requested from web UI...")
-            print("Stopping MediaMTX...")
-            manager.mediamtx.stop()
-            print("Restarting MediaMTX...")
-            # Use global credentials if RTSP auth is enabled
-            rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
-            rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-            manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
-            print("Server restarted successfully!\n")
+            
+            # Check if running on Linux
+            if sys.platform.startswith('linux'):
+                print("Linux detected - performing full server restart...")
+                # Stop everything cleanly
+                print("Stopping MediaMTX...")
+                manager.mediamtx.stop()
+                print("Stopping all cameras...")
+                for camera in manager.cameras:
+                    camera.stop()
+                
+                print("Killing server process...")
+                # Exit with special code 42 to signal restart needed
+                # This immediately releases all ports
+                os._exit(42)
+            else:
+                # Windows - just restart MediaMTX
+                print("Stopping MediaMTX...")
+                manager.mediamtx.stop()
+                print("Restarting MediaMTX...")
+                # Use global credentials if RTSP auth is enabled
+                rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
+                manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
+                print("Server restarted successfully!\n")
             
         # Run restart in background thread
         import threading

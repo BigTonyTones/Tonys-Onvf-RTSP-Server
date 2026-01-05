@@ -66,6 +66,11 @@ class CameraManager:
         if Path(self.config_file).exists():
             with open(self.config_file, 'r') as f:
                 config = json.load(f)
+            
+            # Clear existing cameras before loading to prevent duplicates
+            self.cameras.clear()
+            self.next_id = 1
+            self.next_onvif_port = 8001
                 
             for cam_config in config.get('cameras', []):
                 camera = VirtualONVIFCamera(cam_config)
