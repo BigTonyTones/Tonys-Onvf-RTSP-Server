@@ -171,6 +171,36 @@ def create_web_app(manager):
         
         return jsonify({'message': 'Server restart initiated'})
 
+    @app.route('/api/server/reboot', methods=['POST'])
+    @login_required
+    def reboot_server():
+        """Reboot the entire server (Linux only)"""
+        # Only allow on Linux
+        if not sys.platform.startswith('linux'):
+            return jsonify({'error': 'Reboot is only supported on Linux'}), 400
+        
+        def do_reboot():
+            import time
+            time.sleep(2)  # Give time for response to be sent
+            print("\n\nServer reboot requested from web UI...")
+            print("Stopping MediaMTX...")
+            manager.mediamtx.stop()
+            print("Stopping all cameras...")
+            for camera in manager.cameras:
+                camera.stop()
+            
+            print("Initiating system reboot...")
+            # Execute system reboot command
+            subprocess.run(['sudo', 'reboot'], check=False)
+            
+        # Run reboot in background thread
+        import threading
+        reboot_thread = threading.Thread(target=do_reboot, daemon=True)
+        reboot_thread.start()
+        
+        return jsonify({'message': 'Server reboot initiated'})
+
+
     @app.route('/api/stats')
     def get_stats():
         """Get CPU and memory usage for the app and its children using delta timings"""

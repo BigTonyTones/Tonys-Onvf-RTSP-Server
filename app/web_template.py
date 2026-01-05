@@ -1651,6 +1651,11 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
+                
+                <!-- Reboot Server Button (Linux Only) -->
+                <button type="button" class="btn linux-only" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
+                    <i class="fas fa-power-off"></i> Reboot Server
+                </button>
             </form>
         </div>
     </div>
@@ -3081,6 +3086,25 @@ def get_web_ui_html(current_settings=None):
             }} catch (error) {{
                 console.error('Error saving settings:', error);
                 alert('Error saving settings: ' + error.message);
+            }}
+        }}
+        
+        async function rebootServer() {{
+            if (!confirm('This will reboot the entire server. The system will be unavailable for a few minutes. Continue?')) {{
+                return;
+            }}
+            
+            try {{
+                const response = await fetch('/api/server/reboot', {{method: 'POST'}});
+                if (response.ok) {{
+                    alert('Server is rebooting... The system will be back online in a few minutes.');
+                    closeSettingsModal();
+                }} else {{
+                    alert('Failed to reboot server. This feature only works on Linux.');
+                }}
+            }} catch (error) {{
+                console.error('Error rebooting server:', error);
+                alert('Error rebooting server');
             }}
         }}
         
