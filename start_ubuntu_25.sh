@@ -59,6 +59,17 @@ else
     echo "  Core Python packages already installed."
 fi
 
+# 4b. Check specifically for onvif-zeep (added later, may be missing in existing installations)
+if ! python3 -c "from onvif import ONVIFCamera" &> /dev/null; then
+    echo "  Missing onvif-zeep package, installing..."
+    pip install onvif-zeep
+    if [ $? -eq 0 ]; then
+        echo "  onvif-zeep installed successfully."
+    else
+        echo "  Warning: Failed to install onvif-zeep. You may need to install it manually."
+    fi
+fi
+
 # 5. Provide permissions to MediaMTX and FFmpeg if they exist locally
 if [ -f "mediamtx" ]; then
     chmod +x mediamtx
