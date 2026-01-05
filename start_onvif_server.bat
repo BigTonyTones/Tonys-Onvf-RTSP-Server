@@ -41,6 +41,41 @@ if not exist "run.py" (
     exit /b 1
 )
 
+REM Check if required Python packages are installed
+echo Checking Python packages...
+python -c "import flask" >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo [WARNING] Missing core Python packages: flask, flask-cors, requests, pyyaml, psutil, onvif-zeep
+    echo.
+    set /p install="Would you like to install them now via pip? (y/n): "
+    if /i "%install%"=="y" (
+        echo.
+        echo Installing packages...
+        pip install flask flask-cors requests pyyaml psutil onvif-zeep
+        echo.
+        if errorlevel 1 (
+            echo [ERROR] Failed to install packages
+            echo Please install them manually with: pip install flask flask-cors requests pyyaml psutil onvif-zeep
+            echo.
+            pause
+            exit /b 1
+        )
+        echo Packages installed successfully!
+        echo.
+    ) else (
+        echo.
+        echo [ERROR] Installation skipped. Please install dependencies manually.
+        echo Run: pip install flask flask-cors requests pyyaml psutil onvif-zeep
+        echo.
+        pause
+        exit /b 1
+    )
+) else (
+    echo Core Python packages already installed.
+    echo.
+)
+
 echo Starting ONVIF Server...
 echo.
 echo ========================================
