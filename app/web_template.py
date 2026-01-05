@@ -1711,7 +1711,7 @@ def get_web_ui_html(current_settings=None):
     <div id="update-modal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <div class="modal-title">System Update Available</div>
+                <div class="modal-title" style="text-align: center; flex: 1;">Check for Updates</div>
                 <button class="close-btn" onclick="closeUpdateModal()">×</button>
             </div>
             <div id="update-modal-content">
