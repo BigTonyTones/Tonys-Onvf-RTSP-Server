@@ -15,6 +15,7 @@ from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
 from .linux_network import LinuxNetworkManager
 from .utils import get_captured_logs
+from .updater import UpdateChecker, check_for_updates, download_and_apply_update
 import subprocess
 import tempfile
 import shutil
@@ -751,5 +752,97 @@ def create_web_app(manager):
                     os.remove(path)
                 except:
                     pass
+    
+    # --- Update System Endpoints ---
+    
+    # Global variable to track update progress
+    update_progress = {'status': 'idle', 'progress': 0, 'message': ''}
+    
+    @app.route('/api/updates/check', methods=['GET'])
+    @login_required
+    def check_updates():
+        """Check for available updates from GitHub"""
+        try:
+            update_info = check_for_updates()
+            if update_info:
+                return jsonify(update_info)
+            else:
+                return jsonify({'error': 'Failed to check for updates'}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/updates/apply', methods=['POST'])
+    @login_required
+    def apply_update():
+        """Download and apply update"""
+        data = request.json
+        download_url = data.get('download_url')
+        
+        if not download_url:
+            return jsonify({'error': 'Download URL required'}), 400
+        
+        def progress_callback(status, progress):
+            """Update progress for frontend polling"""
+            update_progress['status'] = status
+            update_progress['progress'] = progress
+            if status == 'downloading':
+                update_progress['message'] = f'Downloading update... {int(progress)}%'
+            elif status == 'backing_up':
+                update_progress['message'] = 'Creating backup...'
+            elif status == 'extracting':
+                update_progress['message'] = 'Extracting files...'
+            elif status == 'applying':
+                update_progress['message'] = 'Applying update...'
+            elif status == 'complete':
+                update_progress['message'] = 'Update complete! Restarting server...'
+        
+        def do_update():
+            try:
+                # Reset progress
+                update_progress['status'] = 'starting'
+                update_progress['progress'] = 0
+                update_progress['message'] = 'Initializing update...'
+                
+                # Download and apply update
+                success = download_and_apply_update(download_url, progress_callback)
+                
+                if success:
+                    update_progress['status'] = 'complete'
+                    update_progress['progress'] = 100
+                    update_progress['message'] = 'Update complete! Restarting server...'
+                    
+                    # Wait a moment for the status to be read
+                    time.sleep(2)
+                    
+                    # Restart server
+                    print("\n\nUpdate applied successfully! Restarting server...")
+                    manager.mediamtx.stop()
+                    
+                    # Exit with code 42 to trigger restart (Linux) or just exit (Windows)
+                    if sys.platform.startswith('linux'):
+                        os._exit(42)
+                    else:
+                        print("\nPlease restart the server manually to complete the update.")
+                        os._exit(0)
+                else:
+                    update_progress['status'] = 'error'
+                    update_progress['message'] = 'Update failed. Check logs for details.'
+            except Exception as e:
+                update_progress['status'] = 'error'
+                update_progress['message'] = f'Update failed: {str(e)}'
+                print(f"Update error: {e}")
+        
+        # Start update in background thread
+        import threading
+        update_thread = threading.Thread(target=do_update, daemon=True)
+        update_thread.start()
+        
+        return jsonify({'message': 'Update started', 'status': 'started'})
+    
+    @app.route('/api/updates/status', methods=['GET'])
+    @login_required
+    def get_update_status():
+        """Get current update progress"""
+        return jsonify(update_progress)
     
     return app
