@@ -7,6 +7,8 @@ from .manager import CameraManager
 from .linux_network import LinuxNetworkManager
 from .config import WEB_UI_PORT, MEDIAMTX_PORT
 from .web import create_web_app
+from .version import CURRENT_VERSION
+from .updater import check_for_updates
 
 def main():
     """Main application entry point"""
@@ -18,7 +20,26 @@ def main():
         net_mgr = LinuxNetworkManager()
         net_mgr.cleanup_all_vnics()
 
-    print("\nTonys Onvif-RTSP Server v5.4.1\n")
+    print(f"\nTonys Onvif-RTSP Server v{CURRENT_VERSION}\n")
+    
+    # Check for updates in background (non-blocking)
+    def check_updates_background():
+        try:
+            update_info = check_for_updates()
+            if update_info and update_info.get('update_available'):
+                print("\n" + "=" * 60)
+                print("UPDATE AVAILABLE!")
+                print("=" * 60)
+                print(f"Current Version: v{update_info['current_version']}")
+                print(f"Latest Version:  v{update_info['latest_version']}")
+                print(f"\nOpen the Web UI to download and install the update.")
+                print("=" * 60 + "\n")
+        except Exception as e:
+            # Silently fail - don't interrupt startup
+            pass
+    
+    update_thread = threading.Thread(target=check_updates_background, daemon=True)
+    update_thread.start()
     
     manager = CameraManager()
     

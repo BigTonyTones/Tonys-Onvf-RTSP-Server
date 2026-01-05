@@ -1,5 +1,6 @@
 import json
 import platform
+from .version import CURRENT_VERSION
 
 # HTML for Web UI (generated dynamically with timezone data)
 def get_web_ui_html(current_settings=None):
@@ -11,7 +12,7 @@ def get_web_ui_html(current_settings=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tonys Onvif-RTSP Server v5.4.1</title>
+    <title>Tonys Onvif-RTSP Server v{CURRENT_VERSION}</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1093,7 +1094,7 @@ def get_web_ui_html(current_settings=None):
                     </select>
                 </div>
             </div>
-            <h1>Tonys Onvif-RTSP Server v5.4.1</h1>
+            <h1>Tonys Onvif-RTSP Server v{CURRENT_VERSION}</h1>
             <div class="actions">
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
@@ -1132,7 +1133,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v5.4.1</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v{CURRENT_VERSION}</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
             </a>
@@ -1650,6 +1651,14 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
+                <!-- System Updates -->
+                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">System Updates</div>
+                    <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
+                        <i class="fas fa-sync-alt"></i> Check for Updates
+                    </button>
+                </div>
+                
                 <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
                 
                 <!-- Reboot Server Button (Linux Only) -->
@@ -1693,6 +1702,83 @@ def get_web_ui_html(current_settings=None):
                         </a>
                     </div>
                     <p style="font-size: 13px; color: var(--text-muted); text-align: center; margin: 0;">Built with ❤️ for the surveillance community.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Update Modal -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <div class="modal-title">System Update Available</div>
+                <button class="close-btn" onclick="closeUpdateModal()">×</button>
+            </div>
+            <div id="update-modal-content">
+                <div id="update-info" style="display: none;">
+                    <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                            <div>
+                                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Current Version</div>
+                                <div id="current-version" style="font-size: 18px; font-weight: 700; color: var(--text-title);"></div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Latest Version</div>
+                                <div id="latest-version" style="font-size: 18px; font-weight: 700; color: #48bb78;"></div>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Release Date</div>
+                        <div id="release-date" style="font-size: 14px; color: var(--text-body);"></div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Release Notes</div>
+                        <div id="release-notes" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-size: 13px; line-height: 1.6; color: var(--text-body); white-space: pre-wrap;"></div>
+                    </div>
+                    
+                    <button id="download-update-btn" class="btn btn-success" onclick="downloadAndInstallUpdate()" style="width:100%; font-weight: 600;">
+                        <i class="fas fa-download"></i> Download and Install
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="reinstallCurrentVersion()" style="width:100%; margin-top: 10px; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                        <i class="fas fa-redo"></i> Reinstall Current Version
+                    </button>
+                </div>
+                
+                <div id="update-progress" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div id="progress-message" style="font-size: 16px; font-weight: 600; color: var(--text-title); margin-bottom: 15px;">Initializing update...</div>
+                        <div style="background: rgba(0,0,0,0.3); border-radius: 10px; height: 20px; overflow: hidden; margin-bottom: 10px;">
+                            <div id="progress-bar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="progress-percent" style="font-size: 14px; color: var(--text-muted);">0%</div>
+                    </div>
+                    <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 15px; border-radius: 4px;">
+                        <small style="color: #f6ad55; font-size: 12px;">
+                            <i class="fas fa-info-circle"></i> Please do not close this window. The server will restart automatically after the update is complete.
+                        </small>
+                    </div>
+                </div>
+                
+                <div id="update-checking" style="text-align: center; padding: 40px 20px;">
+                    <i class="fas fa-sync-alt fa-spin" style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;"></i>
+                    <div style="font-size: 16px; color: var(--text-title);">Checking for updates...</div>
+                </div>
+                
+                <div id="update-no-updates" style="display: none; text-align: center; padding: 40px 20px;">
+                    <i class="fas fa-check-circle" style="font-size: 48px; color: #48bb78; margin-bottom: 20px;"></i>
+                    <div style="font-size: 18px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">You're up to date!</div>
+                    <div id="no-update-version" style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;"></div>
+                    
+                    <button class="btn btn-secondary" onclick="reinstallCurrentVersion()" style="background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                        <i class="fas fa-redo"></i> Reinstall Current Version
+                    </button>
+                </div>
+                
+                <div id="update-error" style="display: none; text-align: center; padding: 40px 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f56565; margin-bottom: 20px;"></i>
+                    <div style="font-size: 18px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Update Check Failed</div>
+                    <div id="error-message" style="font-size: 14px; color: var(--text-muted);"></div>
                 </div>
             </div>
         </div>
@@ -3108,6 +3194,211 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        // Update System Functions
+        let updateInfo = null;
+        let updateProgressInterval = null;
+        
+        async function checkForUpdates() {{
+            // Open modal and show checking state
+            document.getElementById('update-modal').classList.add('active');
+            showUpdateState('checking');
+            
+            try {{
+                const response = await fetch('/api/updates/check');
+                if (response.ok) {{
+                    updateInfo = await response.json();
+                    
+                    if (updateInfo.update_available) {{
+                        // Show update info
+                        document.getElementById('current-version').textContent = 'v' + updateInfo.current_version;
+                        document.getElementById('latest-version').textContent = 'v' + updateInfo.latest_version;
+                        
+                        // Format release date
+                        const releaseDate = new Date(updateInfo.published_at);
+                        document.getElementById('release-date').textContent = releaseDate.toLocaleDateString('en-US', {{
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }});
+                        
+                        document.getElementById('release-notes').textContent = updateInfo.release_notes || 'No release notes available.';
+                        showUpdateState('info');
+                    }} else {{
+                        // No updates available
+                        document.getElementById('no-update-version').textContent = 'Current version: v' + updateInfo.current_version;
+                        showUpdateState('no-updates');
+                    }}
+                }} else {{
+                    showUpdateState('error');
+                    document.getElementById('error-message').textContent = 'Failed to check for updates. Please try again later.';
+                }}
+            }} catch (error) {{
+                console.error('Error checking for updates:', error);
+                showUpdateState('error');
+                document.getElementById('error-message').textContent = 'Network error. Please check your connection.';
+            }}
+        }}
+        
+        function showUpdateState(state) {{
+            // Hide all states
+            document.getElementById('update-checking').style.display = 'none';
+            document.getElementById('update-info').style.display = 'none';
+            document.getElementById('update-progress').style.display = 'none';
+            document.getElementById('update-no-updates').style.display = 'none';
+            document.getElementById('update-error').style.display = 'none';
+            
+            // Show requested state
+            if (state === 'checking') {{
+                document.getElementById('update-checking').style.display = 'block';
+            }} else if (state === 'info') {{
+                document.getElementById('update-info').style.display = 'block';
+            }} else if (state === 'progress') {{
+                document.getElementById('update-progress').style.display = 'block';
+            }} else if (state === 'no-updates') {{
+                document.getElementById('update-no-updates').style.display = 'block';
+            }} else if (state === 'error') {{
+                document.getElementById('update-error').style.display = 'block';
+            }}
+        }}
+        
+        async function downloadAndInstallUpdate() {{
+            if (!updateInfo || !updateInfo.download_url) {{
+                alert('Update information not available');
+                return;
+            }}
+            
+            if (!confirm('This will download and install the update. The server will restart automatically. Continue?')) {{
+                return;
+            }}
+            
+            // Show progress
+            showUpdateState('progress');
+            
+            try {{
+                // Start the update
+                const response = await fetch('/api/updates/apply', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{
+                        download_url: updateInfo.download_url
+                    }})
+                }});
+                
+                if (response.ok) {{
+                    // Start polling for progress
+                    startUpdateProgressPolling();
+                }} else {{
+                    showUpdateState('error');
+                    document.getElementById('error-message').textContent = 'Failed to start update. Please try again.';
+                }}
+            }} catch (error) {{
+                console.error('Error starting update:', error);
+                showUpdateState('error');
+                document.getElementById('error-message').textContent = 'Failed to start update: ' + error.message;
+            }}
+        }}
+        
+        function startUpdateProgressPolling() {{
+            if (updateProgressInterval) {{
+                clearInterval(updateProgressInterval);
+            }}
+            
+            updateProgressInterval = setInterval(async () => {{
+                try {{
+                    const response = await fetch('/api/updates/status');
+                    if (response.ok) {{
+                        const status = await response.json();
+                        
+                        // Update progress bar
+                        document.getElementById('progress-bar').style.width = status.progress + '%';
+                        document.getElementById('progress-percent').textContent = Math.round(status.progress) + '%';
+                        document.getElementById('progress-message').textContent = status.message;
+                        
+                        // Check if complete or error
+                        if (status.status === 'complete') {{
+                            clearInterval(updateProgressInterval);
+                            document.getElementById('progress-message').textContent = 'Update complete! Server restarting...';
+                            // Server will restart, page will disconnect
+                            setTimeout(() => {{
+                                window.location.reload();
+                            }}, 5000);
+                        }} else if (status.status === 'error') {{
+                            clearInterval(updateProgressInterval);
+                            showUpdateState('error');
+                            document.getElementById('error-message').textContent = status.message;
+                        }}
+                    }}
+                }} catch (error) {{
+                    // Server might have restarted, try to reload
+                    console.log('Update progress check failed, server may be restarting...');
+                }}
+            }}, 1000); // Poll every second
+        }}
+        
+        async function reinstallCurrentVersion() {{
+            if (!confirm('This will download and reinstall the current version (v{CURRENT_VERSION}) from GitHub. This is useful for repairing corrupted files. The server will restart automatically. Continue?')) {{
+                return;
+            }}
+            
+            // Show progress
+            showUpdateState('progress');
+            
+            try {{
+                // We need to get the download URL for the current version
+                // First, check if we have it from the update check
+                let downloadUrl = null;
+                
+                if (updateInfo && updateInfo.current_version === '{CURRENT_VERSION}') {{
+                    // If we just checked and we're on the latest version, use that URL
+                    downloadUrl = updateInfo.download_url;
+                }} else {{
+                    // Otherwise, fetch the latest release (which should be our current version if we're up to date)
+                    const response = await fetch('/api/updates/check');
+                    if (response.ok) {{
+                        const info = await response.json();
+                        downloadUrl = info.download_url;
+                    }}
+                }}
+                
+                if (!downloadUrl) {{
+                    showUpdateState('error');
+                    document.getElementById('error-message').textContent = 'Failed to get download URL. Please try again.';
+                    return;
+                }}
+                
+                // Start the reinstall (same as update, just different messaging)
+                const applyResponse = await fetch('/api/updates/apply', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{
+                        download_url: downloadUrl
+                    }})
+                }});
+                
+                if (applyResponse.ok) {{
+                    // Start polling for progress
+                    startUpdateProgressPolling();
+                }} else {{
+                    showUpdateState('error');
+                    document.getElementById('error-message').textContent = 'Failed to start reinstall. Please try again.';
+                }}
+            }} catch (error) {{
+                console.error('Error reinstalling version:', error);
+                showUpdateState('error');
+                document.getElementById('error-message').textContent = 'Failed to reinstall: ' + error.message;
+            }}
+        }}
+        
+        function closeUpdateModal() {{
+            document.getElementById('update-modal').classList.remove('active');
+            if (updateProgressInterval) {{
+                clearInterval(updateProgressInterval);
+                updateProgressInterval = null;
+            }}
+            // Reset to checking state for next time
+            showUpdateState('checking');
+        }}
+        
         async function updateStats() {{
             try {{
                 // Parallel fetch for speed
@@ -3439,7 +3730,7 @@ def get_login_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys Onvif-RTSP Server v5.4.1</title>
+    <title>Login - Tonys Onvif-RTSP Server v{CURRENT_VERSION}</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -3561,7 +3852,7 @@ def get_setup_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Initial Setup - Tonys Onvif-RTSP Server v5.4.1</title>
+    <title>Initial Setup - Tonys Onvif-RTSP Server v{CURRENT_VERSION}</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
