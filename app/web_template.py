@@ -1694,8 +1694,9 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
                     <div style="display: flex; gap: 15px;">
-                        <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" class="coffee-link" style="background: #24292e; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
-                            <span style="color: white">View on GitHub</span>
+                        <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" class="coffee-link" style="background: #24292e; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
+                            <i class="fab fa-github" style="font-size: 24px; color: white;"></i>
+                            <span style="color: white; font-weight: 600;">View on GitHub</span>
                         </a>
                         <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link">
                             <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
