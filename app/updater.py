@@ -239,7 +239,12 @@ class UpdateChecker:
             for script in ['start_onvif_server.bat', 'start_ubuntu_25.sh', 'run.py']:
                 script_source = source_dir / script
                 if script_source.exists():
-                    shutil.copy2(script_source, self.base_dir / script)
+                    dest_script = self.base_dir / script
+                    shutil.copy2(script_source, dest_script)
+                    
+                    # Set executable permissions on Linux for shell scripts
+                    if sys.platform.startswith('linux') and script.endswith('.sh'):
+                        os.chmod(dest_script, 0o755)
             
             # Update README if exists
             readme_source = source_dir / "README.md"
@@ -302,7 +307,12 @@ class UpdateChecker:
             for script in ['start_onvif_server.bat', 'start_ubuntu_25.sh', 'run.py']:
                 script_backup = backup_path / script
                 if script_backup.exists():
-                    shutil.copy2(script_backup, self.base_dir / script)
+                    dest_script = self.base_dir / script
+                    shutil.copy2(script_backup, dest_script)
+                    
+                    # Set executable permissions on Linux for shell scripts
+                    if sys.platform.startswith('linux') and script.endswith('.sh'):
+                        os.chmod(dest_script, 0o755)
             
             print(f"Rollback successful from backup: {backup_path}")
             return True
