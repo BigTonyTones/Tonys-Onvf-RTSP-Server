@@ -2722,6 +2722,11 @@ def get_web_ui_html(current_settings=None):
         async function saveCamera(event) {{
             event.preventDefault();
             
+            const btn = event.submitter || event.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving Please Wait';
+            
             const cameraId = document.getElementById('camera-id').value;
             const isEdit = cameraId !== '';
             
@@ -2779,6 +2784,9 @@ def get_web_ui_html(current_settings=None):
             }} catch (error) {{
                 console.error('Error saving camera:', error);
                 alert('Error saving camera');
+            }} finally {{
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }}
         }}
         
@@ -3124,6 +3132,11 @@ def get_web_ui_html(current_settings=None):
         async function saveSettings(event) {{
             event.preventDefault();
             
+            const btn = event.submitter || event.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving Please Wait';
+            
             const data = {{
                 serverIp: document.getElementById('serverIp').value || 'localhost',
                 openBrowser: document.getElementById('openBrowser').checked,
@@ -3173,6 +3186,9 @@ def get_web_ui_html(current_settings=None):
             }} catch (error) {{
                 console.error('Error saving settings:', error);
                 alert('Error saving settings: ' + error.message);
+            }} finally {{
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }}
         }}
         

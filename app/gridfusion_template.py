@@ -1557,9 +1557,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         async function saveGridFusion() {{
             const btn = document.querySelector('.btn-primary');
-            const originalText = btn.textContent;
+            const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.textContent = 'Saving...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving Please Wait';
             
             // Sync final config
             gfConfig.enabled = document.getElementById('gf-enabled').checked;
@@ -1587,7 +1587,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 alert("Connection error");
             }} finally {{
                 btn.disabled = false;
-                btn.textContent = originalText;
+                btn.innerHTML = originalText;
             }}
         }}
 
