@@ -1509,6 +1509,8 @@ def get_web_ui_html(current_settings=None):
                     <select class="form-input" id="gridColumnsSelect">
                         <option value="2">2 Columns (Large Cards)</option>
                         <option value="3">3 Columns (Compact View)</option>
+                        <option value="4">4 Columns (Extra Compact View)</option>
+                        <option value="5">5 Columns (Super Compact View)</option>
                     </select>
                 </div>
                 
@@ -1881,6 +1883,7 @@ def get_web_ui_html(current_settings=None):
                         
                         settings = newSettings;
                         applyTheme(settings.theme);
+                        applyGridLayout(settings.gridColumns || 3);
                     }}
                 }}
                 
@@ -3537,7 +3540,11 @@ def get_web_ui_html(current_settings=None):
             root.style.setProperty('--grid-cols', columns);
             
             // Adjust container width based on columns
-            if (columns >= 3) {{
+            if (columns >= 5) {{
+                root.style.setProperty('--container-width', '2200px');
+            }} else if (columns >= 4) {{
+                root.style.setProperty('--container-width', '1800px');
+            }} else if (columns >= 3) {{
                 root.style.setProperty('--container-width', '1600px');
             }} else {{
                 root.style.setProperty('--container-width', '1200px');
