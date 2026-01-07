@@ -1444,15 +1444,7 @@ def get_web_ui_html(current_settings=None):
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         Leave as 'localhost' for local access, or enter your server's IP address for network access
                     </small>
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #4a5568;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
-                        </label>
-                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
-                            Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
-                        </small>
-                    </div>
+
                 </div>
                 
                 <div class="form-group">
@@ -1525,6 +1517,16 @@ def get_web_ui_html(current_settings=None):
                         <input type="checkbox" id="openBrowser" style="width: auto; cursor: pointer;">
                         <span class="form-label" style="margin: 0;">Open Browser on Startup</span>
                     </label>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
+                        <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
+                    </label>
+                    <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                        Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
+                    </small>
                 </div>
 
                 <div class="form-group">
