@@ -554,14 +554,19 @@ class MediaMTXManager:
                         else:
                             safe_dest = shlex.quote(dest_url)
                             
-                        # Final command - optimized for extreme stability and low-latency jumping prevention
+                        # Final command - optimized for multi-core CPU utilization and stability
+                        # -threads 0: Auto-detect and use all available CPU cores
+                        # -filter_complex_threads 0: Parallelize filter graph processing across cores
+                        # -preset veryfast: Better quality than ultrafast while still fast
                         gf_cmd = (
                             f'"{ffmpeg_exe}" {ff_global} -nostdin '
                             f'{" ".join(inputs)} '
                             f'-filter_complex "{filter_complex}" '
-                            f'-map "[outv]" {ff_process} '
+                            f'-filter_complex_threads 0 '
+                            f'-map "[outv]" '
+                            f'-c:v libx264 -preset veryfast -tune zerolatency '
                             f'-profile:v high -level 4.2 '
-                            f'-preset ultrafast -tune zerolatency '
+                            f'-threads 0 '
                             f'-b:v 2500k -maxrate 2500k -bufsize 5000k -g {fps} '
                             f'-r {fps} -vsync cfr -max_delay 500000 -f rtsp -rtsp_transport tcp {safe_dest}'
                         )
