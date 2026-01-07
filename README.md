@@ -19,9 +19,7 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 
 ## Linux Setup (Recommended)
-This server is optimized for Ubuntu 25.04 but is compatible with most modern Linux builds. The **Virtual NIC** feature requires a Linux environment.
-
-*Note: This has been tested and confirmed working on the **Raspberry Pi 5** running the latest **Debian 13 (Trixie)** OS.*
+This server is optimized for Ubuntu 25.04 but is compatible with most modern Linux builds. The **Virtual NIC** feature requires a Linux environment. This has been confirmed to work perfectly on the Raspberry Pi 5 running the latest Debian 13 (Trixie) build for those looking to run the server on Raspberry Pi hardware.
 
 1. **Clone and enter the folder:**
    ```bash
