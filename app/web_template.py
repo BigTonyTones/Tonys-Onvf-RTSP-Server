@@ -1444,6 +1444,15 @@ def get_web_ui_html(current_settings=None):
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         Leave as 'localhost' for local access, or enter your server's IP address for network access
                     </small>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #4a5568;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
+                        </label>
+                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                            Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
+                        </small>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1604,6 +1613,7 @@ def get_web_ui_html(current_settings=None):
                         <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Process & Codec Arguments</label>
                         <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
                     </div>
+
                     <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-top: 15px; border-radius: 4px;">
                         <small style="color: #f6ad55; font-size: 11px; font-weight: 600; display: block;">
                             <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
@@ -3016,6 +3026,7 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('ffmpeg_globalArgs').value = '-hide_banner -loglevel error';
                 document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
                 document.getElementById('ffmpeg_processArgs').value = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
+                document.getElementById('ffmpeg_hardwareEncoding').checked = false;
                 
                 showToast('Settings reset to defaults. Click "Save Settings" to apply.');
             }}
@@ -3085,6 +3096,7 @@ def get_web_ui_html(current_settings=None):
                             document.getElementById('ffmpeg_globalArgs').value = adv.ffmpeg.globalArgs || '';
                             document.getElementById('ffmpeg_inputArgs').value = adv.ffmpeg.inputArgs || '';
                             document.getElementById('ffmpeg_processArgs').value = adv.ffmpeg.processArgs || '';
+                            document.getElementById('ffmpeg_hardwareEncoding').checked = adv.ffmpeg.hardwareEncoding === true;
                         }}
                     }}
                     
@@ -3161,7 +3173,8 @@ def get_web_ui_html(current_settings=None):
                     ffmpeg: {{
                         globalArgs: document.getElementById('ffmpeg_globalArgs').value,
                         inputArgs: document.getElementById('ffmpeg_inputArgs').value,
-                        processArgs: document.getElementById('ffmpeg_processArgs').value
+                        processArgs: document.getElementById('ffmpeg_processArgs').value,
+                        hardwareEncoding: document.getElementById('ffmpeg_hardwareEncoding').checked
                     }}
                 }},
                 authEnabled: document.getElementById('authEnabled').checked,

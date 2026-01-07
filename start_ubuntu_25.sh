@@ -11,7 +11,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "============================================================"
-echo "Tonys Onvif-RTSP Server v5.5.5 - Ubuntu Development Setup"
+echo "Tonys Onvif-RTSP Server v5.6 - Ubuntu Development Setup"
 echo "============================================================"
 
 # 1. Install system-level Python dependencies (only if missing)
@@ -92,7 +92,7 @@ ulimit -n 65535
 # 7. Start the application with auto-restart support
 echo ""
 echo "============================================================"
-echo "Starting Tonys Onvif Server v5.5.5..."
+echo "Starting Tonys Onvif Server v5.6..."
 echo "============================================================"
 
 # Loop to handle restart requests (exit code 42)

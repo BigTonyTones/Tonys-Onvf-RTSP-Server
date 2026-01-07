@@ -554,17 +554,36 @@ class MediaMTXManager:
                         else:
                             safe_dest = shlex.quote(dest_url)
                             
+                        # Check for hardware acceleration setting
+                        ff_advanced = advanced_settings.get('ffmpeg', {}) if advanced_settings else {}
+                        use_hw_accel = False
+                        hw_accel_info = None
+                        
+                        if ff_advanced.get('hardwareEncoding', False):
+                            hw_accel_info = self._detect_hardware_acceleration(ffmpeg_exe)
+                            if hw_accel_info:
+                                use_hw_accel = True
+                                print(f"      Hardware acceleration enabled and detected: {hw_accel_info['name']}")
+                            else:
+                                print(f"      Hardware acceleration enabled but not detected. Falling back to software.")
+                        
+                        # Determine encoder arguments
+                        if use_hw_accel and hw_accel_info:
+                             encoder_args = f'-c:v {hw_accel_info["encoder"]} {hw_accel_info["params"]}'
+                        else:
+                             # Software encoding with optimized preset
+                             encoder_args = '-c:v libx264 -preset veryfast -tune zerolatency'
+
                         # Final command - optimized for multi-core CPU utilization and stability
                         # -threads 0: Auto-detect and use all available CPU cores
                         # -filter_complex_threads 0: Parallelize filter graph processing across cores
-                        # -preset veryfast: Better quality than ultrafast while still fast
                         gf_cmd = (
                             f'"{ffmpeg_exe}" {ff_global} -nostdin '
                             f'{" ".join(inputs)} '
                             f'-filter_complex "{filter_complex}" '
                             f'-filter_complex_threads 0 '
                             f'-map "[outv]" '
-                            f'-c:v libx264 -preset veryfast -tune zerolatency '
+                            f'{encoder_args} '
                             f'-profile:v high -level 4.2 '
                             f'-threads 0 '
                             f'-b:v 2500k -maxrate 2500k -bufsize 5000k -g {fps} '
@@ -593,6 +612,56 @@ class MediaMTXManager:
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
+    def _detect_hardware_acceleration(self, ffmpeg_exe):
+        """
+        Detects available hardware acceleration methods supported by the FFmpeg binary.
+        Returns the best available encoder configuration or None.
+        """
+        try:
+            # Run ffmpeg -encoders to get list of supported encoders
+            process = subprocess.Popen(
+                [ffmpeg_exe, "-encoders"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            stdout, _ = process.communicate()
+            
+            # Check for NVIDIA NVENC
+            if "h264_nvenc" in stdout:
+                return {
+                    "name": "NVIDIA NVENC",
+                    "type": "nvenc",
+                    "encoder": "h264_nvenc",
+                    "params": "-preset p4 -tune ll -rc vbr"
+                }
+            
+            # Check for Intel QSV (Quick Sync Video)
+            if "h264_qsv" in stdout:
+                return {
+                    "name": "Intel QSV",
+                    "type": "qsv",
+                    "encoder": "h264_qsv",
+                    "params": "-preset veryfast -global_quality 25 -look_ahead 0"
+                }
+                
+            # Check for AMD AMF
+            if "h264_amf" in stdout:
+                return {
+                    "name": "AMD AMF",
+                    "type": "amf",
+                    "encoder": "h264_amf",
+                    "params": "-usage ultra_low_latency -quality speed -rc cqp"
+                }
+                
+            return None
+            
+        except Exception as e:
+            print(f"Error detecting hardware acceleration: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
     def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
         """Start MediaMTX server"""
         if not self.download_mediamtx():

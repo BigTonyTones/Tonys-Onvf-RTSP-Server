@@ -6,7 +6,7 @@ REM ========================================
 
 echo.
 echo ========================================
-echo  Tonys Onvif-RTSP Server v5.5.5
+echo  Tonys Onvif-RTSP Server v5.6
 echo ========================================
 echo.
 

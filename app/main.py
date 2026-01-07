@@ -64,6 +64,8 @@ def main():
     # Load settings to get RTSP port
     settings = manager.load_settings()
     rtsp_port = settings.get('rtspPort', MEDIAMTX_PORT)
+    debug_mode = settings.get('debugMode', False)
+    advanced_settings = settings.get('advancedSettings', {})
     
     # Get credentials only if RTSP auth is enabled
     rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
@@ -74,7 +76,7 @@ def main():
     # Pass manager.cameras so it can generate config
     print("\nInitializing MediaMTX RTSP Server...")
     # Pass authentication details to start()
-    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=manager.get_grid_fusion()):
+    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=manager.get_grid_fusion(), debug_mode=debug_mode, advanced_settings=advanced_settings):
         print("\nFailed to start MediaMTX. Exiting...")
         sys.exit(1)
     
