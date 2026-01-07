@@ -344,10 +344,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             background-color: #1e293b;
             border: 2px solid var(--accent-color);
             cursor: move;
-            display: flex;
-            flex-direction: column;
             border-radius: 4px;
-            overflow: hidden;
+            overflow: visible;
             z-index: 5;
         }}
 
@@ -355,6 +353,16 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             border-color: var(--success);
             box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
             z-index: 10;
+        }}
+        
+        .camera-content {{
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 4px;
+            pointer-events: none;
         }}
 
         .placed-snapshot {{
@@ -380,6 +388,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             justify-content: space-between;
             color: white;
             z-index: 10;
+            pointer-events: auto;
         }}
         
         .camera-switcher {{
@@ -476,6 +485,86 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
         .ontop-badge.active:hover {{
             background: var(--accent-hover);
+        }}
+
+        .info-icon {{
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background-color: rgba(99, 102, 241, 0.9);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            z-index: 11;
+            font-size: 0.7rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            font-family: 'Inter', serif;
+        }}
+
+        .info-icon:hover {{
+            background-color: var(--accent-color);
+            transform: scale(1.15);
+        }}
+
+        .info-tooltip {{
+            position: absolute;
+            top: 2.2rem;
+            left: 0.5rem;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
+            color: var(--text-primary);
+            padding: 0.5rem 0.7rem;
+            border-radius: 0.5rem;
+            font-size: 0.7rem;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+            z-index: 9999;
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: translateY(-5px);
+            min-width: 280px;
+            line-height: 1.3;
+        }}
+
+        .info-icon:hover + .info-tooltip {{
+            opacity: 1;
+            transform: translateY(0);
+        }}
+        
+        .info-tooltip-line {{
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.35rem;
+        }}
+        
+        .info-tooltip-line:last-child {{
+            margin-bottom: 0;
+        }}
+        
+        .info-tooltip-label {{
+            color: var(--text-secondary);
+            font-weight: 600;
+            min-width: 65px;
+        }}
+        
+        .info-tooltip-value {{
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+        }}
+        
+        .info-tooltip-url {{
+            color: #818cf8;
+            word-break: break-all;
         }}
 
         .resizer {{
@@ -1269,29 +1358,73 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 
                 let inner = '';
                 if (showSnaps && snapshots[cam.id]) {{
-                    inner += `<img src="${{snapshots[cam.id]}}" class="placed-snapshot">`;
+                    inner += `\u003cdiv class=\"camera-content\"\u003e\u003cimg src=\"${{snapshots[cam.id]}}\" class=\"placed-snapshot\"\u003e`;
                 }} else {{
-                    inner += `<div style="flex:1; background:#0f172a; display:flex; align-items:center; justify-content:center; color:#334155; font-size:2rem; font-weight:800;">CAM</div>`;
+                    inner += `\u003cdiv class=\"camera-content\"\u003e\u003cdiv style=\"flex:1; background:#0f172a; display:flex; align-items:center; justify-content:center; color:#334155; font-size:2rem; font-weight:800;\"\u003eCAM\u003c/div\u003e`;
                 }}
                 
-                inner += `
-                    <div class="placed-overlay">
-                        <select class="camera-switcher" onchange="changeCameraInBox(${{idx}}, this.value)" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()">
-                            ${{cameras.map(c => `<option value="${{c.id}}" ${{c.id === gfCam.id ? 'selected' : ''}}>${{c.name}}</option>`).join('')}}
-                        </select>
-                        <select class="stream-switcher" onchange="changeStreamType(${{idx}}, this.value)" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()" title="Switch Stream">
-                            <option value="main" ${{gfCam.stream_type === 'main' ? 'selected' : ''}}>Main</option>
-                            <option value="sub" ${{gfCam.stream_type !== 'main' ? 'selected' : ''}}>Sub</option>
-                        </select>
-                        <div class="ontop-badge ${{gfCam.always_on_top ? 'active' : ''}}" 
-                             onpointerdown="event.stopPropagation()" 
-                             onclick="toggleOnTop(${{idx}}, event)" 
-                             title="Toggle Always on Top">
-                            ${{gfCam.always_on_top ? 'TOP' : 'LAY'}}
-                        </div>
-                    </div>
-                    <div class="remove-btn" onclick="removeCamera(event, ${{idx}})">×</div>
-                    <div class="resizer"></div>
+                // Build RTSP URL for this camera
+                const port = appSettings.rtspPort || 8554;
+                const hostname = window.location.hostname;
+                const streamPath = gfCam.stream_type === 'main' ? cam.name : `${{cam.name}}_sub`;
+                const rtspUrl = `rtsp://${{hostname}}:${{port}}/${{streamPath}}`;
+                
+                // Build enhanced tooltip content
+                const streamTypeLabel = gfCam.stream_type === 'main' ? 'Main Stream (High Res)' : 'Sub Stream (Low Res)';
+                const layerInfo = gfCam.always_on_top ? 'Always on Top' : 'Normal Layer';
+                const statusLabel = cam.status.charAt(0).toUpperCase() + cam.status.slice(1);
+                
+                const tooltipContent = `\r
+                    \u003cdiv style=\"font-weight: 700; color: #818cf8; margin-bottom: 0.3rem; font-size: 0.75rem;\"\u003e${{cam.name}}\u003c/div\u003e\r
+                    \u003cdiv style=\"display: flex; align-items: start; gap: 0.4rem; margin-bottom: 0;\"\u003e\r
+                        \u003cspan style=\"color: var(--text-secondary); font-weight: 600; min-width: 50px; font-size: 0.65rem;\"\u003eStream:\u003c/span\u003e\r
+                        \u003cspan class=\"info-tooltip-url\" style=\"font-size: 0.6rem; line-height: 1.3;\"\u003e${{rtspUrl}}\u003c/span\u003e\r
+                    \u003c/div\u003e\r
+                    \u003cdiv style=\"display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0;\"\u003e\r
+                        \u003cspan style=\"color: var(--text-secondary); font-weight: 600; min-width: 50px; font-size: 0.65rem;\"\u003eType:\u003c/span\u003e\r
+                        \u003cspan style=\"color: var(--text-primary); font-size: 0.65rem;\"\u003e${{streamTypeLabel}}\u003c/span\u003e\r
+                    \u003c/div\u003e\r
+                    \u003cdiv style=\"display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0;\"\u003e\r
+                        \u003cspan style=\"color: var(--text-secondary); font-weight: 600; min-width: 50px; font-size: 0.65rem;\"\u003ePosition:\u003c/span\u003e\r
+                        \u003cspan style=\"color: var(--text-primary); font-family: 'Courier New', monospace; font-size: 0.65rem;\"\u003e${{Math.round(gfCam.x || 0)}}, ${{Math.round(gfCam.y || 0)}}\u003c/span\u003e\r
+                    \u003c/div\u003e\r
+                    \u003cdiv style=\"display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0;\"\u003e\r
+                        \u003cspan style=\"color: var(--text-secondary); font-weight: 600; min-width: 50px; font-size: 0.65rem;\"\u003eSize:\u003c/span\u003e\r
+                        \u003cspan style=\"color: var(--text-primary); font-family: 'Courier New', monospace; font-size: 0.65rem;\"\u003e${{Math.round(gfCam.w || 0)}} × ${{Math.round(gfCam.h || 0)}}\u003c/span\u003e\r
+                    \u003c/div\u003e\r
+                    \u003cdiv style=\"display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0;\"\u003e\r
+                        \u003cspan style=\"color: var(--text-secondary); font-weight: 600; min-width: 50px; font-size: 0.65rem;\"\u003eStatus:\u003c/span\u003e\r
+                        \u003cspan style=\"color: ${{cam.status === 'running' ? '#22c55e' : '#ef4444'}}; font-size: 0.65rem; font-weight: 600;\"\u003e${{statusLabel}}\u003c/span\u003e\r
+                    \u003c/div\u003e\r
+                    \u003cdiv style=\"display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0;\"\u003e\r
+                        \u003cspan style=\"color: var(--text-secondary); font-weight: 600; min-width: 50px; font-size: 0.65rem;\"\u003eLayer:\u003c/span\u003e\r
+                        \u003cspan style=\"color: var(--text-primary); font-size: 0.65rem;\"\u003e${{layerInfo}}\u003c/span\u003e\r
+                    \u003c/div\u003e\r
+                `;
+                
+                inner += `\r
+                    \u003cdiv class=\"placed-overlay\"\u003e\r
+                        \u003cselect class=\"camera-switcher\" onchange=\"changeCameraInBox(${{idx}}, this.value)\" onpointerdown=\"event.stopPropagation()\" onclick=\"event.stopPropagation()\"\u003e\r
+                            ${{cameras.map(c => `\u003coption value=\"${{c.id}}\" ${{c.id === gfCam.id ? 'selected' : ''}}\u003e${{c.name}}\u003c/option\u003e`).join('')}}\r
+                        \u003c/select\u003e\r
+                        \u003cselect class=\"stream-switcher\" onchange=\"changeStreamType(${{idx}}, this.value)\" onpointerdown=\"event.stopPropagation()\" onclick=\"event.stopPropagation()\" title=\"Switch Stream\"\u003e\r
+                            \u003coption value=\"main\" ${{gfCam.stream_type === 'main' ? 'selected' : ''}}\u003eMain\u003c/option\u003e\r
+                            \u003coption value=\"sub\" ${{gfCam.stream_type !== 'main' ? 'selected' : ''}}\u003eSub\u003c/option\u003e\r
+                        \u003c/select\u003e\r
+                        \u003cdiv class=\"ontop-badge ${{gfCam.always_on_top ? 'active' : ''}}\" \r
+                             onpointerdown=\"event.stopPropagation()\" \r
+                             onclick=\"toggleOnTop(${{idx}}, event)\" \r
+                             title=\"Toggle Always on Top\"\u003e\r
+                            ${{gfCam.always_on_top ? 'TOP' : 'LAY'}}\r
+                        \u003c/div\u003e\r
+                    \u003c/div\u003e\r
+                `;
+                inner += `</div>`; // Close camera-content
+                inner += `\r
+                    \u003cdiv class=\"info-icon\" onpointerdown=\"event.stopPropagation()\" onclick=\"event.stopPropagation()\"\u003ei\u003c/div\u003e\r
+                    \u003cdiv class=\"info-tooltip\"\u003e${{tooltipContent}}\u003c/div\u003e\r
+                    \u003cdiv class=\"remove-btn\" onclick=\"removeCamera(event, ${{idx}})\"\u003e×\u003c/div\u003e\r
+                    \u003cdiv class=\"resizer\"\u003e\u003c/div\u003e\r
                 `;
                 
                 el.innerHTML = inner;
