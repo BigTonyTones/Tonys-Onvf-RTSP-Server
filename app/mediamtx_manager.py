@@ -240,7 +240,7 @@ class MediaMTXManager:
             'writeTimeout': advanced_settings.get('mediamtx', {}).get('writeTimeout', '30s') if advanced_settings else '30s',
             
             # Buffer and queue settings
-            'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 16384) if advanced_settings else 16384,
+            'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 32768) if advanced_settings else 32768,
             'udpMaxPayloadSize': advanced_settings.get('mediamtx', {}).get('udpMaxPayloadSize', 1472) if advanced_settings else 1472,
             
             # ===== MEMORY MANAGEMENT =====
@@ -278,7 +278,8 @@ class MediaMTXManager:
         # Get advanced ffmpeg args
         ff_advanced = advanced_settings.get('ffmpeg', {}) if advanced_settings else {}
         ff_global = ff_advanced.get('globalArgs', '-hide_banner -loglevel error')
-        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2')
+        # Optimized for stability: added -stimeout (10s) and increased reconnect delay
+        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -stimeout 10000000 -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5')
         ff_process = ff_advanced.get('processArgs', '-c:v libx264 -preset ultrafast -tune zerolatency -g 30')
         
         

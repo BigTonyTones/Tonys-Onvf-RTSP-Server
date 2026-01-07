@@ -34,6 +34,11 @@ class CameraManager:
         # GridFusion Layouts
         self.grid_fusion_layouts = []
 
+        # Stream Watchdog tracking
+        self.stale_path_times = {} # path_name -> first_stale_timestamp
+        self._watchdog_running = False
+        self._watchdog_thread = None
+
         
         # Auth settings
         self.auth_enabled = False
@@ -44,7 +49,7 @@ class CameraManager:
         # Advanced Settings
         self.advanced_settings = {
             'mediamtx': {
-                'writeQueueSize': 16384,
+                'writeQueueSize': 32768,
                 'readTimeout': '30s',
                 'writeTimeout': '30s',
                 'udpMaxPayloadSize': 1472,
@@ -60,6 +65,9 @@ class CameraManager:
         }
         
         self.load_config()
+        
+        # Start watchdog
+        self.start_watchdog()
         
     def load_config(self):
         """Load camera configuration"""
@@ -660,3 +668,71 @@ class CameraManager:
         """Generate a random session token"""
         alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for _ in range(32))
+
+    # --- Watchdog System ---
+
+    def start_watchdog(self):
+        """Start the background watchdog thread"""
+        if self._watchdog_running:
+            return
+        self._watchdog_running = True
+        self._watchdog_thread = threading.Thread(target=self._watchdog_loop, daemon=True)
+        self._watchdog_thread.start()
+        print("Stream Health Watchdog started.")
+
+    def _watchdog_loop(self):
+        """Monitor stream health and restart if necessary"""
+        # Wait for system to stabilize
+        time.sleep(30)
+        
+        while self._watchdog_running:
+            try:
+                self._check_stream_health()
+            except Exception as e:
+                print(f"Watchdog error: {e}")
+            
+            time.sleep(15) # Check every 15 seconds
+
+    def _check_stream_health(self):
+        """Check for hung streams and perform recovery"""
+        analytics = self.analytics.get_analytics()
+        now = time.time()
+        restart_needed = False
+        stale_paths = []
+
+        for path_name, stats in analytics.items():
+            # We care about publishers that are 'ready' but sending 0 bytes
+            is_publisher = stats.get('source') == 'publisher'
+            is_ready = stats.get('ready', False)
+            is_stale = stats.get('stale', False)
+            
+            if is_ready and is_stale and is_publisher:
+                if path_name not in self.stale_path_times:
+                    self.stale_path_times[path_name] = now
+                
+                stale_duration = now - self.stale_path_times[path_name]
+                if stale_duration > 120: # 2 minutes of zero-bitrate "zombie" state
+                    print(f"Watchdog Alert: Path '{path_name}' has been dead for {stale_duration:.0f}s. Recovery needed.")
+                    restart_needed = True
+                    stale_paths.append(path_name)
+            else:
+                # Path is healthy or not active, clear stale marker
+                if path_name in self.stale_path_times:
+                    del self.stale_path_times[path_name]
+
+        if restart_needed:
+            print(f"Watchdog: Restarting MediaMTX to recover {len(stale_paths)} stalled streams...")
+            rtsp_user = self.global_username if getattr(self, 'rtsp_auth_enabled', False) else ''
+            rtsp_pass = self.global_password if getattr(self, 'rtsp_auth_enabled', False) else ''
+            self.mediamtx.restart(
+                self.cameras, 
+                self.rtsp_port, 
+                rtsp_user, 
+                rtsp_pass, 
+                self.get_grid_fusion(), 
+                debug_mode=self.debug_mode, 
+                advanced_settings=self.advanced_settings
+            )
+            # Clear all stale trackers after restart to give them time to come back
+            self.stale_path_times.clear()
+            time.sleep(30) # Grace period after restart
