@@ -20,6 +20,9 @@ class MediaMTXManager:
         self.process = None
         self.config_file = "mediamtx.yml"
         self.executable = self._get_executable_name()
+        self.log_buffer = [] # Store last 100 lines for debug
+        self._log_lock = threading.Lock()
+        self.debug_mode = False
         
     def _get_executable_name(self):
         """Get the correct executable name for the platform"""
@@ -578,7 +581,7 @@ class MediaMTXManager:
                         # -threads 0: Auto-detect and use all available CPU cores
                         # -filter_complex_threads 0: Parallelize filter graph processing across cores
                         gf_cmd = (
-                            f'"{ffmpeg_exe}" {ff_global} -nostdin '
+                            f'"{ffmpeg_exe}" {ff_global} -nostdin -stats '
                             f'{" ".join(inputs)} '
                             f'-filter_complex "{filter_complex}" '
                             f'-filter_complex_threads 0 '
@@ -664,6 +667,7 @@ class MediaMTXManager:
 
     def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
         """Start MediaMTX server"""
+        self.debug_mode = debug_mode
         if not self.download_mediamtx():
             return False
         
@@ -691,9 +695,20 @@ class MediaMTXManager:
             def capture_output(process):
                 for line in process.stdout:
                     if line:
-                        # Write to sys.stdout so our Logger captures it
-                        sys.stdout.write(line)
-                        sys.stdout.flush()
+                        # Update buffer
+                        with self._log_lock:
+                            self.log_buffer.append(line.strip())
+                            if len(self.log_buffer) > 100:
+                                self.log_buffer.pop(0)
+                        
+                        # Only write to console if debug mode is ON OR it's not a spammy ffmpeg status line
+                        # ffmpeg status lines contain "frame=" and "fps="
+                        is_ffmpeg_status = "frame=" in line and "fps=" in line
+                        
+                        if self.debug_mode or not is_ffmpeg_status:
+                            # Write to sys.stdout so our Logger captures it
+                            sys.stdout.write(line)
+                            sys.stdout.flush()
             
             output_thread = threading.Thread(target=capture_output, args=(self.process,), daemon=True)
             output_thread.start()

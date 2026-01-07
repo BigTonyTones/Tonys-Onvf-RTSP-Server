@@ -963,6 +963,14 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         </label>
                     </div>
 
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span class="toolbar-label">Debug</span>
+                        <label class="switch">
+                            <input type="checkbox" id="gf-debug" onchange="toggleDebugLayout()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
                     <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); margin-left: 0.5rem;">
                         <span style="font-size: 10px; color: var(--text-secondary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">RTSP URL</span>
                         <code id="rtsp-url-display" style="font-size: 11px; color: var(--accent-color); font-weight: 600; font-family: 'JetBrains Mono', monospace; background: transparent; padding: 0;">rtsp://localhost:8554/matrix</code>
@@ -976,6 +984,23 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 <div id="canvas" class="canvas">
                     <div id="grid-overlay" class="grid-overlay"></div>
                     <!-- Placed cameras -->
+                </div>
+                <!-- Debug Overlay -->
+                <div id="debug-overlay" style="position: absolute; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.98); padding: 18px; border-radius: 12px; font-family: 'JetBrains Mono', 'Cascadia Code', monospace; font-size: 11px; color: #f1f5f9; border: 1px solid rgba(56, 189, 248, 0.2); pointer-events: none; display: none; z-index: 1000; min-width: 280px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-font-smoothing: antialiased;">
+                    <div style="font-weight: 800; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 12px; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px;">
+                        <span style="color: #38bdf8;">GRIDFUSION ENGINE DEBUG</span>
+                        <span style="font-size: 9px; background: #059669; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 900;">LIVE</span>
+                    </div>
+                    <div id="debug-stats" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Encoding Speed:</span> <span id="debug-speed" style="font-weight: bold; color: #fbbf24;">--</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Layout ID:</span> <span id="debug-layout-id" style="color: #f1f5f9;">--</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Resolution:</span> <span id="debug-res" style="color: #f1f5f9;">--</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Target FPS:</span> <span id="debug-fps" style="color: #f1f5f9;">--</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Bitrate:</span> <span id="debug-bitrate" style="color: #38bdf8; font-weight: bold;">--</span></div>
+                        <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">CPU Usage:</span> <span id="debug-cpu" style="color: #f1f5f9;">--</span></div>
+                        <div style="margin-top: 8px; font-size: 9px; color: #38bdf8; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">Engine Log Tail</div>
+                        <div id="debug-logs" style="font-size: 10px; color: #cbd5e1; white-space: pre-wrap; height: 75px; overflow: hidden; line-height: 1.4; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-weight: 400;">...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1074,6 +1099,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         let raftId = null;
 
         // Layout Management Functions
+        // Stats bar helper
         function updateLayoutSelector() {{
             const select = document.getElementById('layout-select');
             select.innerHTML = '';
@@ -1093,9 +1119,51 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             const hostname = window.location.hostname;
             const url = `rtsp://${{hostname}}:${{port}}/${{gfConfig.id}}`;
             document.getElementById('rtsp-url-display').textContent = url;
+        }}
+
+        // --- Debug Analytics ---
+        let debugInterval = null;
+
+        function toggleDebugLayout() {{
+            const isChecked = document.getElementById('gf-debug').checked;
+            const overlay = document.getElementById('debug-overlay');
+            overlay.style.display = isChecked ? 'block' : 'none';
             
-            // Update stats bar
-            // document.getElementById('current-grid-name').textContent = gfConfig.name || gfConfig.id;
+            if (isChecked) {{
+                updateDebugStats();
+                debugInterval = setInterval(updateDebugStats, 2000);
+            }} else {{
+                if (debugInterval) clearInterval(debugInterval);
+                debugInterval = null;
+            }}
+        }}
+
+        async function updateDebugStats() {{
+            try {{
+                const [debugResp, statsResp, analyticsResp] = await Promise.all([
+                    fetch('/api/gridfusion/debug'),
+                    fetch('/api/stats'),
+                    fetch('/api/analytics')
+                ]);
+                
+                const debugData = await debugResp.json();
+                const stats = await statsResp.json();
+                const analytics = await analyticsResp.json();
+                const gfStats = analytics[gfConfig.id] || {{}};
+                
+                document.getElementById('debug-speed').textContent = debugData.speed || 'unknown';
+                document.getElementById('debug-layout-id').textContent = gfConfig.id;
+                document.getElementById('debug-res').textContent = gfConfig.resolution || '1920x1080';
+                document.getElementById('debug-fps').textContent = (gfConfig.outputFramerate || 5) + ' FPS';
+                document.getElementById('debug-bitrate').textContent = (gfStats.bitrate || 0).toFixed(0) + ' kbps';
+                document.getElementById('debug-cpu').textContent = (stats.cpu_percent || 0) + '%';
+                
+                if (debugData.log_tail) {{
+                    document.getElementById('debug-logs').textContent = debugData.log_tail.join('\\n');
+                }}
+            }} catch (e) {{
+                console.error("Debug stats fetch failed", e);
+            }}
         }}
 
         function switchLayout(id) {{

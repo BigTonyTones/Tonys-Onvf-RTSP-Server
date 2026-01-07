@@ -678,6 +678,30 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 400
 
+    @app.route('/api/gridfusion/debug', methods=['GET'])
+    @login_required
+    def get_gridfusion_debug():
+        """Get real-time debug info for GridFusion from MediaMTX logs"""
+        # Get logs from mediamtx manager buffer
+        with manager.mediamtx._log_lock:
+            logs = list(manager.mediamtx.log_buffer)
+        
+        # Look for the last 'speed=' in the logs
+        speed = "unknown"
+        for line in reversed(logs):
+            if "speed=" in line:
+                import re
+                # FFmpeg speed output looks like: speed=1.01x
+                match = re.search(r'speed=\s*([\d.]+x)', line)
+                if match:
+                    speed = match.group(1)
+                    break
+        
+        return jsonify({
+            'speed': speed,
+            'log_tail': logs[-10:] if logs else []
+        })
+
     @app.route('/api/gridfusion/snapshot/<int:camera_id>')
     @login_required
     def get_camera_snapshot(camera_id):
