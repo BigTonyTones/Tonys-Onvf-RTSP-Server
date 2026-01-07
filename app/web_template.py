@@ -311,6 +311,7 @@ def get_web_ui_html(current_settings=None):
             color: var(--text-main);
         }}
         .container {{ 
+            width: 100%;
             max-width: var(--container-width, 1600px); 
             margin: 0 auto; 
             transition: max-width 0.3s ease;
@@ -3541,9 +3542,9 @@ def get_web_ui_html(current_settings=None):
             
             // Adjust container width based on columns
             if (columns >= 5) {{
-                root.style.setProperty('--container-width', '2200px');
+                root.style.setProperty('--container-width', '2500px');
             }} else if (columns >= 4) {{
-                root.style.setProperty('--container-width', '1800px');
+                root.style.setProperty('--container-width', '2000px');
             }} else if (columns >= 3) {{
                 root.style.setProperty('--container-width', '1600px');
             }} else {{
