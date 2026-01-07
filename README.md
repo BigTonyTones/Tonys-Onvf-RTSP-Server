@@ -18,8 +18,10 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 - **RTSP Output**: The composed matrix is available as a standard RTSP stream that any NVR can consume
 
 
-## Ubuntu Setup (Recommended)
-This server is optimized for Ubuntu 25.04. The **Virtual NIC** feature requires Linux.
+## Linux Setup (Recommended)
+This server is optimized for Ubuntu 25.04 but is compatible with most modern Linux builds. The **Virtual NIC** feature requires a Linux environment.
+
+*Note: This has been tested and confirmed working on the **Raspberry Pi 5** running the latest **Debian 13 (Trixie)** OS.*
 
 1. **Clone and enter the folder:**
    ```bash
