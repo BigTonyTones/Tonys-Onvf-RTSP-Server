@@ -46,3 +46,7 @@ mediamtx.yml
 # OS
 .DS_Store
 Thumbs.db
+
+# Documentation
+version_history.html
+debug_api.py
