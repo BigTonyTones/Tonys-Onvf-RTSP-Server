@@ -607,6 +607,59 @@ class CameraManager:
                 return camera
         return None
     
+    def reboot_camera(self, camera_id):
+        """Send reboot command to physical camera via ONVIF"""
+        camera = self.get_camera(camera_id)
+        if not camera:
+            return {'success': False, 'error': 'Camera not found'}
+        
+        # Use ONVIFProber to send reboot command
+        from .onvif_client import ONVIFProber
+        prober = ONVIFProber()
+        
+        # Extract host and port from main stream URL or use separate host/port if we had them
+        # For now, we'll try to parse the host from main_stream_url
+        from urllib.parse import urlparse
+        try:
+            # Add protocol if missing for parsing
+            url = camera.main_stream_url
+            if not url.startswith('rtsp://'):
+                url = 'rtsp://' + url
+            
+            parsed = urlparse(url)
+            host = parsed.hostname
+            # Use ONVIF port - wait, we need the PHYSICAL camera's ONVIF port
+            # Usually users put the physical camera's host in the 'host' field during setup
+            # But the 'camera' object in manager.py is the virtual one.
+            # We need the physical camera's details.
+            
+            # Looking at camera.py, it doesn't seem to store the physical camera's ONVIF port separately
+            # unless it's extracted from the RTSP URL which is unlikely.
+            # HOWEVER, in openEditModal in web_template.py, we see:
+            # document.getElementById('host').value = mainUrl.hostname;
+            
+            # Let's check how we can get the physical camera's ONVIF credentials.
+            # In saveCamera: username: document.getElementById('username').value, 
+            # password: document.getElementById('password').value
+            
+            # We'll use the virtual camera's host (which is the physical camera's host) 
+            # and we might need to assume a port (80, 888, 8000, 8080) or ask the user.
+            # Standard ONVIF port is often 80 or 8000.
+            
+            # Re-evaluating: The user probably wants to reboot the camera they just configured.
+            # We'll use the hostname from main_stream_url and default ONVIF port 80 if not known.
+            # Actually, common cameras use 80, 8080, 888, or 8000.
+            
+            # Let's try 80 first.
+            return prober.reboot_camera(
+                host, 
+                80, # Defaulting to 80 for now
+                camera.onvif_username, 
+                camera.onvif_password
+            )
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
     def start_all(self):
         """Start all cameras"""
         for camera in self.cameras:

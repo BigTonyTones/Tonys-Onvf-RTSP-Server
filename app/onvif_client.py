@@ -148,3 +148,51 @@ class ONVIFProber:
                 'success': False,
                 'error': str(e)
             }
+
+    def reboot_camera(self, host, port, username, password):
+        """
+        Send a SystemReboot command to an ONVIF camera.
+        """
+        try:
+            from onvif import ONVIFCamera
+            import onvif
+        except ImportError:
+            return {
+                'success': False, 
+                'error': 'onvif-zeep library not installed.'
+            }
+
+        try:
+            # Determine WSDL directory (same logic as probe)
+            wsdl_dir = os.path.join(os.path.dirname(onvif.__file__), 'wsdl')
+            if not os.path.exists(os.path.join(wsdl_dir, 'devicemgmt.wsdl')):
+                possible_paths = [
+                    r"C:\Users\Tony\AppData\Roaming\Python\Lib\site-packages\wsdl",
+                    os.path.join(os.path.dirname(os.path.dirname(onvif.__file__)), 'wsdl'),
+                    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(onvif.__file__))), 'Lib', 'site-packages', 'wsdl'),
+                ]
+                for p in possible_paths:
+                    if os.path.exists(os.path.join(p, 'devicemgmt.wsdl')):
+                        wsdl_dir = p
+                        break
+            
+            # Connect to Camera
+            mycam = ONVIFCamera(host, port, username, password, wsdl_dir=wsdl_dir)
+            
+            # Create device management service
+            devicemgmt = mycam.create_devicemgmt_service()
+            
+            # Send Reboot command
+            # SystemReboot returns a message (often "Rebooting")
+            response = devicemgmt.SystemReboot()
+            
+            return {
+                'success': True,
+                'message': str(response)
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }

@@ -419,20 +419,20 @@ def get_web_ui_html(current_settings=None):
             font-weight: 600;
             color: var(--text-title);
         }}
-        .camera-actions {{ display: flex; gap: 8px; }}
+        .camera-actions {{ display: flex; gap: 4px; }}
         .icon-btn {{
-            padding: 6px 12px;
+            padding: 4px 8px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-color);
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: 4px;
             color: var(--text-body);
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }}
         .metric-badge {{
             display: inline-flex;
@@ -2140,6 +2140,7 @@ def get_web_ui_html(current_settings=None):
                         }}
                         <button class="icon-btn icon-btn-edit" onclick="openEditModal(${{cam.id}})" title="Edit"><i class="fas fa-edit"></i> Edit</button>
                         <button class="icon-btn icon-btn-delete" onclick="deleteCamera(${{cam.id}})" title="Delete"><i class="fas fa-trash"></i> Delete</button>
+                        <button class="icon-btn icon-btn-stop" onclick="rebootCamera(${{cam.id}})" title="Reboot Camera"><i class="fas fa-power-off"></i> Reboot</button>
                     </div>
                 </div>
                 
@@ -2812,6 +2813,33 @@ def get_web_ui_html(current_settings=None):
                 await loadData();
             }} catch (error) {{
                 console.error('Error deleting camera:', error);
+            }}
+        }}
+
+        async function rebootCamera(id) {{
+            if (!confirm('Are you sure you want to reboot this camera? The stream will be interrupted for 30-60 seconds.')) return;
+            
+            try {{
+                const btn = event.target.closest('button');
+                const originalContent = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                const response = await fetch(`/api/cameras/${{id}}/reboot`, {{method: 'POST'}});
+                const data = await response.json();
+                
+                if (data.success) {{
+                    alert('Reboot command sent successfully. Camera should reboot shortly.');
+                }} else {{
+                    alert('Failed to reboot camera: ' + (data.error || 'Unknown error'));
+                }}
+                
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+                await loadData();
+            }} catch (error) {{
+                console.error('Error rebooting camera:', error);
+                alert('Error connecting to server.');
             }}
         }}
         
