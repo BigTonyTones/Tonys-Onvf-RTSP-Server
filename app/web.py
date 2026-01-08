@@ -393,15 +393,7 @@ def create_web_app(manager):
                 manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
-    
-    @app.route('/api/cameras/<int:camera_id>/reboot', methods=['POST'])
-    @login_required
-    def reboot_camera_api(camera_id):
-        result = manager.reboot_camera(camera_id)
-        if result.get('success'):
-            return jsonify(result)
-        return jsonify(result), 400
-    
+
     @app.route('/api/cameras/start-all', methods=['POST'])
     @login_required
     def start_all():
