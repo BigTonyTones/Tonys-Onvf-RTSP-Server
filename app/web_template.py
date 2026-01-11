@@ -315,6 +315,8 @@ def get_web_ui_html(current_settings=None):
             max-width: var(--container-width, 1600px); 
             margin: 0 auto; 
             transition: max-width 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }}
         .header {{
             background: var(--header-bg);
@@ -323,6 +325,8 @@ def get_web_ui_html(current_settings=None):
             margin-bottom: 20px;
             box-shadow: var(--shadow);
             position: relative;
+            width: 100%;
+            display: block;
         }}
         .header h1 {{ color: var(--text-title); margin-bottom: 10px; }}
         .header p {{ color: var(--text-body); font-size: 14px; }}
@@ -1107,14 +1111,14 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn" onclick="openAboutModal()">About</button>
                 <button class="btn" onclick="openLogsModal()">Logs</button>
                 <button class="btn btn-danger" onclick="stopServer()">Stop Server</button>
-                <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
                     <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Low Latency</span>
                     <label class="toggle-switch" style="margin: 0; transform: scale(0.8);">
                         <input type="checkbox" id="latencyToggle" onchange="toggleLatencyMode(this.checked)">
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <div style="display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Display real-time bitrate, stream status, and active viewer count on camera previews">
                     <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Bandwidth</span>
                     <label class="toggle-switch" style="margin: 0; transform: scale(0.8);">
                         <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
@@ -3573,13 +3577,17 @@ def get_web_ui_html(current_settings=None):
             const columns = parseInt(cols) || 3;
             root.style.setProperty('--grid-cols', columns);
             
-            // Adjust container width based on columns
-            if (columns >= 5) {{
-                root.style.setProperty('--container-width', '2500px');
+            // Significantly increased widths to satisfy card content and alignment
+            if (columns >= 6) {{
+                root.style.setProperty('--container-width', '3500px');
+            }} else if (columns >= 5) {{
+                root.style.setProperty('--container-width', '2800px');
             }} else if (columns >= 4) {{
-                root.style.setProperty('--container-width', '2000px');
+                root.style.setProperty('--container-width', '2200px');
             }} else if (columns >= 3) {{
-                root.style.setProperty('--container-width', '1600px');
+                root.style.setProperty('--container-width', '1800px');
+            }} else if (columns >= 2) {{
+                root.style.setProperty('--container-width', '1400px');
             }} else {{
                 root.style.setProperty('--container-width', '1200px');
             }}

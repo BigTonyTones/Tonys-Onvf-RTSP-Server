@@ -10,8 +10,12 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Define colors for output
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
 echo "============================================================"
-echo "Tonys Onvif-RTSP Server v5.7 - Ubuntu Development Setup"
+echo -e "${YELLOW}Tonys Onvif-RTSP Server v5.7.1 - Ubuntu Development Setup${NC}"
 echo "============================================================"
 
 # 1. Install system-level Python dependencies (only if missing)
