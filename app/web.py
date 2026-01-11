@@ -307,7 +307,8 @@ def create_web_app(manager):
                 ip_mode=data.get('ipMode', 'dhcp'),
                 static_ip=data.get('staticIp', ''),
                 netmask=data.get('netmask', '24'),
-                gateway=data.get('gateway', '')
+                gateway=data.get('gateway', ''),
+                uuid=data.get('uuid')
             )
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
@@ -345,7 +346,8 @@ def create_web_app(manager):
                 ip_mode=data.get('ipMode', 'dhcp'),
                 static_ip=data.get('staticIp', ''),
                 netmask=data.get('netmask', '24'),
-                gateway=data.get('gateway', '')
+                gateway=data.get('gateway', ''),
+                uuid=data.get('uuid')
             )
             if camera:
                 return jsonify(camera.to_dict())

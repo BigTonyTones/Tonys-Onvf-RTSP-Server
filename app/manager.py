@@ -412,7 +412,7 @@ class CameraManager:
                    main_framerate=30, sub_framerate=15, onvif_port=None,
                    transcode_sub=False, transcode_main=False,
                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
-                   static_ip='', netmask='24', gateway=''):
+                   static_ip='', netmask='24', gateway='', uuid=None):
         """Add a new camera"""
         if not main_path.startswith('/'):
             main_path = '/' + main_path
@@ -479,6 +479,7 @@ class CameraManager:
             'staticIp': static_ip,
             'netmask': netmask,
             'gateway': gateway,
+            'uuid': uuid,
             'debugMode': getattr(self, 'debug_mode', False)
         }
         
@@ -498,7 +499,7 @@ class CameraManager:
                       main_framerate=30, sub_framerate=15, onvif_port=None,
                       transcode_sub=False, transcode_main=False,
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
-                      static_ip='', netmask='24', gateway=''):
+                      static_ip='', netmask='24', gateway='', uuid=None):
         """Update an existing camera"""
         camera = self.get_camera(camera_id)
         if not camera:
@@ -573,6 +574,9 @@ class CameraManager:
         camera.static_ip = static_ip
         camera.netmask = netmask
         camera.gateway = gateway
+        
+        if uuid:
+            camera.uuid = uuid
         
         print(f"\nUpdated camera: {name}")
         
