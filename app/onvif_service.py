@@ -245,7 +245,7 @@ class ONVIFService:
         <d:ProbeMatches>
             <d:ProbeMatch>
                 <wsa:EndpointReference>
-                    <wsa:Address>urn:uuid:camera-{self.camera.id}-virtual</wsa:Address>
+                    <wsa:Address>urn:uuid:{self.camera.uuid}</wsa:Address>
                 </wsa:EndpointReference>
                 <d:Types>dn:NetworkVideoTransmitter</d:Types>
                 <d:Scopes>onvif://www.onvif.org/type/NetworkVideoTransmitter onvif://www.onvif.org/name/{self.camera.name.replace(' ', '_')}</d:Scopes>

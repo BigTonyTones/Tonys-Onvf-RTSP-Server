@@ -2,6 +2,8 @@
 import threading
 import socket
 import time
+import uuid
+import hashlib
 from .config import MEDIAMTX_PORT
 from .onvif_service import ONVIFService
 from .linux_network import LinuxNetworkManager
@@ -11,6 +13,7 @@ class VirtualONVIFCamera:
     
     def __init__(self, config):
         self.id = config['id']
+        self.uuid = config.get('uuid') or str(uuid.uuid4())
         self.name = config['name']
         self.main_stream_url = config['mainStreamUrl']
         self.sub_stream_url = config['subStreamUrl']
@@ -58,9 +61,13 @@ class VirtualONVIFCamera:
         if self.nic_mac and ':' in self.nic_mac:
             return self.nic_mac.lower()
         
-        # Generate a stable MAC based on camera ID if none provided
-        # Use locally administered address range (x2:xx:xx:xx:xx:xx)
-        return f"02:00:00:00:00:{self.id:02x}"
+        # Generate a stable MAC based on camera UUID if none provided
+        # Use hashlib to get a deterministic hash from the UUID
+        h = hashlib.md5(self.uuid.encode()).hexdigest()
+        # Take the first 10 characters for the MAC suffix (5 bytes)
+        # Prefix with 02 to indicate locally administered
+        mac = f"02:{h[0:2]}:{h[2:4]}:{h[4:6]}:{h[6:8]}:{h[8:10]}"
+        return mac.lower()
         
     def start(self):
         """Mark camera as running and start ONVIF service"""
@@ -132,6 +139,7 @@ class VirtualONVIFCamera:
         """Convert to dictionary for API"""
         return {
             'id': self.id,
+            'uuid': self.uuid,
             'name': self.name,
             'mainStreamUrl': self.main_stream_url,
             'subStreamUrl': self.sub_stream_url,
@@ -168,6 +176,7 @@ class VirtualONVIFCamera:
         """Convert to dictionary for config file (excludes runtime status)"""
         return {
             'id': self.id,
+            'uuid': self.uuid,
             'name': self.name,
             'mainStreamUrl': self.main_stream_url,
             'subStreamUrl': self.sub_stream_url,

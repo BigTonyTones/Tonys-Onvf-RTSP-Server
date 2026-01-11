@@ -1344,6 +1344,17 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="form-group">
+                    <label class="form-label">Camera UUID (Unique Identifier)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="form-input" id="cameraUuid" placeholder="Auto-generated" style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="generateNewUuid()" style="padding: 0 15px;">Generate New</button>
+                    </div>
+                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                        Used for WS-Discovery and Serial Number. Changing this will make NVRs see it as a new camera.
+                    </small>
+                </div>
+                
+                <div class="form-group">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="autoStart" style="width: auto; cursor: pointer;">
                         <span class="form-label" style="margin: 0;">Auto-start camera on server startup</span>
@@ -2130,7 +2141,10 @@ def get_web_ui_html(current_settings=None):
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
                             ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
-                            ${{cam.useVirtualNic && cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--text-muted); color: white;">${{cam.nicMac}}</div>` : ''}}
+                            ${{cam.useVirtualNic && cam.nicMac ? `<div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--text-muted); color: white; white-space: nowrap;">${{cam.nicMac}}</div>` : ''}}
+                        </div>
+                        <div style="margin-left: 24px; margin-top: 4px;">
+                            <div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #764ba2; color: white; width: fit-content; white-space: nowrap; font-family: monospace;" title="${{cam.uuid}}">UUID: ${{cam.uuid}}</div>
                         </div>
                     </div>
                     <div class="camera-actions">
@@ -2517,8 +2531,9 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('subFramerate').value = camera.subFramerate || 15;
 
                 
-                // Don't copy ONVIF port (it needs to be unique)
+                // Don't copy ONVIF port or UUID (they need to be unique)
                 document.getElementById('onvifPort').value = ''; 
+                document.getElementById('cameraUuid').value = ''; 
                 document.getElementById('onvifUsername').value = camera.onvifUsername || 'admin';
                 document.getElementById('onvifPassword').value = camera.onvifPassword || 'admin';
                 
@@ -2597,6 +2612,22 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('nicMac').value = mac;
         }}
 
+        function generateNewUuid() {{
+            try {{
+                if (crypto && crypto.randomUUID) {{
+                    document.getElementById('cameraUuid').value = crypto.randomUUID();
+                }} else {{
+                    // Fallback for non-secure contexts (http) or older browsers
+                    document.getElementById('cameraUuid').value = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {{
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    }});
+                }}
+            }} catch (e) {{
+                console.error("UUID generation failed", e);
+            }}
+        }}
+
         function toggleNetworkFields() {{
             const useVnic = document.getElementById('useVirtualNic').checked;
             const fields = document.getElementById('vnic-fields');
@@ -2629,7 +2660,7 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('nicMac').value = '';
             document.getElementById('ipMode').value = 'dhcp';
             document.getElementById('staticIp').value = '';
-            document.getElementById('staticIp').value = '';
+            generateNewUuid();
 
             
             document.getElementById('netmask').value = '24';
@@ -2690,6 +2721,7 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('transcodeSub').checked = camera.transcodeSub || false;
             document.getElementById('transcodeMain').checked = camera.transcodeMain || false;
             document.getElementById('onvifPort').value = camera.onvifPort || '';
+            document.getElementById('cameraUuid').value = camera.uuid || '';
             
             // Populate Network fields
             document.getElementById('useVirtualNic').checked = camera.useVirtualNic || false;
@@ -2771,7 +2803,8 @@ def get_web_ui_html(current_settings=None):
                 ipMode: document.getElementById('ipMode').value,
                 staticIp: document.getElementById('staticIp').value,
                 netmask: document.getElementById('netmask').value,
-                gateway: document.getElementById('gateway').value
+                gateway: document.getElementById('gateway').value,
+                uuid: document.getElementById('cameraUuid').value || null
             }};
             
             // Add ONVIF port if specified
