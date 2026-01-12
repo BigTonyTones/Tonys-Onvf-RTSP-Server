@@ -309,7 +309,7 @@ class FFmpegManager:
         min_version_str = f"{self.MIN_RECOMMENDED_VERSION[0]}.{self.MIN_RECOMMENDED_VERSION[1]}.{self.MIN_RECOMMENDED_VERSION[2]}"
         
         if self.is_version_sufficient(version):
-            print(f"✓ FFmpeg version {version_str} detected (meets requirements)")
+            print(f"FFmpeg version {version_str} detected (meets requirements)")
             return True
         
         # Version is too old
@@ -362,15 +362,15 @@ class FFmpegManager:
                         new_version = self.get_ffmpeg_version("ffmpeg")
                         if new_version:
                             new_version_str = f"{new_version[0]}.{new_version[1]}.{new_version[2]}"
-                            print(f"\n✓ FFmpeg upgraded to version {new_version_str}")
+                            print(f"\nFFmpeg upgraded to version {new_version_str}")
                             print("=" * 60)
                             return self.is_version_sufficient(new_version)
                         else:
-                            print("\n✓ FFmpeg installed successfully")
+                            print("\nFFmpeg installed successfully")
                             print("=" * 60)
                             return True
                     else:
-                        print("\n❌ FFmpeg upgrade failed")
+                        print("\nFFmpeg upgrade failed")
                         print("Please upgrade manually: sudo apt update && sudo apt install -y ffmpeg")
                         print("=" * 60)
                         return False
