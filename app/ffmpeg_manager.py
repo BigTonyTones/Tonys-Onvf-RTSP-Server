@@ -264,6 +264,11 @@ class FFmpegManager:
             return False
         return version >= self.MIN_RECOMMENDED_VERSION
     
+    def get_active_version(self):
+        """Get the version of the ffmpeg binary that would actually be used"""
+        path = self.get_ffmpeg_path()
+        return self.get_ffmpeg_version(path)
+    
     def check_and_prompt_upgrade(self):
         """
         Check FFmpeg version and prompt user to upgrade if needed.
