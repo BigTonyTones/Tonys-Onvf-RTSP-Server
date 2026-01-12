@@ -1110,6 +1110,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn" onclick="restartServer()">Restart Server</button>
                 <button class="btn" onclick="openAboutModal()">About</button>
                 <button class="btn" onclick="openLogsModal()">Logs</button>
+                <button class="btn" style="background: rgba(102, 126, 234, 0.15); border: 1px solid rgba(102, 126, 234, 0.3);" onclick="window.location.href='/diagnostics'">Diagnostics</button>
                 <button class="btn btn-danger" onclick="stopServer()">Stop Server</button>
                 <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
                     <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Low Latency</span>

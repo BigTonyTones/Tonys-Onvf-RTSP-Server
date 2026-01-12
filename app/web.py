@@ -10,6 +10,7 @@ from flask import Flask, jsonify, request, session, redirect, url_for, make_resp
 from flask_cors import CORS
 
 from .web_template import get_web_ui_html
+from .diagnostics_template import get_diagnostics_html
 
 from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
@@ -906,5 +907,184 @@ def create_web_app(manager):
     def get_update_status():
         """Get current update progress"""
         return jsonify(update_progress)
+    
+    # --- Diagnostics Endpoints ---
+    
+    @app.route('/diagnostics')
+    @login_required
+    def diagnostics():
+        """Serve the diagnostic tools page"""
+        return get_diagnostics_html()
+        
+    @app.route('/api/diagnostics/ping', methods=['POST'])
+    @login_required
+    def diag_ping():
+        """Run ping test"""
+        data = request.json
+        host = data.get('host')
+        count = min(10, data.get('count', 4))
+        
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+            
+        try:
+            # -n on Windows, -c on Linux
+            param = '-n' if sys.platform.startswith('win') else '-c'
+            cmd = ['ping', param, str(count), host]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            return jsonify({
+                'success': True, 
+                'output': result.stdout if result.returncode == 0 else result.stderr
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/traceroute', methods=['POST'])
+    @login_required
+    def diag_traceroute():
+        """Run traceroute test"""
+        data = request.json
+        host = data.get('host')
+        
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+            
+        try:
+            # tracert on Windows, traceroute on Linux
+            cmd_name = 'tracert' if sys.platform.startswith('win') else 'traceroute'
+            cmd = [cmd_name, host]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            return jsonify({
+                'success': True, 
+                'output': result.stdout if result.returncode == 0 else result.stderr
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/port-check', methods=['POST'])
+    @login_required
+    def diag_port_check():
+        """Check if a specific port is open"""
+        import socket
+        data = request.json
+        host = data.get('host')
+        port = int(data.get('port', 554))
+        
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+            
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            return jsonify({'success': True, 'open': result == 0})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/stream-test', methods=['POST'])
+    @login_required
+    def diag_stream_test():
+        """Test RTSP stream with ffprobe"""
+        data = request.json
+        url = data.get('url')
+        
+        if not url:
+            return jsonify({'success': False, 'error': 'URL required'}), 400
+            
+        try:
+            ffmpeg_mgr = FFmpegManager()
+            ffprobe_exe = ffmpeg_mgr.get_ffprobe_path()
+            
+            if not ffprobe_exe:
+                return jsonify({'success': False, 'error': 'FFprobe not found'}), 404
+                
+            cmd = [
+                ffprobe_exe, 
+                '-v', 'error',
+                '-rtsp_transport', 'tcp',
+                '-select_streams', 'v:0',
+                '-show_entries', 'stream=width,height,r_frame_rate,codec_name',
+                '-of', 'json',
+                url
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            if result.returncode != 0:
+                return jsonify({'success': False, 'error': result.stderr or 'Connection failed'}), 400
+                
+            import json as json_mod
+            info = json_mod.loads(result.stdout)
+            if 'streams' in info and len(info['streams']) > 0:
+                s = info['streams'][0]
+                return jsonify({
+                    'success': True,
+                    'width': s.get('width'),
+                    'height': s.get('height'),
+                    'framerate': s.get('r_frame_rate'),
+                    'codec': s.get('codec_name')
+                })
+            return jsonify({'success': False, 'error': 'No video stream found'}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/ffmpeg-info')
+    @login_required
+    def diag_ffmpeg_info():
+        """Get full FFmpeg version info"""
+        try:
+            ffmpeg_mgr = FFmpegManager()
+            ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
+            
+            if not ffmpeg_exe:
+                return jsonify({'success': False, 'error': 'FFmpeg not found'}), 404
+            
+            result = subprocess.run([ffmpeg_exe, '-version'], capture_output=True, text=True)
+            return jsonify({
+                'success': True,
+                'version': result.stdout.split('\n')[0],
+                'full_output': result.stdout
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/system-info')
+    @login_required
+    def diag_system_info():
+        """Get detailed system information"""
+        try:
+            import platform
+            
+            # Fetch versions
+            ffmpeg_mgr = FFmpegManager()
+            # Try to find ffmpeg path
+            ffmpeg_path = None
+            local_ffmpeg = os.path.join(ffmpeg_mgr.ffmpeg_dir, ffmpeg_mgr.ffmpeg_executable)
+            if os.path.exists(local_ffmpeg):
+                ffmpeg_path = local_ffmpeg
+            else:
+                ffmpeg_path = shutil.which("ffmpeg")
+            
+            ff_ver = ffmpeg_mgr.get_ffmpeg_version(ffmpeg_path) if ffmpeg_path else None
+            ff_ver_str = f"{ff_ver[0]}.{ff_ver[1]}.{ff_ver[2]}" if ff_ver else "Unknown"
+            
+            mm_ver = manager.mediamtx._get_latest_version()
+            
+            mem = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            return jsonify({
+                'success': True,
+                'platform': f"{platform.system()} {platform.release()} ({platform.machine()})",
+                'python_version': sys.version.split()[0],
+                'cpu_count': psutil.cpu_count(),
+                'total_memory': round(mem.total / (1024**3), 2),
+                'available_memory': round(mem.available / (1024**3), 2),
+                'disk_usage': disk.percent,
+                'mediamtx_version': mm_ver,
+                'ffmpeg_version': ff_ver_str
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
     
     return app
