@@ -4,12 +4,17 @@ import subprocess
 import zipfile
 import shutil
 import requests
+import re
 
 class FFmpegManager:
     """Manages FFmpeg/FFprobe installation"""
     
+    # Minimum recommended version for full feature support
+    MIN_RECOMMENDED_VERSION = (4, 0, 0)  # FFmpeg 4.0.0
+    
     def __init__(self):
         self.ffprobe_executable = self._get_ffprobe_name()
+        self.ffmpeg_executable = "ffmpeg.exe" if platform.system().lower() == "windows" else "ffmpeg"
         self.ffmpeg_dir = "ffmpeg"
         
     def _get_ffprobe_name(self):
@@ -219,6 +224,173 @@ class FFmpegManager:
                     
         print("  No supported package manager found or installation failed.")
         return False
+
+    def get_ffmpeg_version(self, ffmpeg_path="ffmpeg"):
+        """
+        Get FFmpeg version as a tuple (major, minor, patch)
+        Returns None if FFmpeg is not installed or version cannot be determined
+        """
+        try:
+            result = subprocess.run(
+                [ffmpeg_path, "-version"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode != 0:
+                return None
+            
+            # Parse version from output like "ffmpeg version 4.4.2-0ubuntu0.22.04.1"
+            # or "ffmpeg version 7.1.3-0+deb13u1+rpt1"
+            version_line = result.stdout.split('\n')[0]
+            
+            # Extract version number using regex
+            match = re.search(r'ffmpeg version (\d+)\.(\d+)\.?(\d*)', version_line)
+            if match:
+                major = int(match.group(1))
+                minor = int(match.group(2))
+                patch = int(match.group(3)) if match.group(3) else 0
+                return (major, minor, patch)
+            
+            return None
+            
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+            return None
+    
+    def is_version_sufficient(self, version):
+        """Check if version meets minimum requirements"""
+        if version is None:
+            return False
+        return version >= self.MIN_RECOMMENDED_VERSION
+    
+    def check_and_prompt_upgrade(self):
+        """
+        Check FFmpeg version and prompt user to upgrade if needed.
+        Returns True if FFmpeg is sufficient, False otherwise.
+        """
+        print("\nChecking FFmpeg installation...")
+        
+        # Try to find ffmpeg
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            # Try local directory
+            local_ffmpeg = os.path.join(self.ffmpeg_dir, self.ffmpeg_executable)
+            if os.path.exists(local_ffmpeg):
+                ffmpeg_path = local_ffmpeg
+        
+        version = self.get_ffmpeg_version(ffmpeg_path) if ffmpeg_path else None
+        
+        if version is None:
+            print("=" * 60)
+            print("WARNING: FFmpeg not found or version cannot be determined!")
+            print("=" * 60)
+            print("FFmpeg is required for transcoding features.")
+            print("Please install FFmpeg manually:")
+            print("")
+            
+            system = platform.system().lower()
+            if system == "linux":
+                print("  sudo apt update && sudo apt install -y ffmpeg")
+            elif system == "darwin":
+                print("  brew install ffmpeg")
+            elif system == "windows":
+                print("  Download from: https://ffmpeg.org/download.html")
+            
+            print("=" * 60)
+            return False
+        
+        version_str = f"{version[0]}.{version[1]}.{version[2]}"
+        min_version_str = f"{self.MIN_RECOMMENDED_VERSION[0]}.{self.MIN_RECOMMENDED_VERSION[1]}.{self.MIN_RECOMMENDED_VERSION[2]}"
+        
+        if self.is_version_sufficient(version):
+            print(f"✓ FFmpeg version {version_str} detected (meets requirements)")
+            return True
+        
+        # Version is too old
+        print("=" * 60)
+        print("WARNING: FFmpeg version is outdated!")
+        print("=" * 60)
+        print(f"Current version:  {version_str}")
+        print(f"Recommended:      {min_version_str} or higher")
+        print("")
+        print("Older FFmpeg versions may not support all features:")
+        print("  - Advanced timeout options (-timeout)")
+        print("  - Reconnect functionality")
+        print("  - Hardware encoding")
+        print("")
+        
+        system = platform.system().lower()
+        
+        if system == "linux":
+            print("Would you like to upgrade FFmpeg now?")
+            print("This will run: sudo apt update && sudo apt install -y ffmpeg")
+            print("")
+            
+            try:
+                response = input("Upgrade FFmpeg? (y/n): ").strip().lower()
+                if response in ['y', 'yes']:
+                    print("\nUpgrading FFmpeg...")
+                    print("-" * 60)
+                    
+                    # Check if running as root
+                    try:
+                        is_root = os.geteuid() == 0
+                    except AttributeError:
+                        is_root = False
+                    
+                    prefix = [] if is_root else ["sudo"]
+                    
+                    # Update package list
+                    print("Updating package list...")
+                    subprocess.run(prefix + ["apt", "update"], check=False)
+                    
+                    # Install/upgrade FFmpeg
+                    print("\nInstalling/upgrading FFmpeg...")
+                    result = subprocess.run(
+                        prefix + ["apt", "install", "-y", "ffmpeg"],
+                        check=False
+                    )
+                    
+                    if result.returncode == 0:
+                        # Check new version
+                        new_version = self.get_ffmpeg_version("ffmpeg")
+                        if new_version:
+                            new_version_str = f"{new_version[0]}.{new_version[1]}.{new_version[2]}"
+                            print(f"\n✓ FFmpeg upgraded to version {new_version_str}")
+                            print("=" * 60)
+                            return self.is_version_sufficient(new_version)
+                        else:
+                            print("\n✓ FFmpeg installed successfully")
+                            print("=" * 60)
+                            return True
+                    else:
+                        print("\n❌ FFmpeg upgrade failed")
+                        print("Please upgrade manually: sudo apt update && sudo apt install -y ffmpeg")
+                        print("=" * 60)
+                        return False
+                else:
+                    print("\nSkipping FFmpeg upgrade.")
+                    print("You can upgrade later with: sudo apt update && sudo apt install -y ffmpeg")
+                    print("=" * 60)
+                    return False
+                    
+            except (EOFError, KeyboardInterrupt):
+                print("\n\nSkipping FFmpeg upgrade.")
+                print("=" * 60)
+                return False
+                
+        else:
+            # Windows or macOS
+            print("Please upgrade FFmpeg manually:")
+            print("")
+            if system == "darwin":
+                print("  brew upgrade ffmpeg")
+            elif system == "windows":
+                print("  Download latest version from: https://ffmpeg.org/download.html")
+            
+            print("=" * 60)
+            return False
 
     def get_ffmpeg_path(self):
         """Get the path to ffmpeg"""

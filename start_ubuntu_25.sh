@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "============================================================"
-echo -e "${YELLOW}Tonys Onvif-RTSP Server v5.7.1 - Ubuntu Development Setup${NC}"
+echo -e "${YELLOW}Tonys Onvif-RTSP Server v5.8 - Ubuntu Development Setup${NC}"
 echo "============================================================"
 
 # 1. Install system-level Python dependencies (only if missing)
@@ -96,7 +96,7 @@ ulimit -n 65535
 # 7. Start the application with auto-restart support
 echo ""
 echo "============================================================"
-echo "Starting Tonys Onvif Server v5.7..."
+echo "Starting Tonys Onvif Server v5.8..."
 echo "============================================================"
 
 # Loop to handle restart requests (exit code 42)

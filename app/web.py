@@ -583,6 +583,42 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 400
     
+    @app.route('/api/system/versions', methods=['GET'])
+    @login_required
+    def get_system_versions():
+        """Get MediaMTX and FFmpeg versions"""
+        try:
+            from .ffmpeg_manager import FFmpegManager
+            import shutil
+            
+            # Get MediaMTX version
+            mediamtx_version = manager.mediamtx._get_latest_version()
+            
+            # Get FFmpeg version - check local directory first
+            ffmpeg_mgr = FFmpegManager()
+            
+            # Try to find ffmpeg (local directory first, then system PATH)
+            ffmpeg_path = None
+            local_ffmpeg = os.path.join(ffmpeg_mgr.ffmpeg_dir, ffmpeg_mgr.ffmpeg_executable)
+            if os.path.exists(local_ffmpeg):
+                ffmpeg_path = local_ffmpeg
+            else:
+                ffmpeg_path = shutil.which("ffmpeg")
+            
+            ffmpeg_version_tuple = ffmpeg_mgr.get_ffmpeg_version(ffmpeg_path) if ffmpeg_path else None
+            
+            if ffmpeg_version_tuple:
+                ffmpeg_version = f"{ffmpeg_version_tuple[0]}.{ffmpeg_version_tuple[1]}.{ffmpeg_version_tuple[2]}"
+            else:
+                ffmpeg_version = "Not installed"
+            
+            return jsonify({
+                'mediamtx': mediamtx_version,
+                'ffmpeg': ffmpeg_version
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
     @app.route('/api/config/backup', methods=['GET'])
     @login_required
     def backup_config():

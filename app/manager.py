@@ -169,6 +169,50 @@ class CameraManager:
                 'outputFramerate': 5
             }]
             self.save_config()
+        
+        # Migrate old FFmpeg options if needed
+        self._migrate_ffmpeg_options()
+    
+    def _migrate_ffmpeg_options(self):
+        """Migrate old FFmpeg options to new format (v5.8+)"""
+        import re
+        
+        # Check if advanced settings have old reconnect options
+        if 'ffmpeg' in self.advanced_settings:
+            input_args = self.advanced_settings['ffmpeg'].get('inputArgs', '')
+            
+            # Check if it contains old -reconnect options
+            if '-reconnect' in input_args or '-stimeout' in input_args:
+                print("  Migrating FFmpeg options to v5.8 format...")
+                
+                # Remove all reconnect options and fix stimeout -> timeout
+                new_input_args = input_args
+                
+                # Remove reconnect options
+                new_input_args = re.sub(r'-reconnect\s+\d+', '', new_input_args)
+                new_input_args = re.sub(r'-reconnect_at_eof\s+\d+', '', new_input_args)
+                new_input_args = re.sub(r'-reconnect_streamed\s+\d+', '', new_input_args)
+                new_input_args = re.sub(r'-reconnect_delay_max\s+\d+', '', new_input_args)
+                
+                # Fix stimeout -> timeout
+                new_input_args = re.sub(r'-stimeout\s+(\d+)', r'-timeout \1', new_input_args)
+                
+                # Clean up extra spaces
+                new_input_args = ' '.join(new_input_args.split())
+                
+                # Ensure we have timeout option
+                if '-timeout' not in new_input_args:
+                    new_input_args += ' -timeout 10000000'
+                
+                # Update the settings
+                self.advanced_settings['ffmpeg']['inputArgs'] = new_input_args
+                
+                print(f"  Old: {input_args}")
+                print(f"  New: {new_input_args}")
+                
+                # Save the migrated config
+                self.save_config()
+                print("  ✓ FFmpeg options migrated successfully")
             
     def save_config(self):
         """Save configuration to file atomically"""

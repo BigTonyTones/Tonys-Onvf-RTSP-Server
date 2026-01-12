@@ -1722,6 +1722,25 @@ def get_web_ui_html(current_settings=None):
                     <p><strong style="color: var(--text-title);">2. Stream Rebroadcasting and Performance Optimization:</strong><br>
                     The application also enables reliable rebroadcasting of a single RTSP stream. Many physical cameras struggle to handle multiple concurrent connections, often resulting in lag or instability. This server functions as a high-performance proxy, efficiently managing multiple viewers while minimizing load on the original camera hardware.</p>
                 </div>
+                
+                <!-- System Information -->
+                <div style="background: rgba(102, 126, 234, 0.08); padding: 15px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3); margin-bottom: 20px;">
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-info-circle" style="color: #667eea;"></i>
+                        <span>System Information</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">MediaMTX Version</div>
+                            <div id="about-mediamtx-version" style="color: var(--text-title); font-weight: 600; font-family: monospace;">Loading...</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">FFmpeg Version</div>
+                            <div id="about-ffmpeg-version" style="color: var(--text-title); font-weight: 600; font-family: monospace;">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
                     <div style="display: flex; gap: 15px;">
                         <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" class="coffee-link" style="background: #24292e; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
@@ -2175,13 +2194,19 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="info-section">
-                    <div class="info-label">RTSP Main Stream (Full Quality)</div>
+                    <div class="info-label">
+                        RTSP Main Stream (Full Quality)
+                        ${{cam.transcodeMain ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Transcoded</span>' : ''}}
+                    </div>
                     <div class="info-value">
                         rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main
                         <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_main', this)">Copy</button>
                     </div>
                     
-                    <div class="info-label">RTSP Sub Stream (Lower Quality)</div>
+                    <div class="info-label">
+                        RTSP Sub Stream (Lower Quality)
+                        ${{cam.transcodeSub ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Transcoded</span>' : ''}}
+                    </div>
                     <div class="info-value">
                         rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub
                         <button class="copy-btn" onclick="copyToClipboard('rtsp://${{settings.rtspAuthEnabled ? encodeURIComponent(settings.globalUsername || 'admin') + ':' + encodeURIComponent(settings.globalPassword || 'admin') + '@' : ''}}${{displayIp}}:${{settings.rtspPort || 8554}}/${{cam.pathName}}_sub', this)">Copy</button>
@@ -3157,6 +3182,8 @@ def get_web_ui_html(current_settings=None):
         }}
         
         function openAboutModal() {{
+            // Fetch system versions
+            fetchSystemVersions();
             document.getElementById('about-modal').classList.add('active');
         }}
         
@@ -3178,6 +3205,24 @@ def get_web_ui_html(current_settings=None):
             }}
             
             document.getElementById('settings-modal').classList.add('active');
+        }}
+        
+        async function fetchSystemVersions() {{
+            try {{
+                const response = await fetch('/api/system/versions');
+                if (response.ok) {{
+                    const data = await response.json();
+                    document.getElementById('about-mediamtx-version').textContent = data.mediamtx || 'Unknown';
+                    document.getElementById('about-ffmpeg-version').textContent = data.ffmpeg || 'Not installed';
+                }} else {{
+                    document.getElementById('about-mediamtx-version').textContent = 'Error';
+                    document.getElementById('about-ffmpeg-version').textContent = 'Error';
+                }}
+            }} catch (error) {{
+                console.error('Failed to fetch system versions:', error);
+                document.getElementById('about-mediamtx-version').textContent = 'Error';
+                document.getElementById('about-ffmpeg-version').textContent = 'Error';
+            }}
         }}
         
         function closeSettingsModal() {{

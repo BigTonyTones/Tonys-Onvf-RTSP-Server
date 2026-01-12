@@ -43,6 +43,11 @@ def main():
     
     manager = CameraManager()
     
+    # Check FFmpeg version and prompt upgrade if needed
+    from .ffmpeg_manager import FFmpegManager
+    ffmpeg_mgr = FFmpegManager()
+    ffmpeg_mgr.check_and_prompt_upgrade()
+    
     # Check for MediaMTX updates BEFORE starting cameras to ensure prompt is visible
     manager.mediamtx.download_mediamtx()
     

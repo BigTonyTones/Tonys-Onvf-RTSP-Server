@@ -278,8 +278,9 @@ class MediaMTXManager:
         # Get advanced ffmpeg args
         ff_advanced = advanced_settings.get('ffmpeg', {}) if advanced_settings else {}
         ff_global = ff_advanced.get('globalArgs', '-hide_banner -loglevel error')
-        # Optimized for stability: added -stimeout (10s) and increased reconnect delay
-        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -stimeout 10000000 -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5')
+        # Optimized for stability: using -timeout (correct option name, not -stimeout)
+        # Timeout is in microseconds: 10000000 = 10 seconds
+        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -timeout 10000000')
         ff_process = ff_advanced.get('processArgs', '-c:v libx264 -preset ultrafast -tune zerolatency -g 30')
         
         
