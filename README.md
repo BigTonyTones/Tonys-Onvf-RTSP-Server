@@ -1,4 +1,4 @@
-# Tonys Onvif-RTSP Server
+# Tonys Onvif-RTSP Proxy Server
 
 Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a proxy, giving each of your cameras a unique identity (IP/MAC) so they work correctly with Protect's requirements.
 
