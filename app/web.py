@@ -595,18 +595,9 @@ def create_web_app(manager):
             # Get MediaMTX version
             mediamtx_version = manager.mediamtx._get_latest_version()
             
-            # Get FFmpeg version - check local directory first
+            # Get FFmpeg version - use the same logic as the rest of the app
             ffmpeg_mgr = FFmpegManager()
-            
-            # Try to find ffmpeg (local directory first, then system PATH)
-            ffmpeg_path = None
-            local_ffmpeg = os.path.join(ffmpeg_mgr.ffmpeg_dir, ffmpeg_mgr.ffmpeg_executable)
-            if os.path.exists(local_ffmpeg):
-                ffmpeg_path = local_ffmpeg
-            else:
-                ffmpeg_path = shutil.which("ffmpeg")
-            
-            ffmpeg_version_tuple = ffmpeg_mgr.get_ffmpeg_version(ffmpeg_path) if ffmpeg_path else None
+            ffmpeg_version_tuple = ffmpeg_mgr.get_active_version()
             
             if ffmpeg_version_tuple:
                 ffmpeg_version = f"{ffmpeg_version_tuple[0]}.{ffmpeg_version_tuple[1]}.{ffmpeg_version_tuple[2]}"
@@ -1072,15 +1063,7 @@ def create_web_app(manager):
             
             # Fetch versions
             ffmpeg_mgr = FFmpegManager()
-            # Try to find ffmpeg path
-            ffmpeg_path = None
-            local_ffmpeg = os.path.join(ffmpeg_mgr.ffmpeg_dir, ffmpeg_mgr.ffmpeg_executable)
-            if os.path.exists(local_ffmpeg):
-                ffmpeg_path = local_ffmpeg
-            else:
-                ffmpeg_path = shutil.which("ffmpeg")
-            
-            ff_ver = ffmpeg_mgr.get_ffmpeg_version(ffmpeg_path) if ffmpeg_path else None
+            ff_ver = ffmpeg_mgr.get_active_version()
             ff_ver_str = f"{ff_ver[0]}.{ff_ver[1]}.{ff_ver[2]}" if ff_ver else "Unknown"
             
             mm_ver = manager.mediamtx._get_latest_version()
