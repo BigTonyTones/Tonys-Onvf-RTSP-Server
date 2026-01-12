@@ -10,8 +10,25 @@ def get_diagnostics_html():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diagnostics - Tonys Onvif Server</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --bg-color: #282a36;
+            --sidebar-bg: #1e1f29;
+            --card-bg: #343746;
+            --header-bg: #1e1f29;
+            --text-main: #f8f8f2;
+            --text-muted: #6272a4;
+            --accent-purple: #bd93f9;
+            --accent-pink: #ff79c6;
+            --accent-cyan: #8be9fd;
+            --accent-green: #50fa7b;
+            --accent-orange: #ffb86c;
+            --accent-red: #ff5555;
+            --border-color: #44475a;
+            --input-bg: #282a36;
+            --console-bg: #191a21;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -20,202 +37,232 @@ def get_diagnostics_html():
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px 30px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            background: var(--header-bg);
+            padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
         
         .header h1 {
-            color: #667eea;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            color: var(--accent-purple);
+            font-size: 20px;
+            font-weight: 700;
         }
         
-        .back-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+        .header-actions {
             display: flex;
+            gap: 12px;
             align-items: center;
-            gap: 8px;
+        }
+
+        .back-btn {
+            background: var(--accent-purple);
+            color: #282a36;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
             transition: all 0.3s;
         }
         
         .back-btn:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
+            background: var(--accent-pink);
+            transform: translateY(-1px);
+        }
+
+        .clear-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .clear-btn:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
         }
         
-        .tools-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 20px;
-        }
-        
-        .tool-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tool-header {
+        .main-layout {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
+            flex: 1;
+            overflow: hidden;
         }
         
-        .tool-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .sidebar {
+            width: 400px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 0;
+            background: var(--console-bg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tool-section {
+            background: var(--card-bg);
             border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 18px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
         }
-        
+
         .tool-title {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: 700;
-            color: #2d3748;
+            color: var(--accent-purple);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
         
         .input-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-weight: 600;
-            color: #4a5568;
-            font-size: 13px;
+            color: var(--accent-cyan);
+            font-size: 12px;
         }
         
         .input-group input,
         .input-group select {
             width: 100%;
-            padding: 10px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-main);
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.2s;
         }
         
-        .input-group input:focus,
-        .input-group select:focus {
+        .input-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.1);
         }
         
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--accent-purple) 0%, #a277e3 100%);
+            color: #282a36;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 10px 20px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             width: 100%;
-            transition: all 0.3s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
         }
         
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            filter: brightness(1.1);
+            transform: translateY(-1px);
         }
         
+        .btn:active {
+            transform: translateY(0);
+        }
+
         .btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
         
-        .output-box {
-            background: #1a202c;
-            color: #e6f1ff;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 12px;
+        .output-console {
+            flex: 1;
+            padding: 25px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
             line-height: 1.6;
-            max-height: 400px;
             overflow-y: auto;
-            margin-top: 15px;
-            white-space: pre-wrap;
+            color: #f8f8f2;
             word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .output-console::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .output-console::-webkit-scrollbar-track {
+            background: var(--console-bg);
+        }
+
+        .output-console::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 5px;
+        }
+
+        .output-console::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
         
-        .output-box:empty::before {
-            content: 'Output will appear here...';
-            color: #718096;
+        .log-entry {
+            margin-bottom: 4px;
+            animation: fadeIn 0.2s ease-out;
         }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(5px); }
+            to { opacity: 1; transform: translateX(0); }
         }
-        
-        .status-success {
-            background: #48bb78;
-            color: white;
+
+        .log-timestamp {
+            color: var(--text-muted);
+            margin-right: 10px;
+            font-size: 12px;
         }
-        
-        .status-error {
-            background: #f56565;
-            color: white;
-        }
-        
-        .status-warning {
-            background: #ed8936;
-            color: white;
-        }
+
+        .log-info { color: var(--accent-cyan); }
+        .log-success { color: var(--accent-green); }
+        .log-error { color: var(--accent-red); }
+        .log-warn { color: var(--accent-orange); }
+        .log-purple { color: var(--accent-purple); }
         
         .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top: 3px solid white;
+            border: 2px solid rgba(40, 42, 54, 0.3);
+            border-top: 2px solid #282a36;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             animation: spin 1s linear infinite;
+            margin-right: 8px;
         }
         
         @keyframes spin {
@@ -223,166 +270,145 @@ def get_diagnostics_html():
             100% { transform: rotate(360deg); }
         }
         
-        .info-text {
-            font-size: 12px;
-            color: #718096;
-            margin-top: 8px;
+        .placeholder-text {
+            color: var(--text-muted);
+            font-style: italic;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            font-size: 16px;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 15px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>
-                <i class="fas fa-stethoscope"></i>
-                System Diagnostics
-            </h1>
-            <button class="back-btn" onclick="window.location.href='/'">
-                <i class="fas fa-arrow-left"></i>
-                Back to Dashboard
-            </button>
+    <div class="header">
+        <h1>System Diagnostics</h1>
+        <div class="header-actions">
+            <button class="clear-btn" onclick="clearConsole()">Clear Console</button>
+            <button class="back-btn" onclick="window.location.href='/'">Back to Dashboard</button>
         </div>
-        
-        <div class="tools-grid">
+    </div>
+    
+    <div class="main-layout">
+        <div class="sidebar">
             <!-- Ping Tool -->
-            <div class="tool-card">
-                <div class="tool-header">
-                    <div class="tool-icon">
-                        <i class="fas fa-signal"></i>
-                    </div>
-                    <div class="tool-title">Ping Test</div>
-                </div>
+            <div class="tool-section">
+                <div class="tool-title">Ping Tool</div>
                 <div class="input-group">
                     <label>Target Host or IP</label>
-                    <input type="text" id="ping-host" placeholder="192.168.1.100 or example.com">
+                    <input type="text" id="ping-host" placeholder="e.g. 192.168.1.100">
                 </div>
                 <div class="input-group">
                     <label>Count</label>
                     <input type="number" id="ping-count" value="4" min="1" max="10">
                 </div>
-                <button class="btn" onclick="runPing()" id="ping-btn">
-                    <i class="fas fa-play"></i>
-                    Run Ping
-                </button>
-                <div class="output-box" id="ping-output"></div>
+                <button class="btn" onclick="runPing()" id="ping-btn">Run Ping</button>
             </div>
-            
+
             <!-- Traceroute Tool -->
-            <div class="tool-card">
-                <div class="tool-header">
-                    <div class="tool-icon">
-                        <i class="fas fa-route"></i>
-                    </div>
-                    <div class="tool-title">Traceroute</div>
-                </div>
+            <div class="tool-section">
+                <div class="tool-title">Traceroute</div>
                 <div class="input-group">
                     <label>Target Host or IP</label>
-                    <input type="text" id="trace-host" placeholder="192.168.1.100 or example.com">
+                    <input type="text" id="trace-host" placeholder="e.g. example.com">
                 </div>
-                <button class="btn" onclick="runTraceroute()" id="trace-btn">
-                    <i class="fas fa-play"></i>
-                    Run Traceroute
-                </button>
-                <div class="output-box" id="trace-output"></div>
-                <div class="info-text">
-                    <i class="fas fa-info-circle"></i>
-                    Traceroute may take 30-60 seconds to complete
-                </div>
+                <button class="btn" onclick="runTraceroute()" id="trace-btn">Run Traceroute</button>
             </div>
             
             <!-- Stream Test -->
-            <div class="tool-card">
-                <div class="tool-header">
-                    <div class="tool-icon">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <div class="tool-title">RTSP Stream Test</div>
-                </div>
+            <div class="tool-section">
+                <div class="tool-title">RTSP Stream Test</div>
                 <div class="input-group">
                     <label>RTSP URL</label>
-                    <input type="text" id="stream-url" placeholder="rtsp://user:pass@192.168.1.100:554/stream">
+                    <input type="text" id="stream-url" placeholder="rtsp://user:pass@host:port/path">
                 </div>
-                <button class="btn" onclick="testStream()" id="stream-btn">
-                    <i class="fas fa-play"></i>
-                    Test Stream
-                </button>
-                <div class="output-box" id="stream-output"></div>
-                <div class="info-text">
-                    <i class="fas fa-info-circle"></i>
-                    Tests stream connectivity and retrieves video properties
-                </div>
+                <button class="btn" onclick="testStream()" id="stream-btn">Test Connection</button>
             </div>
             
             <!-- Port Scanner -->
-            <div class="tool-card">
-                <div class="tool-header">
-                    <div class="tool-icon">
-                        <i class="fas fa-network-wired"></i>
-                    </div>
-                    <div class="tool-title">Port Check</div>
-                </div>
+            <div class="tool-section">
+                <div class="tool-title">Port Check</div>
                 <div class="input-group">
                     <label>Host</label>
-                    <input type="text" id="port-host" placeholder="192.168.1.100">
+                    <input type="text" id="port-host" placeholder="e.g. 192.168.1.50">
                 </div>
                 <div class="input-group">
                     <label>Port</label>
                     <input type="number" id="port-number" placeholder="554" min="1" max="65535">
                 </div>
-                <button class="btn" onclick="checkPort()" id="port-btn">
-                    <i class="fas fa-play"></i>
-                    Check Port
-                </button>
-                <div class="output-box" id="port-output"></div>
+                <button class="btn" onclick="checkPort()" id="port-btn">Check Port</button>
             </div>
-            
-            <!-- FFmpeg Version -->
-            <div class="tool-card">
-                <div class="tool-header">
-                    <div class="tool-icon">
-                        <i class="fas fa-film"></i>
-                    </div>
-                    <div class="tool-title">FFmpeg Info</div>
-                </div>
-                <button class="btn" onclick="getFFmpegInfo()" id="ffmpeg-btn">
-                    <i class="fas fa-info-circle"></i>
-                    Get FFmpeg Details
-                </button>
-                <div class="output-box" id="ffmpeg-output"></div>
-            </div>
-            
+
             <!-- System Info -->
-            <div class="tool-card">
-                <div class="tool-header">
-                    <div class="tool-icon">
-                        <i class="fas fa-server"></i>
-                    </div>
-                    <div class="tool-title">System Information</div>
+            <div class="tool-section">
+                <div class="tool-title">System Status</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="btn" onclick="getSystemInfo()" id="system-btn">System Info</button>
+                    <button class="btn" onclick="getFFmpegInfo()" id="ffmpeg-btn">FFmpeg Info</button>
                 </div>
-                <button class="btn" onclick="getSystemInfo()" id="system-btn">
-                    <i class="fas fa-info-circle"></i>
-                    Get System Info
-                </button>
-                <div class="output-box" id="system-output"></div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="output-console" id="console">
+                <div class="placeholder-text">Diagnostic output will be displayed here...</div>
             </div>
         </div>
     </div>
     
     <script>
+        const consoleEl = document.getElementById('console');
+        let hasOutput = false;
+
+        function log(message, type = 'info') {
+            if (!hasOutput) {
+                consoleEl.innerHTML = '';
+                hasOutput = true;
+            }
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let colorClass = 'log-info';
+            if (type === 'error') colorClass = 'log-error';
+            if (type === 'success') colorClass = 'log-success';
+            if (type === 'warn') colorClass = 'log-warn';
+            if (type === 'purple') colorClass = 'log-purple';
+
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span><span class="${colorClass}">${message}</span>`;
+            consoleEl.appendChild(entry);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function clearConsole() {
+            consoleEl.innerHTML = '<div class="placeholder-text">Console cleared. Waiting for next tool...</div>';
+            hasOutput = false;
+        }
+
         async function runPing() {
             const host = document.getElementById('ping-host').value;
             const count = document.getElementById('ping-count').value;
-            const output = document.getElementById('ping-output');
             const btn = document.getElementById('ping-btn');
             
             if (!host) {
-                output.textContent = 'Error: Please enter a host or IP address';
+                log('Error: Please enter a target host.', 'error');
                 return;
             }
             
             btn.disabled = true;
+            const originalText = btn.textContent;
             btn.innerHTML = '<div class="spinner"></div> Running...';
-            output.textContent = 'Pinging ' + host + '...\\n';
+            
+            log(`Starting ping request to ${host} (Count: ${count})...`, 'purple');
             
             try {
                 const response = await fetch('/api/diagnostics/ping', {
@@ -392,33 +418,35 @@ def get_diagnostics_html():
                 });
                 
                 const data = await response.json();
-                
                 if (data.success) {
-                    output.textContent = data.output;
+                    log(data.output);
+                    log('Ping completed successfully.', 'success');
                 } else {
-                    output.textContent = 'Error: ' + data.error;
+                    log('Ping failed: ' + data.error, 'error');
                 }
             } catch (error) {
-                output.textContent = 'Error: ' + error.message;
+                log('Connection error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play"></i> Run Ping';
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
             }
         }
         
         async function runTraceroute() {
             const host = document.getElementById('trace-host').value;
-            const output = document.getElementById('trace-output');
             const btn = document.getElementById('trace-btn');
             
             if (!host) {
-                output.textContent = 'Error: Please enter a host or IP address';
+                log('Error: Please enter a target host.', 'error');
                 return;
             }
             
             btn.disabled = true;
+            const originalText = btn.textContent;
             btn.innerHTML = '<div class="spinner"></div> Running...';
-            output.textContent = 'Tracing route to ' + host + '...\\nThis may take up to 60 seconds...\\n';
+            
+            log(`Tracing route to ${host}. Please wait, this may take up to 60 seconds...`, 'purple');
             
             try {
                 const response = await fetch('/api/diagnostics/traceroute', {
@@ -428,33 +456,35 @@ def get_diagnostics_html():
                 });
                 
                 const data = await response.json();
-                
                 if (data.success) {
-                    output.textContent = data.output;
+                    log(data.output);
+                    log('Traceroute completed.', 'success');
                 } else {
-                    output.textContent = 'Error: ' + data.error;
+                    log('Traceroute failed: ' + data.error, 'error');
                 }
             } catch (error) {
-                output.textContent = 'Error: ' + error.message;
+                log('Connection error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play"></i> Run Traceroute';
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
             }
         }
         
         async function testStream() {
             const url = document.getElementById('stream-url').value;
-            const output = document.getElementById('stream-output');
             const btn = document.getElementById('stream-btn');
             
             if (!url) {
-                output.textContent = 'Error: Please enter an RTSP URL';
+                log('Error: Please enter an RTSP URL.', 'error');
                 return;
             }
             
             btn.disabled = true;
+            const originalText = btn.textContent;
             btn.innerHTML = '<div class="spinner"></div> Testing...';
-            output.textContent = 'Testing stream: ' + url + '...\\n';
+            
+            log(`Analyzing stream properties for ${url}...`, 'purple');
             
             try {
                 const response = await fetch('/api/diagnostics/stream-test', {
@@ -464,39 +494,40 @@ def get_diagnostics_html():
                 });
                 
                 const data = await response.json();
-                
                 if (data.success) {
-                    let result = '✓ Stream is accessible\\n\\n';
-                    result += 'Stream Properties:\\n';
-                    result += '  Resolution: ' + data.width + 'x' + data.height + '\\n';
-                    result += '  Framerate: ' + data.framerate + ' fps\\n';
-                    result += '  Codec: ' + data.codec + '\\n';
-                    output.textContent = result;
+                    log('✓ Stream successfully accessed.', 'success');
+                    log(`Properties Detected:`, 'info');
+                    log(`  Resolution: ${data.width}x${data.height}`);
+                    log(`  Framerate:  ${data.framerate} fps`);
+                    log(`  Codec:      ${data.codec}`);
                 } else {
-                    output.textContent = '✗ Stream test failed\\n\\nError: ' + data.error;
+                    log('✗ Stream test failed.', 'error');
+                    log('Error output: ' + data.error, 'error');
                 }
             } catch (error) {
-                output.textContent = 'Error: ' + error.message;
+                log('Connection error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play"></i> Test Stream';
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
             }
         }
         
         async function checkPort() {
             const host = document.getElementById('port-host').value;
             const port = document.getElementById('port-number').value;
-            const output = document.getElementById('port-output');
             const btn = document.getElementById('port-btn');
             
             if (!host || !port) {
-                output.textContent = 'Error: Please enter both host and port';
+                log('Error: Host and port are required.', 'error');
                 return;
             }
             
             btn.disabled = true;
+            const originalText = btn.textContent;
             btn.innerHTML = '<div class="spinner"></div> Checking...';
-            output.textContent = 'Checking ' + host + ':' + port + '...\\n';
+            
+            log(`Checking connectivity to ${host}:${port}...`, 'purple');
             
             try {
                 const response = await fetch('/api/diagnostics/port-check', {
@@ -506,82 +537,82 @@ def get_diagnostics_html():
                 });
                 
                 const data = await response.json();
-                
                 if (data.success) {
                     if (data.open) {
-                        output.textContent = '✓ Port ' + port + ' is OPEN on ' + host;
+                        log(`✓ Port ${port} is OPEN on ${host}.`, 'success');
                     } else {
-                        output.textContent = '✗ Port ' + port + ' is CLOSED on ' + host;
+                        log(`✗ Port ${port} is CLOSED or restricted on ${host}.`, 'error');
                     }
                 } else {
-                    output.textContent = 'Error: ' + data.error;
+                    log('Error performing check: ' + data.error, 'error');
                 }
             } catch (error) {
-                output.textContent = 'Error: ' + error.message;
+                log('Connection error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play"></i> Check Port';
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
             }
         }
         
         async function getFFmpegInfo() {
-            const output = document.getElementById('ffmpeg-output');
             const btn = document.getElementById('ffmpeg-btn');
-            
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Loading...';
-            output.textContent = 'Retrieving FFmpeg information...\\n';
+            const originalText = btn.textContent;
+            btn.innerHTML = '<div class="spinner"></div> ...';
+            
+            log('Retrieving FFmpeg environment details...', 'purple');
             
             try {
                 const response = await fetch('/api/diagnostics/ffmpeg-info');
                 const data = await response.json();
                 
                 if (data.success) {
-                    let result = 'FFmpeg Version: ' + data.version + '\\n\\n';
-                    result += 'Full Output:\\n' + data.full_output;
-                    output.textContent = result;
+                    log(`Active Version: ${data.version}`, 'info');
+                    log('-- Full Output --');
+                    log(data.full_output);
                 } else {
-                    output.textContent = 'Error: ' + data.error;
+                    log('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                output.textContent = 'Error: ' + error.message;
+                log('Connection error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-info-circle"></i> Get FFmpeg Details';
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
             }
         }
         
         async function getSystemInfo() {
-            const output = document.getElementById('system-output');
             const btn = document.getElementById('system-btn');
-            
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Loading...';
-            output.textContent = 'Retrieving system information...\\n';
+            const originalText = btn.textContent;
+            btn.innerHTML = '<div class="spinner"></div> ...';
+            
+            log('Gathering system health and hardware metrics...', 'purple');
             
             try {
                 const response = await fetch('/api/diagnostics/system-info');
                 const data = await response.json();
                 
                 if (data.success) {
-                    let result = 'System Information:\\n\\n';
-                    result += 'Platform: ' + data.platform + '\\n';
-                    result += 'Python Version: ' + data.python_version + '\\n';
-                    result += 'CPU Cores: ' + data.cpu_count + '\\n';
-                    result += 'Total Memory: ' + data.total_memory + ' GB\\n';
-                    result += 'Available Memory: ' + data.available_memory + ' GB\\n';
-                    result += 'Disk Usage: ' + data.disk_usage + '%\\n';
-                    result += '\\nMediaMTX Version: ' + data.mediamtx_version + '\\n';
-                    result += 'FFmpeg Version: ' + data.ffmpeg_version + '\\n';
-                    output.textContent = result;
+                    log(`System Info:`, 'info');
+                    log(`  OS Platform:      ${data.platform}`);
+                    log(`  Python Version:   ${data.python_version}`);
+                    log(`  CPU Cores:        ${data.cpu_count}`);
+                    log(`  Memory Usage:     ${data.available_memory}GB available / ${data.total_memory}GB total`);
+                    log(`  Disk Usage:       ${data.disk_usage}%`);
+                    log(`  MediaMTX Version: ${data.mediamtx_version}`, 'purple');
+                    log(`  FFmpeg Version:   ${data.ffmpeg_version}`, 'purple');
                 } else {
-                    output.textContent = 'Error: ' + data.error;
+                    log('Error: ' + data.error, 'error');
                 }
             } catch (error) {
-                output.textContent = 'Error: ' + error.message;
+                log('Connection error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-info-circle"></i> Get System Info';
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
             }
         }
     </script>
