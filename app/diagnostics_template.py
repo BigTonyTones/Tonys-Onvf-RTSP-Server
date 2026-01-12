@@ -167,7 +167,8 @@ def get_diagnostics_html():
             transition: all 0.2s;
         }
         
-        .input-group input:focus {
+        .input-group input:focus,
+        .input-group select:focus {
             outline: none;
             border-color: var(--accent-purple);
             box-shadow: 0 0 0 2px rgba(189, 147, 249, 0.1);
@@ -326,9 +327,37 @@ def get_diagnostics_html():
             <!-- Stream Test -->
             <div class="tool-section">
                 <div class="tool-title">RTSP Stream Test</div>
+                
                 <div class="input-group">
-                    <label>RTSP URL</label>
-                    <input type="text" id="stream-url" placeholder="rtsp://user:pass@host:port/path">
+                    <label>Quick Select Camera</label>
+                    <select id="camera-select" onchange="handleCameraSelect()">
+                        <option value="">- Manual Input -</option>
+                    </select>
+                </div>
+
+                <div class="input-group" id="stream-type-group" style="display: none;">
+                    <label>Stream Type</label>
+                    <select id="stream-type" onchange="handleCameraSelect()">
+                        <option value="main">Main Stream</option>
+                        <option value="sub">Sub Stream</option>
+                    </select>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="input-group">
+                    <label>Host/IP & Path</label>
+                    <input type="text" id="stream-host" placeholder="192.168.1.100:554/stream">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="stream-user" placeholder="admin">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="stream-pass" placeholder="password">
+                    </div>
                 </div>
                 <button class="btn" onclick="testStream()" id="stream-btn">Test Connection</button>
             </div>
@@ -367,6 +396,7 @@ def get_diagnostics_html():
     <script>
         const consoleEl = document.getElementById('console');
         let hasOutput = false;
+        let camerasData = [];
 
         function log(message, type = 'info') {
             if (!hasOutput) {
@@ -393,6 +423,61 @@ def get_diagnostics_html():
             consoleEl.innerHTML = '<div class="placeholder-text">Console cleared. Waiting for next tool...</div>';
             hasOutput = false;
         }
+
+        // Camera loading and handling
+        async function loadCameras() {
+            try {
+                const response = await fetch('/api/cameras');
+                camerasData = await response.json();
+                const select = document.getElementById('camera-select');
+                
+                camerasData.forEach(cam => {
+                    const opt = document.createElement('option');
+                    opt.value = cam.id;
+                    opt.textContent = cam.name;
+                    select.appendChild(opt);
+                });
+                
+                if (camerasData.length > 0) {
+                    log(`Loaded ${camerasData.length} existing cameras for quick selection.`, 'info');
+                }
+            } catch (err) {
+                console.error('Failed to load cameras:', err);
+            }
+        }
+
+        function handleCameraSelect() {
+            const select = document.getElementById('camera-select');
+            const typeGroup = document.getElementById('stream-type-group');
+            const typeSelect = document.getElementById('stream-type');
+            
+            if (!select.value) {
+                typeGroup.style.display = 'none';
+                return;
+            }
+
+            typeGroup.style.display = 'block';
+            const camera = camerasData.find(c => c.id == select.value);
+            if (camera) {
+                const isSub = typeSelect.value === 'sub';
+                const fullUrl = isSub ? camera.subStreamUrl : camera.mainStreamUrl;
+                
+                // Extract Host:Port/Path (strip rtsp:// and user:pass@ if present)
+                let hostPath = fullUrl.replace(/^rtsp:\/\//i, '');
+                if (hostPath.includes('@')) {
+                    hostPath = hostPath.split('@')[1];
+                }
+                
+                document.getElementById('stream-host').value = hostPath;
+                document.getElementById('stream-user').value = camera.username || '';
+                document.getElementById('stream-pass').value = camera.password || '';
+                
+                log(`Selected Camera: ${camera.name} (${typeSelect.value} stream)`, 'purple');
+            }
+        }
+
+        // Initialize
+        loadCameras();
 
         async function runPing() {
             const host = document.getElementById('ping-host').value;
@@ -472,34 +557,83 @@ def get_diagnostics_html():
         }
         
         async function testStream() {
-            const url = document.getElementById('stream-url').value;
+            const host = document.getElementById('stream-host').value;
+            const user = document.getElementById('stream-user').value;
+            const pass = document.getElementById('stream-pass').value;
             const btn = document.getElementById('stream-btn');
             
-            if (!url) {
-                log('Error: Please enter an RTSP URL.', 'error');
+            if (!host) {
+                log('Error: Please enter the stream Host/IP & Path.', 'error');
                 return;
+            }
+
+            // Construct full URL with encoded credentials
+            let fullUrl = host;
+            // Ensure rtsp:// prefix isn't doubled or missing
+            if (fullUrl.toLowerCase().startsWith('rtsp://')) {
+                fullUrl = fullUrl.substring(7);
+            }
+
+            if (user && pass) {
+                const encUser = encodeURIComponent(user);
+                const encPass = encodeURIComponent(pass);
+                fullUrl = `rtsp://${encUser}:${encPass}@${fullUrl}`;
+            } else {
+                fullUrl = `rtsp://${fullUrl}`;
             }
             
             btn.disabled = true;
             const originalText = btn.textContent;
             btn.innerHTML = '<div class="spinner"></div> Testing...';
             
-            log(`Analyzing stream properties for ${url}...`, 'purple');
+            log(`Analyzing stream properties for camera at ${host}...`, 'purple');
+            if (user) log(`Using credentials for user: ${user}`, 'info');
             
             try {
                 const response = await fetch('/api/diagnostics/stream-test', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url})
+                    body: JSON.stringify({url: fullUrl})
                 });
                 
                 const data = await response.json();
                 if (data.success) {
                     log('✓ Stream successfully accessed.', 'success');
-                    log(`Properties Detected:`, 'info');
-                    log(`  Resolution: ${data.width}x${data.height}`);
-                    log(`  Framerate:  ${data.framerate} fps`);
-                    log(`  Codec:      ${data.codec}`);
+                    
+                    if (data.video) {
+                        log(`Video Stream:`, 'purple');
+                        log(`  • Resolution: ${data.video.width}x${data.video.height}`);
+                        log(`  • Codec:      ${data.video.codec_name} (${data.video.profile || 'unknown profile'})`);
+                        log(`  • Pixel FMT:  ${data.video.pix_fmt}`);
+                        log(`  • Framerate:  ${data.video.r_frame_rate} (${parseFloat(eval(data.video.r_frame_rate)).toFixed(2)} fps)`);
+                        if (data.video.bit_rate) log(`  • Bitrate:    ${(data.video.bit_rate / 1000).toFixed(0)} kbps`);
+                    }
+
+                    if (data.audio) {
+                        log(`Audio Stream:`, 'purple');
+                        log(`  • Codec:      ${data.audio.codec_name}`);
+                        log(`  • Channels:   ${data.audio.channels}`);
+                        log(`  • Sample:     ${data.audio.sample_rate} Hz`);
+                    }
+
+                    if (data.format && data.format.size) {
+                        log(`Format Metadata:`, 'info');
+                        log(`  • Size:       ${(data.format.size / 1024).toFixed(0)} KB probed`);
+                        log(`  • Duration:   ${data.format.duration}s probed`);
+                    }
+
+                    log(`Raw Data:`, 'info');
+                    log(`  Click to view full JSON probe output below...`);
+                    const pre = document.createElement('pre');
+                    pre.style.margin = '10px 0';
+                    pre.style.padding = '10px';
+                    pre.style.background = 'rgba(0,0,0,0.3)';
+                    pre.style.borderRadius = '5px';
+                    pre.style.fontSize = '12px';
+                    pre.style.color = '#bd93f9';
+                    pre.textContent = JSON.stringify(data.raw, null, 2);
+                    consoleEl.appendChild(pre);
+
                 } else {
                     log('✗ Stream test failed.', 'error');
                     log('Error output: ' + data.error, 'error');

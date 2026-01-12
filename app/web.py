@@ -1001,11 +1001,11 @@ def create_web_app(manager):
                 
             cmd = [
                 ffprobe_exe, 
-                '-v', 'error',
+                '-v', 'quiet',
                 '-rtsp_transport', 'tcp',
-                '-select_streams', 'v:0',
-                '-show_entries', 'stream=width,height,r_frame_rate,codec_name',
-                '-of', 'json',
+                '-print_format', 'json',
+                '-show_format',
+                '-show_streams',
                 url
             ]
             
@@ -1015,15 +1015,30 @@ def create_web_app(manager):
                 
             import json as json_mod
             info = json_mod.loads(result.stdout)
-            if 'streams' in info and len(info['streams']) > 0:
-                s = info['streams'][0]
-                return jsonify({
-                    'success': True,
-                    'width': s.get('width'),
-                    'height': s.get('height'),
-                    'framerate': s.get('r_frame_rate'),
-                    'codec': s.get('codec_name')
+            
+            video_stream = next((s for s in info.get('streams', []) if s.get('codec_type') == 'video'), None)
+            audio_stream = next((s for s in info.get('streams', []) if s.get('codec_type') == 'audio'), None)
+            format_info = info.get('format', {})
+            
+            response_data = {
+                'success': True,
+                'raw': info,
+                'video': video_stream,
+                'audio': audio_stream,
+                'format': format_info
+            }
+            
+            if video_stream:
+                response_data.update({
+                    'width': video_stream.get('width'),
+                    'height': video_stream.get('height'),
+                    'framerate': video_stream.get('r_frame_rate'),
+                    'codec': video_stream.get('codec_name'),
+                    'profile': video_stream.get('profile'),
+                    'pix_fmt': video_stream.get('pix_fmt')
                 })
+                
+            return jsonify(response_data)
             return jsonify({'success': False, 'error': 'No video stream found'}), 400
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
