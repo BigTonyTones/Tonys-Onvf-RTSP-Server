@@ -602,6 +602,24 @@ main() {
     create_system_service
     create_commands
     print_completion
+    
+    # Ask if user wants to start the server now
+    echo ""
+    echo -e "${YELLOW}Would you like to start the server now? (y/n):${NC} "
+    read -r start_now
+    
+    if [[ $start_now == [yY] || $start_now == [yY][eE][sS] ]]; then
+        echo ""
+        echo -e "${GREEN}Starting Tonys Onvif-RTSP Server...${NC}"
+        echo ""
+        cd "$INSTALL_DIR"
+        exec ./start_ubuntu_25.sh
+    else
+        echo ""
+        echo -e "${CYAN}Server not started. You can start it later with:${NC}"
+        echo "  sudo tonys-onvif"
+        echo ""
+    fi
 }
 
 # Run main function

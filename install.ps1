@@ -491,6 +491,26 @@ function Start-Installation {
     New-StartScript
     New-WindowsService
     Write-Completion
+    
+    # Ask if user wants to start the server now
+    Write-Host ""
+    Write-Host "Would you like to start the server now? (y/n): " -NoNewline -ForegroundColor Yellow
+    $startNow = Read-Host
+    
+    if ($startNow -eq 'y' -or $startNow -eq 'Y' -or $startNow -eq 'yes' -or $startNow -eq 'Yes') {
+        Write-Host ""
+        Write-Host "Starting Tonys Onvif-RTSP Server..." -ForegroundColor Green
+        Write-Host ""
+        Set-Location $INSTALL_DIR
+        & ".\start-server.bat"
+    }
+    else {
+        Write-Host ""
+        Write-Host "Server not started. You can start it later with:" -ForegroundColor Cyan
+        Write-Host "  cd `"$INSTALL_DIR`""
+        Write-Host "  .\start-server.bat"
+        Write-Host ""
+    }
 }
 
 # Run installation
