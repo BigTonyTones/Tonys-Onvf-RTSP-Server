@@ -20,7 +20,14 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 ## Quick Install (Recommended)
 
-**One-line automated installer** - installs everything automatically including all dependencies, FFmpeg, MediaMTX, and Python packages.
+**One-line automated installer** - automatically installs and configures everything needed to run the server:
+- **Git** - for cloning the repository
+- **Python 3** - runtime environment
+- **Python packages** - Flask, Flask-CORS, Requests, PyYAML, psutil, onvif-zeep
+- **MediaMTX v1.15.6** - RTSP server for stream management
+- **FFmpeg** - video processing and transcoding
+- **System configuration** - file descriptor limits, permissions, and PATH setup
+- **Systemd/Launchd service** - optional auto-start on boot (Linux/macOS)
 
 **Note:** The one-line installer automatically installs all required dependencies and configures your system. If you prefer more control over the installation process, use the manual setup instructions below.
 
