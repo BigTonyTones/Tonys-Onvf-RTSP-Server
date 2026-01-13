@@ -18,7 +18,7 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 - **RTSP Output**: The composed matrix is available as a standard RTSP stream that any NVR can consume
 
 
-## 🚀 Quick Install (Recommended)
+## Quick Install (Recommended)
 
 **One-line automated installer** - installs everything automatically including all dependencies, FFmpeg, MediaMTX, and Python packages.
 
