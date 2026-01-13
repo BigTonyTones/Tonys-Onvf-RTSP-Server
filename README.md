@@ -22,6 +22,8 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 **One-line automated installer** - installs everything automatically including all dependencies, FFmpeg, MediaMTX, and Python packages.
 
+**Note:** The one-line installer automatically installs all required dependencies and configures your system. If you prefer more control over the installation process, use the manual setup instructions below.
+
 ### Linux/macOS:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash
@@ -31,8 +33,6 @@ curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server
 ```powershell
 irm https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.ps1 | iex
 ```
-
-**Note:** The one-line installer automatically installs all required dependencies and configures your system. If you prefer more control over the installation process, use the manual setup instructions below.
 
 After installation, access the web interface at **http://localhost:5552**
 
