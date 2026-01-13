@@ -424,15 +424,20 @@ class FFmpegManager:
             print("  FFmpeg not found locally or in system path.")
             return "ffmpeg" # Return default and let it fail
             
-        # Windows/Other: Strict local management (Existing logic)
+        # Windows/macOS: Check system PATH first, then local directory
         executable = "ffmpeg.exe" if system == "windows" else "ffmpeg"
         
-        # 1. Check local directory ONLY
+        # 1. Check system PATH first
+        system_path = shutil.which("ffmpeg")
+        if system_path:
+            return os.path.abspath(system_path)
+        
+        # 2. Check local directory
         local_path = os.path.join(self.ffmpeg_dir, executable)
         if os.path.exists(local_path):
             return local_path
             
-        # 2. Try to download if missing
+        # 3. Try to download if missing (Windows only)
         if system == "windows":
             print(f"\n  Local FFmpeg not found. Attempting to download for {system}...")
             if self.download_ffmpeg():
@@ -457,12 +462,18 @@ class FFmpegManager:
                      return os.path.abspath(system_path)
             return "ffprobe"
 
-        # Windows/Existing logic
+        # Windows/macOS: Check system PATH first, then local directory
+        # 1. Check system PATH first
+        system_path = shutil.which("ffprobe")
+        if system_path:
+            return os.path.abspath(system_path)
+        
+        # 2. Check local directory
         ffprobe_path = self.is_ffprobe_available()
         if ffprobe_path:
             return ffprobe_path
         
-        # Try to download
+        # 3. Try to download (Windows only)
         if system == "windows":
             print(f"\n  FFprobe not found. Attempting to download for {system}...")
             if self.download_ffmpeg():
