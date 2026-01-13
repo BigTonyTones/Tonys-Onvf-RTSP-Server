@@ -310,16 +310,7 @@ function Install-FFmpeg {
     
     Set-Location $INSTALL_DIR
     
-    # Check if FFmpeg is in PATH
-    $ffmpegInPath = Get-Command ffmpeg -ErrorAction SilentlyContinue
-    if ($ffmpegInPath) {
-        $version = & ffmpeg -version 2>&1 | Select-Object -First 1
-        Write-Success "FFmpeg already available in PATH"
-        Write-Info "$version"
-        return
-    }
-    
-    # Check if local ffmpeg exists
+    # Check if local ffmpeg exists first (priority)
     if (Test-Path "ffmpeg\ffmpeg.exe") {
         Write-Success "FFmpeg already installed locally"
         Write-Info "Location: $INSTALL_DIR\ffmpeg\ffmpeg.exe"
@@ -336,6 +327,13 @@ function Install-FFmpeg {
         return
     }
     
+    # Check if FFmpeg is in PATH (informational only)
+    $ffmpegInPath = Get-Command ffmpeg -ErrorAction SilentlyContinue
+    if ($ffmpegInPath) {
+        Write-Info "FFmpeg found in system PATH: $($ffmpegInPath.Source)"
+        Write-Info "Installing local copy for application use..."
+    }
+    
     # Try to install via Chocolatey first
     Write-Info "Attempting to install FFmpeg via Chocolatey..."
     if (Install-Chocolatey) {
@@ -345,13 +343,16 @@ function Install-FFmpeg {
             # Refresh PATH
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
             
-            # Verify installation
+            # Verify Chocolatey installation
             $ffmpegInPath = Get-Command ffmpeg -ErrorAction SilentlyContinue
             if ($ffmpegInPath) {
                 $version = & ffmpeg -version 2>&1 | Select-Object -First 1
                 Write-Success "FFmpeg installed via Chocolatey"
                 Write-Info "Verified: $version"
-                return
+                Write-Info "System-wide installation complete"
+                
+                # Now also download to local directory for application use
+                Write-Info "Downloading local copy for application..."
             }
         }
         catch {
@@ -359,8 +360,8 @@ function Install-FFmpeg {
         }
     }
     
-    # Fallback: Download FFmpeg directly
-    Write-Info "Downloading FFmpeg static build..."
+    # Always download to local directory (fallback or in addition to Chocolatey)
+    Write-Info "Downloading FFmpeg static build to local directory..."
     
     $arch = Get-Architecture
     $ffmpegUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
