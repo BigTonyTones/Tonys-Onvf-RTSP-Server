@@ -323,6 +323,16 @@ function Install-FFmpeg {
     if (Test-Path "ffmpeg\ffmpeg.exe") {
         Write-Success "FFmpeg already installed locally"
         Write-Info "Location: $INSTALL_DIR\ffmpeg\ffmpeg.exe"
+        
+        # Add to PATH if not already there
+        $ffmpegDir = Join-Path $INSTALL_DIR "ffmpeg"
+        $currentPath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+        if ($currentPath -notlike "*$ffmpegDir*") {
+            Write-Info "Adding FFmpeg to system PATH..."
+            [System.Environment]::SetEnvironmentVariable("Path", "$currentPath;$ffmpegDir", "Machine")
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            Write-Success "FFmpeg added to system PATH"
+        }
         return
     }
     
@@ -398,6 +408,15 @@ function Install-FFmpeg {
                 $version = & $ffmpegExe -version 2>&1 | Select-Object -First 1
                 Write-Success "FFmpeg installed successfully to $ffmpegDir"
                 Write-Info "$version"
+                
+                # Add to system PATH
+                Write-Info "Adding FFmpeg to system PATH..."
+                $currentPath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+                if ($currentPath -notlike "*$ffmpegDir*") {
+                    [System.Environment]::SetEnvironmentVariable("Path", "$currentPath;$ffmpegDir", "Machine")
+                    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+                    Write-Success "FFmpeg added to system PATH"
+                }
             }
             else {
                 Write-Error "FFmpeg installation verification failed"
