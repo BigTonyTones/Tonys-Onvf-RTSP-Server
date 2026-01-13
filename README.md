@@ -18,7 +18,29 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 - **RTSP Output**: The composed matrix is available as a standard RTSP stream that any NVR can consume
 
 
-## Linux Setup (Recommended)
+## 🚀 Quick Install (Recommended)
+
+**One-line automated installer** - installs everything automatically including all dependencies, FFmpeg, MediaMTX, and Python packages.
+
+### Linux/macOS:
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash
+```
+
+### Windows (PowerShell as Administrator):
+```powershell
+irm https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.ps1 | iex
+```
+
+**Note:** The one-line installer automatically installs all required dependencies and configures your system. If you prefer more control over the installation process, use the manual setup instructions below.
+
+After installation, access the web interface at **http://localhost:5552**
+
+---
+
+## Manual Installation
+
+### Linux
 This server is optimized for Ubuntu 25.04 but is compatible with most modern Linux builds. The **Virtual NIC** feature requires a Linux environment. This has been confirmed to work perfectly on the Raspberry Pi 5 running the latest Debian 13 (Trixie) build for those looking to run the server on Raspberry Pi hardware.
 
 1. **Clone and enter the folder:**
@@ -39,7 +61,7 @@ This server is optimized for Ubuntu 25.04 but is compatible with most modern Lin
 
 ---
 
-## Windows Setup
+### Windows
 1. Install Python 3.7+.
 2. Run `start_onvif_server.bat`.
    *Note: Virtual NICs (unique IP/MAC per camera) are not supported on Windows. All cameras will share the host IP.*
