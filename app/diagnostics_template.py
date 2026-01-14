@@ -589,6 +589,10 @@ def get_diagnostics_html():
             log(`Analyzing stream properties for camera at ${host}...`, 'purple');
             if (user) log(`Using credentials for user: ${user}`, 'info');
             
+            // Log the constructed URL (with password masked) for debugging
+            const maskedUrl = fullUrl.replace(/:([^:@]+)@/, ':****@');
+            log(`Testing URL: ${maskedUrl}`, 'info');
+            
             try {
                 const response = await fetch('/api/diagnostics/stream-test', {
                     method: 'POST',

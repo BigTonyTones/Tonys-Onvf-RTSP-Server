@@ -991,25 +991,57 @@ def create_web_app(manager):
                 return jsonify({'success': False, 'error': 'FFprobe not found'}), 404
                 
             cmd = [
-                ffprobe_exe, 
-                '-v', 'quiet',
+                ffprobe_exe,
+                '-v', 'error',  # Show errors but suppress warnings about missing reference frames
                 '-rtsp_transport', 'tcp',
+                '-analyzeduration', '5000000',  # Analyze up to 5 seconds of stream
+                '-probesize', '5000000',  # Read up to 5MB to find stream info
                 '-print_format', 'json',
                 '-show_format',
                 '-show_streams',
                 url
             ]
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
-                return jsonify({'success': False, 'error': result.stderr or 'Connection failed'}), 400
+                # Combine stderr and stdout for better error context
+                error_msg = result.stderr.strip() if result.stderr.strip() else result.stdout.strip()
+                if not error_msg:
+                    error_msg = f'Connection failed (exit code: {result.returncode})'
+                
+                # Log the full error for debugging
+                print(f"  [Stream Test] FFprobe failed for URL: {url}")
+                print(f"  [Stream Test] Return code: {result.returncode}")
+                print(f"  [Stream Test] Stderr: {result.stderr}")
+                print(f"  [Stream Test] Stdout: {result.stdout}")
+                
+                return jsonify({'success': False, 'error': error_msg}), 400
                 
             import json as json_mod
-            info = json_mod.loads(result.stdout)
+            try:
+                info = json_mod.loads(result.stdout)
+            except json_mod.JSONDecodeError:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Failed to parse stream information. The camera may be sending an incomplete or corrupted stream.'
+                }), 400
+            
+            # Check if we got any stream data
+            if not info or 'streams' not in info or len(info.get('streams', [])) == 0:
+                return jsonify({
+                    'success': False, 
+                    'error': 'No stream data received. The camera may need more time to send keyframes, or the stream path may be incorrect.'
+                }), 400
             
             video_stream = next((s for s in info.get('streams', []) if s.get('codec_type') == 'video'), None)
             audio_stream = next((s for s in info.get('streams', []) if s.get('codec_type') == 'audio'), None)
             format_info = info.get('format', {})
+            
+            if not video_stream:
+                return jsonify({
+                    'success': False, 
+                    'error': 'No video stream found in the response.'
+                }), 400
             
             response_data = {
                 'success': True,
@@ -1030,7 +1062,6 @@ def create_web_app(manager):
                 })
                 
             return jsonify(response_data)
-            return jsonify({'success': False, 'error': 'No video stream found'}), 400
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
