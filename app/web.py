@@ -551,6 +551,8 @@ def create_web_app(manager):
         def do_stop():
             import time
             import os
+            import signal
+            import subprocess
             time.sleep(2)  # Give time for response to be sent
             print("\n\nServer stop requested from web UI...")
             print("Stopping MediaMTX...")
@@ -560,7 +562,27 @@ def create_web_app(manager):
                 camera.stop()
             print("Server stopped successfully!")
             print("\nTo restart, run the script again.\n")
-            os._exit(0)  # Force exit
+            
+            # Check if running as systemd service
+            try:
+                if sys.platform.startswith('linux'):
+                    # Check if we're running under systemd
+                    result = subprocess.run(['systemctl', 'is-active', 'tonys-onvif'], 
+                                          capture_output=True, text=True, timeout=2)
+                    if result.returncode == 0 and result.stdout.strip() == 'active':
+                        print("Detected systemd service. Stopping service...")
+                        # Stop the systemd service properly
+                        subprocess.run(['systemctl', 'stop', 'tonys-onvif'], timeout=5)
+                        return
+                    else:
+                        # Not running as service, kill process group
+                        os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+                else:
+                    # On Windows, just exit normally
+                    os._exit(0)
+            except:
+                # Fallback to regular exit
+                os._exit(0)
         
         # Run stop in background thread
         import threading
