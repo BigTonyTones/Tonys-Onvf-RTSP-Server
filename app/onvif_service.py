@@ -284,7 +284,7 @@ class ONVIFService:
                    xmlns:tds="http://www.onvif.org/ver10/device/wsdl">
     <SOAP-ENV:Body>
         <tds:GetDeviceInformationResponse>
-            <tds:Manufacturer>Virtual ONVIF Server</tds:Manufacturer>
+            <tds:Manufacturer>Tonys Virtual ONVIF Server</tds:Manufacturer>
             <tds:Model>{self.camera.name}</tds:Model>
             <tds:FirmwareVersion>1.0.0</tds:FirmwareVersion>
             <tds:SerialNumber>{self.camera.mac_address.replace(':', '').upper()}</tds:SerialNumber>
