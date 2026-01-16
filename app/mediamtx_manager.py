@@ -343,10 +343,11 @@ class MediaMTXManager:
                         safe_source = shlex.quote(main_source)
                         safe_dest = shlex.quote(dest_url)
                     
-                    # Build FFmpeg command - Optimized for RAM and CPU usage
+                    # Build FFmpeg command - Optimized for RAM and CPU usage with auto-reconnect
+                    # Wrap in infinite loop for automatic reconnection
                     # -threads 2 limits memory footprint per process
                     # -rc-lookahead 0 prevents frame pre-buffering
-                    cmd = (
+                    ffmpeg_cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
                         f'{ff_input} '
                         f'-i {safe_source} '
@@ -358,13 +359,21 @@ class MediaMTXManager:
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
+                    # Wrap in shell loop for auto-reconnect (prevents zombie processes)
+                    if system == "windows":
+                        cmd = f'cmd /c "for /L %i in (1,0,2) do ({ffmpeg_cmd} & timeout /t 2 /nobreak > nul)"'
+                    else:
+                        cmd = f'sh -c \'while true; do {ffmpeg_cmd}; sleep 2; done\''
+                    
+                    
                     main_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
-                        'runOnInitRestart': True,
+                        'runOnInitRestart': False,  # Disable auto-restart to prevent zombie processes
                         'rtspTransport': 'tcp',
                         'sourceOnDemand': False,
                         'overridePublisher': True,
+                        'runOnDemand': False,
                     }
                 else:
                     main_path_cfg = {
@@ -411,7 +420,9 @@ class MediaMTXManager:
                         safe_source = shlex.quote(sub_source)
                         safe_dest = shlex.quote(dest_url)
                     
-                    cmd = (
+                    
+                    # Build FFmpeg command with auto-reconnect wrapper
+                    ffmpeg_cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
                         f'{ff_input} '
                         f'-i {safe_source} '
@@ -423,13 +434,21 @@ class MediaMTXManager:
                         f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
+                    # Wrap in shell loop for auto-reconnect (prevents zombie processes)
+                    if system == "windows":
+                        cmd = f'cmd /c "for /L %i in (1,0,2) do ({ffmpeg_cmd} & timeout /t 2 /nobreak > nul)"'
+                    else:
+                        cmd = f'sh -c \'while true; do {ffmpeg_cmd}; sleep 2; done\''
+                    
+                    
                     sub_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
-                        'runOnInitRestart': True,
+                        'runOnInitRestart': False,  # Disable auto-restart to prevent zombie processes
                         'rtspTransport': 'tcp',
                         'sourceOnDemand': False,
                         'overridePublisher': True,
+                        'runOnDemand': False,
                     }
                 else:
                     # Standard Proxy Mode
@@ -598,7 +617,8 @@ class MediaMTXManager:
                         config['paths'][layout_id] = {
                             'source': 'publisher',
                             'runOnInit': gf_cmd,
-                            'runOnInitRestart': True,
+                            'runOnInitRestart': False,  # Disable auto-restart to prevent zombie processes
+                            'runOnDemand': False,
                         }
                         print(f"      {layout_name} stream added at /{layout_id} ({res})")
 
