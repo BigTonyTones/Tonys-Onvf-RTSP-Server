@@ -30,7 +30,7 @@ class ONVIFService:
         self.camera = camera
         self.app = None
         # Cache for authenticated IPs: {ip: timestamp}
-        # Prevents repetitive 401 challenges for recently authenticated clients
+        # Prevents repetitive 401 challenges for recently authenticated clients (30 min TTL)
         self.auth_cache = {}
         
     def create_app(self):
@@ -62,9 +62,9 @@ class ONVIFService:
                 client_ip = request.remote_addr
                 current_time = time.time()
                 
-                # Check if IP is in auth cache (5 minute TTL)
+                # Check if IP is in auth cache (30 minute TTL)
                 if client_ip in self.auth_cache:
-                    if current_time - self.auth_cache[client_ip] < 300:  # 5 minutes
+                    if current_time - self.auth_cache[client_ip] < 1800:  # 30 minutes
                         return f(*args, **kwargs)
                     else:
                         # Expired, remove from cache
