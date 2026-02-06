@@ -29,6 +29,9 @@ class ONVIFService:
     def __init__(self, camera):
         self.camera = camera
         self.app = None
+        # Cache for authenticated IPs: {ip: timestamp}
+        # Prevents repetitive 401 challenges for recently authenticated clients
+        self.auth_cache = {}
         
     def create_app(self):
         """Create the Flask app for ONVIF service"""
@@ -56,34 +59,40 @@ class ONVIFService:
             from functools import wraps
             @wraps(f)
             def decorated(*args, **kwargs):
+                client_ip = request.remote_addr
+                current_time = time.time()
+                
+                # Check if IP is in auth cache (5 minute TTL)
+                if client_ip in self.auth_cache:
+                    if current_time - self.auth_cache[client_ip] < 300:  # 5 minutes
+                        return f(*args, **kwargs)
+                    else:
+                        # Expired, remove from cache
+                        del self.auth_cache[client_ip]
+                
                 # Check for Basic Auth
                 auth = request.authorization
-                
-                if auth:
-                    pass_len = len(auth.password) if auth.password else 0
-                else:
-                    pass
-                
-                # Allow if credentials match Basic Auth
                 if auth and auth.username == self.camera.onvif_username and auth.password == self.camera.onvif_password:
+                    # Cache successful authentication
+                    self.auth_cache[client_ip] = current_time
                     return f(*args, **kwargs)
                 
-                # Check for SOAP WS-UsernameToken (Found in body)
+                # Check for SOAP WS-UsernameToken (in request body)
                 data = request.get_data(as_text=True)
                 
-                # More robust check for UsernameToken
-                if 'UsernameToken' in data and f'>{self.camera.onvif_username}</' in data:
-                     # Check if it's actually inside a username tag
-                     if f'<Username>{self.camera.onvif_username}</Username>' in data or \
-                        f':Username>{self.camera.onvif_username}</' in data:
-                         return f(*args, **kwargs)
-                     return f(*args, **kwargs)
+                # Simplified UsernameToken validation
+                if 'UsernameToken' in data and f'<Username>{self.camera.onvif_username}</Username>' in data:
+                    # Cache successful authentication
+                    self.auth_cache[client_ip] = current_time
+                    return f(*args, **kwargs)
                 
-                if 'Authorization' in request.headers and 'Digest' in request.headers['Authorization']:
-                     pass
-                else:
-                     pass
+                # Also check for namespaced username tags (e.g., wsse:Username)
+                if 'UsernameToken' in data and f':Username>{self.camera.onvif_username}</' in data:
+                    # Cache successful authentication
+                    self.auth_cache[client_ip] = current_time
+                    return f(*args, **kwargs)
                 
+                # Authentication failed - return 401
                 return Response(
                     'Authentication required', 401,
                     {'WWW-Authenticate': 'Basic realm="ONVIF"'}

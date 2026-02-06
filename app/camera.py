@@ -4,9 +4,38 @@ import socket
 import time
 import uuid
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
+from werkzeug.serving import make_server, ThreadedWSGIServer
 from .config import MEDIAMTX_PORT
 from .onvif_service import ONVIFService
 from .linux_network import LinuxNetworkManager
+
+
+class ThreadPoolWSGIServer(ThreadedWSGIServer):
+    """Custom WSGI server with a fixed-size thread pool to prevent thread exhaustion"""
+    
+    def __init__(self, host, port, app, max_workers=20, **kwargs):
+        super().__init__(host, port, app, **kwargs)
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.max_workers = max_workers
+    
+    def process_request(self, request, client_address):
+        """Process incoming request using thread pool instead of spawning new threads"""
+        self.executor.submit(self.process_request_thread, request, client_address)
+    
+    def process_request_thread(self, request, client_address):
+        """Handle one request in a thread from the pool"""
+        try:
+            self.finish_request(request, client_address)
+        except Exception:
+            self.handle_error(request, client_address)
+        finally:
+            self.shutdown_request(request)
+    
+    def shutdown(self):
+        """Shutdown the server and thread pool"""
+        self.executor.shutdown(wait=True)
+        super().shutdown()
 
 class VirtualONVIFCamera:
     """Represents a virtual ONVIF camera"""
@@ -113,15 +142,26 @@ class VirtualONVIFCamera:
         # Use assigned IP if available, otherwise 0.0.0.0
         bind_ip = self.assigned_ip if self.assigned_ip else '0.0.0.0'
         
-        # Run Flask in a separate thread with threading enabled for stability
+        # Create server with thread pool to prevent thread exhaustion
+        server = make_server(
+            bind_ip,
+            self.onvif_port,
+            app,
+            threaded=False,  # Disable default threading
+            request_handler=None,
+            passthrough_errors=False,
+            ssl_context=None,
+            fd=None
+        )
+        
+        # Replace the server class with our thread-pooled version
+        server.__class__ = ThreadPoolWSGIServer
+        server.executor = ThreadPoolExecutor(max_workers=20)
+        server.max_workers = 20
+        
+        # Run server in a separate thread
         self.flask_thread = threading.Thread(
-            target=lambda: app.run(
-                host=bind_ip, 
-                port=self.onvif_port, 
-                debug=False, 
-                use_reloader=False,
-                threaded=True  # Enable threading for concurrent requests
-            ),
+            target=server.serve_forever,
             daemon=True
         )
         self.flask_thread.start()
