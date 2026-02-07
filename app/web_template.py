@@ -621,7 +621,21 @@ def get_web_ui_html(current_settings=None):
             border-radius: 8px;
             border: 1px solid var(--border-color);
             margin-top: 5px;
+            overflow: visible; /* Changed to visible to allow pseudo-element bridge */
+        }}
+        /* Hover Bridge to prevent dropdown from closing when moving mouse from button to menu */
+        .dropdown-content::before {{
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: transparent;
+        }}
+        .dropdown-content-inner {{
             overflow: hidden;
+            border-radius: 8px;
         }}
         .dropdown-content button {{
             color: var(--text-title);
@@ -1184,15 +1198,17 @@ def get_web_ui_html(current_settings=None):
                         <i class="fas fa-server"></i> Server <i class="fas fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
                     </button>
                     <div class="dropdown-content">
-                        <button onclick="restartServer()">
-                            <i class="fas fa-sync-alt"></i> Restart Server
-                        </button>
-                        <button onclick="stopServer()" style="color: #f56565;">
-                            <i class="fas fa-stop-circle"></i> Stop Server
-                        </button>
-                        <button onclick="rebootServer()" class="linux-only" style="border-top: 1px solid var(--border-color);">
-                            <i class="fas fa-power-off"></i> Reboot Host
-                        </button>
+                        <div class="dropdown-content-inner">
+                            <button onclick="restartServer()">
+                                <i class="fas fa-sync-alt"></i> Restart Server
+                            </button>
+                            <button onclick="stopServer()" style="color: #f56565;">
+                                <i class="fas fa-stop-circle"></i> Stop Server
+                            </button>
+                            <button onclick="rebootServer()" class="linux-only" style="border-top: 1px solid var(--border-color);">
+                                <i class="fas fa-power-off"></i> Reboot Host
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <button class="btn" onclick="openLogsModal()">Logs</button>
