@@ -1199,10 +1199,13 @@ def get_web_ui_html(current_settings=None):
                     </button>
                     <div class="dropdown-content">
                         <div class="dropdown-content-inner">
-                            <button onclick="restartServer()">
+                            <button onclick="openLogsModal()">
+                                <i class="fas fa-list-alt"></i> System Logs
+                            </button>
+                            <button onclick="restartServer()" style="border-top: 1px solid var(--border-color);">
                                 <i class="fas fa-sync-alt"></i> Restart Server
                             </button>
-                            <button onclick="stopServer()" style="color: #f56565;">
+                            <button onclick="stopServer()" style="color: #f56565; border-top: 1px solid var(--border-color);">
                                 <i class="fas fa-stop-circle"></i> Stop Server
                             </button>
                             <button onclick="rebootServer()" class="linux-only" style="border-top: 1px solid var(--border-color);">
@@ -1211,7 +1214,6 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                 </div>
-                <button class="btn" onclick="openLogsModal()">Logs</button>
                 <button class="btn" onclick="openAboutModal()">About</button>
                 <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
                     <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Low Latency</span>
