@@ -289,6 +289,9 @@ class MediaMTXManager:
         
         
         # Auth handling is now external via the Python web app
+        enable_global_auth = bool(rtsp_username and rtsp_password)
+        sys_user = rtsp_username
+        sys_pass = rtsp_password
 
         # Only add paths for RUNNING cameras
         running_count = 0
@@ -513,7 +516,7 @@ class MediaMTXManager:
                     if inputs:
                         # Construct overlay chain
                         # Force a constant baseline framerate
-                        overlay_chain = f'color=black:s={res_w}x{res_h}:r={fps}[base];'
+                        overlay_chain_parts = [f'color=black:s={res_w}x{res_h}:r={fps}[base]']
                         last_label = '[base]'
                         for i in range(len(active_gf_cams)):
                             gf_cam = active_gf_cams[i]
@@ -522,9 +525,10 @@ class MediaMTXManager:
                             
                             next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
                             # repeatlast=1 is critical: if one input stops, the others keep flowing
-                            overlay_chain += f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label};'
+                            overlay_chain_parts.append(f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label}')
                             last_label = next_label
                         
+                        overlay_chain = ";".join(overlay_chain_parts)
                         filter_complex = ";".join(filters) + ";" + overlay_chain
                         
                         if enable_global_auth:
