@@ -410,11 +410,12 @@ class CameraManager:
     def get_active_sessions(self):
         """Get ALL active sessions (RTSP, HLS, WebRTC) from MediaMTX API"""
         all_formatted = []
-        # MediaMTX separates these into different endpoints
+        # MediaMTX v1.x uses more specific endpoint names
         endpoints = [
-            ('sessions', None),      # RTSP, RTMP, etc.
-            ('hlssessions', 'HLS'),
-            ('webrtcsessions', 'WebRTC')
+            ('rtspsessions', 'RTSP'),
+            ('webrtcsessions', 'WebRTC'),
+            ('rtmpsessions', 'RTMP'),
+            ('sessions', None)  # Fallback for older versions
         ]
         
         for ep_name, proto_override in endpoints:
