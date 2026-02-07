@@ -9,12 +9,14 @@ import string
 from pathlib import Path
 from urllib.parse import quote
 from werkzeug.security import generate_password_hash, check_password_hash
-from .config import CONFIG_FILE, MEDIAMTX_PORT
+import ipaddress
+from .config import CONFIG_FILE, MEDIAMTX_PORT, MEDIAMTX_API_PORT
 from .camera import VirtualONVIFCamera
 from .onvif_service import ONVIFService
 from .mediamtx_manager import MediaMTXManager
 from .linux_service import LinuxServiceManager
 from .analytics import AnalyticsManager
+import requests
 
 class CameraManager:
     """Manages multiple virtual ONVIF cameras"""
@@ -31,6 +33,11 @@ class CameraManager:
         
         # Start analytics polling
         self.analytics.start()
+        
+        # Initialize basic attributes
+        self.ip_whitelist = []
+        self.debug_mode = False
+        self.server_ip = 'localhost'
         
         # GridFusion Layouts
         self.grid_fusion_layouts = []
@@ -65,6 +72,7 @@ class CameraManager:
             }
         }
         
+        self.ip_whitelist = []
         self.load_config()
         
         # Start watchdog
@@ -82,7 +90,7 @@ class CameraManager:
             self.next_onvif_port = 8001
                 
             for cam_config in config.get('cameras', []):
-                camera = VirtualONVIFCamera(cam_config)
+                camera = VirtualONVIFCamera(cam_config, self)
                 self.cameras.append(camera)
                 
                 if cam_config['id'] >= self.next_id:
@@ -101,6 +109,7 @@ class CameraManager:
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             self.debug_mode = config.get('settings', {}).get('debugMode', False)
+            self.ip_whitelist = config.get('settings', {}).get('ipWhitelist', [])
             
             # Load GridFusion settings (Support multiple layouts)
             grid_fusion = config.get('gridFusion', {})
@@ -156,6 +165,7 @@ class CameraManager:
             self.global_password = 'admin'
             self.rtsp_auth_enabled = False
             self.debug_mode = False
+            self.ip_whitelist = []
             # Default layouts if config missing
             self.grid_fusion_layouts = [{
                 'id': 'matrix',
@@ -228,7 +238,8 @@ class CameraManager:
                 'globalUsername': getattr(self, 'global_username', 'admin'),
                 'globalPassword': getattr(self, 'global_password', 'admin'),
                 'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
-                'debugMode': getattr(self, 'debug_mode', False)
+                'debugMode': getattr(self, 'debug_mode', False),
+                'ipWhitelist': getattr(self, 'ip_whitelist', [])
             },
             'auth': {
                 'enabled': getattr(self, 'auth_enabled', False),
@@ -257,135 +268,198 @@ class CameraManager:
 
     def load_settings(self):
         """Load settings from config with error safety"""
-        if Path(self.config_file).exists():
-            with self._lock:
-                try:
-                    with open(self.config_file, 'r') as f:
-                        config = json.load(f)
-                        settings = config.get('settings', {})
-                        new_ip = settings.get('serverIp')
-                        if new_ip:
-                            self.server_ip = new_ip
-                        self.open_browser = settings.get('openBrowser', True)
-                        self.theme = settings.get('theme', 'dracula')
-                        self.grid_columns = settings.get('gridColumns', 3)
-                        self.rtsp_port = settings.get('rtspPort', 8554)
-                        self.auto_boot = settings.get('autoBoot', False)
-                        self.global_username = settings.get('globalUsername', 'admin')
-                        self.global_password = settings.get('globalPassword', 'admin')
-                        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
-                        self.debug_mode = settings.get('debugMode', False)
-                        self.advanced_settings = config.get('advancedSettings', self.advanced_settings)
-                except Exception as e:
-                    # If reading fails (e.g. file busy), we just fall back to the last known 
-                    # value stored in self.server_ip, which is much safer.
-                    print(f"Warning: Could not read config file for settings: {e}")
-        
-        return {
-            'serverIp': self.server_ip, 
-            'openBrowser': self.open_browser, 
-            'theme': self.theme, 
-            'gridColumns': self.grid_columns,
-            'rtspPort': self.rtsp_port,
-            'autoBoot': self.auto_boot,
-            'globalUsername': getattr(self, 'global_username', 'admin'),
-            'globalPassword': getattr(self, 'global_password', 'admin'),
-            'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
-            'debugMode': getattr(self, 'debug_mode', False),
-            'authEnabled': self.auth_enabled,
-            'username': self.username,
-            'advancedSettings': getattr(self, 'advanced_settings', {})
-        }
-    
+        try:
+            if not os.path.exists(self.config_file):
+                return {}
+            
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+                settings = config.get('settings', {})
+                
+                # Update attributes from settings
+                self.server_ip = settings.get('serverIp', 'localhost')
+                self.open_browser = settings.get('openBrowser', True)
+                self.theme = settings.get('theme', 'dracula')
+                self.grid_columns = settings.get('gridColumns', 3)
+                self.rtsp_port = settings.get('rtspPort', 8554)
+                self.auto_boot = settings.get('autoBoot', False)
+                self.global_username = settings.get('globalUsername', 'admin')
+                self.global_password = settings.get('globalPassword', 'admin')
+                self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+                self.debug_mode = settings.get('debugMode', False)
+                
+                # Ensure whitelist exists
+                self.ip_whitelist = settings.get('ipWhitelist', [])
+                settings['ipWhitelist'] = self.ip_whitelist
+                
+                return settings
+        except Exception as e:
+            print(f"Error loading settings: {e}")
+            return {}
+
     def save_settings(self, settings):
         """Save settings to config"""
-        self.server_ip = settings.get('serverIp', 'localhost')
-        self.open_browser = settings.get('openBrowser', True)
-        self.theme = settings.get('theme', self.theme)
-        self.grid_columns = int(settings.get('gridColumns', self.grid_columns))
-        old_rtsp_port = self.rtsp_port
-        old_global_username = getattr(self, 'global_username', 'admin')
-        old_global_password = getattr(self, 'global_password', 'admin')
-        old_rtsp_auth_enabled = getattr(self, 'rtsp_auth_enabled', False)
-        old_debug_mode = getattr(self, 'debug_mode', False)
-        
-        # Update values
-        self.rtsp_port = int(settings.get('rtspPort', self.rtsp_port))
-        self.global_username = settings.get('globalUsername', 'admin')
-        self.global_password = settings.get('globalPassword', 'admin')
-        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
-        self.debug_mode = settings.get('debugMode', False)
+        old_settings = self.load_settings()
         
         # Check for changes that require MediaMTX restart
-        rtsp_needs_restart = (
-            old_rtsp_port != self.rtsp_port or
-            old_global_username != self.global_username or
-            old_global_password != self.global_password or
-            old_rtsp_auth_enabled != self.rtsp_auth_enabled or
-            old_debug_mode != self.debug_mode or
-            settings.get('advancedSettings') != self.advanced_settings
-        )
+        restart_keys = [
+            'rtspPort', 'globalUsername', 'globalPassword', 
+            'rtspAuthEnabled', 'debugMode', 'advancedSettings'
+        ]
+        restart_needed = False
+        for key in restart_keys:
+            if settings.get(key) != old_settings.get(key):
+                restart_needed = True
+                break
+
+        # Update attributes
+        self.server_ip = settings.get('serverIp', self.server_ip)
+        self.open_browser = settings.get('openBrowser', self.open_browser)
+        self.theme = settings.get('theme', self.theme)
+        self.grid_columns = int(settings.get('gridColumns', self.grid_columns))
+        self.rtsp_port = int(settings.get('rtspPort', self.rtsp_port))
+        self.auto_boot = settings.get('autoBoot', self.auto_boot)
+        self.global_username = settings.get('globalUsername', self.global_username)
+        self.global_password = settings.get('globalPassword', self.global_password)
+        self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', self.rtsp_auth_enabled)
+        self.debug_mode = settings.get('debugMode', self.debug_mode)
+        self.ip_whitelist = settings.get('ipWhitelist', self.ip_whitelist)
         
-        # Update advanced settings if provided
         if 'advancedSettings' in settings:
             self.advanced_settings = settings['advancedSettings']
-            
-        # Handle auto-boot setting (Linux only)
-        new_auto_boot = settings.get('autoBoot', False)
-        if new_auto_boot != self.auto_boot:
-            if self.service_mgr.is_linux():
-                if new_auto_boot:
-                    success, msg = self.service_mgr.install_service()
-                    if not success:
-                        raise Exception(f"Failed to enable auto-boot: {msg}")
-                else:
-                    success, msg = self.service_mgr.uninstall_service()
-                    if not success:
-                        raise Exception(f"Failed to disable auto-boot: {msg}")
-            self.auto_boot = new_auto_boot
 
-        # Handle Auth toggle
-        new_auth_enabled = settings.get('authEnabled', False)
-        new_username = settings.get('username')
-        new_password = settings.get('password')
-        
-        if new_auth_enabled:
-            if new_username:
-                self.username = new_username
-            if new_password:
-                self.password_hash = generate_password_hash(new_password)
-            
-            # If still no username/password after potential update, can't enable
-            if not self.username or not self.password_hash:
-                 new_auth_enabled = False
-        
-        self.auth_enabled = new_auth_enabled
-        
+        # Handle auto-boot setting (Linux only)
+        if settings.get('autoBoot') != old_settings.get('autoBoot'):
+            if self.service_mgr.is_linux():
+                if settings.get('autoBoot'):
+                    self.service_mgr.install_service()
+                else:
+                    self.service_mgr.uninstall_service()
+
+        # Handle Web UI Auth
+        if 'authEnabled' in settings:
+            self.auth_enabled = settings['authEnabled']
+            if settings.get('username'):
+                self.username = settings['username']
+            if settings.get('password'):
+                self.password_hash = generate_password_hash(settings['password'])
+
         self.save_config()
-        
-        # Restart MediaMTX if needed
-        if rtsp_needs_restart:
-            print("RTSP settings changed, restarting MediaMTX...")
-            # Pass credentials only if auth is enabled
+
+        if restart_needed:
+            print("Settings changed, restarting MediaMTX...")
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
-            
-        return {
-            'serverIp': self.server_ip, 
-            'openBrowser': self.open_browser, 
-            'theme': self.theme, 
-            'gridColumns': self.grid_columns, 
-            'rtspPort': self.rtsp_port,
-            'autoBoot': self.auto_boot,
-            'globalUsername': self.global_username,
-            'globalPassword': self.global_password,
-            'rtspAuthEnabled': self.rtsp_auth_enabled,
-            'debugMode': self.debug_mode,
-            'authEnabled': self.auth_enabled,
-            'username': self.username
-        }
+            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), 
+                                  debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
+        
+        return self.load_settings()
 
+    def get_ip_whitelist(self):
+        """Get the current IP whitelist"""
+        settings = self.load_settings()
+        return settings.get('ipWhitelist', [])
+
+    def save_ip_whitelist(self, whitelist):
+        """Save the IP whitelist"""
+        self.ip_whitelist = whitelist
+        
+        # Save the entire config
+        self.save_config()
+        return self.load_settings()
+
+    def is_ip_whitelisted(self, ip_address):
+        """Check if an IP address or range is whitelisted"""
+        if not ip_address or ip_address == 'Unknown':
+            return False
+            
+        # Clean IP if it has brackets (IPv6) or a port
+        if ip_address.startswith('['):
+            ip_address = ip_address.split(']')[0][1:]
+        
+        if ':' in ip_address:
+            # IPv4 with port (e.g. 1.2.3.4:5678)
+            if '.' in ip_address:
+                ip_address = ip_address.rsplit(':', 1)[0]
+            # IPv6 with port is already handled by brackets check
+
+        # Normalize local addresses
+        if ip_address in ['::1', 'localhost']:
+            ip_address = '127.0.0.1'
+
+        whitelist = self.ip_whitelist
+        if not whitelist:
+            return False
+
+        try:
+            client_ip = ipaddress.ip_address(ip_address)
+            for entry in whitelist:
+                try:
+                    if '/' in entry:
+                        if client_ip in ipaddress.ip_network(entry, strict=False):
+                            return True
+                    elif client_ip == ipaddress.ip_address(entry):
+                        return True
+                except ValueError:
+                    continue
+        except ValueError:
+            pass
+            
+        return False
+
+    def get_active_sessions(self):
+        """Get ALL active sessions (RTSP, HLS, WebRTC) from MediaMTX API"""
+        all_formatted = []
+        # MediaMTX separates these into different endpoints
+        endpoints = [
+            ('sessions', None),      # RTSP, RTMP, etc.
+            ('hlssessions', 'HLS'),
+            ('webrtcsessions', 'WebRTC')
+        ]
+        
+        for ep_name, proto_override in endpoints:
+            try:
+                # Use 127.0.0.1 for consistency
+                url = f"http://127.0.0.1:{MEDIAMTX_API_PORT}/v3/{ep_name}/list"
+                response = requests.get(url, timeout=2)
+                if response.status_code == 200:
+                    data = response.json()
+                    items = data.get('items', []) if isinstance(data, dict) else []
+                    
+                    for s in items:
+                        remote_addr = s.get('remoteAddr', 'Unknown')
+                        
+                        # Robust IP extraction from "IP:PORT" or "[IPv6]:PORT"
+                        clean_ip = remote_addr
+                        if remote_addr.startswith('['):
+                            clean_ip = remote_addr.split(']')[0][1:]
+                        elif ':' in remote_addr:
+                             # For IPv4 (and IPv6 without brackets), rsplit the last colon (the port)
+                             if remote_addr.count(':') == 1 or '.' in remote_addr:
+                                 clean_ip = remote_addr.rsplit(':', 1)[0]
+                        
+                        all_formatted.append({
+                            'id': s.get('id'),
+                            'remoteAddr': remote_addr,
+                            'cleanIp': clean_ip,
+                            'path': s.get('path'),
+                            'protocol': proto_override or s.get('protocol', 'Unknown'),
+                            'created': s.get('created'),
+                            'whitelisted': self.is_ip_whitelisted(clean_ip)
+                        })
+            except Exception as e:
+                if getattr(self, 'debug_mode', False):
+                    print(f"  [Session API] Warning fetching {ep_name}: {e}")
+                continue
+                
+        # Sort by creation time (most recent first)
+        try:
+            all_formatted.sort(key=lambda x: x.get('created') or '', reverse=True)
+        except:
+            pass
+            
+        return all_formatted
+            
     def get_grid_fusion(self):
         """Get GridFusion configuration (updated for multi-layout)"""
         return {
@@ -527,7 +601,7 @@ class CameraManager:
             'debugMode': getattr(self, 'debug_mode', False)
         }
         
-        camera = VirtualONVIFCamera(config)
+        camera = VirtualONVIFCamera(config, self)
         self.cameras.append(camera)
         
         self.next_id += 1

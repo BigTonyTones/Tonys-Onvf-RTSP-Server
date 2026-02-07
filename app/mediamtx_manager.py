@@ -11,7 +11,7 @@ import shlex
 import secrets
 import threading
 from pathlib import Path
-from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT
+from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT, WEB_UI_PORT
 
 class MediaMTXManager:
     """Manages MediaMTX RTSP server"""
@@ -231,6 +231,10 @@ class MediaMTXManager:
             'api': True,
             'apiAddress': f':{MEDIAMTX_API_PORT}',
             
+            # ===== AUTHENTICATION =====
+            'authMethod': 'http',
+            'authHTTPAddress': f'http://localhost:{WEB_UI_PORT}/api/auth',
+            
             # ===== PROTOCOL SETTINGS =====
             'rtspTransports': ['tcp'],  # TCP only for reliability
             
@@ -284,33 +288,7 @@ class MediaMTXManager:
         ff_process = ff_advanced.get('processArgs', '-c:v libx264 -preset ultrafast -tune zerolatency -g 30')
         
         
-        # Check if GLOBAL authentication is enabled
-        enable_global_auth = bool(rtsp_username and rtsp_password)
-        
-        auth_users_map = {} # (user, pass) -> list of permissions
-        sys_user = "internal_publisher"
-        sys_pass = secrets.token_hex(16)
-        
-        # Ensure strings
-        rtsp_username = str(rtsp_username) if rtsp_username else ""
-        rtsp_password = str(rtsp_password) if rtsp_password else ""
-        
-        if enable_global_auth:
-            print(f"    Global Authentication Enabled (User: {rtsp_username})")
-            # Add system publisher with full rights (publish and read everywhere)
-            # Use ~^.*$ for regex matching all paths
-            auth_users_map[(sys_user, sys_pass)] = [
-                {'action': 'publish', 'path': '~^.*$'}, 
-                {'action': 'read', 'path': '~^.*$'},
-                {'action': 'api', 'path': '~^.*$'},
-                {'action': 'metrics', 'path': '~^.*$'},
-                {'action': 'pprof', 'path': '~^.*$'}
-            ]
-            
-            # Add the user defined global listener
-            auth_users_map[(rtsp_username, rtsp_password)] = [
-                {'action': 'read', 'path': '~^.*$'}
-            ]
+        # Auth handling is now external via the Python web app
 
         # Only add paths for RUNNING cameras
         running_count = 0
@@ -603,16 +581,7 @@ class MediaMTXManager:
                         print(f"      {layout_name} stream added at /{layout_id} ({res})")
 
         
-        # Populate authInternalUsers if enabled
-        if enable_global_auth and auth_users_map:
-            config['authMethod'] = 'internal'
-            config['authInternalUsers'] = []
-            for (user, passwd), perms in auth_users_map.items():
-                config['authInternalUsers'].append({
-                    'user': user,
-                    'pass': passwd,
-                    'permissions': perms
-                })
+        # External auth handled via hook
         
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)

@@ -1104,6 +1104,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
                 <button class="btn" style="background: linear-gradient(135deg, #be5a83 0%, #9333ea 100%); color: white; font-weight: 600;" onclick="toggleMatrixView(true)">Matrix View</button>
+                <button class="btn" style="background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: white; font-weight: 600;" onclick="window.location.href='/ip-management'">IP Management</button>
                 <button class="btn" onclick="startAll()">Start All</button>
                 <button class="btn" onclick="stopAll()">Stop All</button>
                 <button class="btn" onclick="openSettingsModal()">Settings</button>

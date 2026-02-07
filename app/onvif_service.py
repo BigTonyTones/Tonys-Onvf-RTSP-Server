@@ -60,6 +60,13 @@ class ONVIFService:
             @wraps(f)
             def decorated(*args, **kwargs):
                 client_ip = request.remote_addr
+
+                # Check for IP whitelist bypass
+                if self.camera.manager and self.camera.manager.is_ip_whitelisted(request.remote_addr):
+                    if getattr(self.camera, 'debug_mode', False):
+                        print(f"  [ONVIF] Auth bypass for whitelisted IP: {client_ip}")
+                    return f(*args, **kwargs)
+                
                 current_time = time.time()
                 
                 # Check if IP is in auth cache (30 minute TTL)
@@ -80,17 +87,19 @@ class ONVIFService:
                 # Check for SOAP WS-UsernameToken (in request body)
                 data = request.get_data(as_text=True)
                 
-                # Simplified UsernameToken validation
-                if 'UsernameToken' in data and f'<Username>{self.camera.onvif_username}</Username>' in data:
-                    # Cache successful authentication
-                    self.auth_cache[client_ip] = current_time
-                    return f(*args, **kwargs)
-                
-                # Also check for namespaced username tags (e.g., wsse:Username)
-                if 'UsernameToken' in data and f':Username>{self.camera.onvif_username}</' in data:
-                    # Cache successful authentication
-                    self.auth_cache[client_ip] = current_time
-                    return f(*args, **kwargs)
+                if 'UsernameToken' in data:
+                    # Robust check for Username and Password in SOAP XML
+                    # Supports namespaced tags (wsse:Username) and cleartext passwords
+                    has_user = f'<Username>{self.camera.onvif_username}</Username>' in data or \
+                               f':Username>{self.camera.onvif_username}</' in data
+                    
+                    has_pass = f'>{self.camera.onvif_password}</' in data and \
+                               ('<Password' in data or ':Password' in data)
+
+                    if has_user and has_pass:
+                        # Cache successful authentication
+                        self.auth_cache[client_ip] = current_time
+                        return f(*args, **kwargs)
                 
                 # Authentication failed - return 401
                 return Response(
@@ -141,31 +150,14 @@ class ONVIFService:
             
         # Root Route: Handle ONVIF Device Service at the root for convenience
         @app.route('/', methods=['GET', 'POST'], endpoint=f'root_service_{self.camera.id}')
+        @require_auth
         def root_service():
             return device_service()
 
         # ONVIF Media Service
-        @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}_v1')
-        def media_service_v1():
-            if request.method == 'GET':
-                return self._get_media_wsdl()
-            
-            soap_body = request.data.decode('utf-8')
-            
-            # GetProfiles
-            if 'GetProfiles' in soap_body:
-                return self._handle_get_profiles()
-            
-            # GetStreamUri
-            elif 'GetStreamUri' in soap_body:
-                return self._handle_get_stream_uri(local_ip)
-            
-            return self._handle_get_profiles()
-        
-        # ONVIF Media Service (separate endpoint for ODM compatibility)
-        @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}_v2')
+        @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}')
         @require_auth
-        def media_service_v2():
+        def media_service():
             try:
                 if request.method == 'GET':
                     return self._get_media_wsdl()
