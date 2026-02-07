@@ -580,7 +580,7 @@ class MediaMTXManager:
                         config['paths'][layout_id] = {
                             'source': 'publisher',
                             'runOnInit': gf_cmd,
-                            'runOnInitRestart': False,  # Disable auto-restart to prevent zombie processes
+                            'runOnInitRestart': True,  # Auto-restart enabled to recover from initial connection failures
                         }
                         print(f"      {layout_name} stream added at /{layout_id} ({res})")
 
