@@ -408,6 +408,15 @@ def get_ip_management_html(whitelist):
                 </div>
             </div>
             
+            <!-- Reboot Warning -->
+            <div class="card" style="background: rgba(255, 184, 108, 0.1); border: 2px solid var(--accent-orange); display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+                <i class="fas fa-redo-alt fa-2x" style="color: var(--accent-orange);"></i>
+                <div>
+                    <h3 style="color: var(--accent-orange); margin-bottom: 4px; font-size: 16px;">Reboot Required</h3>
+                    <p style="font-size: 13px; opacity: 0.9;">A server reboot is necessary to fully apply IP whitelist changes to all streaming services.</p>
+                </div>
+            </div>
+
             <div class="card" style="background: rgba(139, 233, 253, 0.05); border-color: rgba(139, 233, 253, 0.2);">
                 <div style="color: var(--accent-cyan); font-size: 14px; display: flex; align-items: flex-start; gap: 12px;">
                     <i class="fas fa-info-circle" style="margin-top: 3px;"></i>
