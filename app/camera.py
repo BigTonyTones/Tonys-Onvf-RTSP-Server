@@ -40,7 +40,8 @@ class ThreadPoolWSGIServer(ThreadedWSGIServer):
 class VirtualONVIFCamera:
     """Represents a virtual ONVIF camera"""
     
-    def __init__(self, config):
+    def __init__(self, config, manager=None):
+        self.manager = manager
         self.id = config['id']
         self.uuid = config.get('uuid') or str(uuid.uuid4())
         self.name = config['name']

@@ -11,6 +11,7 @@ from flask_cors import CORS
 
 from .web_template import get_web_ui_html
 from .diagnostics_template import get_diagnostics_html
+from .ip_management_template import get_ip_management_html
 
 from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
@@ -1138,4 +1139,65 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
     
+    @app.route('/ip-management')
+    @login_required
+    def ip_management():
+        whitelist = manager.get_ip_whitelist()
+        return get_ip_management_html(whitelist)
+
+    @app.route('/api/sessions', methods=['GET'])
+    @login_required
+    def get_sessions():
+        return jsonify(manager.get_active_sessions())
+
+    @app.route('/api/settings/whitelist', methods=['POST'])
+    @login_required
+    def save_whitelist():
+        data = request.json
+        whitelist = data.get('whitelist', [])
+        try:
+            manager.save_ip_whitelist(whitelist)
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/auth', methods=['POST'])
+    def mediamtx_auth():
+        """Handle authentication requests from MediaMTX"""
+        try:
+            data = request.json
+            if not data:
+                return jsonify({'error': 'Invalid request'}), 400
+            
+            client_ip = data.get('ip')
+            user = data.get('user', '')
+            password = data.get('password', '')
+            
+            # 1. ALWAYS allow whitelisted IPs
+            if manager.is_ip_whitelisted(client_ip):
+                if manager.debug_mode:
+                    print(f"  [RTSP] Auth bypass for whitelisted IP: {client_ip}")
+                return '', 200
+                
+            # 2. Allow system internal publisher (used for transcoding)
+            # This is a bit tricky as the password is random and stored in mediamtx_manager
+            # But we can allow any user from localhost for now, or just allow the specific user
+            if client_ip in ['127.0.0.1', '::1', 'localhost']:
+                 return '', 200
+
+            # 3. Check if global RTSP auth is enabled
+            if not getattr(manager, 'rtsp_auth_enabled', False):
+                return '', 200
+                
+            # 4. Validate credentials
+            if user == manager.global_username and password == manager.global_password:
+                return '', 200
+                
+            # print(f"  Auth: Denied for {user} from {client_ip}")
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        except Exception as e:
+            print(f"  Error in MediaMTX auth hook: {e}")
+            return jsonify({'error': str(e)}), 500
+
     return app
