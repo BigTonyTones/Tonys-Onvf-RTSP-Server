@@ -1138,6 +1138,56 @@ def create_web_app(manager):
             })
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/server/restart', methods=['POST'])
+    @login_required
+    def server_restart():
+        """Restart the application"""
+        import threading
+        def do_restart():
+            time.sleep(1)
+            print("\n\nServer restart requested via UI...")
+            manager.mediamtx.stop()
+            # Exit with code 42 to trigger restart (Linux) or just exit (Windows)
+            if sys.platform.startswith('linux'):
+                os._exit(42)
+            else:
+                os._exit(0)
+        
+        threading.Thread(target=do_restart, daemon=True).start()
+        return jsonify({'success': True, 'message': 'Restarting...'})
+
+    @app.route('/api/server/stop', methods=['POST'])
+    @login_required
+    def server_stop():
+        """Stop the application"""
+        import threading
+        def do_stop():
+            time.sleep(1)
+            print("\n\nServer stop requested via UI...")
+            manager.mediamtx.stop()
+            os._exit(0)
+            
+        threading.Thread(target=do_stop, daemon=True).start()
+        return jsonify({'success': True, 'message': 'Stopping...'})
+
+    @app.route('/api/server/reboot', methods=['POST'])
+    @login_required
+    def server_reboot():
+        """Reboot the host machine (Linux only)"""
+        if not sys.platform.startswith('linux'):
+            return jsonify({'success': False, 'error': 'Reboot is only supported on Linux'}), 400
+            
+        import threading
+        def do_reboot():
+            time.sleep(1)
+            print("\n\nSystem reboot requested via UI...")
+            manager.mediamtx.stop()
+            # Send the command to reboot
+            os.system('sudo reboot')
+            
+        threading.Thread(target=do_reboot, daemon=True).start()
+        return jsonify({'success': True, 'message': 'Rebooting system...'})
     
     @app.route('/ip-management')
     @login_required

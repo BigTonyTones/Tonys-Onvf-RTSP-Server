@@ -604,6 +604,76 @@ def get_web_ui_html(current_settings=None):
             text-transform: uppercase;
             margin-bottom: 4px;
         }}
+
+        /* Dropdown Menu Styles */
+        .dropdown {{
+            position: relative;
+            display: inline-block;
+        }}
+        .dropdown-content {{
+            display: none;
+            position: absolute;
+            right: 0;
+            background: var(--card-bg);
+            min-width: 180px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 100;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-top: 5px;
+            overflow: hidden;
+        }}
+        .dropdown-content button {{
+            color: var(--text-title);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }}
+        .dropdown-content button i {{
+            margin-right: 10px;
+            width: 16px;
+            text-align: center;
+        }}
+        .dropdown-content button:hover {{
+            background-color: var(--body-bg);
+            color: var(--btn-primary);
+        }}
+        .dropdown-content button.btn-reboot:hover {{
+            color: #f56565 !important;
+        }}
+        .dropdown:hover .dropdown-content {{
+            display: block;
+        }}
+        /* Toast Notifications */
+        .toast {{
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+            pointer-events: none;
+        }}
+        @keyframes slideIn {{
+            from {{ transform: translateX(100%); opacity: 0; }}
+            to {{ transform: translateX(0); opacity: 1; }}
+        }}
+        @keyframes slideOut {{
+            from {{ transform: translateX(0); opacity: 1; }}
+            to {{ transform: translateX(100%); opacity: 0; }}
+        }}
         .info-value {{
             font-family: 'Courier New', monospace;
             font-size: 13px;
@@ -1109,8 +1179,22 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn" onclick="stopAll()">Stop All</button>
                 <button class="btn" onclick="openSettingsModal()">Settings</button>
                 <button class="btn" style="background: rgba(102, 126, 234, 0.15); border: 1px solid rgba(102, 126, 234, 0.3);" onclick="window.location.href='/diagnostics'">Diagnostics</button>
-                <button class="btn" onclick="restartServer()">Restart Server</button>
-                <button class="btn btn-danger" onclick="stopServer()">Stop Server</button>
+                <div class="dropdown">
+                    <button class="btn" style="background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: white; border-color: #2d3748;">
+                        <i class="fas fa-server"></i> Server <i class="fas fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <button onclick="restartServer()">
+                            <i class="fas fa-sync-alt"></i> Restart Server
+                        </button>
+                        <button onclick="stopServer()" style="color: #f56565;">
+                            <i class="fas fa-stop-circle"></i> Stop Server
+                        </button>
+                        <button onclick="rebootServer()" class="linux-only" style="border-top: 1px solid var(--border-color);">
+                            <i class="fas fa-power-off"></i> Reboot Host
+                        </button>
+                    </div>
+                </div>
                 <button class="btn" onclick="openLogsModal()">Logs</button>
                 <button class="btn" onclick="openAboutModal()">About</button>
                 <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
@@ -2961,14 +3045,17 @@ def get_web_ui_html(current_settings=None):
         }}
         
         async function restartServer() {{
+            if (!confirm('Are you sure you want to restart the server application?')) return;
             try {{
                 const response = await fetch('/api/server/restart', {{method: 'POST'}});
                 if (response.ok) {{
-                    alert('Server is restarting... The page will reload in 10 seconds.');
-                    // Reload page after 10 seconds to reconnect
-                    setTimeout(() => {{
-                        window.location.reload();
-                    }}, 10000);
+                    if (typeof showToast === 'function') {{
+                        showToast('Server is restarting...', 'info');
+                    }} else {{
+                        alert('Server is restarting... Please wait a few seconds.');
+                    }}
+                    // Reload page after 5 seconds to reconnect
+                    setTimeout(() => window.location.reload(), 5000);
                 }} else {{
                     alert('Failed to restart server');
                 }}
@@ -2982,18 +3069,33 @@ def get_web_ui_html(current_settings=None):
             if (!confirm('Are you sure you want to stop the server? This will shut down all camera streams and the web interface.')) {{
                 return;
             }}
-
+            
             try {{
+                if (typeof showToast === 'function') {{
+                    showToast('Server is stopping...', 'warning');
+                }}
+                
                 const response = await fetch('/api/server/stop', {{method: 'POST'}});
                 if (response.ok) {{
-                    // Show a message since the server will be down
-                    document.body.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #000; color: #fff;\"><h1>Server Stopped</h1><p>The ONVIF server has been shut down successfully.</p><p style=\"color: #718096; margin-top: 20px;\">You can safely close this browser tab.</p></div>';
+                    setTimeout(() => {{
+                        document.body.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #1a202c; color: #fff; text-align: center; padding: 20px;">' +
+                            '<i class="fas fa-power-off" style="font-size: 64px; color: #f56565; margin-bottom: 20px;"></i>' +
+                            '<h1>Server Stopped</h1>' +
+                            '<p style="font-size: 18px; color: #a0aec0;">The ONVIF server has been shut down successfully.</p>' +
+                            '<p style="color: #718096; margin-top: 30px; font-size: 14px;">You can safely close this browser tab.</p>' +
+                            '</div>';
+                    }}, 1500);
                 }} else {{
                     alert('Failed to stop server');
                 }}
             }} catch (error) {{
                 // Expected error since server is shutting down
-                document.body.innerHTML = '<div style=\"display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #000; color: #fff;\"><h1>Server Stopped</h1><p>The ONVIF server has been shut down successfully.</p><p style=\"color: #718096; margin-top: 20px;\">You can safely close this browser tab.</p></div>';
+                document.body.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #1a202c; color: #fff; text-align: center; padding: 20px;">' +
+                    '<i class="fas fa-power-off" style="font-size: 64px; color: #f56565; margin-bottom: 20px;"></i>' +
+                    '<h1>Server Stopped</h1>' +
+                    '<p style="font-size: 18px; color: #a0aec0;">The ONVIF server has been shut down successfully.</p>' +
+                    '<p style="color: #718096; margin-top: 30px; font-size: 14px;">You can safely close this browser tab.</p>' +
+                    '</div>';
             }}
         }}
         
@@ -3295,6 +3397,27 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        function showToast(message, type = 'info') {{
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${{type}}`;
+            
+            if (type === 'info') toast.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            else if (type === 'success') toast.style.background = '#48bb78';
+            else if (type === 'warning') toast.style.background = '#ed8936';
+            else if (type === 'error') toast.style.background = '#f56565';
+            else toast.style.background = '#2d3748';
+            
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {{
+                if (toast) {{
+                    toast.style.animation = 'slideOut 0.3s ease-in forwards';
+                    setTimeout(() => toast.remove(), 300);
+                }}
+            }}, 3000);
+        }}
+
         async function rebootServer() {{
             if (!confirm('This will reboot the entire server. The system will be unavailable for a few minutes. Continue?')) {{
                 return;
@@ -3304,7 +3427,7 @@ def get_web_ui_html(current_settings=None):
                 const response = await fetch('/api/server/reboot', {{method: 'POST'}});
                 if (response.ok) {{
                     alert('Server is rebooting... The system will be back online in a few minutes.');
-                    closeSettingsModal();
+                    if (typeof closeSettingsModal === 'function') closeSettingsModal();
                 }} else {{
                     alert('Failed to reboot server. This feature only works on Linux.');
                 }}
