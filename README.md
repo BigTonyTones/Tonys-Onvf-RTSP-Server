@@ -8,7 +8,7 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 **GridFusion** lets you combine multiple camera feeds into a single, customizable RTSP stream. Perfect for creating security monitoring walls, multi-angle views, or consolidated feeds for your NVR.
 
-![GridFusion Editor](assets/gridfusion.png)
+![GridFusion Editor](assets/Gridfusion2.png)
 
 ### Key Features:
 - **Visual Drag-and-Drop Editor**: Position cameras anywhere on the canvas with pixel-perfect control
