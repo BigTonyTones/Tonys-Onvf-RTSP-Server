@@ -2,7 +2,7 @@
 
 Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a proxy, giving each of your cameras a unique identity (IP/MAC) so they work correctly with Protect's requirements.
 
-![Dashboard Screenshot](assets/main.png)
+![Dashboard Screenshot](assets/Main%20Page.png)
 
 ## Introducing GridFusion - Multi-Camera Matrix Composer
 
