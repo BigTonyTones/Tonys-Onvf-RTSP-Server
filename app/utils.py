@@ -92,24 +92,23 @@ def check_and_install_requirements():
     else:
         print("All dependencies are already installed.")
         
-        # SPECIAL CASE: Check for missing ONVIF WSDLs (common issue)
+        # SPECIAL CASE: Check for missing ONVIF WSDLs (common issue in some pip installs)
         try:
             import onvif
             import os
-            wsdl_file = os.path.join(os.path.dirname(onvif.__file__), 'wsdl', 'devicemgmt.wsdl')
-            if not os.path.exists(wsdl_file):
+            
+            # Check for the primary WSDL file
+            wsdl_dir = os.path.join(os.path.dirname(onvif.__file__), 'wsdl')
+            wsdl_file = os.path.join(wsdl_dir, 'devicemgmt.wsdl')
+            
+            # Check for local fallback in app/wsdl
+            local_wsdl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl', 'devicemgmt.wsdl')
+            
+            if not os.path.exists(wsdl_file) and not os.path.exists(local_wsdl):
                 print("\n[WARNING] ONVIF WSDL files are missing from onvif-zeep installation!")
-                print("Attempting to repair by force-reinstalling onvif-zeep...")
-                try:
-                    # Try onvif-zeep-foscam first as it's more reliable/complete
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", "--force-reinstall", "onvif-zeep-foscam"])
-                    print("ONVIF repair successful (using onvif-zeep-foscam fork).\n")
-                except subprocess.CalledProcessError:
-                    # Fallback to standard
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", "--force-reinstall", "onvif-zeep"])
-                    print("ONVIF repair successful (force-reinstalled onvif-zeep).\n")
-        except Exception as e:
-            # If import fails, it will be caught by the standard installer above anyway
+                print("Don't worry, the prober will attempt to use local bundled WSDLs if available.")
+                print("If scanning still fails, we may need to manually download the WSDL files.\n")
+        except Exception:
             pass
         
         print("")
