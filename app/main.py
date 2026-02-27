@@ -121,12 +121,31 @@ def main():
     print("Press Ctrl+C to stop the server")
     print("=" * 60 + "\n")
     
+    import signal
+    
+    shutdown_event = threading.Event()
+    
+    def signal_handler(sig, frame):
+        print(f"\n\nShutdown requested (Signal {sig})...")
+        shutdown_event.set()
+        
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     try:
-        while True:
+        # Wait until shutdown is triggered
+        while not shutdown_event.is_set():
             time.sleep(1)
             
     except KeyboardInterrupt:
-        print("\n\nShutdown requested...")
-        manager.mediamtx.stop()
-        print("Server stopped successfully. Goodbye!")
-        sys.exit(0)
+        print("\n\nShutdown requested (KeyboardInterrupt)...")
+        
+    # Perform clean shutdown
+    print("Stopping MediaMTX...")
+    manager.mediamtx.stop()
+    print("Stopping all cameras...")
+    for camera in manager.cameras:
+        camera.stop()
+        
+    print("Server stopped successfully. Goodbye!")
+    sys.exit(0)

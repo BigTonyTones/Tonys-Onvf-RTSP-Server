@@ -120,8 +120,18 @@ class VirtualONVIFCamera:
         self._start_onvif_service()
         
     def stop(self):
-        """Mark camera as stopped and cleanup networking"""
+        """Mark camera as stopped, shutdown ONVIF service, and cleanup networking"""
         self.status = "stopped"
+        
+        # Stop the ONVIF WSGI server safely
+        if hasattr(self, 'server') and self.server:
+            try:
+                import threading
+                # shutdown() tells the serve_forever() loop to exit
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                self.server = None
+            except Exception as e:
+                print(f"  Error shutting down ONVIF server for {self.name}: {e}")
         
         # Cleanup Virtual NIC
         if self.use_virtual_nic and self.network_mgr:
@@ -160,9 +170,11 @@ class VirtualONVIFCamera:
         server.executor = ThreadPoolExecutor(max_workers=20)
         server.max_workers = 20
         
+        self.server = server
+        
         # Run server in a separate thread
         self.flask_thread = threading.Thread(
-            target=server.serve_forever,
+            target=self.server.serve_forever,
             daemon=True
         )
         self.flask_thread.start()
