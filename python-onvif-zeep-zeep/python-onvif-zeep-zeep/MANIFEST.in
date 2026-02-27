@@ -1,5 +1,0 @@
-include onvif/version.txt
-include CHANGES.txt
-include LICENSE
-include README.
-include wsdl/*
