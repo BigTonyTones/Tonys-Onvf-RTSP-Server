@@ -3722,17 +3722,23 @@ def get_web_ui_html(current_settings=None):
                     
                     metricsEl.innerHTML = html;
                     
-                    // Check for H265/HEVC codec on main stream and display warning
+                    // Check for H265/HEVC codec on main or sub stream and display warning
                     const warningEl = document.getElementById(`codec-warning-${{cam.id}}`);
                     if (warningEl) {{
                         let isH265 = false;
-                        if (mainStats && mainStats.tracks && Array.isArray(mainStats.tracks)) {{
-                            isH265 = mainStats.tracks.some(track => {{
-                                const trackStr = typeof track === 'string' ? track : JSON.stringify(track);
-                                const t = trackStr.toLowerCase();
-                                return t.includes('h265') || t.includes('hevc');
-                            }});
-                        }}
+                        
+                        const checkTracksForH265 = (stats) => {{
+                            if (stats && stats.tracks && Array.isArray(stats.tracks)) {{
+                                return stats.tracks.some(track => {{
+                                    const trackStr = typeof track === 'string' ? track : JSON.stringify(track);
+                                    const t = trackStr.toLowerCase();
+                                    return t.includes('h265') || t.includes('hevc');
+                                }});
+                            }}
+                            return false;
+                        }};
+                        
+                        isH265 = checkTracksForH265(mainStats) || checkTracksForH265(subStats);
                         
                         if (isH265) {{
                             warningEl.innerHTML = '<div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; color: #ed8936; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;"><i class="fas fa-exclamation-triangle" style="margin-top: 2px;"></i><span><strong>Performance Warning:</strong> H.265 / HEVC stream detected. For optimal performance and compatibility, it is recommended to set your camera to use <strong>H.264</strong> encoding instead.</span></div>';
