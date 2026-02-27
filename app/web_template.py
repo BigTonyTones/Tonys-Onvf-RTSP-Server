@@ -2298,7 +2298,7 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="info-section">
-                    <div id="codec-warning-${cam.id}"></div>
+                    <div id="codec-warning-${{cam.id}}"></div>
                     <div class="info-label">
                         RTSP Main Stream (Full Quality)
                         ${{cam.transcodeMain ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Transcoded</span>' : ''}}
