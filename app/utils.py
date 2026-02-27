@@ -153,8 +153,36 @@ def check_and_install_system_dependencies():
     print("     Please install it manually: sudo apt-get install isc-dhcp-client")
 
 def cleanup_stale_processes():
-    """Kill any existing MediaMTX instances to prevent port conflicts"""
+    """Kill any existing MediaMTX instances and old server instances to prevent port conflicts"""
+    import os
+    try:
+        import psutil
+        from .config import WEB_UI_PORT
+    except ImportError:
+        psutil = None
+
     print("Checking for stale processes...")
+    
+    if psutil:
+        try:
+            current_pid = os.getpid()
+            for conn in psutil.net_connections(kind='inet'):
+                if conn.laddr.port == WEB_UI_PORT and conn.status == 'LISTEN':
+                    if conn.pid and conn.pid != current_pid:
+                        try:
+                            p = psutil.Process(conn.pid)
+                            print(f"  Found stale app process (PID: {conn.pid}) using port {WEB_UI_PORT}, terminating...")
+                            p.terminate()
+                            p.wait(timeout=3)
+                            print("  Stale app process terminated")
+                        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+                            try:
+                                p.kill()
+                            except:
+                                pass
+        except Exception as e:
+            print(f"  Warning: Could not check port {WEB_UI_PORT}: {e}")
+
     try:
         if platform.system() == "Windows":
             # Check if mediamtx.exe is running
