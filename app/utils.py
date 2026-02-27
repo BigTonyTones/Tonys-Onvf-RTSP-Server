@@ -57,7 +57,8 @@ def check_and_install_requirements():
         'flask_cors': 'flask-cors',
         'requests': 'requests',
         'yaml': 'pyyaml',
-        'psutil': 'psutil'
+        'psutil': 'psutil',
+        'onvif': 'onvif-zeep'
     }
     
     # Check if we need tzdata for timezone support
@@ -89,7 +90,29 @@ def check_and_install_requirements():
                 sys.exit(1)
         print("\nAll dependencies installed successfully!\n")
     else:
-        print("All dependencies are already installed.\n")
+        print("All dependencies are already installed.")
+        
+        # SPECIAL CASE: Check for missing ONVIF WSDLs (common issue)
+        try:
+            import onvif
+            import os
+            wsdl_file = os.path.join(os.path.dirname(onvif.__file__), 'wsdl', 'devicemgmt.wsdl')
+            if not os.path.exists(wsdl_file):
+                print("\n[WARNING] ONVIF WSDL files are missing from onvif-zeep installation!")
+                print("Attempting to repair by force-reinstalling onvif-zeep...")
+                try:
+                    # Try onvif-zeep-foscam first as it's more reliable/complete
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "--force-reinstall", "onvif-zeep-foscam"])
+                    print("ONVIF repair successful (using onvif-zeep-foscam fork).\n")
+                except subprocess.CalledProcessError:
+                    # Fallback to standard
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "--force-reinstall", "onvif-zeep"])
+                    print("ONVIF repair successful (force-reinstalled onvif-zeep).\n")
+        except Exception as e:
+            # If import fails, it will be caught by the standard installer above anyway
+            pass
+        
+        print("")
 
 def check_and_install_system_dependencies():
     """Check and install required system packages (Linux only)"""

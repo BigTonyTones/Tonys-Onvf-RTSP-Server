@@ -44,24 +44,61 @@ class ONVIFProber:
             
             # Connect to Camera
             # We assume the WSDLs are in the standard location
-            # Determine WSDL directory
+            # Match the library's internal WSDL directory
             wsdl_dir = os.path.join(os.path.dirname(onvif.__file__), 'wsdl')
+            
+            # Check if devicemgmt.wsdl exists in the primary wsdl_dir
             if not os.path.exists(os.path.join(wsdl_dir, 'devicemgmt.wsdl')):
-                # Search for WSDLs in common separated locations
+                # Search for WSDLs in common locations
                 possible_paths = [
-                    r"C:\Users\Tony\AppData\Roaming\Python\Lib\site-packages\wsdl",
+                    # Linux venv (user-specific path logic)
                     os.path.join(os.path.dirname(os.path.dirname(onvif.__file__)), 'wsdl'),
-                    # Try three levels up + Lib/site-packages/wsdl (common in some user installs)
-                    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(onvif.__file__))), 'Lib', 'site-packages', 'wsdl'),
+                    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(onvif.__file__))), 'share', 'onvif', 'wsdl'),
+                    # Windows paths
+                    r"C:\Users\Tony\AppData\Roaming\Python\Lib\site-packages\onvif\wsdl",
+                    # Default system paths
+                    "/usr/local/lib/python3.11/dist-packages/onvif/wsdl",
+                    "/usr/lib/python3/dist-packages/onvif/wsdl",
                 ]
+                
+                found_valid = False
                 for p in possible_paths:
                     if os.path.exists(os.path.join(p, 'devicemgmt.wsdl')):
                         wsdl_dir = p
-                        print(f"Found WSDLs at: {wsdl_dir}")
+                        print(f"  [ONVIF] Found WSDLs at alternative location: {wsdl_dir}")
+                        found_valid = True
                         break
+                
+                if not found_valid:
+                    print(f"  [ONVIF] Warning: devicemgmt.wsdl not found in standard paths.")
+                    print(f"  [ONVIF] Checking if it's in the same directory as this file...")
+                    local_wsdl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
+                    if os.path.exists(os.path.join(local_wsdl, 'devicemgmt.wsdl')):
+                        wsdl_dir = local_wsdl
+                        print(f"  [ONVIF] Found local WSDLs: {wsdl_dir}")
+                    else:
+                        # Fallback: Let the library try its own defaults if we can't find it
+                        # but if the devicemgmt.wsdl is truly missing from the package, this will still fail.
+                        print(f"  [ONVIF] Final fallback: attempting to use library defaults")
+                        wsdl_dir = None
             
-            # Connect to Camera with explicit wsdl_dir
-            mycam = ONVIFCamera(host, port, username, password, wsdl_dir=wsdl_dir)
+            # Connect to Camera
+            try:
+                if wsdl_dir:
+                    mycam = ONVIFCamera(host, port, username, password, wsdl_dir=wsdl_dir)
+                else:
+                    mycam = ONVIFCamera(host, port, username, password)
+            except Exception as e:
+                error_str = str(e)
+                if "No such file" in error_str and "wsdl" in error_str:
+                    return {
+                        'success': False,
+                        'error': f"ONVIF WSDL files are missing from your installation. "
+                                 f"Please run: 'pip install --force-reinstall onvif-zeep' "
+                                 f"or 'pip install onvif-zeep-foscam' to fix this. "
+                                 f"(Original Error: {error_str})"
+                    }
+                raise e # Re-raise to catch in outer block
             
             # Create media service
             media = mycam.create_media_service()
