@@ -2298,6 +2298,7 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div class="info-section">
+                    <div id="codec-warning-${cam.id}"></div>
                     <div class="info-label">
                         RTSP Main Stream (Full Quality)
                         ${{cam.transcodeMain ? '<span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Transcoded</span>' : ''}}
@@ -3720,6 +3721,25 @@ def get_web_ui_html(current_settings=None):
                     }}
                     
                     metricsEl.innerHTML = html;
+                    
+                    // Check for H265/HEVC codec on main stream and display warning
+                    const warningEl = document.getElementById(`codec-warning-${{cam.id}}`);
+                    if (warningEl) {{
+                        let isH265 = false;
+                        if (mainStats && mainStats.tracks && Array.isArray(mainStats.tracks)) {{
+                            isH265 = mainStats.tracks.some(track => {{
+                                const trackStr = typeof track === 'string' ? track : JSON.stringify(track);
+                                const t = trackStr.toLowerCase();
+                                return t.includes('h265') || t.includes('hevc');
+                            }});
+                        }}
+                        
+                        if (isH265) {{
+                            warningEl.innerHTML = '<div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; color: #ed8936; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;"><i class="fas fa-exclamation-triangle" style="margin-top: 2px;"></i><span><strong>Performance Warning:</strong> H.265 / HEVC stream detected. For optimal performance and compatibility, it is recommended to set your camera to use <strong>H.264</strong> encoding instead.</span></div>';
+                        }} else {{
+                            warningEl.innerHTML = '';
+                        }}
+                    }}
                 }});
                 
             }} catch (e) {{
