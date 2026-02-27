@@ -82,6 +82,13 @@ This server is optimized for Ubuntu 25.04 but is compatible with most modern Lin
 - **Transcoding**: Only enable this if your camera's native codec isn't compatible. It is CPU intensive.
 - **VMs**: If running in a VM (Proxmox, ESXi), you **must** enable **Promiscuous Mode** on the network interface for Virtual NICs to work.
 - **Auto-Boot**: You can enable the systemd service in the Web UI settings to start the server on boot.
+- **H.264 vs H.265**: High awareness is required regarding video codecs! See below.
+
+## 💡 Important: Video Codecs (H.264 vs H.265)
+For the best experience and lowest latency:
+- **Use H.264**: It is highly recommended to set your physical cameras to **H.264** in their own settings. H.264 is the universal standard for web browsers and provides the smoothest playback on the dashboard.
+- **H.265 (HEVC) Issues**: While H.265 saves bandwidth, most web browsers **cannot play it natively** in a web player. If your camera is set to H.265, you may see a black screen or loading spinner on the dashboard.
+- **The Fix**: Either change your camera's internal settings to H.264 (preferred) or enable **Transcoding** in the camera settings of this server. Note that transcoding is extremely CPU intensive, especially on Raspberry Pi hardware.
 
 ## Credits
 Built using [MediaMTX](https://github.com/bluenviron/mediamtx) and [FFmpeg](https://ffmpeg.org/).
