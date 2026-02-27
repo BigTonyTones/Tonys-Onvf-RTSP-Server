@@ -1145,9 +1145,12 @@ def create_web_app(manager):
         """Restart the application"""
         import threading
         def do_restart():
+            import signal
             time.sleep(1)
             print("\n\nServer restart requested via UI...")
             manager.mediamtx.stop()
+            for camera in manager.cameras:
+                camera.stop()
             # Exit with code 42 to trigger restart (Linux) or just exit (Windows)
             if sys.platform.startswith('linux'):
                 os._exit(42)
@@ -1156,20 +1159,6 @@ def create_web_app(manager):
         
         threading.Thread(target=do_restart, daemon=True).start()
         return jsonify({'success': True, 'message': 'Restarting...'})
-
-    @app.route('/api/server/stop', methods=['POST'])
-    @login_required
-    def server_stop():
-        """Stop the application"""
-        import threading
-        def do_stop():
-            time.sleep(1)
-            print("\n\nServer stop requested via UI...")
-            manager.mediamtx.stop()
-            os._exit(0)
-            
-        threading.Thread(target=do_stop, daemon=True).start()
-        return jsonify({'success': True, 'message': 'Stopping...'})
 
     @app.route('/api/server/reboot', methods=['POST'])
     @login_required
