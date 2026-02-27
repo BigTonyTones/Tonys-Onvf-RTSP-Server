@@ -2139,10 +2139,19 @@ def get_web_ui_html(current_settings=None):
 
                         // Always update info section to ensure IP is correct
                         // This is safe because it doesn't affect the video player (video-preview div)
+                        const existingWarning = card.querySelector(`#codec-warning-${{cam.id}}`);
+                        const warningHtml = existingWarning ? existingWarning.innerHTML : '';
+                        
                         const newInfoContent = getCameraCardContent(cam, serverIp);
                         const tempDiv = document.createElement('div');
                         tempDiv.innerHTML = newInfoContent;
                         card.querySelector('.info-section').innerHTML = tempDiv.querySelector('.info-section').innerHTML;
+                        
+                        // Restore warning
+                        if (warningHtml) {{
+                            const newWarning = card.querySelector(`#codec-warning-${{cam.id}}`);
+                            if (newWarning) newWarning.innerHTML = warningHtml;
+                        }}
                     }}
                 }}
             }});
