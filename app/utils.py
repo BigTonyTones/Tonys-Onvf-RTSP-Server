@@ -74,8 +74,11 @@ def check_and_install_requirements():
     
     print("Checking dependencies...")
     missing_packages = []
+    optional_packages = ['psutil']
     
     for module_name, package_name in required_packages.items():
+        if package_name in optional_packages:
+            continue
         if importlib.util.find_spec(module_name) is None:
             missing_packages.append(package_name)
     
@@ -88,9 +91,20 @@ def check_and_install_requirements():
             except subprocess.CalledProcessError as e:
                 print(f"Failed to install {package}: {e}")
                 sys.exit(1)
-        print("\nAll dependencies installed successfully!\n")
+        print("\nCore dependencies installed successfully!\n")
     else:
-        print("All dependencies are already installed.")
+        print("Core dependencies are already installed.")
+
+    # Check optional packages
+    for package in optional_packages:
+        module_name = 'psutil' # Currently only one, but we can expand this
+        if importlib.util.find_spec(module_name) is None:
+            print(f"Attempting to install optional package: {package}")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                print(f"Installed {package}")
+            except subprocess.CalledProcessError:
+                print(f"Warning: Could not install optional package {package}. Some minor features may be limited.")
         
         # SPECIAL CASE: Check for missing ONVIF WSDLs (common issue in some pip installs)
         try:

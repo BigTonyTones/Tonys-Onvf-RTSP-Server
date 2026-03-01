@@ -2,7 +2,10 @@ import json
 import os
 import sys
 from urllib.parse import quote
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 import time
 import functools
 from datetime import timedelta
@@ -207,6 +210,9 @@ def create_web_app(manager):
     @app.route('/api/stats')
     def get_stats():
         """Get CPU and memory usage for the app and its children using delta timings"""
+        if psutil is None:
+            return jsonify({'cpu_percent': 0.0, 'memory_mb': 0.0})
+
         try:
             current_time = time.time()
             parent = psutil.Process(os.getpid())
@@ -1122,20 +1128,32 @@ def create_web_app(manager):
             
             mm_ver = manager.mediamtx._get_latest_version()
             
-            mem = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
-            return jsonify({
+            system_info = {
                 'success': True,
                 'platform': f"{platform.system()} {platform.release()} ({platform.machine()})",
                 'python_version': sys.version.split()[0],
-                'cpu_count': psutil.cpu_count(),
-                'total_memory': round(mem.total / (1024**3), 2),
-                'available_memory': round(mem.available / (1024**3), 2),
-                'disk_usage': disk.percent,
                 'mediamtx_version': mm_ver,
                 'ffmpeg_version': ff_ver_str
-            })
+            }
+            
+            if psutil:
+                mem = psutil.virtual_memory()
+                disk = psutil.disk_usage('/')
+                system_info.update({
+                    'cpu_count': psutil.cpu_count(),
+                    'total_memory': round(mem.total / (1024**3), 2),
+                    'available_memory': round(mem.available / (1024**3), 2),
+                    'disk_usage': disk.percent
+                })
+            else:
+                system_info.update({
+                    'cpu_count': 'Unknown',
+                    'total_memory': 'Unknown',
+                    'available_memory': 'Unknown',
+                    'disk_usage': 0
+                })
+                
+            return jsonify(system_info)
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 

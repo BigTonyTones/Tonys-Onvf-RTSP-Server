@@ -81,7 +81,7 @@ class UpdateChecker:
                 'release_notes': release_data.get('body', 'No release notes available.'),
                 'download_url': download_url,
                 'published_at': release_data.get('published_at', ''),
-                'release_name': release_data.get('name', f'v{latest_version}')
+                'release_name': release_data.get('name', latest_version)
             }
             
         except requests.RequestException as e:
@@ -139,7 +139,7 @@ class UpdateChecker:
         """
         try:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_path = self.backup_dir / f"backup_v{CURRENT_VERSION}_{timestamp}"
+            backup_path = self.backup_dir / f"backup_{CURRENT_VERSION}_{timestamp}"
             backup_path.mkdir(parents=True, exist_ok=True)
             
             # Backup app directory

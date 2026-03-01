@@ -243,6 +243,24 @@ class MediaMTXManager:
             'readTimeout': advanced_settings.get('mediamtx', {}).get('readTimeout', '30s') if advanced_settings else '30s',
             'writeTimeout': advanced_settings.get('mediamtx', {}).get('writeTimeout', '30s') if advanced_settings else '30s',
             
+            # Ensure timeouts are valid and not empty or zero
+            # MediaMTX will crash if these are "0", "0s", or empty
+        }
+        
+        # Sanitize timeouts
+        for key in ['readTimeout', 'writeTimeout']:
+            val = config.get(key)
+            if not val or str(val).strip() in ['0', '0s', '']:
+                config[key] = '30s'
+            elif isinstance(val, (int, float)):
+                # If it's a number, convert to string with 's' suffix
+                config[key] = f"{int(val)}s"
+            elif isinstance(val, str) and val.isdigit():
+                 # If it's a digits-only string, add 's'
+                 config[key] = f"{val}s"
+
+        # Continue with other settings
+        config.update({
             # Buffer and queue settings
             'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 32768) if advanced_settings else 32768,
             'udpMaxPayloadSize': advanced_settings.get('mediamtx', {}).get('udpMaxPayloadSize', 1472) if advanced_settings else 1472,
@@ -258,7 +276,7 @@ class MediaMTXManager:
             
             # ===== PATHS (CAMERAS) =====
             'paths': {}
-        }
+        })
         
         # Find FFmpeg using the manager
         from .ffmpeg_manager import FFmpegManager
@@ -507,8 +525,8 @@ class MediaMTXManager:
                         inputs.append(f'-fflags nobuffer -flags low_delay -rtsp_transport tcp -probesize 1M -analyzeduration 1M -thread_queue_size 4096 -use_wallclock_as_timestamps 1 -i {safe_src}')
                         
                         # Scale and normalize timestamps to prevent sync-induced jumping
-                        w = int(gf_cam.get('w', 640))
-                        h = int(gf_cam.get('h', 480))
+                        w = int(round(float(gf_cam.get('w', 640))))
+                        h = int(round(float(gf_cam.get('h', 480))))
                         filters.append(f'[{input_idx}:v]scale={w}:{h},setpts=PTS-STARTPTS[v{input_idx}]')
                         active_gf_cams.append(gf_cam)
                         input_idx += 1
@@ -520,8 +538,8 @@ class MediaMTXManager:
                         last_label = '[base]'
                         for i in range(len(active_gf_cams)):
                             gf_cam = active_gf_cams[i]
-                            x = int(gf_cam.get('x', 0))
-                            y = int(gf_cam.get('y', 0))
+                            x = int(round(float(gf_cam.get('x', 0))))
+                            y = int(round(float(gf_cam.get('y', 0))))
                             
                             next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
                             # repeatlast=1 is critical: if one input stops, the others keep flowing
