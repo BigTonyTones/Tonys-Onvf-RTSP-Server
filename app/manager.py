@@ -146,6 +146,9 @@ class CameraManager:
                         'outputFramerate': 5
                     }]
             
+            # Load "Looks" (Presets)
+            self.grid_fusion_looks = grid_fusion.get('looks', [])
+            
             # Load advanced settings
             self.advanced_settings = config.get('advancedSettings', self.advanced_settings)
             
@@ -248,7 +251,8 @@ class CameraManager:
             },
             'advancedSettings': getattr(self, 'advanced_settings', {}),
             'gridFusion': {
-                'layouts': getattr(self, 'grid_fusion_layouts', [])
+                'layouts': getattr(self, 'grid_fusion_layouts', []),
+                'looks': getattr(self, 'grid_fusion_looks', [])
             }
         }
         
@@ -464,7 +468,8 @@ class CameraManager:
     def get_grid_fusion(self):
         """Get GridFusion configuration (updated for multi-layout)"""
         return {
-            'layouts': getattr(self, 'grid_fusion_layouts', [])
+            'layouts': getattr(self, 'grid_fusion_layouts', []),
+            'looks': getattr(self, 'grid_fusion_looks', [])
         }
 
     def save_grid_fusion(self, data):
@@ -475,6 +480,9 @@ class CameraManager:
         # If receiving legacy single-layout update, wrap it (backward compat, though UI should be updated)
         if 'layouts' in data:
             self.grid_fusion_layouts = data['layouts']
+        
+        if 'looks' in data:
+            self.grid_fusion_looks = data['looks']
         else:
              # This might happen if old UI sends data
              # Update the first layout or create one
