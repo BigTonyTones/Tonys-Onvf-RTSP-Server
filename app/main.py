@@ -20,7 +20,7 @@ def main():
         net_mgr = LinuxNetworkManager()
         net_mgr.cleanup_all_vnics()
 
-    print(f"\nTonys Onvif-RTSP Server v{CURRENT_VERSION}\n")
+    print(f"\nTonys Onvif-RTSP Server\n")
     
     # Check for updates in background (non-blocking)
     def check_updates_background():
@@ -30,8 +30,8 @@ def main():
                 print("\n" + "=" * 60)
                 print("UPDATE AVAILABLE!")
                 print("=" * 60)
-                print(f"Current Version: v{update_info['current_version']}")
-                print(f"Latest Version:  v{update_info['latest_version']}")
+                print(f"Current Version: {update_info['current_version']}")
+                print(f"Latest Version:  {update_info['latest_version']}")
                 print(f"\nOpen the Web UI to download and install the update.")
                 print("=" * 60 + "\n")
         except Exception as e:

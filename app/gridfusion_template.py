@@ -1371,7 +1371,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             
             toggleGridOverlay();
             updateCanvasSize();
-            renderGrid();
+            // renderGrid is called by updateCanvasSize
         }}
 
         function updateCanvasSize() {{
@@ -1385,14 +1385,17 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             const availH = container.clientHeight - padding;
             const scale = Math.min(availW / w, availH / h, 1);
             
-            canvas.style.width = (w * scale) + 'px';
-            canvas.style.height = (h * scale) + 'px';
+            // Use Math.round to avoid sub-pixel scaling issues on the canvas container itself
+            canvas.style.width = Math.round(w * scale) + 'px';
+            canvas.style.height = Math.round(h * scale) + 'px';
             canvas.setAttribute('data-w', w);
             canvas.setAttribute('data-h', h);
             canvas.setAttribute('data-scale', scale);
             
             document.getElementById('canvas-info').textContent = `Canvas: ${{w}} x ${{h}} | Scaling: ${{Math.round(scale * 100)}}%`;
             
+            // Refresh grid overlay to match new scale
+            toggleGridOverlay();
             renderGrid();
         }}
 
@@ -1413,10 +1416,12 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 
                 const el = document.createElement('div');
                 el.className = 'placed-camera' + (selectedIdx === idx ? ' selected' : '');
-                el.style.left = (gfCam.x * scale) + 'px';
-                el.style.top = (gfCam.y * scale) + 'px';
-                el.style.width = (gfCam.w * scale) + 'px';
-                el.style.height = (gfCam.h * scale) + 'px';
+                // Use Math.round for visual positioning to keep edges sharp, 
+                // while preserving true coordinates in gfCam
+                el.style.left = Math.round(gfCam.x * scale) + 'px';
+                el.style.top = Math.round(gfCam.y * scale) + 'px';
+                el.style.width = Math.round(gfCam.w * scale) + 'px';
+                el.style.height = Math.round(gfCam.h * scale) + 'px';
                 el.setAttribute('data-idx', idx);
                 
                 // Set z-index: Always on Top cameras get higher priority
@@ -1627,8 +1632,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 nx = Math.round(nx / snap) * snap;
                 ny = Math.round(ny / snap) * snap;
                 
-                gfCam.x = Math.max(0, Math.min(nx, maxW - gfCam.w));
-                gfCam.y = Math.max(0, Math.min(ny, maxH - gfCam.h));
+                // Final storage is always integer
+                gfCam.x = Math.round(Math.max(0, Math.min(nx, maxW - gfCam.w)));
+                gfCam.y = Math.round(Math.max(0, Math.min(ny, maxH - gfCam.h)));
             }} else if (isResizing) {{
                 const dx = (e.clientX - lastMousePos.x) / scale;
                 const dy = (e.clientY - lastMousePos.y) / scale;
@@ -1639,8 +1645,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 nw = Math.round(nw / snap) * snap;
                 nh = Math.round(nh / snap) * snap;
                 
-                gfCam.w = Math.max(100, Math.min(nw, maxW - gfCam.x));
-                gfCam.h = Math.max(56, Math.min(nh, maxH - gfCam.y));
+                gfCam.w = Math.round(Math.max(100, Math.min(nw, maxW - gfCam.x)));
+                gfCam.h = Math.round(Math.max(56, Math.min(nh, maxH - gfCam.y)));
                 
                 lastMousePos.x = e.clientX;
                 lastMousePos.y = e.clientY;
@@ -1650,10 +1656,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (raftId) cancelAnimationFrame(raftId);
             raftId = requestAnimationFrame(() => {{
                 if (!dragTarget) return;
-                dragTarget.style.left = (gfCam.x * scale) + 'px';
-                dragTarget.style.top = (gfCam.y * scale) + 'px';
-                dragTarget.style.width = (gfCam.w * scale) + 'px';
-                dragTarget.style.height = (gfCam.h * scale) + 'px';
+                // Rounding for visual snap
+                dragTarget.style.left = Math.round(gfCam.x * scale) + 'px';
+                dragTarget.style.top = Math.round(gfCam.y * scale) + 'px';
+                dragTarget.style.width = Math.round(gfCam.w * scale) + 'px';
+                dragTarget.style.height = Math.round(gfCam.h * scale) + 'px';
                 updatePropsPanel();
             }});
         }}
@@ -1684,10 +1691,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (selectedIdx === -1) return;
             const cam = gfConfig.cameras[selectedIdx];
             
-            cam.x = parseFloat(document.getElementById('prop-x').value) || 0;
-            cam.y = parseFloat(document.getElementById('prop-y').value) || 0;
-            cam.w = parseFloat(document.getElementById('prop-w').value) || 100;
-            cam.h = parseFloat(document.getElementById('prop-h').value) || 56;
+            // Manual updates are rounded to nearest pixel
+            cam.x = Math.round(parseFloat(document.getElementById('prop-x').value)) || 0;
+            cam.y = Math.round(parseFloat(document.getElementById('prop-y').value)) || 0;
+            cam.w = Math.round(parseFloat(document.getElementById('prop-w').value)) || 100;
+            cam.h = Math.round(parseFloat(document.getElementById('prop-h').value)) || 56;
             cam.stream_type = document.getElementById('prop-stream').value;
             cam.always_on_top = document.getElementById('prop-on-top').checked;
             
@@ -1703,10 +1711,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             const scale = parseFloat(canvas.getAttribute('data-scale')) || 1;
             const el = document.querySelector(`.placed-camera[data-idx="${{selectedIdx}}"]`);
             if (el) {{
-                el.style.left = (cam.x * scale) + 'px';
-                el.style.top = (cam.y * scale) + 'px';
-                el.style.width = (cam.w * scale) + 'px';
-                el.style.height = (cam.h * scale) + 'px';
+                el.style.left = Math.round(cam.x * scale) + 'px';
+                el.style.top = Math.round(cam.y * scale) + 'px';
+                el.style.width = Math.round(cam.w * scale) + 'px';
+                el.style.height = Math.round(cam.h * scale) + 'px';
             }}
         }}
 
@@ -1721,7 +1729,16 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         function toggleGridOverlay() {{
             const show = document.getElementById('gf-show-grid').checked;
-            document.getElementById('grid-overlay').style.display = show ? 'block' : 'none';
+            const overlay = document.getElementById('grid-overlay');
+            overlay.style.display = show ? 'block' : 'none';
+            
+            if (show) {{
+                const canvas = document.getElementById('canvas');
+                const scale = parseFloat(canvas.getAttribute('data-scale')) || 1;
+                const snap = 20; // Default snap value
+                const size = snap * scale;
+                overlay.style.backgroundSize = `${{size}}px ${{size}}px`;
+            }}
         }}
 
         function updateGFEnabled() {{
