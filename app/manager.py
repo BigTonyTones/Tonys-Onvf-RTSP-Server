@@ -856,7 +856,7 @@ class CameraManager:
                             self.stale_path_times[path_name] = now
                         
                         stale_duration = now - self.stale_path_times[path_name]
-                        if stale_duration > 60: # 60 seconds of downtime/instability
+                        if stale_duration > 120: # 120 seconds (2 mins) to allow for camera reboots/network hiccups
                             print(f"Watchdog Alert: Camera path '{path_name}' ({camera.name}) has been dead/stale for {stale_duration:.0f}s.")
                             restart_needed = True
                             stale_reasons.append(f"{camera.name} ({suffix})")
