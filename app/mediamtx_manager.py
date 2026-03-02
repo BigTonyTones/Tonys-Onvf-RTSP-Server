@@ -521,9 +521,9 @@ class MediaMTXManager:
                         else:
                             safe_src = shlex.quote(src_url)
                         
-                        # Ultra-low latency configuration for internal loopback feeds
-                        # thread_queue_size 8: Prevents FFmpeg from buffering a massive backlog if the CPU is busy
-                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 2000000 -probesize 32k -analyzeduration 0 -thread_queue_size 8 -use_wallclock_as_timestamps 1 -i {safe_src}')
+                        # Balanced configuration: low latency but high enough buffer to detect video headers
+                        # probesize/analyzeduration 1M: Prevents "unspecified size" / "could not find codec parameters" errors
+                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -probesize 1M -analyzeduration 1M -thread_queue_size 16 -use_wallclock_as_timestamps 1 -i {safe_src}')
                         
                         # Scale and normalize timestamps only. 
                         # Removing the per-input 'fps' filter as it adds unnecessary CPU overhead and latency.
