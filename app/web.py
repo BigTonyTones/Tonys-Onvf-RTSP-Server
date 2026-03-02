@@ -1226,20 +1226,28 @@ def create_web_app(manager):
             if not data:
                 return jsonify({'error': 'Invalid request'}), 400
             
-            client_ip = data.get('ip')
+            client_ip = data.get('ip', '')
+            
+            # Normalize IPv6-mapped IPv4 addresses (e.g., ::ffff:127.0.0.1)
+            if client_ip.startswith('::ffff:'):
+                client_ip = client_ip.replace('::ffff:', '')
+            
             user = data.get('user', '')
             password = data.get('password', '')
             
+            if manager.debug_mode:
+                 print(f"  [RTSP Auth Check] IP: {client_ip}, Path: {data.get('path')}, User: {user}")
+
             # 1. ALWAYS allow whitelisted IPs
             if manager.is_ip_whitelisted(client_ip):
                 if manager.debug_mode:
                     print(f"  [RTSP] Auth bypass for whitelisted IP: {client_ip}")
                 return '', 200
                 
-            # 2. Allow system internal publisher (used for transcoding)
-            # This is a bit tricky as the password is random and stored in mediamtx_manager
-            # But we can allow any user from localhost for now, or just allow the specific user
-            if client_ip in ['127.0.0.1', '::1', 'localhost']:
+            # 2. Allow local loopback connections
+            if client_ip in ['127.0.0.1', '127.0.1.1', '::1', 'localhost']:
+                 if manager.debug_mode:
+                     print(f"  [RTSP] Local bypass granted for {client_ip}")
                  return '', 200
 
             # 3. Check if global RTSP auth is enabled
