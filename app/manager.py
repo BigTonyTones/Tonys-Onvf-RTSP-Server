@@ -67,7 +67,7 @@ class CameraManager:
             },
             'ffmpeg': {
                 'globalArgs': '-hide_banner -loglevel error',
-                'inputArgs': '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2',
+                'inputArgs': '-rtsp_transport tcp -timeout 10000000',
                 'processArgs': '-c:v libx264 -preset ultrafast -tune zerolatency -g 30',
             }
         }
@@ -827,34 +827,72 @@ class CameraManager:
             time.sleep(15) # Check every 15 seconds
 
     def _check_stream_health(self):
-        """Check for hung streams and perform recovery"""
+        """Check for hung or disconnected streams and perform recovery"""
         analytics = self.analytics.get_analytics()
         now = time.time()
         restart_needed = False
-        stale_paths = []
+        stale_reasons = []
 
-        for path_name, stats in analytics.items():
-            # We care about publishers that are 'ready' but sending 0 bytes
-            is_publisher = stats.get('source') == 'publisher'
-            is_ready = stats.get('ready', False)
-            is_stale = stats.get('stale', False)
-            
-            if is_ready and is_stale and is_publisher:
-                if path_name not in self.stale_path_times:
-                    self.stale_path_times[path_name] = now
+        # 1. Check all cameras that should be running
+        for camera in self.cameras:
+            if camera.status == "running":
+                # Check both main and sub paths
+                for suffix in ["_main", "_sub"]:
+                    path_name = f"{camera.path_name}{suffix}"
+                    stats = analytics.get(path_name)
+                    
+                    if not stats:
+                        # Path not even found in MediaMTX yet
+                        if path_name not in self.stale_path_times:
+                            self.stale_path_times[path_name] = now
+                        continue
+                    
+                    is_ready = stats.get('ready', False)
+                    is_stale = stats.get('stale', False)
+                    
+                    # If not ready, or ready but stale (sending 0 bytes)
+                    if not is_ready or is_stale:
+                        if path_name not in self.stale_path_times:
+                            self.stale_path_times[path_name] = now
+                        
+                        stale_duration = now - self.stale_path_times[path_name]
+                        if stale_duration > 60: # 60 seconds of downtime/instability
+                            print(f"Watchdog Alert: Camera path '{path_name}' ({camera.name}) has been dead/stale for {stale_duration:.0f}s.")
+                            restart_needed = True
+                            stale_reasons.append(f"{camera.name} ({suffix})")
+                    else:
+                        # Path is healthy, clear stale marker
+                        if path_name in self.stale_path_times:
+                            del self.stale_path_times[path_name]
+
+        # 2. Check GridFusion Layouts
+        for layout in self.grid_fusion_layouts:
+            if layout.get('enabled'):
+                layout_id = layout.get('id', 'matrix')
+                stats = analytics.get(layout_id)
                 
-                stale_duration = now - self.stale_path_times[path_name]
-                if stale_duration > 120: # 2 minutes of zero-bitrate "zombie" state
-                    print(f"Watchdog Alert: Path '{path_name}' has been dead for {stale_duration:.0f}s. Recovery needed.")
-                    restart_needed = True
-                    stale_paths.append(path_name)
-            else:
-                # Path is healthy or not active, clear stale marker
-                if path_name in self.stale_path_times:
-                    del self.stale_path_times[path_name]
+                if not stats:
+                    if layout_id not in self.stale_path_times:
+                        self.stale_path_times[layout_id] = now
+                    continue
+
+                # For GridFusion, since it always sends data (black baseline), 
+                # we primarily check if it's 'ready' (process is running)
+                if not stats.get('ready', False):
+                    if layout_id not in self.stale_path_times:
+                        self.stale_path_times[layout_id] = now
+                    
+                    stale_duration = now - self.stale_path_times[layout_id]
+                    if stale_duration > 60:
+                        print(f"Watchdog Alert: GridFusion '{layout_id}' is not ready.")
+                        restart_needed = True
+                        stale_reasons.append(f"GridFusion:{layout_id}")
+                else:
+                    if layout_id in self.stale_path_times:
+                        del self.stale_path_times[layout_id]
 
         if restart_needed:
-            print(f"Watchdog: Restarting MediaMTX to recover {len(stale_paths)} stalled streams...")
+            print(f"Watchdog: Recovery triggered for {', '.join(stale_reasons)}. Restarting MediaMTX...")
             rtsp_user = self.global_username if getattr(self, 'rtsp_auth_enabled', False) else ''
             rtsp_pass = self.global_password if getattr(self, 'rtsp_auth_enabled', False) else ''
             self.mediamtx.restart(
