@@ -243,6 +243,24 @@ class MediaMTXManager:
             'readTimeout': advanced_settings.get('mediamtx', {}).get('readTimeout', '30s') if advanced_settings else '30s',
             'writeTimeout': advanced_settings.get('mediamtx', {}).get('writeTimeout', '30s') if advanced_settings else '30s',
             
+            # Ensure timeouts are valid and not empty or zero
+            # MediaMTX will crash if these are "0", "0s", or empty
+        }
+        
+        # Sanitize timeouts
+        for key in ['readTimeout', 'writeTimeout']:
+            val = config.get(key)
+            if not val or str(val).strip() in ['0', '0s', '']:
+                config[key] = '30s'
+            elif isinstance(val, (int, float)):
+                # If it's a number, convert to string with 's' suffix
+                config[key] = f"{int(val)}s"
+            elif isinstance(val, str) and val.isdigit():
+                 # If it's a digits-only string, add 's'
+                 config[key] = f"{val}s"
+
+        # Continue with other settings
+        config.update({
             # Buffer and queue settings
             'writeQueueSize': advanced_settings.get('mediamtx', {}).get('writeQueueSize', 32768) if advanced_settings else 32768,
             'udpMaxPayloadSize': advanced_settings.get('mediamtx', {}).get('udpMaxPayloadSize', 1472) if advanced_settings else 1472,
@@ -258,7 +276,7 @@ class MediaMTXManager:
             
             # ===== PATHS (CAMERAS) =====
             'paths': {}
-        }
+        })
         
         # Find FFmpeg using the manager
         from .ffmpeg_manager import FFmpegManager
@@ -342,7 +360,7 @@ class MediaMTXManager:
                     main_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
-                        'runOnInitRestart': False,  # Disable auto-restart to prevent zombie processes
+                        'runOnInitRestart': True,  # Auto-restart enabled to recover from connection failures
                         'rtspTransport': 'tcp',
                         'overridePublisher': True,
                     }
@@ -407,7 +425,7 @@ class MediaMTXManager:
                     sub_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
-                        'runOnInitRestart': False,  # Disable auto-restart to prevent zombie processes
+                        'runOnInitRestart': True,  # Auto-restart enabled to recover from connection failures
                         'rtspTransport': 'tcp',
                         'sourceOnDemand': False,
                         'overridePublisher': True,
@@ -503,28 +521,30 @@ class MediaMTXManager:
                         else:
                             safe_src = shlex.quote(src_url)
                         
-                        # Optimized for low-latency local ingestion with wallclock sync
-                        inputs.append(f'-fflags nobuffer -flags low_delay -rtsp_transport tcp -probesize 1M -analyzeduration 1M -thread_queue_size 4096 -use_wallclock_as_timestamps 1 -i {safe_src}')
+                        # Balanced configuration: low latency but high enough buffer to detect video headers
+                        # probesize/analyzeduration 1M: Prevents "unspecified size" / "could not find codec parameters" errors
+                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -probesize 1M -analyzeduration 1M -thread_queue_size 16 -use_wallclock_as_timestamps 1 -i {safe_src}')
                         
-                        # Scale and normalize timestamps to prevent sync-induced jumping
-                        w = int(gf_cam.get('w', 640))
-                        h = int(gf_cam.get('h', 480))
+                        # Scale and normalize timestamps only. 
+                        # Removing the per-input 'fps' filter as it adds unnecessary CPU overhead and latency.
+                        w = int(round(float(gf_cam.get('w', 640))))
+                        h = int(round(float(gf_cam.get('h', 480))))
                         filters.append(f'[{input_idx}:v]scale={w}:{h},setpts=PTS-STARTPTS[v{input_idx}]')
                         active_gf_cams.append(gf_cam)
                         input_idx += 1
                     
                     if inputs:
                         # Construct overlay chain
-                        # Force a constant baseline framerate
+                        # The [base] color source provides the master clock for the entire matrix
                         overlay_chain_parts = [f'color=black:s={res_w}x{res_h}:r={fps}[base]']
                         last_label = '[base]'
                         for i in range(len(active_gf_cams)):
                             gf_cam = active_gf_cams[i]
-                            x = int(gf_cam.get('x', 0))
-                            y = int(gf_cam.get('y', 0))
+                            x = int(round(float(gf_cam.get('x', 0))))
+                            y = int(round(float(gf_cam.get('y', 0))))
                             
                             next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
-                            # repeatlast=1 is critical: if one input stops, the others keep flowing
+                            # eof_action=pass + repeatlast=1: if an input dies/EOFs, keep the matrix running
                             overlay_chain_parts.append(f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label}')
                             last_label = next_label
                         
@@ -557,9 +577,9 @@ class MediaMTXManager:
                         # Determine encoder arguments
                         if use_hw_accel and hw_accel_info:
                              encoder_args = f'-c:v {hw_accel_info["encoder"]} {hw_accel_info["params"]}'
-                        else:
-                             # Software encoding with optimized preset
-                             encoder_args = '-c:v libx264 -preset veryfast -tune zerolatency'
+                        # Software encoding with optimized preset
+                        # 'ultrafast' is used to minimize latency at the cost of bitrate efficiency
+                        encoder_args = '-c:v libx264 -preset ultrafast -tune zerolatency'
 
                         # Final command - optimized for multi-core CPU utilization and stability
                         # -threads 0: Auto-detect and use all available CPU cores
