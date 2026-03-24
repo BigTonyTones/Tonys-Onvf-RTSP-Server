@@ -1242,7 +1242,7 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server v{CURRENT_VERSION}</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
             </a>
@@ -3284,7 +3284,7 @@ def get_web_ui_html(current_settings=None):
                     if (settings.advancedSettings) {{
                         const adv = settings.advancedSettings;
                         if (adv.mediamtx) {{
-                            document.getElementById('mediamtx_writeQueueSize').value = adv.mediamtx.writeQueueSize || 4096;
+                            document.getElementById('mediamtx_writeQueueSize').value = adv.mediamtx.writeQueueSize || 32768;
                             document.getElementById('mediamtx_readTimeout').value = adv.mediamtx.readTimeout || '30s';
                             document.getElementById('mediamtx_writeTimeout').value = adv.mediamtx.writeTimeout || '30s';
                             document.getElementById('mediamtx_udpMaxPayloadSize').value = adv.mediamtx.udpMaxPayloadSize || 1472;
@@ -3293,9 +3293,9 @@ def get_web_ui_html(current_settings=None):
                             document.getElementById('mediamtx_hlsPartDuration').value = adv.mediamtx.hlsPartDuration || '200ms';
                         }}
                         if (adv.ffmpeg) {{
-                            document.getElementById('ffmpeg_globalArgs').value = adv.ffmpeg.globalArgs || '';
-                            document.getElementById('ffmpeg_inputArgs').value = adv.ffmpeg.inputArgs || '';
-                            document.getElementById('ffmpeg_processArgs').value = adv.ffmpeg.processArgs || '';
+                            document.getElementById('ffmpeg_globalArgs').value = adv.ffmpeg.globalArgs || '-hide_banner -loglevel error';
+                            document.getElementById('ffmpeg_inputArgs').value = adv.ffmpeg.inputArgs || '-rtsp_transport tcp -timeout 10000000';
+                            document.getElementById('ffmpeg_processArgs').value = adv.ffmpeg.processArgs || '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
                             document.getElementById('ffmpeg_hardwareEncoding').checked = adv.ffmpeg.hardwareEncoding === true;
                         }}
                     }}
@@ -3382,18 +3382,18 @@ def get_web_ui_html(current_settings=None):
                 debugMode: document.getElementById('debugMode').checked,
                 advancedSettings: {{
                     mediamtx: {{
-                        writeQueueSize: parseInt(document.getElementById('mediamtx_writeQueueSize').value),
-                        readTimeout: document.getElementById('mediamtx_readTimeout').value,
-                        writeTimeout: document.getElementById('mediamtx_writeTimeout').value,
-                        udpMaxPayloadSize: parseInt(document.getElementById('mediamtx_udpMaxPayloadSize').value),
-                        hlsSegmentCount: parseInt(document.getElementById('mediamtx_hlsSegmentCount').value),
-                        hlsSegmentDuration: document.getElementById('mediamtx_hlsSegmentDuration').value,
-                        hlsPartDuration: document.getElementById('mediamtx_hlsPartDuration').value
+                        writeQueueSize: parseInt(document.getElementById('mediamtx_writeQueueSize').value) || 32768,
+                        readTimeout: document.getElementById('mediamtx_readTimeout').value || '30s',
+                        writeTimeout: document.getElementById('mediamtx_writeTimeout').value || '30s',
+                        udpMaxPayloadSize: parseInt(document.getElementById('mediamtx_udpMaxPayloadSize').value) || 1472,
+                        hlsSegmentCount: parseInt(document.getElementById('mediamtx_hlsSegmentCount').value) || 10,
+                        hlsSegmentDuration: document.getElementById('mediamtx_hlsSegmentDuration').value || '1s',
+                        hlsPartDuration: document.getElementById('mediamtx_hlsPartDuration').value || '200ms'
                     }},
                     ffmpeg: {{
-                        globalArgs: document.getElementById('ffmpeg_globalArgs').value,
-                        inputArgs: document.getElementById('ffmpeg_inputArgs').value,
-                        processArgs: document.getElementById('ffmpeg_processArgs').value,
+                        globalArgs: document.getElementById('ffmpeg_globalArgs').value || '-hide_banner -loglevel error',
+                        inputArgs: document.getElementById('ffmpeg_inputArgs').value || '-rtsp_transport tcp -timeout 10000000',
+                        processArgs: document.getElementById('ffmpeg_processArgs').value || '-c:v libx264 -preset ultrafast -tune zerolatency -g 30',
                         hardwareEncoding: document.getElementById('ffmpeg_hardwareEncoding').checked
                     }}
                 }},

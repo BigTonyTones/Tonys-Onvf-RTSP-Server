@@ -4,6 +4,23 @@ import importlib.util
 import platform
 import collections
 import threading
+import socket
+
+def get_local_ip():
+    """Get the primary local IP address of this machine"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        try:
+            IP = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
 class Logger:
     def __init__(self, max_lines=2000):
@@ -74,8 +91,11 @@ def check_and_install_requirements():
     
     print("Checking dependencies...")
     missing_packages = []
+    optional_packages = ['psutil']
     
     for module_name, package_name in required_packages.items():
+        if package_name in optional_packages:
+            continue
         if importlib.util.find_spec(module_name) is None:
             missing_packages.append(package_name)
     
@@ -88,9 +108,20 @@ def check_and_install_requirements():
             except subprocess.CalledProcessError as e:
                 print(f"Failed to install {package}: {e}")
                 sys.exit(1)
-        print("\nAll dependencies installed successfully!\n")
+        print("\nCore dependencies installed successfully!\n")
     else:
-        print("All dependencies are already installed.")
+        print("Core dependencies are already installed.")
+
+    # Check optional packages
+    for package in optional_packages:
+        module_name = 'psutil' # Currently only one, but we can expand this
+        if importlib.util.find_spec(module_name) is None:
+            print(f"Attempting to install optional package: {package}")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                print(f"Installed {package}")
+            except subprocess.CalledProcessError:
+                print(f"Warning: Could not install optional package {package}. Some minor features may be limited.")
         
         # SPECIAL CASE: Check for missing ONVIF WSDLs (common issue in some pip installs)
         try:

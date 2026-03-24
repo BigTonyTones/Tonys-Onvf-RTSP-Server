@@ -9,6 +9,7 @@ from werkzeug.serving import make_server, ThreadedWSGIServer
 from .config import MEDIAMTX_PORT
 from .onvif_service import ONVIFService
 from .linux_network import LinuxNetworkManager
+from .utils import get_local_ip
 
 
 class ThreadPoolWSGIServer(ThreadedWSGIServer):
@@ -99,6 +100,20 @@ class VirtualONVIFCamera:
         mac = f"02:{h[0:2]}:{h[2:4]}:{h[4:6]}:{h[6:8]}:{h[8:10]}"
         return mac.lower()
         
+    def get_effective_ip(self):
+        """Determine the IP address that should be reported for this camera"""
+        # 1. Use the specific IP assigned to a Virtual NIC if active
+        if self.assigned_ip:
+            return self.assigned_ip
+            
+        # 2. Use the host/IP set in the global server settings (if it's not 'localhost')
+        if self.manager and hasattr(self.manager, 'server_ip') and \
+           self.manager.server_ip and self.manager.server_ip != 'localhost':
+            return self.manager.server_ip
+            
+        # 3. Fallback to automatic detection
+        return get_local_ip()
+        
     def start(self):
         """Mark camera as running and start ONVIF service"""
         self.status = "running"
@@ -180,8 +195,8 @@ class VirtualONVIFCamera:
         self.flask_thread.start()
         
         # Start WS-Discovery
-        # Use assigned IP for discovery if virtual NIC is active
-        local_ip = self.assigned_ip if self.assigned_ip else socket.gethostbyname(socket.gethostname())
+        # Use effective IP for discovery reporting
+        local_ip = self.get_effective_ip()
         
         self.onvif_service.start_discovery_service(local_ip)
         

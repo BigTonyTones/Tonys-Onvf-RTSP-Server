@@ -272,40 +272,46 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
 
         .props-panel {{
-            padding: 1.25rem;
+            padding: 0.6rem 0.8rem;
             border-top: 1px solid var(--border);
-            background-color: rgba(255,255,255,0.01);
+            background-color: rgba(255,255,255,0.015);
             display: none;
         }}
 
         .props-grid {{
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-top: 0.75rem;
+            gap: 0.4rem;
+            margin-top: 0.4rem;
         }}
 
         .prop-item {{
             display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(0,0,0,0.1);
+            padding: 2px 4px;
+            border-radius: 4px;
         }}
 
         .prop-label {{
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 700;
             color: var(--text-secondary);
             text-transform: uppercase;
+            min-width: 32px;
         }}
 
         .prop-input {{
+            flex: 1;
             width: 100%;
-            padding: 0.4rem;
-            font-size: 0.75rem;
+            padding: 0.2rem 0.3rem;
+            font-size: 0.7rem;
             background: #0f172a;
             border: 1px solid var(--border);
             color: white;
-            border-radius: 4px;
+            border-radius: 3px;
+            outline: none;
         }}
 
 
@@ -775,10 +781,12 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         <div class="sidebar">
             <div style="padding: 1rem; border-bottom: 1px solid var(--border); background: var(--bg-hover);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
-                    <div class="sidebar-title">Layouts</div>
-                    <div style="display:flex; gap: 5px;">
-                        <button class="btn-xs-primary" onclick="createNewLayout()" title="New Layout">Add</button>
-                        <button class="btn-xs-danger" onclick="deleteCurrentLayout()" title="Delete Layout">Del</button>
+                    <div class="sidebar-title">Layouts: <span id="side-layout-name" style="color: var(--accent-color); text-transform: none; margin-left: 4px;"></span></div>
+                    <div style="display:flex; gap: 4px;">
+                        <button class="btn-xs-primary" onclick="createNewLayout()" title="Add Layout" style="font-size: 11px; padding: 2px 6px;">Add</button>
+                        <button class="btn-xs-primary" onclick="duplicateCurrentLayout()" title="Duplicate Layout" style="font-size: 11px; padding: 2px 6px;">Copy</button>
+                        <button class="btn-xs-primary" onclick="renameCurrentLayout()" title="Rename Layout" style="font-size: 11px; padding: 2px 6px;">Rename</button>
+                        <button class="btn-xs-danger" onclick="deleteCurrentLayout()" title="Delete Layout" style="font-size: 11px; padding: 2px 5px;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
                 <select id="layout-select" onchange="switchLayout(this.value)" style="width:100%; background: var(--bg-primary); color: white; border: 1px solid var(--border); padding: 5px; border-radius: 4px; margin-bottom: 5px;">
@@ -786,36 +794,50 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 </select>
                 <input type="text" id="layout-name-edit" style="width:100%; background: rgba(0,0,0,0.2); color: var(--text-secondary); border: 1px solid transparent; padding: 4px; border-radius: 4px; font-size: 11px;" placeholder="Layout Name" onchange="updateLayoutName(this.value)">
             </div>
-
-            <div class="sidebar-header">
-                <div class="sidebar-title">Available Cameras</div>
+            
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border); background: rgba(99, 102, 241, 0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                    <div class="sidebar-title" style="color: #818cf8;">Looks (Presets)</div>
+                    <div style="display:flex; gap: 4px;">
+                        <button class="btn-xs-primary" onclick="saveLook()" title="Save Current Look" style="font-size: 10px; padding: 2px 5px; background: #6366f1; border-color: #6366f1; color: white;">Save Look</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <select id="looks-select" style="flex: 1; background: var(--bg-primary); color: white; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
+                        <option value="">-- Select a Look --</option>
+                    </select>
+                    <button class="btn-xs-primary" onclick="recallLook()" title="Apply Selected Look" style="font-size: 10px; padding: 4px 6px;">Apply</button>
+                    <button class="btn-xs-danger" onclick="deleteLook()" title="Delete Selected Look" style="font-size: 10px; padding: 4px 6px;"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div style="font-size: 9px; color: var(--text-secondary); margin-top: 5px;">Recalling a look replaces all cameras in current layout.</div>
             </div>
+
             <div id="camera-list" class="camera-list">
                 <!-- Populated via JS -->
             </div>
             
             <div id="props-panel" class="props-panel">
-                <div id="props-cam-name" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-color); margin-bottom: 0.75rem;">No Camera Selected</div>
+                <div id="props-cam-name" style="font-size: 0.65rem; font-weight: 800; color: var(--accent-color); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px;">No Camera Selected</div>
                 <div class="props-grid">
                     <div class="prop-item">
-                        <span class="prop-label">X Pos</span>
+                        <span class="prop-label">X</span>
                         <input type="number" id="prop-x" class="prop-input" oninput="manualPropUpdate()">
                     </div>
                     <div class="prop-item">
-                        <span class="prop-label">Y Pos</span>
+                        <span class="prop-label">Y</span>
                         <input type="number" id="prop-y" class="prop-input" oninput="manualPropUpdate()">
                     </div>
                     <div class="prop-item">
-                        <span class="prop-label">Width</span>
+                        <span class="prop-label">W</span>
                         <input type="number" id="prop-w" class="prop-input" oninput="manualPropUpdate()">
                     </div>
                     <div class="prop-item">
-                        <span class="prop-label">Height</span>
+                        <span class="prop-label">H</span>
                         <input type="number" id="prop-h" class="prop-input" oninput="manualPropUpdate()">
                     </div>
-                    <div class="prop-item" style="grid-column: span 2;">
-                        <span class="prop-label">Stream Type</span>
-                        <select id="prop-stream" class="prop-input" onchange="manualPropUpdate()">
+                    <div class="prop-item" style="grid-column: span 2; background: none; padding: 0;">
+                        <span class="prop-label" style="min-width: fit-content; margin-right: 5px;">Stream:</span>
+                        <select id="prop-stream" class="prop-input" onchange="manualPropUpdate()" style="padding: 2px;">
                             <option value="main">Main (High Res)</option>
                             <option value="sub">Sub (Low Res)</option>
                         </select>
@@ -833,20 +855,6 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             <div style="padding: 1.25rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.1);">
                 <button class="btn btn-secondary" style="width:100%; justify-content: center;" onclick="refreshSnapshots()">Refresh Snapshots</button>
                 
-                <div class="kbd-hint">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                        <div class="kbd-key" style="background: #6366f1; border-color: #4f46e5; color: white; height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-up"></i></div>
-                        <div style="display: flex; gap: 2px;">
-                            <div class="kbd-key" style="height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-left"></i></div>
-                            <div class="kbd-key" style="height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-down"></i></div>
-                            <div class="kbd-key" style="height: 16px; min-width: 16px; font-size: 8px;"><i class="fas fa-caret-right"></i></div>
-                        </div>
-                    </div>
-                    <div style="font-size: 10px; color: var(--text-secondary); line-height: 1.2;">
-                        <div style="color: var(--text-primary); font-weight: 700;">Arrow keys move cams</div>
-                        <div>Hold <span class="kbd-key" style="font-size: 7px; min-width: 30px; height: 14px; padding: 0 4px; vertical-align: middle;">SHIFT</span> for 10px</div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -971,6 +979,20 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         </label>
                     </div>
 
+                    <!-- Keyboard Shortcuts Hint -->
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 0 15px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); height: 30px; margin-left: 0.5rem;">
+                        <div style="display: flex; gap: 2px;">
+                            <div class="kbd-key" style="height: 18px; width: 18px; font-size: 8px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-arrow-left"></i></div>
+                            <div class="kbd-key" style="height: 18px; width: 18px; font-size: 8px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="kbd-key" style="height: 18px; width: 18px; font-size: 8px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-arrow-up"></i></div>
+                            <div class="kbd-key" style="height: 18px; width: 18px; font-size: 8px; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-arrow-right"></i></div>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-secondary); white-space: nowrap;">
+                            <span style="color: var(--text-primary); font-weight: 700;">Arrows move cams</span> 
+                            <span style="margin-left: 8px;">(Hold <span class="kbd-key" style="font-size: 8px; min-width: 36px; height: 16px; padding: 0 4px;">SHIFT</span> for 10px)</span>
+                        </div>
+                    </div>
+
                     <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); margin-left: 0.5rem;">
                         <span style="font-size: 10px; color: var(--text-secondary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">RTSP URL</span>
                         <code id="rtsp-url-display" style="font-size: 11px; color: var(--accent-color); font-weight: 600; font-family: 'JetBrains Mono', monospace; background: transparent; padding: 0;">rtsp://localhost:8554/matrix</code>
@@ -1057,10 +1079,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         let cameras = [];
         // Load full config data
-        let gfData = {json.dumps(grid_fusion_config) if grid_fusion_config else '{ "layouts": [] }'};
+        let gfData = {json.dumps(grid_fusion_config) if grid_fusion_config else '{ "layouts": [], "looks": [] }'};
         
-        // Initialize layouts array
         let gfLayouts = gfData.layouts || [];
+        let gfLooks = gfData.looks || [];
         
         // Fallback or legacy handling
         if (gfLayouts.length === 0) {{
@@ -1113,12 +1135,31 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             
             // Update name edit field
             document.getElementById('layout-name-edit').value = gfConfig.name || gfConfig.id;
+            document.getElementById('side-layout-name').textContent = gfConfig.name || gfConfig.id;
             
             // Update RTSP URL display
             const port = appSettings.rtspPort || 8554;
             const hostname = window.location.hostname;
             const url = `rtsp://${{hostname}}:${{port}}/${{gfConfig.id}}`;
             document.getElementById('rtsp-url-display').textContent = url;
+            
+            updateLooksSelector();
+        }}
+        
+        function updateLooksSelector() {{
+            const select = document.getElementById('looks-select');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- Select a Look --</option>';
+            
+            gfLooks.forEach(look => {{
+                const opt = document.createElement('option');
+                opt.value = look.id;
+                opt.textContent = look.name;
+                select.appendChild(opt);
+            }});
+            
+            // Try to restore previous selection
+            if (currentVal) select.value = currentVal;
         }}
 
         // --- Debug Analytics ---
@@ -1215,11 +1256,87 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             }}
         }}
 
+        function renameCurrentLayout() {{
+            const newName = prompt("Rename layout to:", gfConfig.name);
+            if (newName && newName.trim() !== '') {{
+                updateLayoutName(newName);
+            }}
+        }}
+
+        function duplicateCurrentLayout() {{
+            // Deep clone the current layout
+            const newLayout = JSON.parse(JSON.stringify(gfConfig));
+            
+            // Generate new ID and name
+            newLayout.id = 'matrix_' + Math.floor(Math.random() * 10000);
+            newLayout.name = (gfConfig.name || gfConfig.id) + ' (Copy)';
+            
+            // Push to layouts and switch to it
+            gfLayouts.push(newLayout);
+            gfConfig = newLayout;
+            selectedIdx = -1;
+            syncUI();
+            
+            // Prompt user if they want to rename the copy immediately
+            renameCurrentLayout();
+        }}
+
         function updateLayoutName(newName) {{
-            if (newName) {{
-                gfConfig.name = newName;
+            if (newName && newName.trim() !== '') {{
+                gfConfig.name = newName.trim();
                 updateLayoutSelector(); // Refresh list names
             }}
+        }}
+
+        // --- LOOKS (Presets) ---
+        function saveLook() {{
+            if (gfConfig.cameras.length === 0) {{
+                alert("Current layout is empty. Add some cameras before saving a Look.");
+                return;
+            }}
+            
+            const name = prompt("Enter a name for this Look (Camera Preset):", "My Favorite Layout");
+            if (!name) return;
+            
+            const newLook = {{
+                id: 'look_' + Date.now(),
+                name: name,
+                cameras: JSON.parse(JSON.stringify(gfConfig.cameras)) // Deep clone
+            }};
+            
+            gfLooks.push(newLook);
+            updateLooksSelector();
+            alert(`Look "${{name}}" saved! Remember to click 'Save & Apply Changes' at the top to keep it permanently.`);
+        }}
+        
+        function recallLook() {{
+            const lookId = document.getElementById('looks-select').value;
+            if (!lookId) {{
+                alert("Please select a Look from the dropdown first.");
+                return;
+            }}
+            
+            const look = gfLooks.find(l => l.id === lookId);
+            if (!look) return;
+            
+            // Transfer cameras (deep clone)
+            gfConfig.cameras = JSON.parse(JSON.stringify(look.cameras));
+            
+            selectedIdx = -1;
+            syncUI();
+        }}
+        
+        function deleteLook() {{
+            const lookId = document.getElementById('looks-select').value;
+            if (!lookId) return;
+            
+            const look = gfLooks.find(l => l.id === lookId);
+            if (!look) return;
+            
+            if (!confirm(`Delete saved Look "${{look.name}}"?`)) return;
+            
+            gfLooks = gfLooks.filter(l => l.id !== lookId);
+            updateLooksSelector();
         }}
 
         async function updateStats() {{
@@ -1371,7 +1488,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             
             toggleGridOverlay();
             updateCanvasSize();
-            renderGrid();
+            // renderGrid is called by updateCanvasSize
         }}
 
         function updateCanvasSize() {{
@@ -1385,14 +1502,17 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             const availH = container.clientHeight - padding;
             const scale = Math.min(availW / w, availH / h, 1);
             
-            canvas.style.width = (w * scale) + 'px';
-            canvas.style.height = (h * scale) + 'px';
+            // Use Math.round to avoid sub-pixel scaling issues on the canvas container itself
+            canvas.style.width = Math.round(w * scale) + 'px';
+            canvas.style.height = Math.round(h * scale) + 'px';
             canvas.setAttribute('data-w', w);
             canvas.setAttribute('data-h', h);
             canvas.setAttribute('data-scale', scale);
             
             document.getElementById('canvas-info').textContent = `Canvas: ${{w}} x ${{h}} | Scaling: ${{Math.round(scale * 100)}}%`;
             
+            // Refresh grid overlay to match new scale
+            toggleGridOverlay();
             renderGrid();
         }}
 
@@ -1413,10 +1533,12 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 
                 const el = document.createElement('div');
                 el.className = 'placed-camera' + (selectedIdx === idx ? ' selected' : '');
-                el.style.left = (gfCam.x * scale) + 'px';
-                el.style.top = (gfCam.y * scale) + 'px';
-                el.style.width = (gfCam.w * scale) + 'px';
-                el.style.height = (gfCam.h * scale) + 'px';
+                // Use Math.round for visual positioning to keep edges sharp, 
+                // while preserving true coordinates in gfCam
+                el.style.left = Math.round(gfCam.x * scale) + 'px';
+                el.style.top = Math.round(gfCam.y * scale) + 'px';
+                el.style.width = Math.round(gfCam.w * scale) + 'px';
+                el.style.height = Math.round(gfCam.h * scale) + 'px';
                 el.setAttribute('data-idx', idx);
                 
                 // Set z-index: Always on Top cameras get higher priority
@@ -1627,8 +1749,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 nx = Math.round(nx / snap) * snap;
                 ny = Math.round(ny / snap) * snap;
                 
-                gfCam.x = Math.max(0, Math.min(nx, maxW - gfCam.w));
-                gfCam.y = Math.max(0, Math.min(ny, maxH - gfCam.h));
+                // Final storage is always integer
+                gfCam.x = Math.round(Math.max(0, Math.min(nx, maxW - gfCam.w)));
+                gfCam.y = Math.round(Math.max(0, Math.min(ny, maxH - gfCam.h)));
             }} else if (isResizing) {{
                 const dx = (e.clientX - lastMousePos.x) / scale;
                 const dy = (e.clientY - lastMousePos.y) / scale;
@@ -1639,8 +1762,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 nw = Math.round(nw / snap) * snap;
                 nh = Math.round(nh / snap) * snap;
                 
-                gfCam.w = Math.max(100, Math.min(nw, maxW - gfCam.x));
-                gfCam.h = Math.max(56, Math.min(nh, maxH - gfCam.y));
+                gfCam.w = Math.round(Math.max(100, Math.min(nw, maxW - gfCam.x)));
+                gfCam.h = Math.round(Math.max(56, Math.min(nh, maxH - gfCam.y)));
                 
                 lastMousePos.x = e.clientX;
                 lastMousePos.y = e.clientY;
@@ -1650,10 +1773,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (raftId) cancelAnimationFrame(raftId);
             raftId = requestAnimationFrame(() => {{
                 if (!dragTarget) return;
-                dragTarget.style.left = (gfCam.x * scale) + 'px';
-                dragTarget.style.top = (gfCam.y * scale) + 'px';
-                dragTarget.style.width = (gfCam.w * scale) + 'px';
-                dragTarget.style.height = (gfCam.h * scale) + 'px';
+                // Rounding for visual snap
+                dragTarget.style.left = Math.round(gfCam.x * scale) + 'px';
+                dragTarget.style.top = Math.round(gfCam.y * scale) + 'px';
+                dragTarget.style.width = Math.round(gfCam.w * scale) + 'px';
+                dragTarget.style.height = Math.round(gfCam.h * scale) + 'px';
                 updatePropsPanel();
             }});
         }}
@@ -1684,10 +1808,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (selectedIdx === -1) return;
             const cam = gfConfig.cameras[selectedIdx];
             
-            cam.x = parseFloat(document.getElementById('prop-x').value) || 0;
-            cam.y = parseFloat(document.getElementById('prop-y').value) || 0;
-            cam.w = parseFloat(document.getElementById('prop-w').value) || 100;
-            cam.h = parseFloat(document.getElementById('prop-h').value) || 56;
+            // Manual updates are rounded to nearest pixel
+            cam.x = Math.round(parseFloat(document.getElementById('prop-x').value)) || 0;
+            cam.y = Math.round(parseFloat(document.getElementById('prop-y').value)) || 0;
+            cam.w = Math.round(parseFloat(document.getElementById('prop-w').value)) || 100;
+            cam.h = Math.round(parseFloat(document.getElementById('prop-h').value)) || 56;
             cam.stream_type = document.getElementById('prop-stream').value;
             cam.always_on_top = document.getElementById('prop-on-top').checked;
             
@@ -1703,10 +1828,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             const scale = parseFloat(canvas.getAttribute('data-scale')) || 1;
             const el = document.querySelector(`.placed-camera[data-idx="${{selectedIdx}}"]`);
             if (el) {{
-                el.style.left = (cam.x * scale) + 'px';
-                el.style.top = (cam.y * scale) + 'px';
-                el.style.width = (cam.w * scale) + 'px';
-                el.style.height = (cam.h * scale) + 'px';
+                el.style.left = Math.round(cam.x * scale) + 'px';
+                el.style.top = Math.round(cam.y * scale) + 'px';
+                el.style.width = Math.round(cam.w * scale) + 'px';
+                el.style.height = Math.round(cam.h * scale) + 'px';
             }}
         }}
 
@@ -1721,7 +1846,16 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         function toggleGridOverlay() {{
             const show = document.getElementById('gf-show-grid').checked;
-            document.getElementById('grid-overlay').style.display = show ? 'block' : 'none';
+            const overlay = document.getElementById('grid-overlay');
+            overlay.style.display = show ? 'block' : 'none';
+            
+            if (show) {{
+                const canvas = document.getElementById('canvas');
+                const scale = parseFloat(canvas.getAttribute('data-scale')) || 1;
+                const snap = 20; // Default snap value
+                const size = snap * scale;
+                overlay.style.backgroundSize = `${{size}}px ${{size}}px`;
+            }}
         }}
 
         function updateGFEnabled() {{
@@ -1774,7 +1908,10 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const resp = await fetch('/api/gridfusion', {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ layouts: gfLayouts }})
+                    body: JSON.stringify({{ 
+                        layouts: gfLayouts,
+                        looks: gfLooks
+                    }})
                 }});
                 
                 if (resp.ok) {{

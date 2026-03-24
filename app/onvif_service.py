@@ -24,6 +24,7 @@ else:
         pass
 
 from .config import CONFIG_FILE
+from .utils import get_local_ip
 
 class ONVIFService:
     def __init__(self, camera):
@@ -51,8 +52,8 @@ class ONVIFService:
         import os
         os.environ['FLASK_ENV'] = 'production'
         
-        # Get correct local IP for ONVIF URLs (Use assigned IP for Virtual NICs)
-        local_ip = self.camera.assigned_ip if self.camera.assigned_ip else socket.gethostbyname(socket.gethostname())
+        # Get correct local IP for ONVIF URLs (Use camera's effective IP)
+        local_ip = self.camera.get_effective_ip()
         
         # Authentication decorator for ONVIF endpoints
         def require_auth(f):
@@ -591,7 +592,7 @@ class ONVIFService:
 
     def _get_device_wsdl(self):
         """Return device service WSDL"""
-        local_ip = self.camera.assigned_ip if self.camera.assigned_ip else socket.gethostbyname(socket.gethostname())
+        local_ip = self.camera.get_effective_ip()
         
         wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
@@ -608,7 +609,7 @@ class ONVIFService:
 
     def _get_media_wsdl(self):
         """Return media service WSDL"""
-        local_ip = self.camera.assigned_ip if self.camera.assigned_ip else socket.gethostbyname(socket.gethostname())
+        local_ip = self.camera.get_effective_ip()
         
         wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"

@@ -2,7 +2,10 @@ import json
 import os
 import sys
 from urllib.parse import quote
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 import time
 import functools
 from datetime import timedelta
@@ -207,6 +210,9 @@ def create_web_app(manager):
     @app.route('/api/stats')
     def get_stats():
         """Get CPU and memory usage for the app and its children using delta timings"""
+        if psutil is None:
+            return jsonify({'cpu_percent': 0.0, 'memory_mb': 0.0})
+
         try:
             current_time = time.time()
             parent = psutil.Process(os.getpid())
@@ -1122,20 +1128,32 @@ def create_web_app(manager):
             
             mm_ver = manager.mediamtx._get_latest_version()
             
-            mem = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
-            return jsonify({
+            system_info = {
                 'success': True,
                 'platform': f"{platform.system()} {platform.release()} ({platform.machine()})",
                 'python_version': sys.version.split()[0],
-                'cpu_count': psutil.cpu_count(),
-                'total_memory': round(mem.total / (1024**3), 2),
-                'available_memory': round(mem.available / (1024**3), 2),
-                'disk_usage': disk.percent,
                 'mediamtx_version': mm_ver,
                 'ffmpeg_version': ff_ver_str
-            })
+            }
+            
+            if psutil:
+                mem = psutil.virtual_memory()
+                disk = psutil.disk_usage('/')
+                system_info.update({
+                    'cpu_count': psutil.cpu_count(),
+                    'total_memory': round(mem.total / (1024**3), 2),
+                    'available_memory': round(mem.available / (1024**3), 2),
+                    'disk_usage': disk.percent
+                })
+            else:
+                system_info.update({
+                    'cpu_count': 'Unknown',
+                    'total_memory': 'Unknown',
+                    'available_memory': 'Unknown',
+                    'disk_usage': 0
+                })
+                
+            return jsonify(system_info)
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -1208,20 +1226,28 @@ def create_web_app(manager):
             if not data:
                 return jsonify({'error': 'Invalid request'}), 400
             
-            client_ip = data.get('ip')
+            client_ip = data.get('ip', '')
+            
+            # Normalize IPv6-mapped IPv4 addresses (e.g., ::ffff:127.0.0.1)
+            if client_ip.startswith('::ffff:'):
+                client_ip = client_ip.replace('::ffff:', '')
+            
             user = data.get('user', '')
             password = data.get('password', '')
             
+            if manager.debug_mode:
+                 print(f"  [RTSP Auth Check] IP: {client_ip}, Path: {data.get('path')}, User: {user}")
+
             # 1. ALWAYS allow whitelisted IPs
             if manager.is_ip_whitelisted(client_ip):
                 if manager.debug_mode:
                     print(f"  [RTSP] Auth bypass for whitelisted IP: {client_ip}")
                 return '', 200
                 
-            # 2. Allow system internal publisher (used for transcoding)
-            # This is a bit tricky as the password is random and stored in mediamtx_manager
-            # But we can allow any user from localhost for now, or just allow the specific user
-            if client_ip in ['127.0.0.1', '::1', 'localhost']:
+            # 2. Allow local loopback connections
+            if client_ip in ['127.0.0.1', '127.0.1.1', '::1', 'localhost']:
+                 if manager.debug_mode:
+                     print(f"  [RTSP] Local bypass granted for {client_ip}")
                  return '', 200
 
             # 3. Check if global RTSP auth is enabled
