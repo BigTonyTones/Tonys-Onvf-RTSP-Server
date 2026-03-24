@@ -4,6 +4,23 @@ import importlib.util
 import platform
 import collections
 import threading
+import socket
+
+def get_local_ip():
+    """Get the primary local IP address of this machine"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('8.8.8.8', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        try:
+            IP = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
 class Logger:
     def __init__(self, max_lines=2000):

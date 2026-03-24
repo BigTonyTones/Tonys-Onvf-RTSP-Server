@@ -2,7 +2,7 @@ import sys
 import time
 import threading
 import webbrowser
-from .utils import cleanup_stale_processes
+from .utils import cleanup_stale_processes, get_local_ip
 from .manager import CameraManager
 from .linux_network import LinuxNetworkManager
 from .config import WEB_UI_PORT, MEDIAMTX_PORT
@@ -113,11 +113,12 @@ def main():
         except:
             pass
     
+    local_ip = get_local_ip()
     print("=" * 60)
     print("SERVER RUNNING")
     print("=" * 60)
-    print(f"Web Interface: http://localhost:{WEB_UI_PORT}")
-    print(f"RTSP Server: rtsp://localhost:{rtsp_port}")
+    print(f"Web Interface: http://{local_ip}:{WEB_UI_PORT}")
+    print(f"RTSP Server: rtsp://{local_ip}:{rtsp_port}")
     print("Press Ctrl+C to stop the server")
     print("=" * 60 + "\n")
     
