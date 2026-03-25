@@ -3,7 +3,7 @@ Diagnostics page template for troubleshooting
 """
 
 def get_diagnostics_html():
-    return '''
+    return r'''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -287,6 +287,19 @@ def get_diagnostics_html():
             background: var(--border-color);
             margin: 15px 0;
         }
+
+        .soap-pre {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 11px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            color: #f8f8f2;
+            margin-bottom: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -324,7 +337,41 @@ def get_diagnostics_html():
                 <button class="btn" onclick="runTraceroute()" id="trace-btn">Run Traceroute</button>
             </div>
             
-            <!-- Stream Test -->
+            <!-- ONVIF Tool -->
+            <div class="tool-section">
+                <div class="tool-title">ONVIF Diagnostics</div>
+                
+                <div class="input-group">
+                    <label>Quick Select Camera</label>
+                    <select id="onvif-camera-select" onchange="handleOnvifCameraSelect()">
+                        <option value="">- Manual Input -</option>
+                    </select>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="input-group">
+                    <label>Host/IP</label>
+                    <input type="text" id="onvif-host" placeholder="192.168.1.100">
+                </div>
+                <div class="input-group">
+                    <label>ONVIF Port</label>
+                    <input type="number" id="onvif-port" value="80" min="1" max="65535">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" id="onvif-user" placeholder="admin">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="onvif-pass" placeholder="password">
+                    </div>
+                </div>
+                <button class="btn" onclick="runOnvifDiag()" id="onvif-btn">Run ONVIF Diag</button>
+            </div>
+            
+            <!-- Original Stream Test (Existing) -->
             <div class="tool-section">
                 <div class="tool-title">RTSP Stream Test</div>
                 
@@ -430,12 +477,16 @@ def get_diagnostics_html():
                 const response = await fetch('/api/cameras');
                 camerasData = await response.json();
                 const select = document.getElementById('camera-select');
+                const onvifSelect = document.getElementById('onvif-camera-select');
                 
                 camerasData.forEach(cam => {
                     const opt = document.createElement('option');
                     opt.value = cam.id;
                     opt.textContent = cam.name;
                     select.appendChild(opt);
+                    
+                    const optOnvif = opt.cloneNode(true);
+                    onvifSelect.appendChild(optOnvif);
                 });
                 
                 if (camerasData.length > 0) {
@@ -443,6 +494,20 @@ def get_diagnostics_html():
                 }
             } catch (err) {
                 console.error('Failed to load cameras:', err);
+            }
+        }
+
+        function handleOnvifCameraSelect() {
+            const select = document.getElementById('onvif-camera-select');
+            if (!select.value) return;
+
+            const camera = camerasData.find(c => c.id == select.value);
+            if (camera) {
+                document.getElementById('onvif-host').value = camera.host;
+                document.getElementById('onvif-port').value = camera.onvifPort || 80;
+                document.getElementById('onvif-user').value = camera.onvifUsername || camera.username || '';
+                document.getElementById('onvif-pass').value = camera.onvifPassword || camera.password || '';
+                log(`Selected Camera for ONVIF Diag: ${camera.name}`, 'purple');
             }
         }
 
@@ -478,6 +543,84 @@ def get_diagnostics_html():
 
         // Initialize
         loadCameras();
+
+        async function runOnvifDiag() {
+            const host = document.getElementById('onvif-host').value;
+            const port = document.getElementById('onvif-port').value;
+            const user = document.getElementById('onvif-user').value;
+            const pass = document.getElementById('onvif-pass').value;
+            const btn = document.getElementById('onvif-btn');
+            
+            if (!host || !user || !pass) {
+                log('Error: Host, username, and password are required.', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.innerHTML = '<div class="spinner"></div> Running...';
+            
+            log(`Starting ONVIF diagnostics for ${host}:${port}...`, 'purple');
+            
+            try {
+                const response = await fetch('/api/diagnostics/onvif', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({host, port: parseInt(port), username: user, password: pass})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    log(`✓ ONVIF Connection successful.`, 'success');
+                    
+                    data.diagnostics.forEach(call => {
+                        log(`--- ${call.name} ---`, 'purple');
+                        if (call.success) {
+                            log(`Status: SUCCESS`, 'success');
+                            if (call.request_xml) {
+                                const details = document.createElement('details');
+                                details.style.margin = '10px 0';
+                                details.style.cursor = 'pointer';
+                                details.innerHTML = `<summary style="color: var(--accent-cyan); font-weight: bold;">View SOAP Request/Response</summary>`;
+                                
+                                const reqDiv = document.createElement('div');
+                                reqDiv.style.marginTop = '10px';
+                                reqDiv.innerHTML = `<div style="color: var(--accent-orange); font-size: 12px; margin-bottom: 5px;">SOAP Request:</div>`;
+                                const reqPre = document.createElement('pre');
+                                reqPre.className = 'soap-pre';
+                                reqPre.textContent = call.request_xml;
+                                reqDiv.appendChild(reqPre);
+
+                                const respDiv = document.createElement('div');
+                                respDiv.style.marginTop = '10px';
+                                respDiv.innerHTML = `<div style="color: var(--accent-green); font-size: 12px; margin-bottom: 5px;">SOAP Response:</div>`;
+                                const respPre = document.createElement('pre');
+                                respPre.className = 'soap-pre';
+                                respPre.textContent = call.response_xml;
+                                respDiv.appendChild(respPre);
+                                
+                                details.appendChild(reqDiv);
+                                details.appendChild(respDiv);
+                                consoleEl.appendChild(details);
+                            }
+                        } else {
+                            log(`Status: FAILED`, 'error');
+                            log(`Error: ${call.error}`, 'error');
+                        }
+                    });
+                } else {
+                    log('✗ ONVIF diagnostics failed.', 'error');
+                    log('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                log('Connection error: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                log('--------------------------------------------------');
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            }
+        }
 
         async function runPing() {
             const host = document.getElementById('ping-host').value;

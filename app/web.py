@@ -1094,6 +1094,27 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/api/diagnostics/onvif', methods=['POST'])
+    @login_required
+    def diag_onvif():
+        """Connect to an ONVIF camera and return detailed diagnostic info"""
+        data = request.json
+        host = data.get('host')
+        port = int(data.get('port', 80))
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not host or not username or not password:
+            return jsonify({'success': False, 'error': 'Host, username, and password are required'}), 400
+            
+        prober = ONVIFProber()
+        result = prober.get_detailed_diagnostics(host, port, username, password)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+
     @app.route('/api/diagnostics/ffmpeg-info')
     @login_required
     def diag_ffmpeg_info():
