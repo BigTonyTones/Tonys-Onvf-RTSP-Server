@@ -185,3 +185,103 @@ class ONVIFProber:
                 'success': False,
                 'error': str(e)
             }
+
+    def get_detailed_diagnostics(self, host, port, username, password):
+        """
+        Connect to an ONVIF camera and return detailed info + raw SOAP XML for troubleshooting.
+        """
+        try:
+            from onvif import ONVIFCamera
+            from zeep.plugins import HistoryPlugin
+            from lxml import etree
+        except ImportError:
+            return {
+                'success': False, 
+                'error': 'onvif-zeep or lxml library not installed.'
+            }
+
+        history = HistoryPlugin()
+        
+        # Locate WSDLs (same logic as probe)
+        import onvif
+        wsdl_dir = os.path.join(os.path.dirname(onvif.__file__), 'wsdl')
+        if not os.path.exists(os.path.join(wsdl_dir, 'devicemgmt.wsdl')):
+            local_wsdl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
+            if os.path.exists(os.path.join(local_wsdl, 'devicemgmt.wsdl')):
+                wsdl_dir = local_wsdl
+            else:
+                wsdl_dir = None
+
+        try:
+            if wsdl_dir:
+                mycam = ONVIFCamera(host, port, username, password, wsdl_dir=wsdl_dir)
+            else:
+                mycam = ONVIFCamera(host, port, username, password)
+            
+            # Attach history plugin to zeep clients
+            def attach_history(service):
+                if service and hasattr(service, 'zeep_client'):
+                    if history not in service.zeep_client.plugins:
+                        service.zeep_client.plugins.append(history)
+
+            attach_history(mycam.devicemgmt)
+
+            diag_results = []
+
+            def record_call(name, func, *args, **kwargs):
+                call_info = {'name': name, 'success': False}
+                try:
+                    res = func(*args, **kwargs)
+                    call_info['success'] = True
+                    # Result is often a zeep object, convert if possible or just store type
+                    call_info['result_type'] = str(type(res))
+                except Exception as e:
+                    call_info['error'] = str(e)
+                
+                # Capture history for THIS call
+                if history.last_sent:
+                    # XML formatting
+                    try:
+                        req_xml = etree.tostring(history.last_sent['envelope'], encoding='unicode', pretty_print=True)
+                        resp_xml = etree.tostring(history.last_received['envelope'], encoding='unicode', pretty_print=True)
+                        call_info['request_xml'] = req_xml
+                        call_info['response_xml'] = resp_xml
+                    except:
+                        call_info['request_xml'] = str(history.last_sent['envelope'])
+                        call_info['response_xml'] = str(history.last_received['envelope'])
+                
+                diag_results.append(call_info)
+                return res if call_info['success'] else None
+
+            # 1. Device Information
+            record_call("GetDeviceInformation", mycam.devicemgmt.GetDeviceInformation)
+            
+            # 2. Capabilities
+            record_call("GetCapabilities", mycam.devicemgmt.GetCapabilities)
+            
+            # 3. Network Interfaces
+            record_call("GetNetworkInterfaces", mycam.devicemgmt.GetNetworkInterfaces)
+
+            # 4. Media Profiles
+            media = mycam.create_media_service()
+            attach_history(media)
+            profiles = record_call("GetProfiles", media.GetProfiles)
+            
+            if profiles:
+                # Get more details for the first profile if exists
+                token = profiles[0].token
+                record_call(f"GetStreamUri (Token: {token})", media.GetStreamUri, {
+                    'StreamSetup': {'Stream': 'RTP-Unicast', 'Transport': {'Protocol': 'RTSP'}},
+                    'ProfileToken': token
+                })
+
+            return {
+                'success': True,
+                'diagnostics': diag_results
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }

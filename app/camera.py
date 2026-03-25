@@ -209,6 +209,7 @@ class VirtualONVIFCamera:
             'id': self.id,
             'uuid': self.uuid,
             'name': self.name,
+            'host': self.get_effective_ip(),
             'mainStreamUrl': self.main_stream_url,
             'subStreamUrl': self.sub_stream_url,
             'rtspPort': self.rtsp_port,
