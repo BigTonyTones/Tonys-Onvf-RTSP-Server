@@ -366,7 +366,7 @@ class ONVIFService:
                 <tt:Extension>
                     <tt:DeviceIO>
                         <tt:XAddr>http://{local_ip}:{self.camera.onvif_port}/onvif/deviceio_service</tt:XAddr>
-                        <tt:VideoSources>2</tt:VideoSources>
+                        <tt:VideoSources>{1 if getattr(self.camera, 'disable_substream', False) else 2}</tt:VideoSources>
                         <tt:VideoOutputs>0</tt:VideoOutputs>
                         <tt:AudioSources>0</tt:AudioSources>
                         <tt:AudioOutputs>0</tt:AudioOutputs>
@@ -528,6 +528,10 @@ class ONVIFService:
                     </tt:H264>
                 </tt:VideoEncoderConfiguration>
             </trt:Profiles>
+        """
+        
+        if not getattr(self.camera, 'disable_substream', False):
+            soap_response += f"""
             <trt:Profiles token="subStream" fixed="true">
                 <tt:Name>subStream</tt:Name>
                 <tt:VideoSourceConfiguration token="VideoSourceSub">
@@ -556,6 +560,9 @@ class ONVIFService:
                     </tt:H264>
                 </tt:VideoEncoderConfiguration>
             </trt:Profiles>
+            """
+        
+        soap_response += """
         </trt:GetProfilesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
@@ -639,13 +646,20 @@ class ONVIFService:
                     <tt:Height>{self.camera.main_height}</tt:Height>
                 </tt:Resolution>
             </trt:VideoSources>
-            <trt:VideoSources token="VideoSourceSub">
-                <tt:Framerate>{self.camera.sub_framerate}</tt:Framerate>
-                <tt:Resolution>
-                    <tt:Width>{self.camera.sub_width}</tt:Width>
-                    <tt:Height>{self.camera.sub_height}</tt:Height>
-                </tt:Resolution>
-            </trt:VideoSources>
+            """
+        
+        if not getattr(self.camera, 'disable_substream', False):
+            soap_response += f"""
+                <trt:VideoSources token="VideoSourceSub">
+                    <tt:Framerate>{self.camera.sub_framerate}</tt:Framerate>
+                    <tt:Resolution>
+                        <tt:Width>{self.camera.sub_width}</tt:Width>
+                        <tt:Height>{self.camera.sub_height}</tt:Height>
+                    </tt:Resolution>
+                </tt:VideoSources>
+            """
+        
+        soap_response += """
         </trt:GetVideoSourcesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
