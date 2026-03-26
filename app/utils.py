@@ -28,6 +28,11 @@ class Logger:
         self._lock = threading.Lock()
         self._stdout = sys.stdout
         self._stderr = sys.stderr
+        
+        # Add a single timestamp at the very start of the session
+        import datetime
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._buffer.append(f"--- LOG SESSION STARTED AT {now} ---\n\n")
 
     def write(self, message):
         if not message:
