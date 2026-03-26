@@ -1265,18 +1265,24 @@ def get_web_ui_html(current_settings=None):
         <div class="modal-content" style="max-width: 1200px; width: 95%;">
             <div class="modal-header">
                 <div class="modal-title">Terminal Logs</div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div style="display: flex; align-items: center; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-right: 10px;">
+                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-right: 8px;">Font Size</span>
+                        <button class="btn" style="padding: 2px 8px; font-size: 12px; min-width: 30px;" onclick="adjustLogFontSize(-1)">−</button>
+                        <span id="logFontSizeDisplay" style="padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--text-title); min-width: 40px; text-align: center;">16px</span>
+                        <button class="btn" style="padding: 2px 8px; font-size: 12px; min-width: 30px;" onclick="adjustLogFontSize(1)">+</button>
+                    </div>
                     <button class="btn" onclick="refreshLogs()">Refresh</button>
                     <button class="close-btn" onclick="closeLogsModal()">×</button>
                 </div>
             </div>
-            <div id="logs-container" style="background: #0d1117; color: #e6f1ff; padding: 20px; border-radius: 8px; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.5; max-height: 600px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d;">
+            <div id="logs-container" style="background: #0d1117; color: #e6f1ff; padding: 25px; border-radius: 10px; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.6; max-height: 700px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d;">
                 Loading logs...
             </div>
-            <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 12px;">
+            <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
                 <span>Total 2,000 lines captured in memory</span>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="autoScrollLogs" checked style="width: auto; cursor: pointer;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500;">
+                    <input type="checkbox" id="autoScrollLogs" checked style="width: auto; cursor: pointer; transform: scale(1.1);">
                     <span>Auto-scroll to bottom</span>
                 </label>
             </div>
@@ -1978,8 +1984,27 @@ def get_web_ui_html(current_settings=None):
 
         let logInterval = null;
 
+        let logFontSize = parseInt(localStorage.getItem('logFontSize')) || 16;
+
+        function adjustLogFontSize(direction) {{
+            logFontSize += direction;
+            if (logFontSize < 10) logFontSize = 10;
+            if (logFontSize > 32) logFontSize = 32;
+            
+            localStorage.setItem('logFontSize', logFontSize);
+            applyLogFontSize();
+        }}
+
+        function applyLogFontSize() {{
+            const container = document.getElementById('logs-container');
+            const display = document.getElementById('logFontSizeDisplay');
+            if (container) container.style.fontSize = logFontSize + 'px';
+            if (display) display.textContent = logFontSize + 'px';
+        }}
+
         function openLogsModal() {{
             document.getElementById('logs-modal').classList.add('active');
+            applyLogFontSize();
             refreshLogs();
             // Auto-refresh logs every 3 seconds while open
             if (logInterval) clearInterval(logInterval);

@@ -230,6 +230,9 @@ class FFmpegManager:
         Get FFmpeg version as a tuple (major, minor, patch)
         Returns None if FFmpeg is not installed or version cannot be determined
         """
+        if not ffmpeg_path:
+            return None
+            
         try:
             result = subprocess.run(
                 [ffmpeg_path, "-version"],
@@ -246,13 +249,21 @@ class FFmpegManager:
             version_line = result.stdout.split('\n')[0]
             
             # Extract version number using regex
-            match = re.search(r'ffmpeg version (\d+)\.(\d+)\.?(\d*)', version_line)
+            # Be more flexible: handle prefixes like 'n' or epochs like '7:'
+            match = re.search(r'ffmpeg version (?:.*[:])?(?:n)?(\d+)\.(\d+)\.?(\d*)', version_line)
             if match:
                 major = int(match.group(1))
                 minor = int(match.group(2))
                 patch = int(match.group(3)) if match.group(3) else 0
                 return (major, minor, patch)
             
+            # Fallback for weird version strings - just look for digits.dots.digits
+            match = re.search(r'version (?:n)?(\d+)\.(\d+)', version_line)
+            if match:
+                major = int(match.group(1))
+                minor = int(match.group(2))
+                return (major, minor, 0)
+                
             return None
             
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
@@ -277,12 +288,7 @@ class FFmpegManager:
         print("\nChecking FFmpeg installation...")
         
         # Try to find ffmpeg
-        ffmpeg_path = shutil.which("ffmpeg")
-        if not ffmpeg_path:
-            # Try local directory
-            local_ffmpeg = os.path.join(self.ffmpeg_dir, self.ffmpeg_executable)
-            if os.path.exists(local_ffmpeg):
-                ffmpeg_path = local_ffmpeg
+        ffmpeg_path = self._find_ffmpeg_binary()
         
         version = self.get_ffmpeg_version(ffmpeg_path) if ffmpeg_path else None
         
@@ -397,30 +403,53 @@ class FFmpegManager:
             print("=" * 60)
             return False
 
+    def _find_ffmpeg_binary(self):
+        """Locate ffmpeg binary with multiple fallbacks"""
+        system = platform.system().lower()
+        executable = "ffmpeg.exe" if system == "windows" else "ffmpeg"
+        
+        # 1. Check system path
+        path = shutil.which(executable)
+        if path:
+            return os.path.abspath(path)
+            
+        # 2. Check local directory
+        local_path = os.path.join(self.ffmpeg_dir, executable)
+        if os.path.exists(local_path):
+            return os.path.abspath(local_path)
+            
+        # 3. Linux only: check common standard paths
+        if system == "linux":
+            common_paths = [
+                "/usr/bin/ffmpeg",
+                "/usr/local/bin/ffmpeg",
+                "/bin/ffmpeg",
+                "/usr/sbin/ffmpeg"
+            ]
+            for p in common_paths:
+                if os.path.exists(p):
+                    return p
+                    
+        return None
+
     def get_ffmpeg_path(self):
         """Get the path to ffmpeg"""
         system = platform.system().lower()
         
         # Linux: Prioritize system-wide FFmpeg
         if system == "linux":
-            # 1. Check system path
-            system_path = shutil.which("ffmpeg")
-            if system_path:
-                return os.path.abspath(system_path)
+            # 1. Try to find existing
+            path = self._find_ffmpeg_binary()
+            if path:
+                return path
                 
             # 2. Try to install
             if self.install_system_ffmpeg():
                 # Check again
-                system_path = shutil.which("ffmpeg")
-                if system_path:
-                    return os.path.abspath(system_path)
+                path = self._find_ffmpeg_binary()
+                if path:
+                    return path
             
-            # 3. Fallback to local check (optional, but good for backward compat if user manually placed it)
-            executable = "ffmpeg"
-            local_path = os.path.join(self.ffmpeg_dir, executable)
-            if os.path.exists(local_path):
-                return local_path
-                
             print("  FFmpeg not found locally or in system path.")
             return "ffmpeg" # Return default and let it fail
             
@@ -440,21 +469,50 @@ class FFmpegManager:
         
         return local_path # Return the expected local path even if missing
 
+    def _find_ffprobe_binary(self):
+        """Locate ffprobe binary with multiple fallbacks"""
+        system = platform.system().lower()
+        executable = "ffprobe.exe" if system == "windows" else "ffprobe"
+        
+        # 1. Check system path
+        path = shutil.which(executable)
+        if path:
+            return os.path.abspath(path)
+            
+        # 2. Check local directory
+        local_path = os.path.join(self.ffmpeg_dir, executable)
+        if os.path.exists(local_path):
+            return os.path.abspath(local_path)
+            
+        # 3. Linux only: check common standard paths
+        if system == "linux":
+            common_paths = [
+                "/usr/bin/ffprobe",
+                "/usr/local/bin/ffprobe",
+                "/bin/ffprobe",
+                "/usr/sbin/ffprobe"
+            ]
+            for p in common_paths:
+                if os.path.exists(p):
+                    return p
+                    
+        return None
+
     def get_ffprobe_path(self):
         """Get the path to ffprobe"""
         system = platform.system().lower()
         
         # Linux: Check system path
         if system == "linux":
-            # 1. Check system path
-            system_path = shutil.which("ffprobe")
-            if system_path:
-                return os.path.abspath(system_path)
+            # 1. Try to find existing
+            path = self._find_ffprobe_binary()
+            if path:
+                return path
             # Attempt install if missing (although ffmpeg install usually covers it)
             if self.install_system_ffmpeg():
-                 system_path = shutil.which("ffprobe")
-                 if system_path:
-                     return os.path.abspath(system_path)
+                 path = self._find_ffprobe_binary()
+                 if path:
+                     return path
             return "ffprobe"
 
         # Windows/macOS: Use dedicated local FFprobe only
