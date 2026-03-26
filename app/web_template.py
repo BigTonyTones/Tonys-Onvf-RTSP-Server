@@ -1414,38 +1414,62 @@ def get_web_ui_html(current_settings=None):
                     </div>
 
                     <!-- Sub Stream Column -->
-                    <div class="form-col" style="flex: 1; padding-left: 12px;">
+                    <div class="form-col" style="flex: 1; padding-left: 12px;" id="sub-stream-col">
                         <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">Sub Stream Settings</h3>
                         
-                        <div class="form-group">
-                            <label class="form-label">Sub Stream Path</label>
-                            <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2" required>
-                        </div>
-                        
-                        <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
-                            <div class="auto-start-row" style="margin-bottom: 15px;">
-                                <span class="auto-start-label" style="font-size: 13px;">Transcode Substream</span>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                <span class="auto-start-label" style="font-size: 13px; font-weight: 500;">Disable Substream</span>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="transcodeSub">
+                                    <input type="checkbox" id="disableSubstream" onchange="toggleSubStreamFields()">
                                     <span class="toggle-slider"></span>
                                 </label>
+                            </label>
+                            <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
+                        </div>
+
+                        <div id="sub-stream-fields-container">
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                 <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 500;">Use Main as Substream</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="useMainAsSubstream" onchange="toggleSubStreamFields()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </label>
+                                <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
+                            </div>
+
+                            <div class="form-group" id="subPathContainer">
+                                <label class="form-label">Sub Stream Path</label>
+                                <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2">
                             </div>
                             
-                            <label class="form-label">Resolution & FPS</label>
-                            <div class="form-row" style="margin-bottom: 10px;">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640" required>
+                            <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
+                                <div class="auto-start-row" style="margin-bottom: 15px;">
+                                    <span class="auto-start-label" style="font-size: 13px;">Transcode Substream</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="transcodeSub">
+                                        <span class="toggle-slider"></span>
+                                    </label>
                                 </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480" required>
+                                
+                                <label class="form-label">Resolution & FPS</label>
+                                <div class="form-row" style="margin-bottom: 10px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480">
+                                    </div>
                                 </div>
+                                <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15">
                             </div>
-                            <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15" required>
+                            
+                            <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-top: 12px; font-size: 13px;">
+                                Fetch Sub Stream Info
+                            </button>
                         </div>
-                        
-                        <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('sub')" style="width:100%; margin-top: 12px; font-size: 13px;">
-                            Fetch Sub Stream Info
-                        </button>
                     </div>
                 </div>
                 
@@ -2869,6 +2893,8 @@ def get_web_ui_html(current_settings=None):
                 option.textContent = cam.name;
                 copySelect.appendChild(option);
             }});
+            
+            toggleSubStreamFields();
             document.getElementById('camera-modal').classList.add('active');
         }}
         
@@ -2902,6 +2928,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('subFramerate').value = camera.subFramerate || 15;
             document.getElementById('transcodeSub').checked = camera.transcodeSub || false;
             document.getElementById('transcodeMain').checked = camera.transcodeMain || false;
+            document.getElementById('disableSubstream').checked = camera.disableSubstream || false;
+            document.getElementById('useMainAsSubstream').checked = camera.useMainAsSubstream || false;
             document.getElementById('onvifPort').value = camera.onvifPort || '';
             document.getElementById('cameraUuid').value = camera.uuid || '';
             
@@ -2940,6 +2968,7 @@ def get_web_ui_html(current_settings=None):
             }}
             
             toggleNetworkFields();
+            toggleSubStreamFields();
             
             document.getElementById('camera-modal').classList.add('active');
         }}
@@ -2977,6 +3006,8 @@ def get_web_ui_html(current_settings=None):
                 subFramerate: parseInt(document.getElementById('subFramerate').value),
                 transcodeSub: document.getElementById('transcodeSub').checked,
                 transcodeMain: document.getElementById('transcodeMain').checked,
+                disableSubstream: document.getElementById('disableSubstream').checked,
+                useMainAsSubstream: document.getElementById('useMainAsSubstream').checked,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 
@@ -3070,6 +3101,28 @@ def get_web_ui_html(current_settings=None):
         function toggleAuthFields() {{
             const enabled = document.getElementById('authEnabled').checked;
             document.getElementById('auth-settings-fields').style.display = enabled ? 'block' : 'none';
+        }}
+        
+        function toggleSubStreamFields() {{
+            const disabled = document.getElementById('disableSubstream').checked;
+            const useMain = document.getElementById('useMainAsSubstream').checked;
+            
+            const container = document.getElementById('sub-stream-fields-container');
+            const pathContainer = document.getElementById('subPathContainer');
+            const subPathInput = document.getElementById('subPath');
+            
+            if (disabled) {{
+                container.style.display = 'none';
+            }} else {{
+                container.style.display = 'block';
+                if (useMain) {{
+                    pathContainer.style.display = 'none';
+                    subPathInput.required = false;
+                }} else {{
+                    pathContainer.style.display = 'block';
+                    subPathInput.required = true;
+                }}
+            }}
         }}
         
         async function toggleAutoStart(id, autoStart) {{

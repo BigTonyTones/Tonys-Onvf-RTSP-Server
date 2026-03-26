@@ -557,6 +557,7 @@ class CameraManager:
                    main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                    main_framerate=30, sub_framerate=15, onvif_port=None,
                    transcode_sub=False, transcode_main=False,
+                   disable_substream=False, use_main_as_substream=False,
                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                    static_ip='', netmask='24', gateway='', uuid=None):
         """Add a new camera"""
@@ -618,6 +619,8 @@ class CameraManager:
             'onvifPassword': self.global_password,
             'transcodeSub': transcode_sub,
             'transcodeMain': transcode_main,
+            'disableSubstream': disable_substream,
+            'useMainAsSubstream': use_main_as_substream,
             'useVirtualNic': use_virtual_nic,
             'parentInterface': parent_interface,
             'nicMac': nic_mac,
@@ -644,6 +647,7 @@ class CameraManager:
                       main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                       main_framerate=30, sub_framerate=15, onvif_port=None,
                       transcode_sub=False, transcode_main=False,
+                      disable_substream=False, use_main_as_substream=False,
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway='', uuid=None):
         """Update an existing camera"""
@@ -713,6 +717,8 @@ class CameraManager:
         camera.onvif_password = self.global_password
         camera.transcode_sub = transcode_sub
         camera.transcode_main = transcode_main
+        camera.disable_substream = disable_substream
+        camera.use_main_as_substream = use_main_as_substream
         camera.use_virtual_nic = use_virtual_nic
         camera.parent_interface = parent_interface
         camera.nic_mac = nic_mac

@@ -372,9 +372,20 @@ class MediaMTXManager:
                 
                 # ===== SUB STREAM - Lower Quality, Optimized for Viewing =====
                 
+                # Check if sub-stream is disabled
+                if getattr(camera, 'disable_substream', False):
+                    print(f"    Sub-stream disabled for {camera.name}")
+                    continue
+                
                 # Check for transcoding preference
                 transcode_sub = getattr(camera, 'transcode_sub', False)
-                sub_source = camera.sub_stream_url
+                use_main_as_sub = getattr(camera, 'use_main_as_substream', False)
+                
+                # Use main stream URL as source if requested
+                if use_main_as_sub:
+                    sub_source = camera.main_stream_url
+                else:
+                    sub_source = camera.sub_stream_url
                 
                 if transcode_sub:
                     print(f"    Transcoding enabled for {camera.name} sub-stream")
