@@ -61,9 +61,12 @@ class AnalyticsManager:
             if not name:
                 continue
             
-            # Basic info
+            # Basic info — v1.17+ uses 'online' (replaces deprecated 'ready')
+            # Keep 'ready' fallback for any older binary still present during upgrade
+            is_online = item.get('online', item.get('ready', False))
             analytics = {
-                'ready': item.get('ready', False),
+                'online': is_online,
+                'ready': is_online,  # Backwards-compat alias
                 'tracks': item.get('tracks', []),
                 'readers': len(item.get('readers', [])),
                 'source': item.get('source', {}).get('type', 'unknown'),
@@ -115,7 +118,8 @@ class AnalyticsManager:
         """Get stats for a specific stream path"""
         with self._lock:
             return self.data.get(path_name, {
-                'ready': False,
+                'online': False,
+                'ready': False,  # Backwards-compat alias
                 'bitrate': 0,
                 'readers': 0,
                 'tracks': []

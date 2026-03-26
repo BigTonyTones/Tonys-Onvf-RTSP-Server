@@ -866,11 +866,12 @@ class CameraManager:
                             self.stale_path_times[path_name] = now
                         continue
                     
-                    is_ready = stats.get('ready', False)
+                    # v1.17+ uses 'online'; 'ready' is kept as a backwards-compat alias
+                    is_online = stats.get('online', stats.get('ready', False))
                     is_stale = stats.get('stale', False)
                     
-                    # If not ready, or ready but stale (sending 0 bytes)
-                    if not is_ready or is_stale:
+                    # If not online, or online but stale (sending 0 bytes)
+                    if not is_online or is_stale:
                         if path_name not in self.stale_path_times:
                             self.stale_path_times[path_name] = now
                         
@@ -895,9 +896,9 @@ class CameraManager:
                         self.stale_path_times[layout_id] = now
                     continue
 
-                # For GridFusion, since it always sends data (black baseline), 
-                # we primarily check if it's 'ready' (process is running)
-                if not stats.get('ready', False):
+                # For GridFusion, since it always sends data (black baseline),
+                # we primarily check if it's 'online' (process is running)
+                if not stats.get('online', stats.get('ready', False)):
                     if layout_id not in self.stale_path_times:
                         self.stale_path_times[layout_id] = now
                     

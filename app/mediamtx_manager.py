@@ -32,8 +32,10 @@ class MediaMTXManager:
         return "mediamtx"
     
     def _get_latest_version(self):
-        """Locked to version v1.15.6 as requested"""
-        return "v1.15.6"
+        """Required minimum version of MediaMTX"""
+        return "v1.17.0"
+
+    REQUIRED_VERSION = "v1.17.0"
 
     def _parse_version(self, version_str):
         """Parse version string like 'v1.15.6' into a list of integers [1, 15, 6]"""
@@ -63,30 +65,29 @@ class MediaMTXManager:
         if Path(self.executable).exists():
             # Check current version
             try:
-                # Use absolute path for reliability
                 exe_path = os.path.abspath(self.executable)
-                result = subprocess.run([exe_path, "--version"], 
-                                      capture_output=True, text=True, check=False)
-                # Version output is often just "vX.Y.Z"
+                result = subprocess.run([exe_path, "--version"],
+                                       capture_output=True, text=True, check=False)
                 current_version = result.stdout.strip()
                 if current_version and not current_version.startswith('v'):
                     current_version = 'v' + current_version
-                
+
                 if current_version == latest_version:
                     print(f"MediaMTX is up to date ({current_version})")
                     return True
                 elif self._version_is_newer(current_version, latest_version):
-                    print(f"Newer MediaMTX version available: {current_version} -> {latest_version}")
-                    print("Preparing to update...")
+                    print(f"MediaMTX {current_version} is outdated. v1.17.0 is required for compatibility.")
+                    print("Automatically upgrading MediaMTX...")
+                    # Fall through to download
                 else:
-                    # Current version is actually newer or equal
-                    print(f"MediaMTX is up to date ({current_version})")
+                    # Current version is newer than required — that's fine
+                    print(f"MediaMTX {current_version} meets the v1.17.0 requirement.")
                     return True
             except Exception as e:
                 print(f"Could not check MediaMTX version: {e}")
                 return True
         else:
-            print(f"MediaMTX not found. Downloading latest version: {latest_version}")
+            print(f"MediaMTX not found. Downloading required version: {latest_version}")
         
         version = latest_version
         print(f"Installing MediaMTX {version}...")
@@ -132,17 +133,7 @@ class MediaMTXManager:
         
         print(f"  Platform: {system} {machine}")
         print(f"  Downloading from: {url}")
-        
-        # Ask for confirmation
-        try:
-            confirm = input(f"\nWould you like to download and install MediaMTX {version}? (y/n): ")
-            if confirm.lower() not in ['y', 'yes']:
-                print("Installation cancelled by user.")
-                return False
-        except EOFError:
-            # Handle non-interactive environments
-            print("Non-interactive environment detected, proceeding with download...")
-            pass
+        # Auto-download without prompting — v1.17.0 is a required dependency
         
         try:
             # Download with progress
@@ -373,7 +364,6 @@ class MediaMTXManager:
                         'sourceOnDemandCloseAfter': '10s',
                         'record': False,
                         'overridePublisher': True,
-                        'fallback': '',
                     }
                 
 
@@ -435,18 +425,11 @@ class MediaMTXManager:
                     sub_path_cfg = {
                         'source': sub_source,
                         'rtspTransport': 'tcp',
-                        
-                        # On-demand disabled for multiple simultaneous viewers
                         'sourceOnDemand': True,
                         'sourceOnDemandStartTimeout': '10s',
                         'sourceOnDemandCloseAfter': '10s',
-                        
-                        # Recording settings
                         'record': False,
-                        
-                        # Republishing settings
                         'disablePublisherOverride': False,
-                        'fallback': '',
                     }
                 
                 config['paths'][f'{camera.path_name}_sub'] = sub_path_cfg
