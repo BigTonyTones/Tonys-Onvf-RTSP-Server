@@ -68,10 +68,12 @@ class AnalyticsManager:
                 'online': is_online,
                 'ready': is_online,  # Backwards-compat alias
                 'tracks': item.get('tracks', []),
-                'readers': len(item.get('readers', [])),
-                'source': item.get('source', {}).get('type', 'unknown'),
-                'bytesReceived': item.get('bytesReceived', 0),
-                'bytesSent': item.get('bytesSent', 0),
+                # v1.17 - readers renamed to outboundSessions
+                'readers': len(item.get('outboundSessions') or item.get('readers') or []),
+                'source': item.get('source', {}).get('type', 'unknown') if isinstance(item.get('source'), dict) else 'unknown',
+                # v1.17 moved bytesReceived/Sent into source object
+                'bytesReceived': item.get('bytesReceived') or item.get('source', {}).get('bytesReceived', 0) if isinstance(item.get('source'), dict) else item.get('bytesReceived', 0),
+                'bytesSent': item.get('bytesSent') or item.get('source', {}).get('bytesSent', 0) if isinstance(item.get('source'), dict) else item.get('bytesSent', 0),
                 'bitrate': 0  # To be calculated
             }
             

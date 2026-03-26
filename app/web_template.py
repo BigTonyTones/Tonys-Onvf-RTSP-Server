@@ -3726,20 +3726,22 @@ def get_web_ui_html(current_settings=None):
                     let html = '';
                     
                     if (mainStats) {{
-                        const statusClass = mainStats.stale ? 'warn' : (mainStats.ready ? 'live' : 'error');
+                        const stats = mainStats;
+                        const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
                         html += `
-                            <div class="metric-badge ${{statusClass}}" title="${{mainStats.stale ? 'Stream Stalled' : 'Main Stream Status'}}" style="min-width: 95px; justify-content: center;">
-                                MAIN: ${{mainStats.bitrate.toFixed(0)}}
+                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Main Stream Status'}}" style="min-width: 95px; justify-content: center;">
+                                MAIN: ${{stats.bitrate.toFixed(0)}}
                             </div>
                         `;
                     }}
                     
                     if (subStats) {{
-                        const statusClass = subStats.stale ? 'warn' : (subStats.ready ? 'live' : 'error');
-                        const viewers = subStats.readers || 0;
+                        const stats = subStats;
+                        const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
+                        const viewers = stats.readers || 0;
                         html += `
-                            <div class="metric-badge ${{statusClass}}" title="${{subStats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}" style="min-width: 85px; justify-content: center;">
-                                SUB: ${{subStats.bitrate.toFixed(0)}}
+                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}" style="min-width: 85px; justify-content: center;">
+                                SUB: ${{stats.bitrate.toFixed(0)}}
                             </div>
                             <div class="metric-badge ${{viewers > 0 ? 'live' : ''}}" title="Active Viewers" style="min-width: 40px; justify-content: center;">
                                 <i class="fas fa-users"></i> ${{viewers}}
