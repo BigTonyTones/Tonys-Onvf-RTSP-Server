@@ -1661,6 +1661,20 @@ def get_web_ui_html(current_settings=None):
                     </small>
                 </div>
 
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="watchdogEnabled" style="width: auto; cursor: pointer;">
+                        <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">
+                            <i class="fas fa-flask" style="font-size: 11px; margin-right: 3px;"></i>
+                            Stream Watchdog (Experimental)
+                        </span>
+                    </label>
+                    <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                        Monitors running streams and automatically restarts MediaMTX if a stream is dead or stale for &gt;2 minutes.
+                        Disabled by default. May cause unexpected restarts — enable only if you experience persistent stream failures.
+                    </small>
+                </div>
+
                 <div class="form-group linux-only">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="autoBoot" style="width: auto; cursor: pointer;">
@@ -3280,6 +3294,9 @@ def get_web_ui_html(current_settings=None):
                     const debugModeField = document.getElementById('debugMode');
                     if (debugModeField) debugModeField.checked = settings.debugMode === true;
 
+                    const watchdogField = document.getElementById('watchdogEnabled');
+                    if (watchdogField) watchdogField.checked = settings.watchdogEnabled === true;
+
                     // Load Advanced Settings
                     if (settings.advancedSettings) {{
                         const adv = settings.advancedSettings;
@@ -3380,6 +3397,7 @@ def get_web_ui_html(current_settings=None):
                 globalPassword: document.getElementById('globalPassword').value,
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
                 debugMode: document.getElementById('debugMode').checked,
+                watchdogEnabled: document.getElementById('watchdogEnabled') ? document.getElementById('watchdogEnabled').checked : false,
                 advancedSettings: {{
                     mediamtx: {{
                         writeQueueSize: parseInt(document.getElementById('mediamtx_writeQueueSize').value) || 32768,

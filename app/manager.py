@@ -46,6 +46,7 @@ class CameraManager:
         self.stale_path_times = {} # path_name -> first_stale_timestamp
         self._watchdog_running = False
         self._watchdog_thread = None
+        self.watchdog_enabled = False  # Disabled by default (experimental)
 
         
         # Auth settings
@@ -75,8 +76,9 @@ class CameraManager:
         self.ip_whitelist = []
         self.load_config()
         
-        # Start watchdog
-        self.start_watchdog()
+        # Start watchdog only if enabled in settings
+        if getattr(self, 'watchdog_enabled', False):
+            self.start_watchdog()
         
     def load_config(self):
         """Load camera configuration"""
@@ -109,6 +111,7 @@ class CameraManager:
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             self.debug_mode = config.get('settings', {}).get('debugMode', False)
+            self.watchdog_enabled = config.get('settings', {}).get('watchdogEnabled', False)
             self.ip_whitelist = config.get('settings', {}).get('ipWhitelist', [])
             
             # Load GridFusion settings (Support multiple layouts)
@@ -242,6 +245,7 @@ class CameraManager:
                 'globalPassword': getattr(self, 'global_password', 'admin'),
                 'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
                 'debugMode': getattr(self, 'debug_mode', False),
+                'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
                 'ipWhitelist': getattr(self, 'ip_whitelist', [])
             },
             'auth': {
@@ -291,6 +295,7 @@ class CameraManager:
                 self.global_password = settings.get('globalPassword', 'admin')
                 self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
                 self.debug_mode = settings.get('debugMode', False)
+                self.watchdog_enabled = settings.get('watchdogEnabled', False)
                 
                 # Ensure whitelist exists
                 self.ip_whitelist = settings.get('ipWhitelist', [])
@@ -328,6 +333,20 @@ class CameraManager:
         self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', self.rtsp_auth_enabled)
         self.debug_mode = settings.get('debugMode', self.debug_mode)
         self.ip_whitelist = settings.get('ipWhitelist', self.ip_whitelist)
+
+        # Handle watchdog enable/disable dynamically
+        new_watchdog_enabled = settings.get('watchdogEnabled', self.watchdog_enabled)
+        if new_watchdog_enabled != self.watchdog_enabled:
+            self.watchdog_enabled = new_watchdog_enabled
+            if new_watchdog_enabled:
+                print("Watchdog enabled by user — starting watchdog...")
+                self.start_watchdog()
+            else:
+                print("Watchdog disabled by user — stopping watchdog...")
+                self._watchdog_running = False
+                self._watchdog_thread = None
+        else:
+            self.watchdog_enabled = new_watchdog_enabled
         
         if 'advancedSettings' in settings:
             self.advanced_settings = settings['advancedSettings']
