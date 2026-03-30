@@ -122,7 +122,9 @@ class VirtualONVIFCamera:
         
         # Setup Virtual NIC if requested (Linux only)
         if self.use_virtual_nic and self.network_mgr:
-            vnic_name = f"vnic_{self.path_name[:10]}"
+            # VNIC name must be <= 15 chars on Linux.
+            # Use UUID (stripped of hyphens) to ensure uniqueness regardless of camera name.
+            vnic_name = f"vnic_{self.uuid.replace('-', '')[:10]}"
             if self.network_mgr.create_macvlan(self.parent_interface, vnic_name, self.nic_mac):
                 self.assigned_ip = self.network_mgr.setup_ip(
                     vnic_name, 
@@ -152,7 +154,7 @@ class VirtualONVIFCamera:
         
         # Cleanup Virtual NIC
         if self.use_virtual_nic and self.network_mgr:
-            vnic_name = f"vnic_{self.path_name[:10]}"
+            vnic_name = f"vnic_{self.uuid.replace('-', '')[:10]}"
             self.network_mgr.remove_interface(vnic_name)
             self.assigned_ip = None
         
