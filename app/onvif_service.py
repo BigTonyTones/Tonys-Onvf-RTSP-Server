@@ -177,6 +177,10 @@ class ONVIFService:
                 # GetVideoSources
                 elif 'GetVideoSources' in soap_body:
                     return self._handle_get_video_sources()
+
+                # GetAudioSources
+                elif 'GetAudioSources' in soap_body:
+                    return self._handle_get_audio_sources()
                 
                 # Default: return profiles
                 return self._handle_get_profiles()
@@ -527,6 +531,18 @@ class ONVIFService:
                         <tt:H264Profile>Main</tt:H264Profile>
                     </tt:H264>
                 </tt:VideoEncoderConfiguration>
+                <tt:AudioSourceConfiguration token="AudioSourceConfig_1">
+                    <tt:Name>AudioSourceConfig</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:SourceToken>AudioSource_1</tt:SourceToken>
+                </tt:AudioSourceConfiguration>
+                <tt:AudioEncoderConfiguration token="AudioEncoder_1">
+                    <tt:Name>AudioEncoderConfig</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:Encoding>AAC</tt:Encoding>
+                    <tt:Bitrate>64</tt:Bitrate>
+                    <tt:SampleRate>8000</tt:SampleRate>
+                </tt:AudioEncoderConfiguration>
             </trt:Profiles>
         """
         
@@ -664,4 +680,20 @@ class ONVIFService:
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_audio_sources(self):
+        """Handle GetAudioSources request"""
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetAudioSourcesResponse>
+            <trt:AudioSources token="AudioSource_1">
+                <tt:Channels>1</tt:Channels>
+            </trt:AudioSources>
+        </trt:GetAudioSourcesResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
         return Response(soap_response, mimetype='application/soap+xml')
