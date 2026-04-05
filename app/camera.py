@@ -70,6 +70,7 @@ class VirtualONVIFCamera:
         self.transcode_main = config.get('transcodeMain', False)
         self.disable_substream = config.get('disableSubstream', False)
         self.use_main_as_substream = config.get('useMainAsSubstream', False)
+        self.enable_audio = config.get('enableAudio', False)
         
         # Network settings (Linux only)
         self.use_virtual_nic = config.get('useVirtualNic', False)
@@ -235,6 +236,7 @@ class VirtualONVIFCamera:
             'transcodeMain': self.transcode_main,
             'disableSubstream': self.disable_substream,
             'useMainAsSubstream': self.use_main_as_substream,
+            'enableAudio': self.enable_audio,
             'useVirtualNic': self.use_virtual_nic,
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,
@@ -275,6 +277,7 @@ class VirtualONVIFCamera:
             'transcodeMain': self.transcode_main,
             'disableSubstream': self.disable_substream,
             'useMainAsSubstream': self.use_main_as_substream,
+            'enableAudio': self.enable_audio,
             'useVirtualNic': self.use_virtual_nic,
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,

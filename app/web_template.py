@@ -1428,6 +1428,17 @@ def get_web_ui_html(current_settings=None):
                             <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
                         </div>
 
+                        <div class="form-group" style="margin-bottom: 20px;">
+                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                <span class="auto-start-label" style="font-size: 13px; font-weight: 500;">Enable RTSP Audio</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableAudio">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
+                            <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Advertise audio capabilities and AAC encoding (requires source audio)</small>
+                        </div>
+
                         <div id="sub-stream-fields-container">
                             <div class="form-group" style="margin-bottom: 20px;">
                                  <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
@@ -2342,8 +2353,9 @@ def get_web_ui_html(current_settings=None):
                             ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
                             ${{cam.useVirtualNic && cam.nicMac ? `<div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--text-muted); color: white; white-space: nowrap;">${{cam.nicMac}}</div>` : ''}}
                         </div>
-                        <div style="margin-left: 24px; margin-top: 4px;">
+                        <div style="margin-left: 24px; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
                             <div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #764ba2; color: white; width: fit-content; white-space: nowrap; font-family: monospace;" title="${{cam.uuid}}">UUID: ${{cam.uuid}}</div>
+                            ${{cam.enableAudio ? `<div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);" title="Audio Enabled"><i class="fas fa-volume-up"></i> AUDIO</div>` : ''}}
                         </div>
                     </div>
                     <div class="camera-actions">
@@ -2727,6 +2739,7 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('mainPath').value = mainUrl.pathname + mainUrl.search;
                 document.getElementById('subPath').value = subUrl.pathname + subUrl.search;
                 document.getElementById('autoStart').checked = camera.autoStart || false;
+                document.getElementById('enableAudio').checked = camera.enableAudio || false;
                 
                 // Populate resolution and frame rate fields
                 document.getElementById('mainWidth').value = camera.mainWidth || 1920;
@@ -2859,6 +2872,7 @@ def get_web_ui_html(current_settings=None):
             
             document.getElementById('transcodeSub').checked = false;
             document.getElementById('transcodeMain').checked = false;
+            document.getElementById('enableAudio').checked = false;
             
             // Network reset
             document.getElementById('useVirtualNic').checked = false;
@@ -2930,6 +2944,7 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('transcodeMain').checked = camera.transcodeMain || false;
             document.getElementById('disableSubstream').checked = camera.disableSubstream || false;
             document.getElementById('useMainAsSubstream').checked = camera.useMainAsSubstream || false;
+            document.getElementById('enableAudio').checked = camera.enableAudio || false;
             document.getElementById('onvifPort').value = camera.onvifPort || '';
             document.getElementById('cameraUuid').value = camera.uuid || '';
             
@@ -3008,6 +3023,7 @@ def get_web_ui_html(current_settings=None):
                 transcodeMain: document.getElementById('transcodeMain').checked,
                 disableSubstream: document.getElementById('disableSubstream').checked,
                 useMainAsSubstream: document.getElementById('useMainAsSubstream').checked,
+                enableAudio: document.getElementById('enableAudio').checked,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 
