@@ -178,6 +178,10 @@ class ONVIFService:
                 elif 'GetVideoSources' in soap_body:
                     return self._handle_get_video_sources()
                 
+                # GetAudioSources
+                elif 'GetAudioSources' in soap_body and getattr(self.camera, 'enable_audio', False):
+                    return self._handle_get_audio_sources()
+                
                 # Default: return profiles
                 return self._handle_get_profiles()
                 
@@ -368,7 +372,7 @@ class ONVIFService:
                         <tt:XAddr>http://{local_ip}:{self.camera.onvif_port}/onvif/deviceio_service</tt:XAddr>
                         <tt:VideoSources>{1 if getattr(self.camera, 'disable_substream', False) else 2}</tt:VideoSources>
                         <tt:VideoOutputs>0</tt:VideoOutputs>
-                        <tt:AudioSources>0</tt:AudioSources>
+                        <tt:AudioSources>{1 if getattr(self.camera, 'enable_audio', False) else 0}</tt:AudioSources>
                         <tt:AudioOutputs>0</tt:AudioOutputs>
                         <tt:RelayOutputs>0</tt:RelayOutputs>
                     </tt:DeviceIO>
@@ -494,6 +498,32 @@ class ONVIFService:
 
     def _handle_get_profiles(self):
         """Handle GetProfiles request"""
+        audio_main = """<tt:AudioSourceConfiguration token="AudioSourceConfig_Main">
+                    <tt:Name>Main Audio Source</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:SourceToken>AudioSource_1</tt:SourceToken>
+                </tt:AudioSourceConfiguration>
+                <tt:AudioEncoderConfiguration token="AudioEncoder_Main">
+                    <tt:Name>Main Audio Encoder</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:Encoding>AAC</tt:Encoding>
+                    <tt:Bitrate>64</tt:Bitrate>
+                    <tt:SampleRate>8000</tt:SampleRate>
+                </tt:AudioEncoderConfiguration>"""
+        
+        audio_sub = """<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub">
+                    <tt:Name>Sub Audio Source</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:SourceToken>AudioSource_1</tt:SourceToken>
+                </tt:AudioSourceConfiguration>
+                <tt:AudioEncoderConfiguration token="AudioEncoder_Sub">
+                    <tt:Name>Sub Audio Encoder</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:Encoding>AAC</tt:Encoding>
+                    <tt:Bitrate>64</tt:Bitrate>
+                    <tt:SampleRate>8000</tt:SampleRate>
+                </tt:AudioEncoderConfiguration>"""
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
@@ -527,6 +557,7 @@ class ONVIFService:
                         <tt:H264Profile>Main</tt:H264Profile>
                     </tt:H264>
                 </tt:VideoEncoderConfiguration>
+                {audio_main if getattr(self.camera, 'enable_audio', False) else ""}
             </trt:Profiles>
         """
         
@@ -559,6 +590,7 @@ class ONVIFService:
                         <tt:H264Profile>Baseline</tt:H264Profile>
                     </tt:H264>
                 </tt:VideoEncoderConfiguration>
+                {audio_sub if getattr(self.camera, 'enable_audio', False) else ""}
             </trt:Profiles>
             """
         
@@ -664,4 +696,20 @@ class ONVIFService:
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_audio_sources(self):
+        """Handle GetAudioSources request"""
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetAudioSourcesResponse>
+            <trt:AudioSources token="AudioSource_1">
+                <tt:Channels>1</tt:Channels>
+            </trt:AudioSources>
+        </trt:GetAudioSourcesResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
         return Response(soap_response, mimetype='application/soap+xml')
