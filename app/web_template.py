@@ -1377,7 +1377,25 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
-                <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
+                        <div class="form-group" style="margin: 20px 0; padding: 15px; background: rgba(102, 126, 234, 0.08); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 12px; box-shadow: var(--shadow-sm);">
+                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-volume-up"></i>
+                                    </div>
+                                    <div>
+                                        <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
+                                        <small style="color: #718096; font-size: 11px;">Enable G.711 (PCMU) audio support for both Main and Sub streams</small>
+                                    </div>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableAudio">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
+                        </div>
+
+                        <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
                     <!-- Main Stream Column -->
                     <div class="form-col" style="flex: 1; padding-right: 12px; border-right: 1px solid #e2e8f0;">
                         <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">Main Stream Settings</h3>
@@ -1428,16 +1446,7 @@ def get_web_ui_html(current_settings=None):
                             <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 20px;">
-                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                <span class="auto-start-label" style="font-size: 13px; font-weight: 500;">Enable RTSP Audio</span>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="enableAudio">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </label>
-                            <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Advertise audio capabilities and AAC encoding (requires source audio)</small>
-                        </div>
+
 
                         <div id="sub-stream-fields-container">
                             <div class="form-group" style="margin-bottom: 20px;">

@@ -333,9 +333,10 @@ class MediaMTXManager:
                         safe_source = shlex.quote(main_source)
                         safe_dest = shlex.quote(dest_url)
                     
-                    # Build FFmpeg command - Optimized for RAM and CPU usage
-                    # -threads 2 limits memory footprint per process
-                    # -rc-lookahead 0 prevents frame pre-buffering
+                    # Build audio part
+                    enable_audio = getattr(camera, 'enable_audio', False)
+                    audio_args = f'-c:a pcm_mulaw -ar 8000 -ac 1' if enable_audio else '-an'
+                    
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
                         f'{ff_input} '
@@ -345,7 +346,7 @@ class MediaMTXManager:
                         f'-profile:v high -level 4.2 '
                         f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
                         f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
-                        f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 128k -f rtsp -rtsp_transport tcp {safe_dest}'
+                        f'-r {tgt_fps} {audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
                     main_path_cfg = {
@@ -410,6 +411,10 @@ class MediaMTXManager:
                         safe_source = shlex.quote(sub_source)
                         safe_dest = shlex.quote(dest_url)
                     
+                    # Build audio part
+                    enable_audio = getattr(camera, 'enable_audio', False)
+                    audio_args = f'-c:a pcm_mulaw -ar 8000 -ac 1' if enable_audio else '-an'
+                    
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
                         f'{ff_input} '
@@ -419,7 +424,7 @@ class MediaMTXManager:
                         f'-profile:v baseline -level 4.1 '
                         f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
                         f'-b:v 800k -maxrate 800k -bufsize 1600k '
-                        f'-r {tgt_fps} -c:a aac -ar 44100 -b:a 64k -f rtsp -rtsp_transport tcp {safe_dest}'
+                        f'-r {tgt_fps} {audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
                     
