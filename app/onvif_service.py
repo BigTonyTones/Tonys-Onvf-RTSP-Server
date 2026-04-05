@@ -506,7 +506,7 @@ class ONVIFService:
                 <tt:AudioEncoderConfiguration token="AudioEncoder_Main">
                     <tt:Name>Main Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:Encoding>AAC</tt:Encoding>
+                    <tt:Encoding>G711</tt:Encoding>
                     <tt:Bitrate>64</tt:Bitrate>
                     <tt:SampleRate>8000</tt:SampleRate>
                 </tt:AudioEncoderConfiguration>"""
@@ -519,7 +519,7 @@ class ONVIFService:
                 <tt:AudioEncoderConfiguration token="AudioEncoder_Sub">
                     <tt:Name>Sub Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:Encoding>AAC</tt:Encoding>
+                    <tt:Encoding>G711</tt:Encoding>
                     <tt:Bitrate>64</tt:Bitrate>
                     <tt:SampleRate>8000</tt:SampleRate>
                 </tt:AudioEncoderConfiguration>"""
