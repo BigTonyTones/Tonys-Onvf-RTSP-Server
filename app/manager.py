@@ -558,7 +558,7 @@ class CameraManager:
                    main_framerate=30, sub_framerate=15, onvif_port=None,
                    transcode_sub=False, transcode_main=False,
                    disable_substream=False, use_main_as_substream=False,
-                   enable_audio=False,
+                   enable_audio=False, transcode_audio=False,
                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                    static_ip='', netmask='24', gateway='', uuid=None):
         """Add a new camera"""
@@ -623,6 +623,7 @@ class CameraManager:
             'disableSubstream': disable_substream,
             'useMainAsSubstream': use_main_as_substream,
             'enableAudio': enable_audio,
+            'transcodeAudio': transcode_audio,
             'useVirtualNic': use_virtual_nic,
             'parentInterface': parent_interface,
             'nicMac': nic_mac,
@@ -650,7 +651,7 @@ class CameraManager:
                       main_framerate=30, sub_framerate=15, onvif_port=None,
                       transcode_sub=False, transcode_main=False,
                       disable_substream=False, use_main_as_substream=False,
-                      enable_audio=False,
+                      enable_audio=False, transcode_audio=False,
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway='', uuid=None):
         """Update an existing camera"""
@@ -723,6 +724,7 @@ class CameraManager:
         camera.disable_substream = disable_substream
         camera.use_main_as_substream = use_main_as_substream
         camera.enable_audio = enable_audio
+        camera.transcode_audio = transcode_audio
         camera.use_virtual_nic = use_virtual_nic
         camera.parent_interface = parent_interface
         camera.nic_mac = nic_mac

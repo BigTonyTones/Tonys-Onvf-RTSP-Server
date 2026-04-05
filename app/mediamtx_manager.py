@@ -335,7 +335,14 @@ class MediaMTXManager:
                     
                     # Build audio part
                     enable_audio = getattr(camera, 'enable_audio', False)
-                    audio_args = f'-c:a pcm_mulaw -ar 8000 -ac 1' if enable_audio else '-an'
+                    transcode_audio = getattr(camera, 'transcode_audio', False)
+                    if enable_audio:
+                        if transcode_audio:
+                            audio_args = f'-c:a aac -ar 44100 -ac 1 -b:a 64k'
+                        else:
+                            audio_args = f'-c:a copy'
+                    else:
+                        audio_args = '-an'
                     
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
@@ -413,7 +420,14 @@ class MediaMTXManager:
                     
                     # Build audio part
                     enable_audio = getattr(camera, 'enable_audio', False)
-                    audio_args = f'-c:a pcm_mulaw -ar 8000 -ac 1' if enable_audio else '-an'
+                    transcode_audio = getattr(camera, 'transcode_audio', False)
+                    if enable_audio:
+                        if transcode_audio:
+                            audio_args = f'-c:a aac -ar 44100 -ac 1 -b:a 64k'
+                        else:
+                            audio_args = f'-c:a copy'
+                    else:
+                        audio_args = '-an'
                     
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
