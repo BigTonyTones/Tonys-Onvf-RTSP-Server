@@ -1377,36 +1377,21 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
-                        <div class="form-group" style="margin: 20px 0; padding: 15px; background: rgba(102, 126, 234, 0.08); border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 12px; box-shadow: var(--shadow-sm);">
-                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                        <i class="fas fa-volume-up"></i>
-                                    </div>
-                                    <div>
-                                        <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
-                                        <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (Note: UniFi Protect ONLY supports AAC)</small>
-                                    </div>
+                        <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-volume-up"></i>
                                 </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="enableAudio">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </label>
-
-                            <div style="margin-top: 15px; border-top: 1px solid rgba(102, 126, 234, 0.2); padding-top: 15px;">
-                                <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
-                                    <div>
-                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Audio to AAC</span>
-                                        <small style="color: #718096; font-size: 11px;">Enable if the camera's native audio is not already AAC</small>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="transcodeAudio">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </label>
+                                <div>
+                                    <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
+                                    <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (Note: UniFi Protect ONLY supports AAC)</small>
+                                </div>
                             </div>
-                        </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enableAudio">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </label>
 
                         <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
                     <!-- Main Stream Column -->
@@ -1419,6 +1404,17 @@ def get_web_ui_html(current_settings=None):
                         </div>
                         
                         <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
+                            <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                                <div>
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Main Audio to AAC</span>
+                                    <small style="color: #718096; font-size: 11px;">Enable if the camera's native audio is not already AAC</small>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="transcodeMainAudio">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
+
                             <div class="auto-start-row" style="margin-bottom: 15px;">
                                 <span class="auto-start-label" style="font-size: 13px;">Transcode Main Stream</span>
                                 <label class="toggle-switch">
@@ -1479,6 +1475,17 @@ def get_web_ui_html(current_settings=None):
                             </div>
                             
                             <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
+                                <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                                    <div>
+                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio to AAC</span>
+                                        <small style="color: #718096; font-size: 11px;">Enable if the camera's native audio is not already AAC</small>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="transcodeSubAudio">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </label>
+                                
                                 <div class="auto-start-row" style="margin-bottom: 15px;">
                                     <span class="auto-start-label" style="font-size: 13px;">Transcode Substream</span>
                                     <label class="toggle-switch">
@@ -2762,7 +2769,8 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('subPath').value = subUrl.pathname + subUrl.search;
                 document.getElementById('autoStart').checked = camera.autoStart || false;
                 document.getElementById('enableAudio').checked = camera.enableAudio || false;
-                document.getElementById('transcodeAudio').checked = camera.transcodeAudio || false;
+                document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
+                document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
                 
                 // Populate resolution and frame rate fields
                 document.getElementById('mainWidth').value = camera.mainWidth || 1920;
@@ -2896,7 +2904,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('transcodeSub').checked = false;
             document.getElementById('transcodeMain').checked = false;
             document.getElementById('enableAudio').checked = false;
-            document.getElementById('transcodeAudio').checked = false;
+            document.getElementById('transcodeMainAudio').checked = false;
+            document.getElementById('transcodeSubAudio').checked = false;
             
             // Network reset
             document.getElementById('useVirtualNic').checked = false;
@@ -2969,7 +2978,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('disableSubstream').checked = camera.disableSubstream || false;
             document.getElementById('useMainAsSubstream').checked = camera.useMainAsSubstream || false;
             document.getElementById('enableAudio').checked = camera.enableAudio || false;
-            document.getElementById('transcodeAudio').checked = camera.transcodeAudio || false;
+            document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
+            document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
             document.getElementById('onvifPort').value = camera.onvifPort || '';
             document.getElementById('cameraUuid').value = camera.uuid || '';
             
@@ -3049,7 +3059,8 @@ def get_web_ui_html(current_settings=None):
                 disableSubstream: document.getElementById('disableSubstream').checked,
                 useMainAsSubstream: document.getElementById('useMainAsSubstream').checked,
                 enableAudio: document.getElementById('enableAudio').checked,
-                transcodeAudio: document.getElementById('transcodeAudio').checked,
+                transcodeMainAudio: document.getElementById('transcodeMainAudio').checked,
+                transcodeSubAudio: document.getElementById('transcodeSubAudio').checked,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 
