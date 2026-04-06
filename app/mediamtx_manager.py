@@ -308,12 +308,16 @@ class MediaMTXManager:
             if camera.status == "running":
                 running_count += 1
                 
+                enable_audio = getattr(camera, 'enable_audio', False)
+
                 # ===== MAIN STREAM - High Quality =====
                 
                 # Check for transcoding preference
                 transcode_main = getattr(camera, 'transcode_main', False)
+                transcode_main_audio = getattr(camera, 'transcode_main_audio', False)
+
                 main_source = camera.main_stream_url
-                if transcode_main:
+                if transcode_main or (enable_audio and transcode_main_audio):
                     print(f"    Transcoding enabled for {camera.name} main-stream")
                     tgt_w = getattr(camera, 'main_width', 1920)
                     tgt_h = getattr(camera, 'main_height', 1080)
@@ -333,27 +337,32 @@ class MediaMTXManager:
                         safe_source = shlex.quote(main_source)
                         safe_dest = shlex.quote(dest_url)
                     
-                    # Build audio part
-                    enable_audio = getattr(camera, 'enable_audio', False)
-                    transcode_audio = getattr(camera, 'transcode_audio', False)
                     if enable_audio:
-                        if transcode_audio:
+                        if transcode_main_audio:
                             audio_args = f'-c:a aac -ar 44100 -ac 1 -b:a 64k'
                         else:
                             audio_args = f'-c:a copy'
                     else:
                         audio_args = '-an'
                     
+                    if transcode_main:
+                        video_args = (
+                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
+                            f'{ff_process} '
+                            f'-profile:v high -level 4.2 '
+                            f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
+                            f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
+                            f'-r {tgt_fps} '
+                        )
+                    else:
+                        video_args = '-c:v copy'
+                    
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
                         f'{ff_input} '
                         f'-i {safe_source} '
-                        f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                        f'{ff_process} '
-                        f'-profile:v high -level 4.2 '
-                        f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
-                        f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
-                        f'-r {tgt_fps} {audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
+                        f'{video_args} '
+                        f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
                     main_path_cfg = {
@@ -387,6 +396,7 @@ class MediaMTXManager:
                 
                 # Check for transcoding preference
                 transcode_sub = getattr(camera, 'transcode_sub', False)
+                transcode_sub_audio = getattr(camera, 'transcode_sub_audio', False)
                 use_main_as_sub = getattr(camera, 'use_main_as_substream', False)
                 
                 # Use main stream URL as source if requested
@@ -395,7 +405,7 @@ class MediaMTXManager:
                 else:
                     sub_source = camera.sub_stream_url
                 
-                if transcode_sub:
+                if transcode_sub or (enable_audio and transcode_sub_audio):
                     print(f"    Transcoding enabled for {camera.name} sub-stream")
                     
                     # Target resolution and frame rate
@@ -418,29 +428,33 @@ class MediaMTXManager:
                         safe_source = shlex.quote(sub_source)
                         safe_dest = shlex.quote(dest_url)
                     
-                    # Build audio part
-                    enable_audio = getattr(camera, 'enable_audio', False)
-                    transcode_audio = getattr(camera, 'transcode_audio', False)
                     if enable_audio:
-                        if transcode_audio:
+                        if transcode_sub_audio:
                             audio_args = f'-c:a aac -ar 44100 -ac 1 -b:a 64k'
                         else:
                             audio_args = f'-c:a copy'
                     else:
                         audio_args = '-an'
                     
+                    if transcode_sub:
+                        video_args = (
+                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
+                            f'{ff_process} '
+                            f'-profile:v baseline -level 4.1 '
+                            f'-b:v 800k -maxrate 800k -bufsize 1600k '
+                            f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
+                            f'-r {tgt_fps} '
+                        )
+                    else:
+                        video_args = '-c:v copy'
+                    
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
                         f'{ff_input} '
                         f'-i {safe_source} '
-                        f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                        f'{ff_process} '
-                        f'-profile:v baseline -level 4.1 '
-                        f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
-                        f'-b:v 800k -maxrate 800k -bufsize 1600k '
-                        f'-r {tgt_fps} {audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
+                        f'{video_args} '
+                        f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
-                    
                     
                     sub_path_cfg = {
                         'source': 'publisher',
