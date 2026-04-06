@@ -1384,7 +1384,7 @@ def get_web_ui_html(current_settings=None):
                                 </div>
                                 <div>
                                     <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
-                                    <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (Note: UniFi Protect ONLY supports AAC)</small>
+                                    <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
                                 </div>
                             </div>
                             <label class="toggle-switch">
@@ -1394,9 +1394,12 @@ def get_web_ui_html(current_settings=None):
                         </label>
 
                         <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
+                    
                     <!-- Main Stream Column -->
                     <div class="form-col" style="flex: 1; padding-right: 12px; border-right: 1px solid #e2e8f0;">
-                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">Main Stream Settings</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-video"></i> Main Stream Settings
+                        </h3>
                         
                         <div class="form-group">
                             <label class="form-label">Main Stream Path</label>
@@ -1407,7 +1410,7 @@ def get_web_ui_html(current_settings=None):
                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                                 <div>
                                     <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Main Audio to AAC</span>
-                                    <small style="color: #718096; font-size: 11px;">Enable if the camera's native audio is not already AAC</small>
+                                    <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="transcodeMainAudio">
@@ -1442,11 +1445,13 @@ def get_web_ui_html(current_settings=None):
 
                     <!-- Sub Stream Column -->
                     <div class="form-col" style="flex: 1; padding-left: 12px;" id="sub-stream-col">
-                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px;">Sub Stream Settings</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-microchip"></i> Sub Stream Settings
+                        </h3>
                         
                         <div class="form-group" style="margin-bottom: 20px;">
                              <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                <span class="auto-start-label" style="font-size: 13px; font-weight: 500;">Disable Substream</span>
+                                <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Disable Substream</span>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="disableSubstream" onchange="toggleSubStreamFields()">
                                     <span class="toggle-slider"></span>
@@ -1455,12 +1460,10 @@ def get_web_ui_html(current_settings=None):
                             <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
                         </div>
 
-
-
                         <div id="sub-stream-fields-container">
                             <div class="form-group" style="margin-bottom: 20px;">
                                  <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 500;">Use Main as Substream</span>
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Use Main as Substream</span>
                                     <label class="toggle-switch">
                                         <input type="checkbox" id="useMainAsSubstream" onchange="toggleSubStreamFields()">
                                         <span class="toggle-slider"></span>
@@ -1478,7 +1481,7 @@ def get_web_ui_html(current_settings=None):
                                 <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                                     <div>
                                         <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio to AAC</span>
-                                        <small style="color: #718096; font-size: 11px;">Enable if the camera's native audio is not already AAC</small>
+                                        <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
                                     </div>
                                     <label class="toggle-switch">
                                         <input type="checkbox" id="transcodeSubAudio">
@@ -1511,14 +1514,12 @@ def get_web_ui_html(current_settings=None):
                             </button>
                         </div>
                     </div>
+
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
                     <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
-                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
-                        Default: Auto-assigned starting from 8001
-                    </small>
                 </div>
                 
                 <div class="form-group">
@@ -1527,12 +1528,9 @@ def get_web_ui_html(current_settings=None):
                         <input type="text" class="form-input" id="cameraUuid" placeholder="Auto-generated" style="flex: 1;">
                         <button type="button" class="btn btn-secondary" onclick="generateNewUuid()" style="padding: 0 15px;">Generate New</button>
                     </div>
-                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
-                        Used for WS-Discovery and Serial Number. Changing this will make NVRs see it as a new camera.
-                    </small>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 25px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="autoStart" style="width: auto; cursor: pointer;">
                         <span class="form-label" style="margin: 0;">Auto-start camera on server startup</span>
