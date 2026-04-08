@@ -1306,7 +1306,8 @@ def create_web_app(manager):
             print("="*40)
             
             # Run git pull
-            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30)
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30, cwd=project_root)
             
             output = result.stdout
             if result.stderr:
