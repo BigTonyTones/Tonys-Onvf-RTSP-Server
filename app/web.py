@@ -22,6 +22,7 @@ from .linux_network import LinuxNetworkManager
 from .utils import get_captured_logs
 from .updater import UpdateChecker, check_for_updates, download_and_apply_update
 import subprocess
+import threading
 import tempfile
 import shutil
 
