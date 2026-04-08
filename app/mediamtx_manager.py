@@ -33,12 +33,12 @@ class MediaMTXManager:
     
     def _get_latest_version(self):
         """Required minimum version of MediaMTX"""
-        return "v1.17.0"
+        return "v1.17.1"
 
-    REQUIRED_VERSION = "v1.17.0"
+    REQUIRED_VERSION = "v1.17.1"
 
     def _parse_version(self, version_str):
-        """Parse version string like 'v1.15.6' into a list of integers [1, 15, 6]"""
+        """Parse version string like 'v1.17.1' into a list of integers [1, 17, 1]"""
         try:
             # Remove 'v' prefix and split by '.'
             parts = version_str.lstrip('v').split('.')
@@ -76,12 +76,12 @@ class MediaMTXManager:
                     print(f"MediaMTX is up to date ({current_version})")
                     return True
                 elif self._version_is_newer(current_version, latest_version):
-                    print(f"MediaMTX {current_version} is outdated. v1.17.0 is required for compatibility.")
+                    print(f"MediaMTX {current_version} is outdated. v1.17.1 is required for compatibility.")
                     print("Automatically upgrading MediaMTX...")
                     # Fall through to download
                 else:
                     # Current version is newer than required — that's fine
-                    print(f"MediaMTX {current_version} meets the v1.17.0 requirement.")
+                    print(f"MediaMTX {current_version} meets the v1.17.1 requirement.")
                     return True
             except Exception as e:
                 print(f"Could not check MediaMTX version: {e}")
@@ -133,7 +133,7 @@ class MediaMTXManager:
         
         print(f"  Platform: {system} {machine}")
         print(f"  Downloading from: {url}")
-        # Auto-download without prompting — v1.17.0 is a required dependency
+        # Auto-download without prompting — v1.17.1 is a required dependency
         
         try:
             # Download with progress

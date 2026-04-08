@@ -278,7 +278,7 @@ install_mediamtx() {
     fi
     
     # MediaMTX version and download URL
-    MEDIAMTX_VERSION="1.15.6"
+    MEDIAMTX_VERSION="1.17.1"
     MEDIAMTX_URL="https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}/mediamtx_v${MEDIAMTX_VERSION}_${MEDIAMTX_OS}_${ARCH}.tar.gz"
     
     print_info "Downloading MediaMTX v${MEDIAMTX_VERSION}..."

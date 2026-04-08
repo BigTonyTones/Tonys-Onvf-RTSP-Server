@@ -20,7 +20,7 @@ wget -qO- https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/
 - ✅ Git
 - ✅ Python 3 + pip + venv
 - ✅ Python packages (flask, flask-cors, requests, pyyaml, psutil, onvif-zeep)
-- ✅ MediaMTX v1.15.6 (RTSP server)
+- ✅ MediaMTX v1.17.1 (RTSP server)
 - ✅ FFmpeg (via package manager or static build)
 - ✅ Systemd service (Linux) or Launchd service (macOS)
 - ✅ Convenience command: `tonys-onvif`
@@ -65,7 +65,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/BigTonyTones/Tonys-Onv
 - ✅ Python 3 (if not present)
 - ✅ Git (if not present)
 - ✅ Python packages (flask, flask-cors, requests, pyyaml, psutil, onvif-zeep)
-- ✅ MediaMTX v1.15.6 (RTSP server)
+- ✅ MediaMTX v1.17.1 (RTSP server)
 - ✅ FFmpeg (via Chocolatey or direct download)
 - ✅ Start script: `start-server.bat`
 
