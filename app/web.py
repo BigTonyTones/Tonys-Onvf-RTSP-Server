@@ -1306,17 +1306,34 @@ def create_web_app(manager):
             print("DEVELOPMENT: Running Git Pull...")
             print("="*40)
             
-            # Run git pull
+            # Check if it's a git repository first
             project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30, cwd=project_root)
             
-            output = result.stdout
-            if result.stderr:
-                output += "\nErrors:\n" + result.stderr
+            if not os.path.exists(os.path.join(project_root, '.git')):
+                print("Not a git repository. Initializing and linking to GitHub...")
+                # Initialize git repo, add remote, fetch, and reset to remote main
+                subprocess.run(['git', 'init'], capture_output=True, cwd=project_root)
+                subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git'], capture_output=True, cwd=project_root)
+                subprocess.run(['git', 'fetch', 'origin'], capture_output=True, cwd=project_root)
+                
+                # We use reset --hard to force the local files to match the repo exactly
+                result = subprocess.run(['git', 'reset', '--hard', 'origin/main'], capture_output=True, text=True, cwd=project_root)
+                
+                output = "Initialized git repository and synced with GitHub main branch.\n" + result.stdout
+                if result.stderr:
+                    output += "\nErrors:\n" + result.stderr
+                result_code = result.returncode
+            else:
+                # Run regular git pull
+                result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30, cwd=project_root)
+                output = result.stdout
+                if result.stderr:
+                    output += "\nErrors:\n" + result.stderr
+                result_code = result.returncode
             
             print(output)
             
-            if result.returncode == 0:
+            if result_code == 0:
                 print("Git pull successful. Triggering restart...")
                 
                 # Use a thread to trigger restart after sending response
