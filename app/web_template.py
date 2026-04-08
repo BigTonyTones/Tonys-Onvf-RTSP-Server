@@ -1874,6 +1874,17 @@ def get_web_ui_html(current_settings=None):
                         <i class="fas fa-sync-alt"></i> Check for Updates
                     </button>
                 </div>
+
+                <!-- Development Updates -->
+                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Development</div>
+                    <button type="button" class="btn btn-secondary" onclick="runGithubPull()" style="width:100%; background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); border-color: #ed8936; color: white; font-weight: 600;">
+                        <i class="fas fa-download"></i> Run GitHub Pull & Restart
+                    </button>
+                    <small style="color: #718096; font-size: 11px; margin-top: 6px; display: block;">
+                        Directly executes 'git pull' to update files from the repository and restarts the server.
+                    </small>
+                </div>
                 
                 <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
                 
@@ -4168,6 +4179,56 @@ def get_web_ui_html(current_settings=None):
             }};
             
             input.click();
+        }}
+
+        async function runGithubPull() {{
+            if (!confirm('This will run "git pull" and restart the server immediately. Any unsaved changes may be lost. Continue?')) return;
+            
+            // Show loading toast
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = 'var(--btn-primary)';
+            toast.style.pointerEvents = 'auto'; 
+            toast.style.display = 'block';
+            toast.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Running Git Pull...';
+            document.body.appendChild(toast);
+            
+            try {{
+                const response = await fetch('/api/development/pull', {{ method: 'POST' }});
+                const result = await response.json();
+                
+                if (response.ok) {{
+                    toast.innerHTML = '<i class="fas fa-check"></i> Pull successful! Restarting...';
+                    toast.style.background = 'var(--btn-success)';
+                    
+                    setTimeout(() => {{
+                        toast.innerHTML = '<i class="fas fa-plug"></i> Reconnecting to server...';
+                        
+                        const checkServer = async () => {{
+                            try {{
+                                const check = await fetch('/api/stats', {{ timeout: 2000 }});
+                                if (check.ok) {{
+                                    toast.innerHTML = '<i class="fas fa-rocket"></i> Server is back! Reloading...';
+                                    setTimeout(() => window.location.reload(), 1000);
+                                    return;
+                                }}
+                            }} catch (e) {{}}
+                            setTimeout(checkServer, 2000);
+                        }};
+                        checkServer();
+                    }}, 2000);
+                    
+                }} else {{
+                    toast.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: ${{result.error || 'Pull failed'}}`;
+                    toast.style.background = 'var(--btn-danger)';
+                    console.error('Git pull output:', result.output);
+                    setTimeout(() => toast.remove(), 10000);
+                }}
+            }} catch (error) {{
+                toast.innerHTML = '<i class="fas fa-wifi"></i> Connection error during pull';
+                toast.style.background = 'var(--btn-danger)';
+                setTimeout(() => toast.remove(), 5000);
+            }}
         }}
 
     </script>
