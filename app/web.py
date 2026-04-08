@@ -1324,8 +1324,9 @@ def create_web_app(manager):
                     output += "\nErrors:\n" + result.stderr
                 result_code = result.returncode
             else:
-                # Run regular git pull
-                result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30, cwd=project_root)
+                # Specify origin and main explicitly to avoid tracking errors on other branches
+                subprocess.run(['git', 'fetch', 'origin'], capture_output=True, cwd=project_root)
+                result = subprocess.run(['git', 'pull', 'origin', 'main'], capture_output=True, text=True, timeout=30, cwd=project_root)
                 output = result.stdout
                 if result.stderr:
                     output += "\nErrors:\n" + result.stderr
