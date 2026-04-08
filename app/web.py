@@ -1296,4 +1296,52 @@ def create_web_app(manager):
             print(f"  Error in MediaMTX auth hook: {e}")
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/development/pull', methods=['POST'])
+    @login_required
+    def development_pull():
+        """Run git pull to update files and then restart"""
+        try:
+            print("\n" + "="*40)
+            print("DEVELOPMENT: Running Git Pull...")
+            print("="*40)
+            
+            # Run git pull
+            result = subprocess.run(['git', 'pull'], capture_output=True, text=True, timeout=30)
+            
+            output = result.stdout
+            if result.stderr:
+                output += "\nErrors:\n" + result.stderr
+            
+            print(output)
+            
+            if result.returncode == 0:
+                print("Git pull successful. Triggering restart...")
+                
+                # Use a thread to trigger restart after sending response
+                def delayed_restart():
+                    time.sleep(1)
+                    if hasattr(manager, 'trigger_restart'):
+                        manager.trigger_restart()
+                    else:
+                        # Fallback if trigger_restart isn't available
+                        os._exit(5)
+                        
+                threading.Thread(target=delayed_restart, daemon=True).start()
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Git pull successful. Restarting server...',
+                    'output': output
+                })
+            else:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Git pull failed',
+                    'output': output
+                }), 500
+                
+        except Exception as e:
+            print(f"Error during development pull: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     return app

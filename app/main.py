@@ -10,6 +10,10 @@ from .web import create_web_app
 from .version import CURRENT_VERSION
 from .updater import check_for_updates
 
+# Global events for signaling
+shutdown_event = threading.Event()
+restart_requested = False
+
 def main():
     """Main application entry point"""
     # Clean up before starting
@@ -130,6 +134,15 @@ def main():
         print(f"\n\nShutdown requested (Signal {sig})...")
         shutdown_event.set()
         
+    def trigger_restart():
+        global restart_requested
+        print("\nRestart requested from Web UI...")
+        restart_requested = True
+        shutdown_event.set()
+
+    # Pass trigger_restart to camera manager or store it where web app can reach it
+    manager.trigger_restart = trigger_restart
+    
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
@@ -148,5 +161,5 @@ def main():
     for camera in manager.cameras:
         camera.stop()
         
-    print("Server stopped successfully. Goodbye!")
-    sys.exit(0)
+    print("Server stopped successfully.")
+    return 5 if restart_requested else 0
