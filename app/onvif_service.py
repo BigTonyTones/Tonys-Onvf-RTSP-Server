@@ -9,6 +9,7 @@ from flask import Flask, request, Response
 from flask_cors import CORS
 from datetime import datetime, timezone
 import sys
+import requests
 
 # Try to import zoneinfo
 if sys.version_info >= (3, 9):
@@ -155,6 +156,17 @@ class ONVIFService:
         def root_service():
             return device_service()
 
+
+        @app.route('/onvif/snapshot', methods=['GET', 'POST'], endpoint=f'snapshot_{self.camera.id}')
+        @require_auth
+        def snapshot():
+            if self.camera.snapshot_path == '':
+                from .web import capture_camera_snapshot
+                return capture_camera_snapshot(self.camera.manager, self.camera.id)
+            
+            response = requests.get(self.camera.snapshot_path)
+            return Response(response.content, mimetype=self.camera.snapshot_path)
+
         # ONVIF Media Service
         @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}')
         @require_auth
@@ -173,6 +185,10 @@ class ONVIFService:
                 # GetStreamUri
                 elif 'GetStreamUri' in soap_body:
                     return self._handle_get_stream_uri(local_ip)
+                
+                # GetSnapshotUri
+                elif 'GetSnapshotUri' in soap_body:
+                    return self._handle_get_snapshot_uri(local_ip)
                 
                 # GetVideoSources
                 elif 'GetVideoSources' in soap_body:
@@ -629,6 +645,26 @@ class ONVIFService:
         
         return Response(soap_response, mimetype='application/soap+xml')
 
+    def _handle_get_snapshot_uri(self, local_ip):
+        """Handle GetSnapshotUri request"""
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetSnapshotUriResponse>
+            <trt:MediaUri>
+                <tt:Uri>http://{local_ip}:{self.camera.onvif_port}/onvif/snapshot</tt:Uri>
+                <tt:InvalidAfterConnect>false</tt:InvalidAfterConnect>
+                <tt:InvalidAfterReboot>false</tt:InvalidAfterReboot>
+                <tt:Timeout>PT60S</tt:Timeout>
+            </trt:MediaUri>
+        </trt:GetSnapshotUriResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        
+        return Response(soap_response, mimetype='application/soap+xml')
+    
     def _get_device_wsdl(self):
         """Return device service WSDL"""
         local_ip = self.camera.get_effective_ip()
