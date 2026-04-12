@@ -73,6 +73,7 @@ class VirtualONVIFCamera:
         self.enable_audio = config.get('enableAudio', False)
         self.transcode_main_audio = config.get('transcodeMainAudio', False)
         self.transcode_sub_audio = config.get('transcodeSubAudio', False)
+        self.snapshot_path = config.get('snapshotPath', '')
         
         # Network settings (Linux only)
         self.use_virtual_nic = config.get('useVirtualNic', False)
@@ -241,6 +242,7 @@ class VirtualONVIFCamera:
             'enableAudio': self.enable_audio,
             'transcodeMainAudio': self.transcode_main_audio,
             'transcodeSubAudio': self.transcode_sub_audio,
+            'snapshotPath': self.snapshot_path,
             'useVirtualNic': self.use_virtual_nic,
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,
@@ -284,6 +286,7 @@ class VirtualONVIFCamera:
             'enableAudio': self.enable_audio,
             'transcodeMainAudio': self.transcode_main_audio,
             'transcodeSubAudio': self.transcode_sub_audio,
+            'snapshotPath': self.snapshot_path,
             'useVirtualNic': self.use_virtual_nic,
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,

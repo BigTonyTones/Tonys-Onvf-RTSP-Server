@@ -1377,26 +1377,26 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
-                        <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-volume-up"></i>
-                                </div>
-                                <div>
-                                    <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
-                                    <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
-                                </div>
-                            </div>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="enableAudio">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </label>
+                <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-volume-up"></i>
+                        </div>
+                        <div>
+                            <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
+                            <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableAudio">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </label>
 
-                        <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
+                <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
                     
                     <!-- Main Stream Column -->
-                    <div class="form-col" style="flex: 1; padding-right: 12px; border-right: 1px solid #e2e8f0;">
+                    <div class="form-col" style="height: 100%; padding-right: 12px; border-right: 1px solid #e2e8f0;">
                         <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
                             <i class="fas fa-video"></i> Main Stream Settings
                         </h3>
@@ -1444,7 +1444,7 @@ def get_web_ui_html(current_settings=None):
                     </div>
 
                     <!-- Sub Stream Column -->
-                    <div class="form-col" style="flex: 1; padding-left: 12px;" id="sub-stream-col">
+                    <div class="form-col" style="padding-left: 12px;" id="sub-stream-col">
                         <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
                             <i class="fas fa-microchip"></i> Sub Stream Settings
                         </h3>
@@ -1517,7 +1517,28 @@ def get_web_ui_html(current_settings=None):
 
                 </div>
 
-                <div class="form-group">
+                <div class="alert alert-info">
+                    <strong>Common formats:</strong><br>
+                    Hikvision: /Streaming/Channels/101<br>
+                    Reolink: /h264Preview_01_main<br>
+                    Dahua: /cam/realmonitor?channel=1&subtype=0
+                </div>
+
+                <div class="form-group" style="border-top: 1px solid #e2e8f0; padding-top: 24px;">
+                    <label class="form-label">Snapshot Path (leave empty for auto-generate)</label>
+                    <input type="text" class="form-input" id="snapshotPath" placeholder="Auto-generated">
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>Common formats:</strong><br>
+                    Hikvision: https://[CAMERA_IP]:8443/snapshot/ISAPI/Streaming/channels/101/picture<br>
+                    Dahua: https://[CAMERA_IP]:8443/snapshot/cgi-bin/snapshot.cgi?channel=1<br>
+                    Amcrest: https://[CAMERA_IP]:8443/snapshot/cgi-bin/snapshot.cgi<br>
+                    Generic/XMEye: https://[CAMERA_IP]:8443/snapshot/webcapture.jpg?command=snap&channel=1<br>
+                    Tapo: https://[CAMERA_IP]:8443/snapshot
+                </div>
+
+                <div class="form-group" style="border-top: 1px solid #e2e8f0; padding-top: 24px;">
                     <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
                     <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
                 </div>
@@ -1604,13 +1625,6 @@ def get_web_ui_html(current_settings=None):
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <strong>Common formats:</strong><br>
-                    Hikvision: /Streaming/Channels/101<br>
-                    Reolink: /h264Preview_01_main<br>
-                    Dahua: /cam/realmonitor?channel=1&subtype=0
                 </div>
                 
                 <button type="submit" class="btn btn-success" style="width:100%">Save Camera</button>
@@ -2780,6 +2794,7 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('enableAudio').checked = camera.enableAudio || false;
                 document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
                 document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
+                document.getElementById('snapshotPath').value = camera.snapshotPath || '';
                 
                 // Populate resolution and frame rate fields
                 document.getElementById('mainWidth').value = camera.mainWidth || 1920;
@@ -2915,6 +2930,7 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('enableAudio').checked = false;
             document.getElementById('transcodeMainAudio').checked = false;
             document.getElementById('transcodeSubAudio').checked = false;
+            document.getElementById('snapshotPath').value = '';
             
             // Network reset
             document.getElementById('useVirtualNic').checked = false;
@@ -2989,6 +3005,7 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('enableAudio').checked = camera.enableAudio || false;
             document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
             document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
+            document.getElementById('snapshotPath').value = camera.snapshotPath || '';
             document.getElementById('onvifPort').value = camera.onvifPort || '';
             document.getElementById('cameraUuid').value = camera.uuid || '';
             
@@ -3070,6 +3087,7 @@ def get_web_ui_html(current_settings=None):
                 enableAudio: document.getElementById('enableAudio').checked,
                 transcodeMainAudio: document.getElementById('transcodeMainAudio').checked,
                 transcodeSubAudio: document.getElementById('transcodeSubAudio').checked,
+                snapshotPath: document.getElementById('snapshotPath').value,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 
