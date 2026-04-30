@@ -38,7 +38,7 @@ fi
 # 2. Create Virtual Environment if it doesn't exist
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment (venv)..."
-    python3 -m venv venv
+    python3 -m venv --upgrade-deps venv 2>/dev/null || python3 -m venv venv
 else
     echo "Virtual environment already exists."
 fi
@@ -46,6 +46,23 @@ fi
 # 3. Activate Virtual Environment
 echo "Activating virtual environment..."
 source venv/bin/activate
+
+# 3b. Ensure pip is available inside the venv (Ubuntu 26+ may create venvs without pip)
+if ! python3 -m pip --version &> /dev/null; then
+    echo "  pip not found in virtual environment. Bootstrapping..."
+    # Try ensurepip first
+    if python3 -m ensurepip --upgrade 2>/dev/null; then
+        echo "  pip bootstrapped via ensurepip."
+    else
+        echo "  ensurepip failed. Installing python3-pip and recreating venv..."
+        sudo apt install -y python3-pip 2>/dev/null || true
+        deactivate 2>/dev/null || true
+        rm -rf venv
+        python3 -m venv venv
+        source venv/bin/activate
+        python3 -m ensurepip --upgrade 2>/dev/null || true
+    fi
+fi
 
 # 4. Install initial required Python packages
 echo "Checking Python packages..."
