@@ -1385,6 +1385,7 @@ def get_web_ui_html(current_settings=None):
                                 <div>
                                     <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
                                     <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
+                                    <small style="color: #f6ad55; font-size: 11px; display: block; margin-top: 4px;"><i class="fas fa-info-circle"></i> If you're running UniFi Protect version 7.1 or newer, make sure to enable "Stream Compatibility Mode – Improved" in your UniFi Console's camera settings to ensure audio is properly supported.</small>
                                 </div>
                             </div>
                             <label class="toggle-switch">
