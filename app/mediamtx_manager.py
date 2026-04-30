@@ -38,7 +38,7 @@ class MediaMTXManager:
     REQUIRED_VERSION = "v1.18.1"
 
     def _parse_version(self, version_str):
-        """Parse version string like 'v1.17.1' into a list of integers [1, 17, 1]"""
+        """Parse version string like 'v1.18.1' into a list of integers [1, 18, 1]"""
         try:
             # Remove 'v' prefix and split by '.'
             parts = version_str.lstrip('v').split('.')
@@ -133,7 +133,7 @@ class MediaMTXManager:
         
         print(f"  Platform: {system} {machine}")
         print(f"  Downloading from: {url}")
-        # Auto-download without prompting — v1.17.1 is a required dependency
+        # Auto-download without prompting — v1.18.1 is a required dependency
         
         try:
             # Download with progress
