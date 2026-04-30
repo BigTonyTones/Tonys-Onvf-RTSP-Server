@@ -101,7 +101,7 @@ echo "============================================================"
 
 # Loop to handle restart requests (exit code 42)
 while true; do
-    python run.py
+    python3 run.py
     EXIT_CODE=$?
     
     # Check if exit code is 42 (restart requested)
