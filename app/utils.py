@@ -106,6 +106,20 @@ def check_and_install_requirements():
     
     if missing_packages:
         print(f"\nInstalling missing packages: {', '.join(missing_packages)}")
+        
+        # Ensure pip is available (Ubuntu 26+ venvs may lack pip)
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "--version"],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("pip not found in environment. Bootstrapping via ensurepip...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "ensurepip", "--upgrade"])
+                print("pip bootstrapped successfully.")
+            except subprocess.CalledProcessError:
+                print("ERROR: Could not bootstrap pip. Please run: python3 -m ensurepip --upgrade")
+                sys.exit(1)
+        
         for package in missing_packages:
             try:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package])
