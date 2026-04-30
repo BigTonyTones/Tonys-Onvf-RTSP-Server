@@ -24,7 +24,7 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 - **Git** - for cloning the repository
 - **Python 3** - runtime environment
 - **Python packages** - Flask, Flask-CORS, Requests, PyYAML, psutil, onvif-zeep
-- **MediaMTX v1.17.1** - RTSP server for stream management
+- **MediaMTX v1.18.1** - RTSP server for stream management
 - **FFmpeg** - video processing and transcoding
 - **System configuration** - file descriptor limits, permissions, and PATH setup
 - **Systemd/Launchd service** - optional auto-start on boot (Linux/macOS)

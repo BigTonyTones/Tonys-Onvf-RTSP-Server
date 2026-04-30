@@ -279,7 +279,7 @@ function Install-MediaMTX {
     }
     
     $arch = Get-Architecture
-    $version = "1.17.1"
+    $version = "1.18.1"
     $url = "https://github.com/bluenviron/mediamtx/releases/download/v$version/mediamtx_v${version}_windows_$arch.zip"
     
     Write-Info "Downloading MediaMTX v$version..."
