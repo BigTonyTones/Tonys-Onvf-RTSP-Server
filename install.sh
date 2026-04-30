@@ -119,8 +119,8 @@ install_dependencies() {
             print_info "Using apt package manager..."
             print_info "Running apt-get update..."
             apt-get update -qq
-            print_info "Installing: git, python3, python3-venv, python3-pip, curl, wget"
-            apt-get install -y -qq git python3-full python3-venv python3-pip curl wget > /dev/null 2>&1 || \
+            print_info "Installing: git, python3, python3-venv, python3-pip, python-is-python3, curl, wget"
+            apt-get install -y -qq git python3-full python3-venv python3-pip python-is-python3 curl wget > /dev/null 2>&1 || \
             apt-get install -y -qq git python3 python3-venv python3-pip curl wget > /dev/null 2>&1
             ;;
         fedora)
@@ -278,7 +278,7 @@ install_mediamtx() {
     fi
     
     # MediaMTX version and download URL
-    MEDIAMTX_VERSION="1.17.1"
+    MEDIAMTX_VERSION="1.18.1"
     MEDIAMTX_URL="https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}/mediamtx_v${MEDIAMTX_VERSION}_${MEDIAMTX_OS}_${ARCH}.tar.gz"
     
     print_info "Downloading MediaMTX v${MEDIAMTX_VERSION}..."
