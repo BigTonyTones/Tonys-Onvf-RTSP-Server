@@ -1340,6 +1340,12 @@ def create_web_app(manager):
                 # Use a thread to trigger restart after sending response
                 def delayed_restart():
                     time.sleep(1)
+                    print("\nStopping MediaMTX before restart...")
+                    manager.mediamtx.stop()
+                    print("Stopping all cameras before restart...")
+                    for camera in manager.cameras:
+                        camera.stop()
+                    time.sleep(1)  # Allow sockets to close
                     if hasattr(manager, 'trigger_restart'):
                         manager.trigger_restart()
                     else:
