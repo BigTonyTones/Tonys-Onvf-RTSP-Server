@@ -791,7 +791,34 @@ class CameraManager:
 
     # --- Authentication Methods ---
     
+    def reset_all_uuids(self):
+        """Generate new random UUIDs for all cameras"""
+        import uuid
+        with self._lock:
+            for camera in self.cameras:
+                camera.uuid = str(uuid.uuid4())
+            self.save_config()
+        return True
+
+    def reset_all_macs(self):
+        """Generate new random MAC addresses for all cameras"""
+        import random
+        with self._lock:
+            for camera in self.cameras:
+                # Generate a random locally administered unicast MAC address
+                # The first byte should have the second-least-significant bit set (x2:xx:xx:xx:xx:xx)
+                mac = [ (random.randint(0x00, 0xff) & 0xfe) | 0x02, 
+                        random.randint(0x00, 0xff),
+                        random.randint(0x00, 0xff),
+                        random.randint(0x00, 0xff),
+                        random.randint(0x00, 0xff),
+                        random.randint(0x00, 0xff) ]
+                camera.nic_mac = ':'.join(map(lambda x: "%02x" % x, mac)).upper()
+            self.save_config()
+        return True
+
     def is_setup_required(self):
+
         """Returns True if no preference is stored at all"""
         # We'll use a hidden setting to track if the user has ever seen the setup
         if hasattr(self, 'setup_shown'):

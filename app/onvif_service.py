@@ -9,6 +9,10 @@ from flask import Flask, request, Response
 from flask_cors import CORS
 from datetime import datetime, timezone
 import sys
+import os
+import tempfile
+from urllib.parse import quote
+from .ffmpeg_manager import FFmpegManager
 
 # Try to import zoneinfo
 if sys.version_info >= (3, 9):
@@ -155,6 +159,58 @@ class ONVIFService:
         def root_service():
             return device_service()
 
+        # ONVIF Snapshot Endpoint (Used by GetSnapshotUri)
+        @app.route('/onvif/snapshot', methods=['GET'], endpoint=f'snapshot_{self.camera.id}')
+        @require_auth
+        def snapshot():
+            """Capture and return a real-time snapshot for ONVIF"""
+            # Use sub-stream if available for faster capture
+            if not getattr(self.camera, 'disable_substream', False):
+                stream_path = f"{self.camera.path_name}_sub"
+            else:
+                stream_path = f"{self.camera.path_name}_main"
+            
+            # Construct local MediaMTX URL
+            rtsp_port = self.camera.rtsp_port
+            if getattr(self.camera.manager, 'rtsp_auth_enabled', False):
+                user = quote(getattr(self.camera.manager, 'global_username', 'admin'))
+                pw = quote(getattr(self.camera.manager, 'global_password', 'admin'))
+                stream_url = f"rtsp://{user}:{pw}@localhost:{rtsp_port}/{stream_path}"
+            else:
+                stream_url = f"rtsp://localhost:{rtsp_port}/{stream_path}"
+            
+            ffmpeg_mgr = FFmpegManager()
+            
+            # Create a temp file
+            fd, path = tempfile.mkstemp(suffix='.jpg')
+            os.close(fd)
+            
+            try:
+                success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+                if not success:
+                    # Fallback to direct camera URL if MediaMTX failed
+                    stream_url = self.camera.sub_stream_url if not getattr(self.camera, 'disable_substream', False) else self.camera.main_stream_url
+                    success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+                
+                if success:
+                    with open(path, 'rb') as f:
+                        content = f.read()
+                    
+                    from flask import make_response
+                    response = make_response(content)
+                    response.headers['Content-Type'] = 'image/jpeg'
+                    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                    return response
+                else:
+                    return Response(f"Snapshot capture failed: {error}", status=500)
+                    
+            except Exception as e:
+                return Response(f"Error: {str(e)}", status=500)
+            finally:
+                if os.path.exists(path):
+                    try: os.remove(path)
+                    except: pass
+
         # ONVIF Media Service
         @app.route('/onvif/media_service', methods=['GET', 'POST'], endpoint=f'media_service_{self.camera.id}')
         @require_auth
@@ -173,6 +229,10 @@ class ONVIFService:
                 # GetStreamUri
                 elif 'GetStreamUri' in soap_body:
                     return self._handle_get_stream_uri(local_ip)
+                
+                # GetSnapshotUri
+                elif 'GetSnapshotUri' in soap_body:
+                    return self._handle_get_snapshot_uri(local_ip)
                 
                 # GetVideoSources
                 elif 'GetVideoSources' in soap_body:
@@ -365,7 +425,14 @@ class ONVIFService:
                         <tt:RTPMulticast>false</tt:RTPMulticast>
                         <tt:RTP_TCP>true</tt:RTP_TCP>
                         <tt:RTP_RTSP_TCP>true</tt:RTP_RTSP_TCP>
+                        <tt:NonAggregateControl>false</tt:NonAggregateControl>
+                        <tt:NoRTSPStreaming>false</tt:NoRTSPStreaming>
                     </tt:StreamingCapabilities>
+                    <tt:Extension>
+                        <tt:ProfileCapabilities>
+                            <tt:MaximumNumberOfProfiles>10</tt:MaximumNumberOfProfiles>
+                        </tt:ProfileCapabilities>
+                    </tt:Extension>
                 </tt:Media>
                 <tt:Extension>
                     <tt:DeviceIO>
@@ -624,6 +691,26 @@ class ONVIFService:
                 <tt:Timeout>PT60S</tt:Timeout>
             </trt:MediaUri>
         </trt:GetStreamUriResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_snapshot_uri(self, local_ip):
+        """Handle GetSnapshotUri request"""
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetSnapshotUriResponse>
+            <trt:MediaUri>
+                <tt:Uri>http://{local_ip}:{self.camera.onvif_port}/onvif/snapshot</tt:Uri>
+                <tt:InvalidAfterConnect>false</tt:InvalidAfterConnect>
+                <tt:InvalidAfterReboot>false</tt:InvalidAfterReboot>
+                <tt:Timeout>PT60S</tt:Timeout>
+            </trt:MediaUri>
+        </trt:GetSnapshotUriResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         

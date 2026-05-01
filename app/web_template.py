@@ -1857,6 +1857,23 @@ def get_web_ui_html(current_settings=None):
                 </div>
                 
                 <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllUUIDs()">
+                            <i class="fas fa-id-card"></i> Reset All UUIDs
+                        </button>
+                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllMACs()">
+                            <i class="fas fa-network-wired"></i> Reset All MACs
+                        </button>
+                    </div>
+                    <small style="color: #718096; font-size: 11px; margin-top: 8px; display: block;">
+                        Warning: Resetting UUIDs or MAC addresses will force clients (like Ubiquiti or NVRs) to re-discover/re-add the cameras. Use this only if you want to present the cameras as 'new' devices.
+                    </small>
+                </div>
+                
+                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
                     <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
                     <div style="display: flex; gap: 10px;">
                         <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
@@ -1874,17 +1891,6 @@ def get_web_ui_html(current_settings=None):
                     <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
                         <i class="fas fa-sync-alt"></i> Check for Updates
                     </button>
-                </div>
-
-                <!-- Development Updates -->
-                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Development</div>
-                    <button type="button" class="btn btn-secondary" onclick="runGithubPull()" style="width:100%; background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); border-color: #ed8936; color: white; font-weight: 600;">
-                        <i class="fas fa-download"></i> Run GitHub Pull & Restart
-                    </button>
-                    <small style="color: #718096; font-size: 11px; margin-top: 6px; display: block;">
-                        Directly executes 'git pull' to update files from the repository and restarts the server.
-                    </small>
                 </div>
                 
                 <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
@@ -2220,7 +2226,6 @@ def get_web_ui_html(current_settings=None):
                 const content = getCameraCardContent(cam, serverIp);
                 
                 if (!card) {{
-                    // New camera
                     card = document.createElement('div');
                     card.className = `camera-card ${{cam.status === 'running' ? 'running' : ''}}`;
                     card.dataset.id = cam.id;
@@ -3519,6 +3524,38 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('settings-modal').classList.remove('active');
         }}
         
+        async function resetAllUUIDs() {{
+            if (!confirm("Are you sure you want to reset ALL camera UUIDs? This will make them appear as new devices to your NVR/Ubiquiti.")) return;
+            try {{
+                const response = await fetch('/api/cameras/reset-uuids', {{ method: 'POST' }});
+                const result = await response.json();
+                if (response.ok) {{
+                    showToast(result.message, "success");
+                    loadCameras();
+                }} else {{
+                    showToast(result.error || "Failed to reset UUIDs", "danger");
+                }}
+            }} catch (e) {{
+                showToast("Error: " + e.message, "danger");
+            }}
+        }}
+
+        async function resetAllMACs() {{
+            if (!confirm("Are you sure you want to reset ALL camera MAC addresses? This may cause IP changes if you use DHCP reservations.")) return;
+            try {{
+                const response = await fetch('/api/cameras/reset-macs', {{ method: 'POST' }});
+                const result = await response.json();
+                if (response.ok) {{
+                    showToast(result.message, "success");
+                    loadCameras();
+                }} else {{
+                    showToast(result.error || "Failed to reset MACs", "danger");
+                }}
+            }} catch (e) {{
+                showToast("Error: " + e.message, "danger");
+            }}
+        }}
+
         async function saveSettings(event) {{
             event.preventDefault();
             
@@ -4181,57 +4218,6 @@ def get_web_ui_html(current_settings=None):
             
             input.click();
         }}
-
-        async function runGithubPull() {{
-            if (!confirm('This will run "git pull" and restart the server immediately. Any unsaved changes may be lost. Continue?')) return;
-            
-            // Show loading toast
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.style.background = 'var(--btn-primary)';
-            toast.style.pointerEvents = 'auto'; 
-            toast.style.display = 'block';
-            toast.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Running Git Pull...';
-            document.body.appendChild(toast);
-            
-            try {{
-                const response = await fetch('/api/development/pull', {{ method: 'POST' }});
-                const result = await response.json();
-                
-                if (response.ok) {{
-                    toast.innerHTML = '<i class="fas fa-check"></i> Pull successful! Restarting...';
-                    toast.style.background = 'var(--btn-success)';
-                    
-                    setTimeout(() => {{
-                        toast.innerHTML = '<i class="fas fa-plug"></i> Reconnecting to server...';
-                        
-                        const checkServer = async () => {{
-                            try {{
-                                const check = await fetch('/api/stats', {{ timeout: 2000 }});
-                                if (check.ok) {{
-                                    toast.innerHTML = '<i class="fas fa-rocket"></i> Server is back! Reloading...';
-                                    setTimeout(() => window.location.reload(), 1000);
-                                    return;
-                                }}
-                            }} catch (e) {{}}
-                            setTimeout(checkServer, 2000);
-                        }};
-                        checkServer();
-                    }}, 2000);
-                    
-                }} else {{
-                    toast.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: ${{result.error || 'Pull failed'}}`;
-                    toast.style.background = 'var(--btn-danger)';
-                    console.error('Git pull output:', result.output);
-                    setTimeout(() => toast.remove(), 10000);
-                }}
-            }} catch (error) {{
-                toast.innerHTML = '<i class="fas fa-wifi"></i> Connection error during pull';
-                toast.style.background = 'var(--btn-danger)';
-                setTimeout(() => toast.remove(), 5000);
-            }}
-        }}
-
     </script>
 </body>
 </html>
