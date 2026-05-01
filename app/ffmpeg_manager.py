@@ -528,3 +528,48 @@ class FFmpegManager:
                 return os.path.join(self.ffmpeg_dir, self.ffprobe_executable)
         
         return self.ffprobe_executable # Fallback
+
+    def capture_snapshot(self, stream_url, output_path, timeout=10):
+        """
+        Capture a single frame from an RTSP stream using FFmpeg.
+        
+        Args:
+            stream_url: The RTSP stream URL
+            output_path: Path to save the JPG file
+            timeout: Maximum time to wait for capture
+            
+        Returns:
+            Tuple (success, error_message)
+        """
+        ffmpeg_exe = self.get_ffmpeg_path()
+        
+        try:
+            # Grab one frame
+            # -ss 1 skips the first second to avoid corruption/black frames
+            # -frames:v 1 tells ffmpeg to stop after 1 frame
+            # -q:v 2 sets high quality
+            cmd = [
+                ffmpeg_exe, 
+                '-hide_banner', '-loglevel', 'error',
+                '-rtsp_transport', 'tcp',
+                '-i', stream_url,
+                '-frames:v', '1',
+                '-q:v', '2',
+                '-f', 'image2',
+                '-y',
+                output_path
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            
+            if result.returncode == 0 and os.path.exists(output_path):
+                return True, None
+            else:
+                error = result.stderr if result.stderr else "Unknown FFmpeg error"
+                return False, error
+                
+        except subprocess.TimeoutExpired:
+            return False, "Capture timed out (check if stream is accessible)"
+        except Exception as e:
+            return False, str(e)
+

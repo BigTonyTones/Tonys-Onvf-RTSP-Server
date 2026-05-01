@@ -427,6 +427,18 @@ def create_web_app(manager):
         manager.stop_all()
         return jsonify([cam.to_dict() for cam in manager.cameras])
     
+    @app.route('/api/cameras/reset-uuids', methods=['POST'])
+    @login_required
+    def reset_uuids():
+        manager.reset_all_uuids()
+        return jsonify({'status': 'success', 'message': 'All camera UUIDs have been reset.'})
+
+    @app.route('/api/cameras/reset-macs', methods=['POST'])
+    @login_required
+    def reset_macs():
+        manager.reset_all_macs()
+        return jsonify({'status': 'success', 'message': 'All camera MAC addresses have been reset.'})
+
     @app.route('/api/cameras/<int:camera_id>/fetch-stream-info', methods=['POST'])
     @login_required
     def fetch_stream_info(camera_id):
@@ -798,44 +810,26 @@ def create_web_app(manager):
             print(f"  Capture: Using direct stream for {camera.name}")
         
         ffmpeg_mgr = FFmpegManager()
-        ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
         
         # Create a temp file for the snapshot
         fd, path = tempfile.mkstemp(suffix='.jpg')
         os.close(fd)
         
         try:
-            # Grab one frame
-            # -ss 1 skips the first second to avoid corruption/black frames
-            cmd = [
-                ffmpeg_exe, 
-                '-hide_banner', '-loglevel', 'error',
-                '-rtsp_transport', 'tcp',
-                '-i', stream_url,
-                '-frames:v', '1',
-                '-q:v', '2', # Quality (2-31, lower is better)
-                '-f', 'image2',
-                '-y',
-                path
-            ]
+            success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
             
-            # Use a timeout of 10 seconds
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            
-            # Write output to sys.stdout so it's captured in our logs
-            if result.stdout:
-                sys.stdout.write(result.stdout)
-            if result.stderr:
-                sys.stderr.write(result.stderr)
-            
-            # Send file content
-            with open(path, 'rb') as f:
-                content = f.read()
-                
-            response = make_response(content)
-            response.headers['Content-Type'] = 'image/jpeg'
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            return response
+            if success:
+                # Send file content
+                with open(path, 'rb') as f:
+                    content = f.read()
+                    
+                response = make_response(content)
+                response.headers['Content-Type'] = 'image/jpeg'
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                return response
+            else:
+                print(f"  Error capturing snapshot for {camera.name}: {error}")
+                return jsonify({'error': error}), 500
             
         except Exception as e:
             print(f"  Error capturing snapshot for {camera.name}: {e}")
@@ -846,6 +840,7 @@ def create_web_app(manager):
                     os.remove(path)
                 except:
                     pass
+
     
     # --- Update System Endpoints ---
     
@@ -1296,78 +1291,5 @@ def create_web_app(manager):
         except Exception as e:
             print(f"  Error in MediaMTX auth hook: {e}")
             return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/development/pull', methods=['POST'])
-    @login_required
-    def development_pull():
-        """Run git pull to update files and then restart"""
-        try:
-            print("\n" + "="*40)
-            print("DEVELOPMENT: Running Git Pull...")
-            print("="*40)
-            
-            # Check if it's a git repository first
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            
-            if not os.path.exists(os.path.join(project_root, '.git')):
-                print("Not a git repository. Initializing and linking to GitHub...")
-                # Initialize git repo, add remote, fetch, and reset to remote main
-                subprocess.run(['git', 'init'], capture_output=True, cwd=project_root)
-                subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git'], capture_output=True, cwd=project_root)
-                subprocess.run(['git', 'fetch', 'origin'], capture_output=True, cwd=project_root)
-                
-                # We use reset --hard to force the local files to match the repo exactly
-                result = subprocess.run(['git', 'reset', '--hard', 'origin/main'], capture_output=True, text=True, cwd=project_root)
-                
-                output = "Initialized git repository and synced with GitHub main branch.\n" + result.stdout
-                if result.stderr:
-                    output += "\nErrors:\n" + result.stderr
-                result_code = result.returncode
-            else:
-                # Force sync with origin/main to discard any local changes automatically
-                subprocess.run(['git', 'fetch', 'origin', 'main'], capture_output=True, cwd=project_root)
-                result = subprocess.run(['git', 'reset', '--hard', 'origin/main'], capture_output=True, text=True, timeout=30, cwd=project_root)
-                output = result.stdout
-                if result.stderr:
-                    output += "\nErrors:\n" + result.stderr
-                result_code = result.returncode
-            
-            print(output)
-            
-            if result_code == 0:
-                print("Git pull successful. Triggering restart...")
-                
-                # Use a thread to trigger restart after sending response
-                def delayed_restart():
-                    time.sleep(1)
-                    print("\nStopping MediaMTX before restart...")
-                    manager.mediamtx.stop()
-                    print("Stopping all cameras before restart...")
-                    for camera in manager.cameras:
-                        camera.stop()
-                    time.sleep(1)  # Allow sockets to close
-                    if hasattr(manager, 'trigger_restart'):
-                        manager.trigger_restart()
-                    else:
-                        # Fallback if trigger_restart isn't available
-                        os._exit(5)
-                        
-                threading.Thread(target=delayed_restart, daemon=True).start()
-                
-                return jsonify({
-                    'success': True, 
-                    'message': 'Git pull successful. Restarting server...',
-                    'output': output
-                })
-            else:
-                return jsonify({
-                    'success': False, 
-                    'error': 'Git pull failed',
-                    'output': output
-                }), 500
-                
-        except Exception as e:
-            print(f"Error during development pull: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
 
     return app
