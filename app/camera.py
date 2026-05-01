@@ -172,8 +172,8 @@ class VirtualONVIFCamera:
         app = self.onvif_service.create_app()
         self.flask_app = app
         
-        # Use assigned IP if available, otherwise 0.0.0.0
-        bind_ip = self.assigned_ip if self.assigned_ip else '0.0.0.0'
+        # Bind to 0.0.0.0 to ensure reachability across all interfaces (including vNICs)
+        bind_ip = '0.0.0.0'
         
         # Create server with thread pool to prevent thread exhaustion
         server = make_server(

@@ -1,16 +1,19 @@
-
 import json
 import time
 import socket
 import struct
 import threading
 from pathlib import Path
-from flask import Flask, request, Response
+from flask import Flask, request, Response, make_response
 from flask_cors import CORS
 from datetime import datetime, timezone
 import sys
+import subprocess
+import tempfile
+import os
+from urllib.parse import quote
+from .ffmpeg_manager import FFmpegManager
 
-# Try to import zoneinfo
 if sys.version_info >= (3, 9):
     try:
         import zoneinfo
@@ -33,13 +36,13 @@ class ONVIFService:
         # Cache for authenticated IPs: {ip: timestamp}
         # Prevents repetitive 401 challenges for recently authenticated clients (30 min TTL)
         self.auth_cache = {}
-        
+
     def create_app(self):
         """Create the Flask app for ONVIF service"""
         app = Flask(f"onvif_camera_{self.camera.id}")
         CORS(app)
         self.app = app
-        
+
         # Disable Flask logging if not in debug mode
         import logging
         log = logging.getLogger('werkzeug')
@@ -47,14 +50,14 @@ class ONVIFService:
             log.setLevel(logging.INFO)
         else:
             log.setLevel(logging.ERROR)
-        
+
         # Disable Flask development server warnings
         import os
         os.environ['FLASK_ENV'] = 'production'
-        
+
         # Get correct local IP for ONVIF URLs (Use camera's effective IP)
         local_ip = self.camera.get_effective_ip()
-        
+
         # Authentication decorator for ONVIF endpoints
         def require_auth(f):
             from functools import wraps
@@ -67,9 +70,9 @@ class ONVIFService:
                     if getattr(self.camera, 'debug_mode', False):
                         print(f"  [ONVIF] Auth bypass for whitelisted IP: {client_ip}")
                     return f(*args, **kwargs)
-                
+
                 current_time = time.time()
-                
+
                 # Check if IP is in auth cache (30 minute TTL)
                 if client_ip in self.auth_cache:
                     if current_time - self.auth_cache[client_ip] < 1800:  # 30 minutes
@@ -77,23 +80,23 @@ class ONVIFService:
                     else:
                         # Expired, remove from cache
                         del self.auth_cache[client_ip]
-                
+
                 # Check for Basic Auth
                 auth = request.authorization
                 if auth and auth.username == self.camera.onvif_username and auth.password == self.camera.onvif_password:
                     # Cache successful authentication
                     self.auth_cache[client_ip] = current_time
                     return f(*args, **kwargs)
-                
+
                 # Check for SOAP WS-UsernameToken (in request body)
                 data = request.get_data(as_text=True)
-                
+
                 if 'UsernameToken' in data:
                     # Robust check for Username and Password in SOAP XML
                     # Supports namespaced tags (wsse:Username) and cleartext passwords
                     has_user = f'<Username>{self.camera.onvif_username}</Username>' in data or \
                                f':Username>{self.camera.onvif_username}</' in data
-                    
+
                     has_pass = f'>{self.camera.onvif_password}</' in data and \
                                ('<Password' in data or ':Password' in data)
 
@@ -101,14 +104,14 @@ class ONVIFService:
                         # Cache successful authentication
                         self.auth_cache[client_ip] = current_time
                         return f(*args, **kwargs)
-                
+
                 # Authentication failed - return 401
                 return Response(
                     'Authentication required', 401,
                     {'WWW-Authenticate': 'Basic realm="ONVIF"'}
                 )
             return decorated
-        
+
         # ONVIF Device Management
         @app.route('/onvif/device_service', methods=['GET', 'POST'], endpoint=f'device_service_{self.camera.id}')
         @require_auth
@@ -116,39 +119,39 @@ class ONVIFService:
             try:
                 if request.method == 'GET':
                     return self._get_device_wsdl()
-                
+
                 # Parse SOAP request
                 soap_body = request.data.decode('utf-8')
-                
+
                 # GetDeviceInformation
                 if 'GetDeviceInformation' in soap_body:
                     return self._handle_get_device_info()
-                
+
                 # GetCapabilities
                 elif 'GetCapabilities' in soap_body:
                     return self._handle_get_capabilities(local_ip)
-                
+
                 # GetServices
                 elif 'GetServices' in soap_body:
                     return self._handle_get_services(local_ip)
-                
+
                 # GetSystemDateAndTime
                 elif 'GetSystemDateAndTime' in soap_body:
                     return self._handle_get_system_date_time()
-                
+
                 # GetNetworkInterfaces
                 elif 'GetNetworkInterfaces' in soap_body:
                     return self._handle_get_network_interfaces()
-                
+
                 # Default response
                 return self._handle_get_device_info()
-                
+
             except Exception as e:
                 print(f"  Error handling request: {e}")
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
-            
+
         # Root Route: Handle ONVIF Device Service at the root for convenience
         @app.route('/', methods=['GET', 'POST'], endpoint=f'root_service_{self.camera.id}')
         @require_auth
@@ -162,35 +165,45 @@ class ONVIFService:
             try:
                 if request.method == 'GET':
                     return self._get_media_wsdl()
-                
+
                 # Parse SOAP request
                 soap_body = request.data.decode('utf-8')
-                
+
                 # GetProfiles
                 if 'GetProfiles' in soap_body:
                     return self._handle_get_profiles()
-                
+
                 # GetStreamUri
                 elif 'GetStreamUri' in soap_body:
                     return self._handle_get_stream_uri(local_ip)
-                
+
+                # GetSnapshotUri
+                elif 'GetSnapshotUri' in soap_body:
+                    return self._handle_get_snapshot_uri(local_ip)
+
                 # GetVideoSources
                 elif 'GetVideoSources' in soap_body:
                     return self._handle_get_video_sources()
-                
+
                 # GetAudioSources
                 elif 'GetAudioSources' in soap_body and getattr(self.camera, 'enable_audio', False):
                     return self._handle_get_audio_sources()
-                
+
                 # Default: return profiles
                 return self._handle_get_profiles()
-                
+
             except Exception as e:
                 print(f"  Error in media service: {e}")
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
-                
+
+        # Snapshot Route
+        @app.route('/onvif/snapshot', methods=['GET'], endpoint=f'snapshot_{self.camera.id}')
+        @require_auth
+        def snapshot_request():
+            return self._handle_snapshot_request()
+
         return app
 
     def start_discovery_service(self, local_ip):
@@ -198,15 +211,15 @@ class ONVIFService:
         # Check if discovery is already running for this camera
         if hasattr(self, '_discovery_thread') and self._discovery_thread and self._discovery_thread.is_alive():
             return
-        
+
         def discovery_responder():
             MCAST_GRP = '239.255.255.250'
             MCAST_PORT = 3702
-            
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.settimeout(2.0)
-            
+
             try:
                 sock.bind(('', MCAST_PORT))
                 mreq = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
@@ -216,12 +229,12 @@ class ONVIFService:
                 print(f"  Discovery service error: {e}")
                 print(f"  You can still add camera manually in ODM: {local_ip}:{self.camera.onvif_port}")
                 return
-            
+
             while self.camera.status == "running":
                 try:
                     data, addr = sock.recvfrom(10240)
                     message = data.decode('utf-8', errors='ignore')
-                    
+
                     # Respond to any Probe request
                     if 'Probe' in message or 'probe' in message.lower():
                         # Extract MessageID if present
@@ -234,7 +247,7 @@ class ONVIFService:
                                     msg_id = message[start:end]
                             except:
                                 pass
-                        
+
                         response = f'''<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:SOAP-ENC="http://www.w3.org/2003/05/soap-encoding"
@@ -261,24 +274,24 @@ class ONVIFService:
         </d:ProbeMatches>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>'''
-                        
+
                         try:
                             sock.sendto(response.encode('utf-8'), addr)
                         except Exception as e:
                             print(f"  Failed to send response: {e}")
-                        
+
                 except socket.timeout:
                     continue
                 except Exception as e:
                     if self.camera.status == "running":
                         print(f"  Discovery error: {e}")
                     break
-            
+
             try:
                 sock.close()
             except:
                 pass
-        
+
         # Start discovery thread and store reference
         self._discovery_thread = threading.Thread(target=discovery_responder, daemon=True)
         self._discovery_thread.start()
@@ -298,7 +311,7 @@ class ONVIFService:
         </tds:GetDeviceInformationResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_capabilities(self, local_ip):
@@ -381,7 +394,7 @@ class ONVIFService:
         </tds:GetCapabilitiesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_services(self, local_ip):
@@ -410,7 +423,7 @@ class ONVIFService:
         </tds:GetServicesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_system_date_time(self):
@@ -418,7 +431,7 @@ class ONVIFService:
         now = datetime.now(timezone.utc)
         utc_now = now
         tz_string = "UTC"
-        
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
@@ -459,13 +472,13 @@ class ONVIFService:
         </tds:GetSystemDateAndTimeResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_network_interfaces(self):
         """Handle GetNetworkInterfaces request"""
         mac = self.camera.mac_address
-        
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
@@ -493,7 +506,7 @@ class ONVIFService:
         </tds:GetNetworkInterfacesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_profiles(self):
@@ -510,7 +523,7 @@ class ONVIFService:
                     <tt:Bitrate>64</tt:Bitrate>
                     <tt:SampleRate>8000</tt:SampleRate>
                 </tt:AudioEncoderConfiguration>"""
-        
+
         audio_sub = """<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub">
                     <tt:Name>Sub Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
@@ -560,7 +573,7 @@ class ONVIFService:
                 {audio_main if getattr(self.camera, 'enable_audio', False) else ""}
             </trt:Profiles>
         """
-        
+
         if not getattr(self.camera, 'disable_substream', False):
             soap_response += f"""
             <trt:Profiles token="subStream" fixed="true">
@@ -593,24 +606,24 @@ class ONVIFService:
                 {audio_sub if getattr(self.camera, 'enable_audio', False) else ""}
             </trt:Profiles>
             """
-        
+
         soap_response += """
         </trt:GetProfilesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_stream_uri(self, local_ip):
         """Handle GetStreamUri request"""
         # Parse the SOAP request to determine which profile is being requested
         soap_body = request.data.decode('utf-8')
-        
+
         # Check which profile token is requested
         stream_path = f"{self.camera.path_name}_main"  # Default to main stream
         if 'profile_2' in soap_body or 'subStream' in soap_body or 'SubStream' in soap_body:
             stream_path = f"{self.camera.path_name}_sub"
-        
+
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
@@ -626,13 +639,13 @@ class ONVIFService:
         </trt:GetStreamUriResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _get_device_wsdl(self):
         """Return device service WSDL"""
         local_ip = self.camera.get_effective_ip()
-        
+
         wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
              xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
@@ -649,7 +662,7 @@ class ONVIFService:
     def _get_media_wsdl(self):
         """Return media service WSDL"""
         local_ip = self.camera.get_effective_ip()
-        
+
         wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
              xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
@@ -679,7 +692,7 @@ class ONVIFService:
                 </tt:Resolution>
             </trt:VideoSources>
             """
-        
+
         if not getattr(self.camera, 'disable_substream', False):
             soap_response += f"""
                 <trt:VideoSources token="VideoSourceSub">
@@ -688,14 +701,14 @@ class ONVIFService:
                         <tt:Width>{self.camera.sub_width}</tt:Width>
                         <tt:Height>{self.camera.sub_height}</tt:Height>
                     </tt:Resolution>
-                </tt:VideoSources>
+                </trt:VideoSources>
             """
-        
+
         soap_response += """
         </trt:GetVideoSourcesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
-        
+
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_audio_sources(self):
@@ -713,3 +726,97 @@ class ONVIFService:
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_snapshot_uri(self, local_ip):
+        """Handle GetSnapshotUri request"""
+        snapshot_url = f"http://{local_ip}:{self.camera.onvif_port}/onvif/snapshot"
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetSnapshotUriResponse>
+            <trt:MediaUri>
+                <tt:Uri>{snapshot_url}</tt:Uri>
+                <tt:InvalidAfterConnect>false</tt:InvalidAfterConnect>
+                <tt:InvalidAfterReboot>false</tt:InvalidAfterReboot>
+                <tt:Timeout>PT0H0M10S</tt:Timeout>
+            </trt:MediaUri>
+        </trt:GetSnapshotUriResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_snapshot_request(self):
+        """Handle actual JPEG snapshot request using FFmpeg"""
+        # Determine stream URL to grab from
+        if self.camera.status == "running":
+            # Use local MediaMTX stream for speed if available
+            manager = self.camera.manager
+            rtsp_port = getattr(manager, 'rtsp_port', 8554)
+            # Use 127.0.0.1 instead of localhost for better reliability
+            if getattr(manager, 'rtsp_auth_enabled', False):
+                user = quote(getattr(manager, 'global_username', 'admin'))
+                pw = quote(getattr(manager, 'global_password', 'admin'))
+                stream_url = f"rtsp://{user}:{pw}@127.0.0.1:{rtsp_port}/{self.camera.path_name}_sub"
+            else:
+                stream_url = f"rtsp://127.0.0.1:{rtsp_port}/{self.camera.path_name}_sub"
+        else:
+            # Fallback to direct camera URL
+            stream_url = self.camera.sub_stream_url
+
+        ffmpeg_mgr = FFmpegManager()
+        ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
+        
+        # Create a temp file for the snapshot
+        fd, path = tempfile.mkstemp(suffix='.jpg')
+        os.close(fd)
+        
+        try:
+            print(f"  [ONVIF] Snapshot: Capturing frame for {self.camera.name} from {stream_url}...")
+            # Grab one frame
+            # -ss 1 can help get a better frame but adds delay
+            cmd = [
+                ffmpeg_exe, 
+                '-hide_banner', '-loglevel', 'error',
+                '-rtsp_transport', 'tcp',
+                '-i', stream_url,
+                '-frames:v', '1',
+                '-q:v', '2',
+                '-f', 'image2',
+                '-y',
+                path
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if result.returncode != 0:
+                print(f"  [ONVIF] FFmpeg snapshot failed for {self.camera.name}: {result.stderr}")
+                # Try one fallback attempt directly to the camera if the local stream failed
+                if "127.0.0.1" in stream_url:
+                    print(f"  [ONVIF] Retrying snapshot directly from camera: {self.camera.sub_stream_url}")
+                    cmd[cmd.index(stream_url)] = self.camera.sub_stream_url
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            
+            if os.path.exists(path) and os.path.getsize(path) > 0:
+                with open(path, 'rb') as f:
+                    content = f.read()
+                    
+                response = make_response(content)
+                response.headers['Content-Type'] = 'image/jpeg'
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                print(f"  [ONVIF] Snapshot success: {len(content)} bytes")
+                return response
+            else:
+                print(f"  [ONVIF] Snapshot failed: Image file was not created or is empty.")
+                return Response("FFmpeg failed to create snapshot", status=500)
+            
+        except Exception as e:
+            print(f"  [ONVIF] Error capturing snapshot for {self.camera.name}: {e}")
+            return Response(f"Error capturing snapshot: {str(e)}", status=500)
+        finally:
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass
