@@ -2595,7 +2595,12 @@ def get_web_ui_html(current_settings=None):
                 
                 pc.onconnectionstatechange = () => {{
                     if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {{
+                        console.log(`WebRTC Disconnected for ${{videoId}}`);
                         showVideoError(cameraId, 'WebRTC Disconnected');
+                        // Remove from tracking so it can be re-initialized
+                        if (webrtcConnections.get(videoId) === pc) {{
+                            webrtcConnections.delete(videoId);
+                        }}
                     }}
                 }};
 
@@ -4218,6 +4223,30 @@ def get_web_ui_html(current_settings=None):
             
             input.click();
         }}
+
+        // Tab visibility change handler to reconnect streams
+        document.addEventListener('visibilitychange', () => {{
+            if (document.visibilityState === 'visible') {{
+                console.log('Tab became visible, checking connections...');
+                reconnectAllStreams();
+            }}
+        }});
+
+        function reconnectAllStreams() {{
+            // Re-initialize players for all running cameras
+            cameras.forEach(cam => {{
+                if (cam.status === 'running') {{
+                    // initVideoPlayer has a guard to prevent double-init
+                    initVideoPlayer(cam.id, cam.pathName);
+                }}
+            }});
+            
+            // Also handle matrix view if active
+            if (matrixActive) {{
+                renderMatrix();
+            }}
+        }}
+
     </script>
 </body>
 </html>
