@@ -50,3 +50,4 @@ Thumbs.db
 # Documentation
 version_history.html
 debug_api.py
+deploy.sh
