@@ -1522,15 +1522,7 @@ def get_web_ui_html(current_settings=None):
                     <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
                     <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Camera UUID (Unique Identifier)</label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" class="form-input" id="cameraUuid" placeholder="Auto-generated" style="flex: 1;">
-                        <button type="button" class="btn btn-secondary" onclick="generateNewUuid()" style="padding: 0 15px;">Generate New</button>
-                    </div>
-                </div>
-                
+
                 <div class="form-group" style="margin-bottom: 25px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="autoStart" style="width: auto; cursor: pointer;">
@@ -1552,6 +1544,20 @@ def get_web_ui_html(current_settings=None):
                     </div>
 
                     <div id="vnic-fields" style="display: none;">
+                        <div class="form-group" style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 20px;">
+                            <div style="font-size: 12px; color: #f6ad55; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
+                            <div style="font-size: 11px; color: #a0aec0; line-height: 1.4;">
+                                UniFi Protect requires each camera to have a unique MAC address.
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label class="form-label">Virtual NIC MAC Address (Optional)</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" class="form-input" id="nicMac" placeholder="00:00:00:00:00:00" style="flex: 1; font-family: monospace; font-size: 13px;">
+                                <button type="button" class="btn btn-secondary" onclick="randomizeMac()" style="padding: 0 15px; font-size: 12px;">Randomize</button>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label class="form-label">Parent Interface</label>
                             <select class="form-input" id="parentInterface" onchange="toggleManualInterface()">
@@ -1566,14 +1572,6 @@ def get_web_ui_html(current_settings=None):
                             <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block;">
                                 Select the physical network port to bridge with
                             </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Virtual MAC Address</label>
-                            <div style="display: flex; gap: 8px;">
-                                <input type="text" class="form-input" id="nicMac" placeholder="00:00:00:00:00:00" style="flex: 1;">
-                                <button type="button" class="btn btn-secondary" onclick="randomizeMac()" style="padding: 0 15px;">Randomize</button>
-                            </div>
                         </div>
 
                         <div class="form-group">
@@ -1633,7 +1631,6 @@ def get_web_ui_html(current_settings=None):
                     <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
                         Leave as 'localhost' for local access, or enter your server's IP address for network access
                     </small>
-
                 </div>
                 
                 <div class="form-group">
@@ -1856,50 +1853,50 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
-                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllUUIDs()">
-                            <i class="fas fa-id-card"></i> Reset All UUIDs
-                        </button>
-                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllMACs()">
-                            <i class="fas fa-network-wired"></i> Reset All MACs
-                        </button>
-                    </div>
-                    <small style="color: #718096; font-size: 11px; margin-top: 8px; display: block;">
-                        Warning: Resetting UUIDs or MAC addresses will force clients (like Ubiquiti or NVRs) to re-discover/re-add the cameras. Use this only if you want to present the cameras as 'new' devices.
-                    </small>
+                <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
+            </form>
+
+            <!-- Maintenance & Extra Tools (OUTSIDE form to prevent submit confusion) -->
+            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
                 </div>
-                
-                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
-                            <i class="fas fa-download"></i> Backup Config
-                        </button>
-                        <button type="button" id="restoreBtn" class="btn btn-secondary" onclick="restoreBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
-                            <i class="fas fa-upload"></i> Restore Config
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- System Updates -->
-                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">System Updates</div>
-                    <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
-                        <i class="fas fa-sync-alt"></i> Check for Updates
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllUUIDs()">
+                        <i class="fas fa-id-card"></i> Reset All UUIDs
+                    </button>
+                    <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllMACs()">
+                        <i class="fas fa-network-wired"></i> Reset All MACs
                     </button>
                 </div>
-                
-                <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
-                
-                <!-- Reboot Server Button (Linux Only) -->
-                <button type="button" class="btn linux-only" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
-                    <i class="fas fa-power-off"></i> Reboot Server
+                <small style="color: #718096; font-size: 11px; margin-top: 8px; display: block;">
+                    Warning: Resetting UUIDs or MAC addresses will force clients (like Ubiquiti or NVRs) to re-discover/re-add the cameras.
+                </small>
+            </div>
+            
+            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                        <i class="fas fa-download"></i> Backup Config
+                    </button>
+                    <button type="button" id="restoreBtn" class="btn btn-secondary" onclick="restoreBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                        <i class="fas fa-upload"></i> Restore Config
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">System Updates</div>
+                <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
+                    <i class="fas fa-sync-alt"></i> Check for Updates
                 </button>
-            </form>
+            </div>
+            
+            <!-- Reboot Server Button (Linux Only) -->
+            <button type="button" class="btn linux-only" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
+                <i class="fas fa-power-off"></i> Reboot Server
+            </button>
         </div>
     </div>
     
@@ -2395,11 +2392,7 @@ def get_web_ui_html(current_settings=None):
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
                             ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
-                            ${{cam.useVirtualNic && cam.nicMac ? `<div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: var(--text-muted); color: white; white-space: nowrap;">${{cam.nicMac}}</div>` : ''}}
-                        </div>
-                        <div style="margin-left: 24px; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
-                            <div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #764ba2; color: white; width: fit-content; white-space: nowrap; font-family: monospace;" title="${{cam.uuid}}">UUID: ${{cam.uuid}}</div>
-                            ${{cam.enableAudio ? `<div style="padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);" title="Audio Enabled"><i class="fas fa-volume-up"></i> AUDIO</div>` : ''}}
+                            ${{cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;">${{cam.nicMac}}</div>` : ''}}
                         </div>
                     </div>
                     <div class="camera-actions">
@@ -3535,8 +3528,9 @@ def get_web_ui_html(current_settings=None):
                 const response = await fetch('/api/cameras/reset-uuids', {{ method: 'POST' }});
                 const result = await response.json();
                 if (response.ok) {{
+                    alert("Camera UUIDs have been reset successfully.\\n\\nA server restart is required to apply these changes to the ONVIF service.");
                     showToast(result.message, "success");
-                    loadCameras();
+                    loadData();
                 }} else {{
                     showToast(result.error || "Failed to reset UUIDs", "danger");
                 }}
@@ -3551,8 +3545,9 @@ def get_web_ui_html(current_settings=None):
                 const response = await fetch('/api/cameras/reset-macs', {{ method: 'POST' }});
                 const result = await response.json();
                 if (response.ok) {{
+                    alert("Camera MAC addresses have been reset successfully.\\n\\nA server restart is required to apply these changes to the Virtual NICs.");
                     showToast(result.message, "success");
-                    loadCameras();
+                    loadData();
                 }} else {{
                     showToast(result.error || "Failed to reset MACs", "danger");
                 }}
