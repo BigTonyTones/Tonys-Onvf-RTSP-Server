@@ -248,31 +248,42 @@ class CameraManager:
                 'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
                 'ipWhitelist': getattr(self, 'ip_whitelist', [])
             },
-            'auth': {
-                'enabled': getattr(self, 'auth_enabled', False),
-                'username': getattr(self, 'username', None),
-                'password_hash': getattr(self, 'password_hash', None)
-            },
-            'advancedSettings': getattr(self, 'advanced_settings', {}),
             'gridFusion': {
-                'layouts': getattr(self, 'grid_fusion_layouts', []),
-                'looks': getattr(self, 'grid_fusion_looks', [])
+                'layouts': self.grid_fusion_layouts,
+                'looks': self.grid_fusion_looks
+            },
+            'advancedSettings': self.advanced_settings,
+            'auth': {
+                'enabled': self.auth_enabled,
+                'username': self.username,
+                'password_hash': self.password_hash
             }
         }
         
-        with self._lock:
-            try:
-                # Use a temporary file for atomic write
-                fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(self.config_file)), text=True)
-                with os.fdopen(fd, 'w') as f:
-                    json.dump(config, f, indent=2)
+        try:
+            # Save to a temporary file first, then rename to ensure atomicity
+            config_dir = os.path.dirname(os.path.abspath(self.config_file))
+            with tempfile.NamedTemporaryFile('w', delete=False, dir=config_dir, suffix='.tmp') as tf:
+                json.dump(config, tf, indent=4)
+                temp_name = tf.name
+            
+            # Replace the original file
+            if os.path.exists(self.config_file):
+                os.remove(self.config_file)
+            os.rename(temp_name, self.config_file)
+            
+            # Final verification
+            if os.path.exists(self.config_file):
+                print(f"  [Config] Successfully saved to {self.config_file} ({os.path.getsize(self.config_file)} bytes)")
+            else:
+                print(f"  [ERROR] Config file missing after save attempt: {self.config_file}")
                 
-                # Atomic rename
-                os.replace(temp_path, self.config_file)
-            except Exception as e:
-                print(f"Error saving config: {e}")
-                if 'temp_path' in locals() and os.path.exists(temp_path):
-                    os.remove(temp_path)
+            return True
+        except Exception as e:
+            print(f"  [ERROR] Failed to save config: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def load_settings(self):
         """Load settings from config with error safety"""
@@ -370,11 +381,16 @@ class CameraManager:
         self.save_config()
 
         if restart_needed:
-            print("Settings changed, restarting MediaMTX...")
+            print("Settings changed, triggering background MediaMTX restart...")
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), 
-                                  debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
+            
+            def do_restart():
+                time.sleep(1) # Give API time to respond
+                self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), 
+                                      debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
+            
+            threading.Thread(target=do_restart, daemon=True).start()
         
         return self.load_settings()
 
@@ -539,10 +555,16 @@ class CameraManager:
             return [{k: v for k, v in l.items() if k in ['id', 'enabled', 'resolution', 'cameras', 'outputFramerate']} for l in layouts]
             
         if extract_stream_config(old_layouts) != extract_stream_config(self.grid_fusion_layouts):
-            print("GridFusion layouts changed, restarting MediaMTX...")
+            print("GridFusion layouts changed, triggering background MediaMTX restart...")
             rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
             rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-            self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
+            
+            def do_restart_gf():
+                time.sleep(1) # Give API time to respond
+                self.mediamtx.restart(self.cameras, self.rtsp_port, rtsp_user, rtsp_pass, self.get_grid_fusion(), 
+                                      debug_mode=self.debug_mode, advanced_settings=self.advanced_settings)
+            
+            threading.Thread(target=do_restart_gf, daemon=True).start()
 
         return self.get_grid_fusion()
     

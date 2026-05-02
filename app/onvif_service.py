@@ -140,6 +140,10 @@ class ONVIFService:
                 elif 'GetSystemDateAndTime' in soap_body:
                     return self._handle_get_system_date_time()
                 
+                # GetScopes
+                elif 'GetScopes' in soap_body:
+                    return self._handle_get_scopes()
+                
                 # GetNetworkInterfaces
                 elif 'GetNetworkInterfaces' in soap_body:
                     return self._handle_get_network_interfaces()
@@ -564,13 +568,15 @@ class ONVIFService:
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_profiles(self):
-        """Handle GetProfiles request"""
-        audio_main = """<tt:AudioSourceConfiguration token="AudioSourceConfig_Main">
+        """Handle GetProfiles request with unique tokens"""
+        cam_id = self.camera.id
+        
+        audio_main = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Main_{cam_id}">
                     <tt:Name>Main Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:SourceToken>AudioSource_1</tt:SourceToken>
+                    <tt:SourceToken>AudioSource_{cam_id}</tt:SourceToken>
                 </tt:AudioSourceConfiguration>
-                <tt:AudioEncoderConfiguration token="AudioEncoder_Main">
+                <tt:AudioEncoderConfiguration token="AudioEncoder_Main_{cam_id}">
                     <tt:Name>Main Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:Encoding>PCMU</tt:Encoding>
@@ -578,12 +584,12 @@ class ONVIFService:
                     <tt:SampleRate>8000</tt:SampleRate>
                 </tt:AudioEncoderConfiguration>"""
         
-        audio_sub = """<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub">
+        audio_sub = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub_{cam_id}">
                     <tt:Name>Sub Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:SourceToken>AudioSource_1</tt:SourceToken>
+                    <tt:SourceToken>AudioSource_{cam_id}</tt:SourceToken>
                 </tt:AudioSourceConfiguration>
-                <tt:AudioEncoderConfiguration token="AudioEncoder_Sub">
+                <tt:AudioEncoderConfiguration token="AudioEncoder_Sub_{cam_id}">
                     <tt:Name>Sub Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:Encoding>PCMU</tt:Encoding>
@@ -597,15 +603,15 @@ class ONVIFService:
                    xmlns:tt="http://www.onvif.org/ver10/schema">
     <SOAP-ENV:Body>
         <trt:GetProfilesResponse>
-            <trt:Profiles token="mainStream" fixed="true">
+            <trt:Profiles token="mainStream_{cam_id}" fixed="true">
                 <tt:Name>mainStream</tt:Name>
-                <tt:VideoSourceConfiguration token="VideoSourceMain">
+                <tt:VideoSourceConfiguration token="VideoSourceMain_{cam_id}">
                     <tt:Name>Main Video Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:SourceToken>VideoSourceMain</tt:SourceToken>
+                    <tt:SourceToken>VideoSourceMain_{cam_id}</tt:SourceToken>
                     <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
                 </tt:VideoSourceConfiguration>
-                <tt:VideoEncoderConfiguration token="VideoEncoderMain">
+                <tt:VideoEncoderConfiguration token="VideoEncoderMain_{cam_id}">
                     <tt:Name>Main Video Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:Encoding>H264</tt:Encoding>
@@ -630,15 +636,15 @@ class ONVIFService:
         
         if not getattr(self.camera, 'disable_substream', False):
             soap_response += f"""
-            <trt:Profiles token="subStream" fixed="true">
+            <trt:Profiles token="subStream_{cam_id}" fixed="true">
                 <tt:Name>subStream</tt:Name>
-                <tt:VideoSourceConfiguration token="VideoSourceSub">
+                <tt:VideoSourceConfiguration token="VideoSourceSub_{cam_id}">
                     <tt:Name>Sub Video Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:SourceToken>VideoSourceSub</tt:SourceToken>
+                    <tt:SourceToken>VideoSourceSub_{cam_id}</tt:SourceToken>
                     <tt:Bounds x="0" y="0" width="{self.camera.sub_width}" height="{self.camera.sub_height}"/>
                 </tt:VideoSourceConfiguration>
-                <tt:VideoEncoderConfiguration token="VideoEncoderSub">
+                <tt:VideoEncoderConfiguration token="VideoEncoderSub_{cam_id}">
                     <tt:Name>Sub Video Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:Encoding>H264</tt:Encoding>
@@ -675,7 +681,7 @@ class ONVIFService:
         
         # Check which profile token is requested
         stream_path = f"{self.camera.path_name}_main"  # Default to main stream
-        if 'profile_2' in soap_body or 'subStream' in soap_body or 'SubStream' in soap_body:
+        if f'subStream_{self.camera.id}' in soap_body or 'subStream' in soap_body:
             stream_path = f"{self.camera.path_name}_sub"
         
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -751,14 +757,15 @@ class ONVIFService:
         return Response(wsdl, mimetype='text/xml')
 
     def _handle_get_video_sources(self):
-        """Handle GetVideoSources request"""
+        """Handle GetVideoSources request with unique tokens"""
+        cam_id = self.camera.id
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
                    xmlns:tt="http://www.onvif.org/ver10/schema">
     <SOAP-ENV:Body>
         <trt:GetVideoSourcesResponse>
-            <trt:VideoSources token="VideoSourceMain">
+            <trt:VideoSources token="VideoSourceMain_{cam_id}">
                 <tt:Framerate>{self.camera.main_framerate}</tt:Framerate>
                 <tt:Resolution>
                     <tt:Width>{self.camera.main_width}</tt:Width>
@@ -769,13 +776,13 @@ class ONVIFService:
         
         if not getattr(self.camera, 'disable_substream', False):
             soap_response += f"""
-                <trt:VideoSources token="VideoSourceSub">
+                <trt:VideoSources token="VideoSourceSub_{cam_id}">
                     <tt:Framerate>{self.camera.sub_framerate}</tt:Framerate>
                     <tt:Resolution>
                         <tt:Width>{self.camera.sub_width}</tt:Width>
                         <tt:Height>{self.camera.sub_height}</tt:Height>
                     </tt:Resolution>
-                </tt:VideoSources>
+                </trt:VideoSources>
             """
         
         soap_response += """
@@ -786,17 +793,48 @@ class ONVIFService:
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_audio_sources(self):
-        """Handle GetAudioSources request"""
+        """Handle GetAudioSources request with unique tokens"""
+        cam_id = self.camera.id
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
                    xmlns:tt="http://www.onvif.org/ver10/schema">
     <SOAP-ENV:Body>
         <trt:GetAudioSourcesResponse>
-            <trt:AudioSources token="AudioSource_1">
+            <trt:AudioSources token="AudioSource_{cam_id}">
                 <tt:Channels>1</tt:Channels>
             </trt:AudioSources>
         </trt:GetAudioSourcesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
+        
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_scopes(self):
+        """Handle GetScopes request with unique device markers"""
+        scopes = [
+            "onvif://www.onvif.org/type/NetworkVideoTransmitter",
+            f"onvif://www.onvif.org/name/{self.camera.name.replace(' ', '_')}",
+            f"onvif://www.onvif.org/hardware/{self.camera.mac_address.replace(':', '').upper()}",
+            f"onvif://www.onvif.org/location/Home"
+        ]
+        
+        scope_xml = ""
+        for s in scopes:
+            scope_xml += f"""
+            <tds:Scopes>
+                <tt:ScopeDef>Fixed</tt:ScopeDef>
+                <tt:ScopeItem>{s}</tt:ScopeItem>
+            </tds:Scopes>"""
+
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <tds:GetScopesResponse>{scope_xml}
+        </tds:GetScopesResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        
         return Response(soap_response, mimetype='application/soap+xml')
