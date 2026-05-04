@@ -1337,6 +1337,7 @@ def get_web_ui_html(current_settings=None):
             
             <form id="camera-form" onsubmit="saveCamera(event)">
                 <input type="hidden" id="camera-id" value="">
+                <input type="hidden" id="cameraUuid" value="">
                 
                 <div class="form-group" id="copy-from-group">
                     <label class="form-label">Copy Settings From</label>
@@ -2797,8 +2798,6 @@ def get_web_ui_html(current_settings=None):
                 // Don't copy ONVIF port or UUID (they need to be unique)
                 document.getElementById('onvifPort').value = ''; 
                 document.getElementById('cameraUuid').value = ''; 
-                document.getElementById('onvifUsername').value = camera.onvifUsername || 'admin';
-                document.getElementById('onvifPassword').value = camera.onvifPassword || 'admin';
                 
                 alert('Settings copied from ' + camera.name);
             }} catch (e) {{
@@ -3085,40 +3084,58 @@ def get_web_ui_html(current_settings=None):
                 gateway: document.getElementById('gateway').value,
                 uuid: document.getElementById('cameraUuid').value || null
             }};
-            
             // Add ONVIF port if specified
             const onvifPort = document.getElementById('onvifPort').value;
             if (onvifPort) {{
                 data.onvifPort = parseInt(onvifPort);
             }}
             
+            const url = isEdit ? `/api/cameras/${{cameraId}}` : '/api/cameras';
+            const method = isEdit ? 'PUT' : 'POST';
+
             try {{
-                const url = isEdit ? `/api/cameras/${{cameraId}}` : '/api/cameras';
-                const method = isEdit ? 'PUT' : 'POST';
-                
+                console.log(`[SaveCamera] Initiating ${{method}} to ${{url}}...`);
                 const response = await fetch(url, {{
                     method: method,
                     headers: {{'Content-Type': 'application/json'}},
                     body: JSON.stringify(data)
                 }});
                 
+                console.log(`[SaveCamera] Response status: ${{response.status}}`);
+                
                 if (response.ok) {{
+                    console.log('[SaveCamera] Save successful, closing modal and reloading data...');
                     closeModal();
-                    await loadData();
+                    
+                    // Reset button state immediately after closing modal so it's ready for next time
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                    
+                    // Now reload data in the background (no need to await it for the UI to be responsive)
+                    loadData(); 
                 }} else {{
                     const error = await response.json();
+                    console.error('[SaveCamera] Save failed:', error);
                     alert('Error saving camera: ' + (error.error || 'Unknown error'));
+                    
+                    // Reset button state on error
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
                 }}
             }} catch (error) {{
-                console.error('Error saving camera:', error);
-                alert('Error saving camera');
+                console.error('[SaveCamera] Network/execution error:', error);
+                alert('An error occurred while saving the camera. Check console for details.');
             }} finally {{
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                // Ensure button is always reset if not already done
+                if (btn.disabled) {{
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }}
             }}
         }}
         
         async function deleteCamera(id) {{
+            if (!confirm('Are you sure you want to delete this camera?')) return;
             try {{
                 await fetch(`/api/cameras/${{id}}`, {{method: 'DELETE'}});
                 await loadData();
