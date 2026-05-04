@@ -41,6 +41,7 @@ class CameraManager:
         
         # GridFusion Layouts
         self.grid_fusion_layouts = []
+        self.grid_fusion_looks = []
 
         # Stream Watchdog tracking
         self.stale_path_times = {} # path_name -> first_stale_timestamp
@@ -184,6 +185,7 @@ class CameraManager:
                 'showSnapshots': True,
                 'outputFramerate': 5
             }]
+            self.grid_fusion_looks = []
             self.save_config()
         
         # Migrate old FFmpeg options if needed
@@ -249,8 +251,8 @@ class CameraManager:
                 'ipWhitelist': getattr(self, 'ip_whitelist', [])
             },
             'gridFusion': {
-                'layouts': self.grid_fusion_layouts,
-                'looks': self.grid_fusion_looks
+                'layouts': getattr(self, 'grid_fusion_layouts', []),
+                'looks': getattr(self, 'grid_fusion_looks', [])
             },
             'advancedSettings': self.advanced_settings,
             'auth': {
