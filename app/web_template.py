@@ -1160,7 +1160,7 @@ def get_web_ui_html(current_settings=None):
         }}
     </style>
 </head>
-<body>
+<body class="theme-{current_settings.get('theme', 'classic') if current_settings else 'classic'}">
     <div class="container">
         <div class="header">
             <div style="position: absolute; top: 15px; right: 15px; display: flex; align-items: center; gap: 15px;">
@@ -1168,18 +1168,18 @@ def get_web_ui_html(current_settings=None):
                 <div style="display: flex; align-items: center; gap: 8px; padding-left: 15px; border-left: 1px solid var(--card-border);">
                     <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Theme</span>
                     <select id="themeSwitcher" class="form-input" style="width: auto; padding: 4px 8px; font-size: 13px; cursor: pointer; border-color: var(--card-border);" onchange="changeTheme(this.value)">
-                        <option value="classic">Classic</option>
-                        <option value="dark">Modern Dark</option>
-                        <option value="nord">Nordic</option>
-                        <option value="dracula">Dracula (Pro Dark)</option>
-                        <option value="solar-light">Solarized</option>
-                        <option value="midnight">Midnight</option>
-                        <option value="emerald">Emerald</option>
-                        <option value="sunset">Sunset</option>
-                        <option value="matrix">Matrix</option>
-                        <option value="slate">Slate</option>
-                        <option value="cyberpunk">Cyberpunk</option>
-                        <option value="amoled">Amoled</option>
+                        <option value="classic" {"selected" if current_settings and current_settings.get('theme') == 'classic' else ""}>Classic</option>
+                        <option value="dark" {"selected" if current_settings and current_settings.get('theme') == 'dark' else ""}>Modern Dark</option>
+                        <option value="nord" {"selected" if current_settings and current_settings.get('theme') == 'nord' else ""}>Nordic</option>
+                        <option value="dracula" {"selected" if not current_settings or current_settings.get('theme') == 'dracula' else ""}>Dracula (Pro Dark)</option>
+                        <option value="solar-light" {"selected" if current_settings and current_settings.get('theme') == 'solar-light' else ""}>Solarized</option>
+                        <option value="midnight" {"selected" if current_settings and current_settings.get('theme') == 'midnight' else ""}>Midnight</option>
+                        <option value="emerald" {"selected" if current_settings and current_settings.get('theme') == 'emerald' else ""}>Emerald</option>
+                        <option value="sunset" {"selected" if current_settings and current_settings.get('theme') == 'sunset' else ""}>Sunset</option>
+                        <option value="matrix" {"selected" if current_settings and current_settings.get('theme') == 'matrix' else ""}>Matrix</option>
+                        <option value="slate" {"selected" if current_settings and current_settings.get('theme') == 'slate' else ""}>Slate</option>
+                        <option value="cyberpunk" {"selected" if current_settings and current_settings.get('theme') == 'cyberpunk' else ""}>Cyberpunk</option>
+                        <option value="amoled" {"selected" if current_settings and current_settings.get('theme') == 'amoled' else ""}>Amoled</option>
                     </select>
                 </div>
             </div>

@@ -741,7 +741,7 @@ class MediaMTXManager:
                 print(f"MediaMTX running on RTSP port {MEDIAMTX_PORT}")
                 return True
             else:
-                print("MediaMTX failed to start. Check console output above.")
+                print("MediaMTX failed to start or was stopped. Check console output above.")
                 return False
                 
         except Exception as e:
