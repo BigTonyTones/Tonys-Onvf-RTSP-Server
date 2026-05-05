@@ -232,35 +232,6 @@ class CameraManager:
                 self.save_config()
                 print("  ✓ FFmpeg options migrated successfully")
             
-    def save_config(self):
-        """Save configuration to file atomically"""
-        config = {
-            'cameras': [cam.to_config_dict() for cam in self.cameras],  # Use to_config_dict() to exclude status
-            'settings': {
-                'serverIp': getattr(self, 'server_ip', 'localhost'),
-                'openBrowser': getattr(self, 'open_browser', True),
-                'theme': getattr(self, 'theme', 'dracula'),
-                'gridColumns': getattr(self, 'grid_columns', 3),
-                'rtspPort': getattr(self, 'rtsp_port', 8554),
-                'autoBoot': getattr(self, 'auto_boot', False),
-                'globalUsername': getattr(self, 'global_username', 'admin'),
-                'globalPassword': getattr(self, 'global_password', 'admin'),
-                'rtspAuthEnabled': getattr(self, 'rtsp_auth_enabled', False),
-                'debugMode': getattr(self, 'debug_mode', False),
-                'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
-                'ipWhitelist': getattr(self, 'ip_whitelist', [])
-            },
-            'gridFusion': {
-                'layouts': getattr(self, 'grid_fusion_layouts', []),
-                'looks': getattr(self, 'grid_fusion_looks', [])
-            },
-                'advancedSettings': self.advanced_settings,
-            'auth': {
-                'enabled': self.auth_enabled,
-                'username': self.username,
-                'password_hash': self.password_hash
-            }
-        }
         
     def save_config(self):
         """Save current camera configuration and settings to file"""
@@ -271,22 +242,29 @@ class CameraManager:
             'cameras': [cam.to_config_dict() for cam in self.cameras],
             'next_id': self.next_id,
             'next_onvif_port': self.next_onvif_port,
-            'serverIp': getattr(self, 'server_ip', 'localhost'),
-            'globalUsername': self.global_username,
-            'globalPassword': self.global_password,
-            'rtspAuthEnabled': self.rtsp_auth_enabled,
-            'rtspPort': self.rtsp_port,
-            'openBrowser': getattr(self, 'open_browser', True),
-            'authEnabled': self.auth_enabled,
-            'theme': getattr(self, 'theme', 'classic'),
-            'gridColumns': getattr(self, 'grid_columns', 3),
+            'settings': {
+                'serverIp': getattr(self, 'server_ip', 'localhost'),
+                'globalUsername': self.global_username,
+                'globalPassword': self.global_password,
+                'rtspAuthEnabled': self.rtsp_auth_enabled,
+                'rtspPort': self.rtsp_port,
+                'openBrowser': getattr(self, 'open_browser', True),
+                'theme': getattr(self, 'theme', 'classic'),
+                'gridColumns': getattr(self, 'grid_columns', 3),
+                'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
+                'ipWhitelist': getattr(self, 'ip_whitelist', []),
+                'debugMode': self.debug_mode
+            },
             'gridFusion': {
                 'layouts': getattr(self, 'grid_fusion_layouts', []),
                 'looks': getattr(self, 'grid_fusion_looks', [])
             },
-            'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
             'advancedSettings': getattr(self, 'advanced_settings', {}),
-            'debugMode': self.debug_mode
+            'auth': {
+                'enabled': self.auth_enabled,
+                'username': self.username,
+                'password_hash': self.password_hash
+            }
         }
         
         try:
