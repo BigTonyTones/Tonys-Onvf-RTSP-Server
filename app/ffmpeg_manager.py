@@ -436,24 +436,25 @@ class FFmpegManager:
         """Get the path to ffmpeg"""
         system = platform.system().lower()
         
-        # Linux: Prioritize system-wide FFmpeg
-        if system == "linux":
+        # Linux/macOS: Prioritize existing FFmpeg (system path or local)
+        if system in ["linux", "darwin"]:
             # 1. Try to find existing
             path = self._find_ffmpeg_binary()
             if path:
                 return path
                 
-            # 2. Try to install
-            if self.install_system_ffmpeg():
+            # 2. Try to install (Linux only)
+            if system == "linux" and self.install_system_ffmpeg():
                 # Check again
                 path = self._find_ffmpeg_binary()
                 if path:
                     return path
             
-            print("  FFmpeg not found locally or in system path.")
-            return "ffmpeg" # Return default and let it fail
+            if system == "linux":
+                print("  FFmpeg not found locally or in system path.")
+                return "ffmpeg" # Return default and let it fail
             
-        # Windows/macOS: Use dedicated local FFmpeg only
+        # Windows/macOS Fallback: Use dedicated local FFmpeg
         executable = "ffmpeg.exe" if system == "windows" else "ffmpeg"
         
         # 1. Check local directory (dedicated copy for this application)
@@ -466,6 +467,12 @@ class FFmpegManager:
             print(f"\n  Local FFmpeg not found. Attempting to download for {system}...")
             if self.download_ffmpeg():
                 return os.path.join(self.ffmpeg_dir, executable)
+        
+        # 3. Check system path for macOS if local not found (already handled above for most cases, but as safety)
+        if system == "darwin":
+            path = shutil.which(executable)
+            if path:
+                return path
         
         return local_path # Return the expected local path even if missing
 
@@ -502,20 +509,22 @@ class FFmpegManager:
         """Get the path to ffprobe"""
         system = platform.system().lower()
         
-        # Linux: Check system path
-        if system == "linux":
+        # Linux/macOS: Check system path or local
+        if system in ["linux", "darwin"]:
             # 1. Try to find existing
             path = self._find_ffprobe_binary()
             if path:
                 return path
-            # Attempt install if missing (although ffmpeg install usually covers it)
-            if self.install_system_ffmpeg():
+            # Attempt install if missing (Linux only)
+            if system == "linux" and self.install_system_ffmpeg():
                  path = self._find_ffprobe_binary()
                  if path:
                      return path
-            return "ffprobe"
+            
+            if system == "linux":
+                return "ffprobe"
 
-        # Windows/macOS: Use dedicated local FFprobe only
+        # Windows/macOS Fallback: Use dedicated local FFprobe
         # 1. Check local directory (dedicated copy for this application)
         ffprobe_path = self.is_ffprobe_available()
         if ffprobe_path:
@@ -526,6 +535,12 @@ class FFmpegManager:
             print(f"\n  FFprobe not found. Attempting to download for {system}...")
             if self.download_ffmpeg():
                 return os.path.join(self.ffmpeg_dir, self.ffprobe_executable)
+        
+        # 3. Check system path for macOS if local not found
+        if system == "darwin":
+            path = shutil.which(self.ffprobe_executable)
+            if path:
+                return path
         
         return self.ffprobe_executable # Fallback
 
