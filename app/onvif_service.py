@@ -246,6 +246,22 @@ class ONVIFService:
                 elif 'GetAudioSources' in soap_body and getattr(self.camera, 'enable_audio', False):
                     return self._handle_get_audio_sources()
                 
+                # GetAudioEncoderConfigurations
+                elif 'GetAudioEncoderConfigurations' in soap_body and getattr(self.camera, 'enable_audio', False):
+                    return self._handle_get_audio_encoder_configs()
+                
+                # GetAudioSourceConfigurations
+                elif 'GetAudioSourceConfigurations' in soap_body and getattr(self.camera, 'enable_audio', False):
+                    return self._handle_get_audio_source_configs()
+                
+                # GetVideoEncoderConfigurations
+                elif 'GetVideoEncoderConfigurations' in soap_body:
+                    return self._handle_get_video_encoder_configs()
+                
+                # GetVideoSourceConfigurations
+                elif 'GetVideoSourceConfigurations' in soap_body:
+                    return self._handle_get_video_source_configs()
+                
                 # Default: return profiles
                 return self._handle_get_profiles()
                 
@@ -571,6 +587,21 @@ class ONVIFService:
         """Handle GetProfiles request with unique tokens"""
         cam_id = self.camera.id
         
+        # Determine actual audio encoding for ONVIF reporting
+        audio_enc = "PCMU" # Default
+        audio_rate = 8000
+        audio_bitrate = 64
+        
+        if getattr(self.camera, 'enable_audio', False):
+            # If transcoding, use the target codec
+            if getattr(self.camera, 'transcode_main_audio', False):
+                codec = getattr(self.camera, 'audio_encoding_main', 'aac').upper()
+                audio_enc = "AAC" if codec == "AAC" else codec
+                audio_rate = int(str(getattr(self.camera, 'audio_sample_rate_main', '8000')).replace('khz', '000').replace('Hz', ''))
+                audio_bitrate = int(str(getattr(self.camera, 'audio_bitrate_main', '64k')).replace('k', '').replace('kbps', ''))
+            # Note: If copying, we still report PCMU as a safe baseline, 
+            # but we should ideally probe the source.
+            
         audio_main = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Main_{cam_id}">
                     <tt:Name>Main Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
@@ -579,11 +610,21 @@ class ONVIFService:
                 <tt:AudioEncoderConfiguration token="AudioEncoder_Main_{cam_id}">
                     <tt:Name>Main Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:Encoding>PCMU</tt:Encoding>
-                    <tt:Bitrate>64</tt:Bitrate>
-                    <tt:SampleRate>8000</tt:SampleRate>
+                    <tt:Encoding>{audio_enc}</tt:Encoding>
+                    <tt:Bitrate>{audio_bitrate}</tt:Bitrate>
+                    <tt:SampleRate>{audio_rate}</tt:SampleRate>
                 </tt:AudioEncoderConfiguration>"""
         
+        # Audio for sub stream
+        audio_enc_sub = "PCMU"
+        audio_rate_sub = 8000
+        audio_bitrate_sub = 64
+        if getattr(self.camera, 'transcode_sub_audio', False):
+            codec = getattr(self.camera, 'audio_encoding_sub', 'aac').upper()
+            audio_enc_sub = "AAC" if codec == "AAC" else codec
+            audio_rate_sub = int(str(getattr(self.camera, 'audio_sample_rate_sub', '8000')).replace('khz', '000').replace('Hz', ''))
+            audio_bitrate_sub = int(str(getattr(self.camera, 'audio_bitrate_sub', '64k')).replace('k', '').replace('kbps', ''))
+
         audio_sub = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub_{cam_id}">
                     <tt:Name>Sub Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
@@ -592,9 +633,9 @@ class ONVIFService:
                 <tt:AudioEncoderConfiguration token="AudioEncoder_Sub_{cam_id}">
                     <tt:Name>Sub Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
-                    <tt:Encoding>PCMU</tt:Encoding>
-                    <tt:Bitrate>64</tt:Bitrate>
-                    <tt:SampleRate>8000</tt:SampleRate>
+                    <tt:Encoding>{audio_enc_sub}</tt:Encoding>
+                    <tt:Bitrate>{audio_bitrate_sub}</tt:Bitrate>
+                    <tt:SampleRate>{audio_rate_sub}</tt:SampleRate>
                 </tt:AudioEncoderConfiguration>"""
 
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -808,6 +849,156 @@ class ONVIFService:
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_audio_encoder_configs(self):
+        """Handle GetAudioEncoderConfigurations request"""
+        cam_id = self.camera.id
+        
+        # Determine actual audio encoding for ONVIF reporting
+        audio_enc = "PCMU"
+        audio_rate = 8000
+        audio_bitrate = 64
+        if getattr(self.camera, 'transcode_main_audio', False):
+            codec = getattr(self.camera, 'audio_encoding_main', 'aac').upper()
+            audio_enc = "AAC" if codec == "AAC" else codec
+            audio_rate = int(str(getattr(self.camera, 'audio_sample_rate_main', '8000')).replace('khz', '000').replace('Hz', ''))
+            audio_bitrate = int(str(getattr(self.camera, 'audio_bitrate_main', '64k')).replace('k', '').replace('kbps', ''))
+
+        audio_enc_sub = "PCMU"
+        audio_rate_sub = 8000
+        audio_bitrate_sub = 64
+        if getattr(self.camera, 'transcode_sub_audio', False):
+            codec = getattr(self.camera, 'audio_encoding_sub', 'aac').upper()
+            audio_enc_sub = "AAC" if codec == "AAC" else codec
+            audio_rate_sub = int(str(getattr(self.camera, 'audio_sample_rate_sub', '8000')).replace('khz', '000').replace('Hz', ''))
+            audio_bitrate_sub = int(str(getattr(self.camera, 'audio_bitrate_sub', '64k')).replace('k', '').replace('kbps', ''))
+
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetAudioEncoderConfigurationsResponse>
+            <trt:Configurations token="AudioEncoder_Main_{cam_id}">
+                <tt:Name>Main Audio Encoder</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:Encoding>{audio_enc}</tt:Encoding>
+                <tt:Bitrate>{audio_bitrate}</tt:Bitrate>
+                <tt:SampleRate>{audio_rate}</tt:SampleRate>
+            </trt:Configurations>
+            <trt:Configurations token="AudioEncoder_Sub_{cam_id}">
+                <tt:Name>Sub Audio Encoder</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:Encoding>{audio_enc_sub}</tt:Encoding>
+                <tt:Bitrate>{audio_bitrate_sub}</tt:Bitrate>
+                <tt:SampleRate>{audio_rate_sub}</tt:SampleRate>
+            </trt:Configurations>
+        </trt:GetAudioEncoderConfigurationsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_audio_source_configs(self):
+        """Handle GetAudioSourceConfigurations request"""
+        cam_id = self.camera.id
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetAudioSourceConfigurationsResponse>
+            <trt:Configurations token="AudioSourceConfig_Main_{cam_id}">
+                <tt:Name>Main Audio Source</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:SourceToken>AudioSource_{cam_id}</tt:SourceToken>
+            </trt:Configurations>
+            <trt:Configurations token="AudioSourceConfig_Sub_{cam_id}">
+                <tt:Name>Sub Audio Source</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:SourceToken>AudioSource_{cam_id}</tt:SourceToken>
+            </trt:Configurations>
+        </trt:GetAudioSourceConfigurationsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_video_encoder_configs(self):
+        """Handle GetVideoEncoderConfigurations request"""
+        cam_id = self.camera.id
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetVideoEncoderConfigurationsResponse>
+            <trt:Configurations token="VideoEncoderMain_{cam_id}">
+                <tt:Name>Main Video Encoder</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:Encoding>H264</tt:Encoding>
+                <tt:Resolution>
+                    <tt:Width>{self.camera.main_width}</tt:Width>
+                    <tt:Height>{self.camera.main_height}</tt:Height>
+                </tt:Resolution>
+                <tt:Quality>5</tt:Quality>
+                <tt:RateControl>
+                    <tt:FrameRateLimit>{self.camera.main_framerate}</tt:FrameRateLimit>
+                    <tt:EncodingInterval>1</tt:EncodingInterval>
+                    <tt:BitrateLimit>4096</tt:BitrateLimit>
+                </tt:RateControl>
+                <tt:H264>
+                    <tt:GovLength>{self.camera.main_framerate}</tt:GovLength>
+                    <tt:H264Profile>Main</tt:H264Profile>
+                </tt:H264>
+            </trt:Configurations>
+            <trt:Configurations token="VideoEncoderSub_{cam_id}">
+                <tt:Name>Sub Video Encoder</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:Encoding>H264</tt:Encoding>
+                <tt:Resolution>
+                    <tt:Width>{self.camera.sub_width}</tt:Width>
+                    <tt:Height>{self.camera.sub_height}</tt:Height>
+                </tt:Resolution>
+                <tt:Quality>3</tt:Quality>
+                <tt:RateControl>
+                    <tt:FrameRateLimit>{self.camera.sub_framerate}</tt:FrameRateLimit>
+                    <tt:EncodingInterval>1</tt:EncodingInterval>
+                    <tt:BitrateLimit>1024</tt:BitrateLimit>
+                </tt:RateControl>
+                <tt:H264>
+                    <tt:GovLength>{self.camera.sub_framerate}</tt:GovLength>
+                    <tt:H264Profile>Baseline</tt:H264Profile>
+                </tt:H264>
+            </trt:Configurations>
+        </trt:GetVideoEncoderConfigurationsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_video_source_configs(self):
+        """Handle GetVideoSourceConfigurations request"""
+        cam_id = self.camera.id
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetVideoSourceConfigurationsResponse>
+            <trt:Configurations token="VideoSourceMain_{cam_id}">
+                <tt:Name>Main Video Source</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:SourceToken>VideoSourceMain_{cam_id}</tt:SourceToken>
+                <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
+            </trt:Configurations>
+            <trt:Configurations token="VideoSourceSub_{cam_id}">
+                <tt:Name>Sub Video Source</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:SourceToken>VideoSourceSub_{cam_id}</tt:SourceToken>
+                <tt:Bounds x="0" y="0" width="{self.camera.sub_width}" height="{self.camera.sub_height}"/>
+            </trt:Configurations>
+        </trt:GetVideoSourceConfigurationsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_get_scopes(self):
