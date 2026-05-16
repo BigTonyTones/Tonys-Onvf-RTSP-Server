@@ -53,3 +53,5 @@ debug_api.py
 
 # Deployment (contains sensitive credentials - NEVER commit)
 deploy_to_server.ps1
+scratch/
+force_accept.ps1
