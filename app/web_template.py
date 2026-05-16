@@ -1282,7 +1282,7 @@ def get_web_ui_html(current_settings=None):
             <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
                 <span>Total 2,000 lines captured in memory</span>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500;">
-                    <input type="checkbox" id="autoScrollLogs" checked style="width: auto; cursor: pointer; transform: scale(1.1);">
+                    <input type="checkbox" id="autoScrollLogs" style="width: auto; cursor: pointer; transform: scale(1.1);">
                     <span>Auto-scroll to bottom</span>
                 </label>
             </div>
@@ -1395,6 +1395,36 @@ def get_web_ui_html(current_settings=None):
                             </label>
                         </label>
 
+                        <div id="sub-stream-management-header" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                            <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-microchip"></i> Sub Stream Management
+                            </h3>
+                            
+                            <div class="form-row" style="gap: 24px; margin-bottom: 0;">
+                                <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                     <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Disable Substream</span>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="disableSubstream" onchange="toggleSubStreamFields()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </label>
+                                    <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
+                                </div>
+
+                                <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                     <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Use Main as Substream</span>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="useMainAsSubstream" onchange="toggleSubStreamFields()">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </label>
+                                    <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
                     
                     <!-- Main Stream Column -->
@@ -1403,46 +1433,92 @@ def get_web_ui_html(current_settings=None):
                             <i class="fas fa-video"></i> Main Stream Settings
                         </h3>
                         
-                        <div class="form-group">
-                            <label class="form-label">Main Stream Path</label>
-                            <input type="text" class="form-input" id="mainPath" placeholder="/stream1" value="/stream1" required>
-                        </div>
-                        
-                        <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
-                            <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                                <div>
-                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Main Audio to AAC</span>
-                                    <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="transcodeMainAudio">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </label>
-
-                            <div class="auto-start-row" style="margin-bottom: 15px;">
-                                <span class="auto-start-label" style="font-size: 13px;">Transcode Main Stream</span>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="transcodeMain">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                        <div style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">Main Stream Path</label>
+                                <input type="text" class="form-input" id="mainPath" placeholder="/stream1" value="/stream1" required>
                             </div>
                             
                             <label class="form-label">Resolution & FPS</label>
-                            <div class="form-row" style="margin-bottom: 10px;">
+                            <div class="form-row" style="margin-bottom: 0;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <input type="number" class="form-input" id="mainWidth" placeholder="Width" value="1920" required>
                                 </div>
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <input type="number" class="form-input" id="mainHeight" placeholder="Height" value="1080" required>
                                 </div>
+                                <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
+                                    <input type="number" class="form-input" id="mainFramerate" placeholder="FPS" value="30" required>
+                                </div>
                             </div>
-                            <input type="number" class="form-input" id="mainFramerate" placeholder="FPS" value="30" required>
                         </div>
                         
-                        <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('main')" style="width:100%; margin-top: 12px; font-size: 13px;">
+                        <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('main')" style="width:100%; margin-bottom: 20px; font-size: 13px;">
                             Fetch Main Stream Info
                         </button>
+                        
+                        <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                            <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                                <div>
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Main Audio</span>
+                                    <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="transcodeMainAudio" onchange="toggleAudioSettings('main')">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
+
+                            <div id="mainAudioSettings" style="display: none; margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 11px;">Audio Encoding</label>
+                                    <select class="form-input" id="audioEncodingMain" style="font-size: 12px; padding: 6px 10px;">
+                                        <option value="aac">AAC</option>
+                                        <option value="g711ulaw">G.711ulaw</option>
+                                        <option value="g711alaw">G.711alaw</option>
+                                        <option value="g722.1">G.722.1</option>
+                                        <option value="mp2l2">MP2L2</option>
+                                        <option value="g726">G.726</option>
+                                        <option value="pcm">PCM</option>
+                                        <option value="mp3">MP3</option>
+                                    </select>
+                                </div>
+                                <div class="form-row" style="gap: 12px; margin-bottom: 0;">
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Sampling Rate</label>
+                                        <select class="form-input" id="audioSampleRateMain" style="font-size: 12px; padding: 6px 10px;">
+                                            <option value="8000">8kHz</option>
+                                            <option value="16000">16kHz</option>
+                                            <option value="32000">32kHz</option>
+                                            <option value="44100">44.1kHz</option>
+                                            <option value="48000">48kHz</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Audio Stream Bitrate</label>
+                                        <select class="form-input" id="audioBitrateMain" style="font-size: 12px; padding: 6px 10px;">
+                                            <option value="16k">16kbps</option>
+                                            <option value="32k">32kbps</option>
+                                            <option value="64k">64kbps</option>
+                                            <option value="128k">128kbps</option>
+                                            <option value="256k">256kbps</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="auto-start-row" style="margin-bottom: 15px;">
+                                <span class="auto-start-label" style="font-size: 13px;">Transcode Main Video Stream</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="transcodeMain" onchange="toggleTranscodeNotice('main')">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div id="mainTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: -10px; margin-bottom: 15px; font-weight: 500;">
+                                <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
+                            </div>
+                        </div>
+                        
                     </div>
 
                     <!-- Sub Stream Column -->
@@ -1451,69 +1527,93 @@ def get_web_ui_html(current_settings=None):
                             <i class="fas fa-microchip"></i> Sub Stream Settings
                         </h3>
                         
-                        <div class="form-group" style="margin-bottom: 20px;">
-                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Disable Substream</span>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="disableSubstream" onchange="toggleSubStreamFields()">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </label>
-                            <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
-                        </div>
-
                         <div id="sub-stream-fields-container">
-                            <div class="form-group" style="margin-bottom: 20px;">
-                                 <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Use Main as Substream</span>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="useMainAsSubstream" onchange="toggleSubStreamFields()">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </label>
-                                <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
-                            </div>
 
-                            <div class="form-group" id="subPathContainer">
-                                <label class="form-label">Sub Stream Path</label>
-                                <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2">
-                            </div>
-                            
-                            <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px;">
-                                <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                                    <div>
-                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio to AAC</span>
-                                        <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="transcodeSubAudio">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </label>
-                                
-                                <div class="auto-start-row" style="margin-bottom: 15px;">
-                                    <span class="auto-start-label" style="font-size: 13px;">Transcode Substream</span>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="transcodeSub">
-                                        <span class="toggle-slider"></span>
-                                    </label>
+                            <div style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 20px;">
+                                <div class="form-group" id="subPathContainer">
+                                    <label class="form-label">Sub Stream Path</label>
+                                    <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2">
                                 </div>
                                 
                                 <label class="form-label">Resolution & FPS</label>
-                                <div class="form-row" style="margin-bottom: 10px;">
+                                <div class="form-row" style="margin-bottom: 0;">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640">
                                     </div>
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480">
                                     </div>
+                                    <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
+                                        <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15">
+                                    </div>
                                 </div>
-                                <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15">
                             </div>
                             
-                            <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-top: 12px; font-size: 13px;">
+                            <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-top: 12px; margin-bottom: 20px; font-size: 13px;">
                                 Fetch Sub Stream Info
                             </button>
+
+                            <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                                    <div>
+                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio</span>
+                                        <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="transcodeSubAudio" onchange="toggleAudioSettings('sub')">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </label>
+
+                                <div id="subAudioSettings" style="display: none; margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                                    <div class="form-group" style="margin-bottom: 12px;">
+                                        <label class="form-label" style="font-size: 11px;">Audio Encoding</label>
+                                        <select class="form-input" id="audioEncodingSub" style="font-size: 12px; padding: 6px 10px;">
+                                            <option value="aac">AAC</option>
+                                            <option value="g711ulaw">G.711ulaw</option>
+                                            <option value="g711alaw">G.711alaw</option>
+                                            <option value="g722.1">G.722.1</option>
+                                            <option value="mp2l2">MP2L2</option>
+                                            <option value="g726">G.726</option>
+                                            <option value="pcm">PCM</option>
+                                            <option value="mp3">MP3</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row" style="gap: 12px; margin-bottom: 0;">
+                                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                            <label class="form-label" style="font-size: 11px;">Sampling Rate</label>
+                                            <select class="form-input" id="audioSampleRateSub" style="font-size: 12px; padding: 6px 10px;">
+                                                <option value="8000">8kHz</option>
+                                                <option value="16000">16kHz</option>
+                                                <option value="32000">32kHz</option>
+                                                <option value="44100">44.1kHz</option>
+                                                <option value="48000">48kHz</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                            <label class="form-label" style="font-size: 11px;">Audio Stream Bitrate</label>
+                                            <select class="form-input" id="audioBitrateSub" style="font-size: 12px; padding: 6px 10px;">
+                                                <option value="16k">16kbps</option>
+                                                <option value="32k">32kbps</option>
+                                                <option value="64k">64kbps</option>
+                                                <option value="128k">128kbps</option>
+                                                <option value="256k">256kbps</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="auto-start-row" style="margin-bottom: 15px;">
+                                    <span class="auto-start-label" style="font-size: 13px;">Transcode Sub Video Stream</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="transcodeSub" onchange="toggleTranscodeNotice('sub')">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div id="subTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: -10px; margin-bottom: 15px; font-weight: 500;">
+                                    <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2394,6 +2494,7 @@ def get_web_ui_html(current_settings=None):
                         <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
                             ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
                             ${{cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;">${{cam.nicMac}}</div>` : ''}}
+                            ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;"><i class="fas fa-volume-up" style="font-size: 9px;"></i> Audio Transcoded</div>` : ''}}
                         </div>
                     </div>
                     <div class="camera-actions">
@@ -2786,6 +2887,19 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
                 document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
                 
+                // Copy audio transcoding settings
+                document.getElementById('audioEncodingMain').value = camera.audioEncodingMain || 'aac';
+                document.getElementById('audioSampleRateMain').value = camera.audioSampleRateMain || '44100';
+                document.getElementById('audioBitrateMain').value = camera.audioBitrateMain || '128k';
+                document.getElementById('audioEncodingSub').value = camera.audioEncodingSub || 'aac';
+                document.getElementById('audioSampleRateSub').value = camera.audioSampleRateSub || '44100';
+                document.getElementById('audioBitrateSub').value = camera.audioBitrateSub || '64k';
+                
+                toggleAudioSettings('main');
+                toggleAudioSettings('sub');
+                toggleTranscodeNotice('main');
+                toggleTranscodeNotice('sub');
+                
                 // Populate resolution and frame rate fields
                 document.getElementById('mainWidth').value = camera.mainWidth || 1920;
                 document.getElementById('mainHeight').value = camera.mainHeight || 1080;
@@ -2919,6 +3033,18 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('transcodeMainAudio').checked = false;
             document.getElementById('transcodeSubAudio').checked = false;
             
+            // Audio settings reset
+            document.getElementById('audioEncodingMain').value = 'aac';
+            document.getElementById('audioSampleRateMain').value = '44100';
+            document.getElementById('audioBitrateMain').value = '128k';
+            document.getElementById('audioEncodingSub').value = 'aac';
+            document.getElementById('audioSampleRateSub').value = '44100';
+            document.getElementById('audioBitrateSub').value = '64k';
+            toggleAudioSettings('main');
+            toggleAudioSettings('sub');
+            toggleTranscodeNotice('main');
+            toggleTranscodeNotice('sub');
+            
             // Network reset
             document.getElementById('useVirtualNic').checked = false;
             document.getElementById('parentInterface').value = '';
@@ -2992,6 +3118,19 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('enableAudio').checked = camera.enableAudio || false;
             document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
             document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
+            
+            // Populate audio transcoding settings
+            document.getElementById('audioEncodingMain').value = camera.audioEncodingMain || 'aac';
+            document.getElementById('audioSampleRateMain').value = camera.audioSampleRateMain || '44100';
+            document.getElementById('audioBitrateMain').value = camera.audioBitrateMain || '128k';
+            document.getElementById('audioEncodingSub').value = camera.audioEncodingSub || 'aac';
+            document.getElementById('audioSampleRateSub').value = camera.audioSampleRateSub || '44100';
+            document.getElementById('audioBitrateSub').value = camera.audioBitrateSub || '64k';
+            
+            toggleAudioSettings('main');
+            toggleAudioSettings('sub');
+            toggleTranscodeNotice('main');
+            toggleTranscodeNotice('sub');
             document.getElementById('onvifPort').value = camera.onvifPort || '';
             document.getElementById('cameraUuid').value = camera.uuid || '';
             
@@ -3039,6 +3178,22 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('camera-modal').classList.remove('active');
             document.getElementById('camera-form').reset();
         }}
+
+        function toggleAudioSettings(type) {{
+            const checked = document.getElementById(`transcode${{type.charAt(0).toUpperCase() + type.slice(1)}}Audio`).checked;
+            const settings = document.getElementById(`${{type}}AudioSettings`);
+            if (settings) {{
+                settings.style.display = checked ? 'block' : 'none';
+            }}
+        }}
+
+        function toggleTranscodeNotice(type) {{
+            const checked = document.getElementById(`transcode${{type.charAt(0).toUpperCase() + type.slice(1)}}`).checked;
+            const notice = document.getElementById(`${{type}}TranscodeNotice`);
+            if (notice) {{
+                notice.style.display = checked ? 'block' : 'none';
+            }}
+        }}
         
         async function saveCamera(event) {{
             event.preventDefault();
@@ -3073,6 +3228,12 @@ def get_web_ui_html(current_settings=None):
                 enableAudio: document.getElementById('enableAudio').checked,
                 transcodeMainAudio: document.getElementById('transcodeMainAudio').checked,
                 transcodeSubAudio: document.getElementById('transcodeSubAudio').checked,
+                audioEncodingMain: document.getElementById('audioEncodingMain').value,
+                audioSampleRateMain: document.getElementById('audioSampleRateMain').value,
+                audioBitrateMain: document.getElementById('audioBitrateMain').value,
+                audioEncodingSub: document.getElementById('audioEncodingSub').value,
+                audioSampleRateSub: document.getElementById('audioSampleRateSub').value,
+                audioBitrateSub: document.getElementById('audioBitrateSub').value,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 

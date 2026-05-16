@@ -74,6 +74,15 @@ class VirtualONVIFCamera:
         self.transcode_main_audio = config.get('transcodeMainAudio', False)
         self.transcode_sub_audio = config.get('transcodeSubAudio', False)
         
+        # Audio transcoding settings
+        self.audio_encoding_main = config.get('audioEncodingMain', 'aac')
+        self.audio_sample_rate_main = config.get('audioSampleRateMain', '44100')
+        self.audio_bitrate_main = config.get('audioBitrateMain', '128k')
+        
+        self.audio_encoding_sub = config.get('audioEncodingSub', 'aac')
+        self.audio_sample_rate_sub = config.get('audioSampleRateSub', '44100')
+        self.audio_bitrate_sub = config.get('audioBitrateSub', '64k')
+        
         # Network settings (Linux only)
         self.use_virtual_nic = config.get('useVirtualNic', False)
         self.parent_interface = config.get('parentInterface', '')
@@ -241,6 +250,12 @@ class VirtualONVIFCamera:
             'enableAudio': self.enable_audio,
             'transcodeMainAudio': self.transcode_main_audio,
             'transcodeSubAudio': self.transcode_sub_audio,
+            'audioEncodingMain': self.audio_encoding_main,
+            'audioSampleRateMain': self.audio_sample_rate_main,
+            'audioBitrateMain': self.audio_bitrate_main,
+            'audioEncodingSub': self.audio_encoding_sub,
+            'audioSampleRateSub': self.audio_sample_rate_sub,
+            'audioBitrateSub': self.audio_bitrate_sub,
             'useVirtualNic': self.use_virtual_nic,
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,
