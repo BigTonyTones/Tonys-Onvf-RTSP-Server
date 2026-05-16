@@ -1549,7 +1549,7 @@ def get_web_ui_html(current_settings=None):
                                 </div>
                             </div>
                             
-                            <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-top: 12px; margin-bottom: 20px; font-size: 13px;">
+                            <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-bottom: 20px; font-size: 13px;">
                                 Fetch Sub Stream Info
                             </button>
 
