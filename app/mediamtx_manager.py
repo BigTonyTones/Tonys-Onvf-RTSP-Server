@@ -33,9 +33,9 @@ class MediaMTXManager:
     
     def _get_latest_version(self):
         """Required minimum version of MediaMTX"""
-        return "v1.18.1"
+        return "v1.18.2"
 
-    REQUIRED_VERSION = "v1.18.1"
+    REQUIRED_VERSION = "v1.18.2"
 
     def _parse_version(self, version_str):
         """Parse version string like 'v1.18.1' into a list of integers [1, 18, 1]"""
@@ -76,12 +76,12 @@ class MediaMTXManager:
                     print(f"MediaMTX is up to date ({current_version})")
                     return True
                 elif self._version_is_newer(current_version, latest_version):
-                    print(f"MediaMTX {current_version} is outdated. v1.18.1 is required for compatibility.")
+                    print(f"MediaMTX {current_version} is outdated. v1.18.2 is required for compatibility.")
                     print("Automatically upgrading MediaMTX...")
                     # Fall through to download
                 else:
                     # Current version is newer than required — that's fine
-                    print(f"MediaMTX {current_version} meets the v1.18.1 requirement.")
+                    print(f"MediaMTX {current_version} meets the v1.18.2 requirement.")
                     return True
             except Exception as e:
                 print(f"Could not check MediaMTX version: {e}")
@@ -293,7 +293,7 @@ class MediaMTXManager:
         ff_global = ff_advanced.get('globalArgs', '-hide_banner -loglevel error')
         # Optimized for stability: using -timeout (correct option name, not -stimeout)
         # Timeout is in microseconds: 10000000 = 10 seconds
-        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -timeout 10000000')
+        ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -timeout 10000000 -fflags +genpts')
         ff_process = ff_advanced.get('processArgs', '-c:v libx264 -preset ultrafast -tune zerolatency -g 30')
         
         
@@ -339,7 +339,23 @@ class MediaMTXManager:
                     
                     if enable_audio:
                         if transcode_main_audio:
-                            audio_args = f'-c:a aac -ar 44100 -ac 1 -b:a 64k'
+                            codec_map = {
+                                'aac': 'aac',
+                                'g711ulaw': 'pcm_mulaw',
+                                'g711alaw': 'pcm_alaw',
+                                'mp2l2': 'mp2',
+                                'g726': 'g726',
+                                'pcm': 'pcm_s16le',
+                                'mp3': 'libmp3lame',
+                                'g722.1': 'g722'
+                            }
+                            enc = getattr(camera, 'audio_encoding_main', 'aac').lower()
+                            ff_codec = codec_map.get(enc, 'aac')
+                            sr = str(getattr(camera, 'audio_sample_rate_main', '44100')).lower().replace('khz', '000')
+                            br = str(getattr(camera, 'audio_bitrate_main', '64k'))
+                            if br.isdigit(): br = f"{br}k"
+                            elif 'kbps' in br.lower(): br = br.lower().replace('kbps', 'k')
+                            audio_args = f'-c:a {ff_codec} -ar {sr} -ac 1 -b:a {br} -af "aresample=async=1"'
                         else:
                             audio_args = f'-c:a copy'
                     else:
@@ -359,7 +375,7 @@ class MediaMTXManager:
                     
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                        f'{ff_input} '
+                        f'{ff_input} -use_wallclock_as_timestamps 1 '
                         f'-i {safe_source} '
                         f'{video_args} '
                         f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
@@ -430,7 +446,23 @@ class MediaMTXManager:
                     
                     if enable_audio:
                         if transcode_sub_audio:
-                            audio_args = f'-c:a aac -ar 44100 -ac 1 -b:a 64k'
+                            codec_map = {
+                                'aac': 'aac',
+                                'g711ulaw': 'pcm_mulaw',
+                                'g711alaw': 'pcm_alaw',
+                                'mp2l2': 'mp2',
+                                'g726': 'g726',
+                                'pcm': 'pcm_s16le',
+                                'mp3': 'libmp3lame',
+                                'g722.1': 'g722'
+                            }
+                            enc = getattr(camera, 'audio_encoding_sub', 'aac').lower()
+                            ff_codec = codec_map.get(enc, 'aac')
+                            sr = str(getattr(camera, 'audio_sample_rate_sub', '44100')).lower().replace('khz', '000')
+                            br = str(getattr(camera, 'audio_bitrate_sub', '64k'))
+                            if br.isdigit(): br = f"{br}k"
+                            elif 'kbps' in br.lower(): br = br.lower().replace('kbps', 'k')
+                            audio_args = f'-c:a {ff_codec} -ar {sr} -ac 1 -b:a {br} -af "aresample=async=1"'
                         else:
                             audio_args = f'-c:a copy'
                     else:
@@ -450,7 +482,7 @@ class MediaMTXManager:
                     
                     cmd = (
                         f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                        f'{ff_input} '
+                        f'{ff_input} -use_wallclock_as_timestamps 1 '
                         f'-i {safe_source} '
                         f'{video_args} '
                         f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
