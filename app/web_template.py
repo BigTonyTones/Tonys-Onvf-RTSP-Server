@@ -1297,9 +1297,13 @@ def get_web_ui_html(current_settings=None):
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
                 <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Filter by Camera:</label>
-                <select id="onvif-camera-filter" class="form-input" style="width: 200px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                <select id="onvif-camera-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
                     <option value="all">All Cameras</option>
                 </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
+                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Search:</label>
+                <input type="text" id="onvif-event-search" class="form-input" placeholder="Search events..." style="width: 180px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748; color: white;" oninput="renderONVIFEvents()">
             </div>
             <button class="btn btn-primary" onclick="clearONVIFEvents()" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); margin-right: 10px;">Clear Events</button>
             <button class="btn-matrix" onclick="toggleONVIFView(false)" style="background: #f56565; border-radius: 6px; padding: 6px 16px;">Close Log</button>
@@ -3383,12 +3387,30 @@ def get_web_ui_html(current_settings=None):
 
         function renderONVIFEvents() {{
             const filterVal = document.getElementById('onvif-camera-filter').value;
+            const searchQuery = (document.getElementById('onvif-event-search')?.value || '').trim().toLowerCase();
             const tbody = document.getElementById('onvif-events-body');
             tbody.innerHTML = '';
             
             const filtered = onvifEvents.filter(evt => {{
-                if (filterVal === 'all') return true;
-                return String(evt.camera_id) === String(filterVal);
+                // Camera filter
+                if (filterVal !== 'all' && String(evt.camera_id) !== String(filterVal)) {{
+                    return false;
+                }}
+                // Search query filter
+                if (searchQuery) {{
+                    const cameraName = String(evt.camera_name || '').toLowerCase();
+                    const topic = String(evt.topic || '').toLowerCase();
+                    const val = String(evt.value || '').toLowerCase();
+                    const property = String(evt.data_name || 'IsMotion').toLowerCase();
+                    const tags = (evt.tags || []).join(' ').toLowerCase();
+                    
+                    return cameraName.includes(searchQuery) ||
+                           topic.includes(searchQuery) ||
+                           val.includes(searchQuery) ||
+                           property.includes(searchQuery) ||
+                           tags.includes(searchQuery);
+                }}
+                return true;
             }});
             
             if (filtered.length === 0) {{
