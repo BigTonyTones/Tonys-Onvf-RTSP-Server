@@ -1167,10 +1167,33 @@ class ONVIFService:
             pass
             
         messages_xml = ""
+        cam_id = self.camera.id
+        source_token = f"VideoSourceMain_{cam_id}"
+        
         for evt in events:
             from xml.sax.saxutils import escape
-            val = escape(str(evt.get('value', 'false')))
-            topic = escape(evt.get('topic', 'RuleEngine/CellMotionDetector/Motion'))
+            
+            # Normalize topic prefix (must start with tns1:)
+            raw_topic = evt.get('topic', 'RuleEngine/CellMotionDetector/Motion')
+            if not raw_topic.startswith('tns1:'):
+                topic = f"tns1:{raw_topic}"
+            else:
+                topic = raw_topic
+            topic = escape(topic)
+            
+            # Normalize value to standard boolean
+            raw_val = str(evt.get('value', 'false')).lower().strip()
+            if raw_val in ['true', '1', 'on', 'active']:
+                val = 'true'
+            else:
+                val = 'false'
+                
+            # Normalize data property name depending on topic
+            if 'MotionAlarm' in topic:
+                data_name = 'State'
+            else:
+                data_name = 'IsMotion'
+                
             timestamp = escape(evt.get('timestamp', datetime.utcnow().isoformat() + 'Z'))
             
             messages_xml += f"""<wsnt:NotificationMessage>
@@ -1178,10 +1201,10 @@ class ONVIFService:
                 <wsnt:Message>
                     <tt:Message UtcTime="{timestamp}">
                         <tt:Source>
-                            <tt:SimpleItem Name="VideoSourceConfigurationToken" Value="VideoSourceToken_1"/>
+                            <tt:SimpleItem Name="VideoSourceConfigurationToken" Value="{source_token}"/>
                         </tt:Source>
                         <tt:Data>
-                            <tt:SimpleItem Name="{evt.get('data_name', 'IsMotion')}" Value="{val}"/>
+                            <tt:SimpleItem Name="{data_name}" Value="{val}"/>
                         </tt:Data>
                     </tt:Message>
                 </wsnt:Message>
@@ -1191,7 +1214,9 @@ class ONVIFService:
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:wsa="http://www.w3.org/2005/08/addressing"
                    xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2"
-                   xmlns:tt="http://www.onvif.org/ver10/schema">
+                   xmlns:tt="http://www.onvif.org/ver10/schema"
+                   xmlns:tns1="http://www.onvif.org/ver10/topics"
+                   xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <SOAP-ENV:Header>
         <wsa:Action>http://www.onvif.org/ver10/events/wsdl/PullPointSubscription/PullMessagesResponse</wsa:Action>
     </SOAP-ENV:Header>
@@ -1241,13 +1266,44 @@ class ONVIFService:
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:tet="http://www.onvif.org/ver10/events/wsdl"
-                   xmlns:tt="http://www.onvif.org/ver10/schema">
+                   xmlns:tt="http://www.onvif.org/ver10/schema"
+                   xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <SOAP-ENV:Body>
         <tet:GetEventPropertiesResponse>
             <tet:TopicNamespaceLocation>http://www.onvif.org/onvif/ver10/topics/topicns.xml</tet:TopicNamespaceLocation>
             <tet:TopicExpressionDialect>http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet</tet:TopicExpressionDialect>
             <tet:MessageContentFilterDialect>http://www.onvif.org/ver10/tev/messageContentFilter/ItemFilter</tet:MessageContentFilterDialect>
             <tet:MessageContentSchemaLocation>http://www.onvif.org/ver10/schema/onvif.xsd</tet:MessageContentSchemaLocation>
+            <tet:TopicSet>
+                <tt:VideoSource xmlns:tt="http://www.onvif.org/ver10/schema">
+                    <tt:MotionAlarm tt:UserLevel="User">
+                        <tt:MessageDescription IsProperty="true">
+                            <tt:Source>
+                                <tt:SimpleItemDescription Name="VideoSourceConfigurationToken" Type="tt:ReferenceToken"/>
+                            </tt:Source>
+                            <tt:Data>
+                                <tt:SimpleItemDescription Name="State" Type="xs:boolean"/>
+                            </tt:Data>
+                        </tt:MessageDescription>
+                    </tt:MotionAlarm>
+                </tt:VideoSource>
+                <tt:RuleEngine xmlns:tt="http://www.onvif.org/ver10/schema">
+                    <tt:CellMotionDetector tt:UserLevel="User">
+                        <tt:Motion tt:UserLevel="User">
+                            <tt:MessageDescription IsProperty="true">
+                                <tt:Source>
+                                    <tt:SimpleItemDescription Name="VideoSourceConfigurationToken" Type="tt:ReferenceToken"/>
+                                    <tt:SimpleItemDescription Name="VideoAnalyticsConfigurationToken" Type="tt:ReferenceToken"/>
+                                    <tt:SimpleItemDescription Name="Rule" Type="xs:string"/>
+                                </tt:Source>
+                                <tt:Data>
+                                    <tt:SimpleItemDescription Name="IsMotion" Type="xs:boolean"/>
+                                </tt:Data>
+                            </tt:MessageDescription>
+                        </tt:Motion>
+                    </tt:CellMotionDetector>
+                </tt:RuleEngine>
+            </tet:TopicSet>
         </tet:GetEventPropertiesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
