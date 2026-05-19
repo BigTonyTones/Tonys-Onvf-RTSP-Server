@@ -7,12 +7,20 @@ import threading
 from pathlib import Path
 from flask import Flask, request, Response
 from flask_cors import CORS
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import sys
 import os
 import tempfile
+import queue
 from urllib.parse import quote
 from .ffmpeg_manager import FFmpegManager
+
+class VirtualSubscription:
+    def __init__(self, sub_id):
+        self.sub_id = sub_id
+        self.queue = queue.Queue(maxsize=100)
+        import time
+        self.last_active = time.time()
 
 # Try to import zoneinfo
 if sys.version_info >= (3, 9):
@@ -37,6 +45,7 @@ class ONVIFService:
         # Cache for authenticated IPs: {ip: timestamp}
         # Prevents repetitive 401 challenges for recently authenticated clients (30 min TTL)
         self.auth_cache = {}
+        self.subscriptions = {}
         
     def create_app(self):
         """Create the Flask app for ONVIF service"""
@@ -270,6 +279,51 @@ class ONVIFService:
                 import traceback
                 traceback.print_exc()
                 return Response("Internal Server Error", status=500)
+
+        # ONVIF Events Service
+        @app.route('/onvif/events_service', methods=['GET', 'POST'], endpoint=f'events_service_{self.camera.id}')
+        @require_auth
+        def events_service():
+            try:
+                if request.method == 'GET':
+                    return self._get_events_wsdl()
+                
+                soap_body = request.data.decode('utf-8')
+                
+                if 'CreatePullPointSubscription' in soap_body:
+                    return self._handle_create_pull_point_subscription(local_ip)
+                elif 'GetEventProperties' in soap_body:
+                    return self._handle_get_event_properties()
+                elif 'GetServiceCapabilities' in soap_body:
+                    return self._handle_get_event_service_capabilities()
+                    
+                return self._handle_get_event_properties()
+            except Exception as e:
+                print(f"  Error in events service: {e}")
+                import traceback
+                traceback.print_exc()
+                return Response("Internal Server Error", status=500)
+
+        # ONVIF Subscription Service
+        @app.route('/onvif/subscription/<sub_id>', methods=['POST'], endpoint=f'subscription_service_{self.camera.id}')
+        @require_auth
+        def subscription_service(sub_id):
+            try:
+                soap_body = request.data.decode('utf-8')
+                
+                if 'PullMessages' in soap_body:
+                    return self._handle_pull_messages(sub_id)
+                elif 'Unsubscribe' in soap_body:
+                    return self._handle_unsubscribe(sub_id)
+                elif 'Renew' in soap_body:
+                    return self._handle_renew_subscription(sub_id)
+                    
+                return Response("Bad Request", status=400)
+            except Exception as e:
+                print(f"  Error in subscription service: {e}")
+                import traceback
+                traceback.print_exc()
+                return Response("Internal Server Error", status=500)
                 
         return app
 
@@ -432,8 +486,8 @@ class ONVIFService:
                 </tt:Device>
                 <tt:Events>
                     <tt:XAddr>http://{local_ip}:{self.camera.onvif_port}/onvif/events_service</tt:XAddr>
-                    <tt:WSSubscriptionPolicySupport>false</tt:WSSubscriptionPolicySupport>
-                    <tt:WSPullPointSupport>false</tt:WSPullPointSupport>
+                    <tt:WSSubscriptionPolicySupport>true</tt:WSSubscriptionPolicySupport>
+                    <tt:WSPullPointSupport>true</tt:WSPullPointSupport>
                     <tt:WSPausableSubscriptionManagerInterfaceSupport>false</tt:WSPausableSubscriptionManagerInterfaceSupport>
                 </tt:Events>
                 <tt:Imaging>
@@ -489,6 +543,14 @@ class ONVIFService:
             <tds:Service>
                 <tds:Namespace>http://www.onvif.org/ver10/media/wsdl</tds:Namespace>
                 <tds:XAddr>http://{local_ip}:{self.camera.onvif_port}/onvif/media_service</tds:XAddr>
+                <tds:Version>
+                    <tt:Major xmlns:tt="http://www.onvif.org/ver10/schema">2</tt:Major>
+                    <tt:Minor xmlns:tt="http://www.onvif.org/ver10/schema">5</tt:Minor>
+                </tds:Version>
+            </tds:Service>
+            <tds:Service>
+                <tds:Namespace>http://www.onvif.org/ver10/events/wsdl</tds:Namespace>
+                <tds:XAddr>http://{local_ip}:{self.camera.onvif_port}/onvif/events_service</tds:XAddr>
                 <tds:Version>
                     <tt:Major xmlns:tt="http://www.onvif.org/ver10/schema">2</tt:Major>
                     <tt:Minor xmlns:tt="http://www.onvif.org/ver10/schema">5</tt:Minor>
@@ -1028,4 +1090,177 @@ class ONVIFService:
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _get_events_wsdl(self):
+        """Return events service WSDL"""
+        local_ip = self.camera.get_effective_ip()
+        wsdl = f"""<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:tev="http://www.onvif.org/ver10/events/wsdl"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap12/"
+             targetNamespace="http://www.onvif.org/ver10/events/wsdl">
+    <service name="EventsService">
+        <port name="EventsPort" binding="tev:EventBinding">
+            <soap:address location="http://{local_ip}:{self.camera.onvif_port}/onvif/events_service"/>
+        </port>
+    </service>
+</definitions>"""
+        return Response(wsdl, mimetype='text/xml')
+
+    def _handle_create_pull_point_subscription(self, local_ip):
+        import uuid
+        sub_id = str(uuid.uuid4())
+        self.subscriptions[sub_id] = VirtualSubscription(sub_id)
+        
+        # Build subscription reference URL
+        sub_ref = f"http://{local_ip}:{self.camera.onvif_port}/onvif/subscription/{sub_id}"
+        
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:wsa="http://www.w3.org/2005/08/addressing"
+                   xmlns:tet="http://www.onvif.org/ver10/events/wsdl">
+    <SOAP-ENV:Header>
+        <wsa:Action>http://www.onvif.org/ver10/events/wsdl/EventPortType/CreatePullPointSubscriptionResponse</wsa:Action>
+    </SOAP-ENV:Header>
+    <SOAP-ENV:Body>
+        <tet:CreatePullPointSubscriptionResponse>
+            <tet:SubscriptionReference>
+                <wsa:Address>{sub_ref}</wsa:Address>
+            </tet:SubscriptionReference>
+            <tet:CurrentTime>{datetime.utcnow().isoformat()}Z</tet:CurrentTime>
+            <tet:TerminationTime>{(datetime.utcnow() + timedelta(minutes=10)).isoformat()}Z</tet:TerminationTime>
+        </tet:CreatePullPointSubscriptionResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_pull_messages(self, sub_id):
+        import queue
+        sub = self.subscriptions.get(sub_id)
+        if not sub:
+            return Response("Subscription not found", status=404)
+        
+        sub.last_active = time.time()
+        
+        soap_body = request.data.decode('utf-8')
+        timeout_seconds = 5
+        try:
+            if 'Timeout' in soap_body:
+                import re
+                match = re.search(r'Timeout[^>]*>PT(\d+)S', soap_body)
+                if match:
+                    timeout_seconds = int(match.group(1))
+        except Exception:
+            pass
+            
+        events = []
+        try:
+            evt = sub.queue.get(timeout=timeout_seconds)
+            events.append(evt)
+            while len(events) < 10:
+                try:
+                    events.append(sub.queue.get_nowait())
+                except queue.Empty:
+                    break
+        except queue.Empty:
+            pass
+            
+        messages_xml = ""
+        for evt in events:
+            from xml.sax.saxutils import escape
+            val = escape(str(evt.get('value', 'false')))
+            topic = escape(evt.get('topic', 'RuleEngine/CellMotionDetector/Motion'))
+            timestamp = escape(evt.get('timestamp', datetime.utcnow().isoformat() + 'Z'))
+            
+            messages_xml += f"""<wsnt:NotificationMessage>
+                <wsnt:Topic Dialect="http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet">{topic}</wsnt:Topic>
+                <wsnt:Message>
+                    <tt:Message UtcTime="{timestamp}">
+                        <tt:Source>
+                            <tt:SimpleItem Name="VideoSourceConfigurationToken" Value="VideoSourceToken_1"/>
+                        </tt:Source>
+                        <tt:Data>
+                            <tt:SimpleItem Name="{evt.get('data_name', 'IsMotion')}" Value="{val}"/>
+                        </tt:Data>
+                    </tt:Message>
+                </wsnt:Message>
+            </wsnt:NotificationMessage>"""
+            
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:wsa="http://www.w3.org/2005/08/addressing"
+                   xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Header>
+        <wsa:Action>http://www.onvif.org/ver10/events/wsdl/PullPointSubscription/PullMessagesResponse</wsa:Action>
+    </SOAP-ENV:Header>
+    <SOAP-ENV:Body>
+        <tet:PullMessagesResponse xmlns:tet="http://www.onvif.org/ver10/events/wsdl">
+            {messages_xml}
+        </tet:PullMessagesResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_unsubscribe(self, sub_id):
+        if sub_id in self.subscriptions:
+            del self.subscriptions[sub_id]
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:wsa="http://www.w3.org/2005/08/addressing"
+                   xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2">
+    <SOAP-ENV:Header>
+        <wsa:Action>http://docs.oasis-open.org/wsn/b-2/SubscriptionManager/UnsubscribeResponse</wsa:Action>
+    </SOAP-ENV:Header>
+    <SOAP-ENV:Body>
+        <wsnt:UnsubscribeResponse/>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_renew_subscription(self, sub_id):
+        if sub_id in self.subscriptions:
+            self.subscriptions[sub_id].last_active = time.time()
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:wsa="http://www.w3.org/2005/08/addressing"
+                   xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2">
+    <SOAP-ENV:Header>
+        <wsa:Action>http://docs.oasis-open.org/wsn/b-2/SubscriptionManager/RenewResponse</wsa:Action>
+    </SOAP-ENV:Header>
+    <SOAP-ENV:Body>
+        <wsnt:RenewResponse>
+            <wsnt:TerminationTime>{(datetime.utcnow() + timedelta(minutes=10)).isoformat()}Z</wsnt:TerminationTime>
+        </wsnt:RenewResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_event_properties(self):
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:tet="http://www.onvif.org/ver10/events/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <tet:GetEventPropertiesResponse>
+            <tet:TopicNamespaceLocation>http://www.onvif.org/onvif/ver10/topics/topicns.xml</tet:TopicNamespaceLocation>
+            <tet:TopicExpressionDialect>http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet</tet:TopicExpressionDialect>
+            <tet:MessageContentFilterDialect>http://www.onvif.org/ver10/tev/messageContentFilter/ItemFilter</tet:MessageContentFilterDialect>
+            <tet:MessageContentSchemaLocation>http://www.onvif.org/ver10/schema/onvif.xsd</tet:MessageContentSchemaLocation>
+        </tet:GetEventPropertiesResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_event_service_capabilities(self):
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:tet="http://www.onvif.org/ver10/events/wsdl">
+    <SOAP-ENV:Body>
+        <tet:GetServiceCapabilitiesResponse>
+            <tet:Capabilities PullPointSupport="true" SubscriptionPolicySupport="false" WSSubscriptionPolicySupport="false"/>
+        </tet:GetServiceCapabilitiesResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
         return Response(soap_response, mimetype='application/soap+xml')
