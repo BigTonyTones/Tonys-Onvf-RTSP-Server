@@ -896,16 +896,42 @@ def get_web_ui_html(current_settings=None):
             background: #000;
         }}
         
-        .btn-matrix {{
-            background: #4a5568;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 14px;
-            border: none;
-            cursor: pointer;
-        }}
         .btn-matrix:hover {{ background: #2d3748; }}
+        
+        /* ONVIF Event Table Styles */
+        .diagnostics-table th {{
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            color: #718096;
+            border-bottom: 2px solid #2d3748;
+        }}
+        .diagnostics-table td {{
+            padding: 12px 10px;
+            border-bottom: 1px solid #1a202c;
+        }}
+        .diagnostics-table tr:hover {{
+            background: rgba(255, 255, 255, 0.02);
+        }}
+        .badge-event-active {{
+            background: rgba(245, 101, 101, 0.15);
+            color: #fc8181;
+            border: 1px solid rgba(245, 101, 101, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }}
+        .badge-event-inactive {{
+            background: rgba(72, 187, 120, 0.15);
+            color: #68d391;
+            border: 1px solid rgba(72, 187, 120, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }}
         
         .view-toggle-btn {{
             background: #ed64a6;
@@ -1188,6 +1214,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
                 <button class="btn" style="background: linear-gradient(135deg, #be5a83 0%, #9333ea 100%); color: white; font-weight: 600;" onclick="toggleMatrixView(true)">Matrix View</button>
+                <button class="btn" style="background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; font-weight: 600;" onclick="toggleONVIFView(true)">ONVIF</button>
                 <button class="btn" style="background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: white; font-weight: 600;" onclick="window.location.href='/ip-management'">IP Management</button>
                 <button class="btn" onclick="startAll()">Start All</button>
                 <button class="btn" onclick="stopAll()">Stop All</button>
@@ -1259,6 +1286,40 @@ def get_web_ui_html(current_settings=None):
             <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: #f56565;">Close Matrix</button>
         </div>
         <div id="matrix-grid" class="matrix-grid"></div>
+    </div>
+    
+    <!-- ONVIF Events Overlay -->
+    <div id="onvif-overlay" class="matrix-overlay">
+        <div class="matrix-controls" style="align-items: center; border-bottom: 1px solid #2d3748; padding-bottom: 15px; margin-bottom: 15px;">
+            <div style="color: white; font-size: 18px; font-weight: 600; margin-right: auto; display: flex; align-items: center; gap: 10px; padding-left: 10px;">
+                <i class="fas fa-bell" style="color: #3b82f6;"></i>
+                <span>ONVIF Event Log Stream</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
+                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Filter by Camera:</label>
+                <select id="onvif-camera-filter" class="form-input" style="width: 200px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                    <option value="all">All Cameras</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="clearONVIFEvents()" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); margin-right: 10px;">Clear Events</button>
+            <button class="btn-matrix" onclick="toggleONVIFView(false)" style="background: #f56565; border-radius: 6px; padding: 6px 16px;">Close Log</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; background: #0b0f19; border-radius: 8px; border: 1px solid #2d3748; padding: 15px;">
+            <table class="diagnostics-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #2d3748; color: #a0aec0; font-size: 14px;">
+                        <th style="padding: 10px;">Timestamp</th>
+                        <th style="padding: 10px;">Camera</th>
+                        <th style="padding: 10px;">Topic</th>
+                        <th style="padding: 10px;">Property</th>
+                        <th style="padding: 10px;">Value</th>
+                    </tr>
+                </thead>
+                <tbody id="onvif-events-body" style="color: #e2e8f0; font-size: 13px; font-family: monospace;">
+                    <!-- Dynamically populated -->
+                </tbody>
+            </table>
+        </div>
     </div>
     
     <div id="logs-modal" class="modal">
@@ -1629,6 +1690,47 @@ def get_web_ui_html(current_settings=None):
                         <input type="checkbox" id="autoStart" style="width: auto; cursor: pointer;">
                         <span class="form-label" style="margin: 0;">Auto-start camera on server startup</span>
                     </label>
+                </div>
+
+                <div style="border-top: 1px solid #2d3748; padding-top: 15px; margin-top: 15px; margin-bottom: 20px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 12px;">ONVIF Event Forwarding</div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="enableEventForwarding" style="width: auto; cursor: pointer;" onchange="toggleEventForwardingFields()">
+                            <span class="form-label" style="margin: 0; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                                Enable ONVIF Event Forwarding
+                                <span style="font-size: 10px; background-color: #d69e2e; color: #1a202c; padding: 1px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Beta</span>
+                            </span>
+                        </label>
+                        <div style="color: #718096; font-size: 11px; margin-left: 24px; margin-top: 4px;">
+                            Forward original motion and inputs from physical camera's ONVIF to virtual server. (Beta - please report any issues)
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="physicalOnvifPortGroup" style="display: none; margin-left: 24px;">
+                        <label class="form-label" style="font-size: 12px;">Physical Camera ONVIF Port</label>
+                        <input type="number" class="form-input" id="physicalOnvifPort" placeholder="80" value="80" style="max-width: 150px;">
+                    </div>
+
+                    <div id="onvifForwardingCredGroup" style="display: none; margin-left: 24px; margin-top: 10px;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">ONVIF Credentials</div>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 10px;">
+                            <input type="checkbox" id="onvifUseAboveCredentials" style="width: auto; cursor: pointer;" checked onchange="toggleOnvifCredFields()">
+                            <span style="font-size: 12px; color: #cbd5e0;">Use above camera credentials</span>
+                        </label>
+                        <div id="onvifCustomCredFields" style="display: none;">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 120px;">
+                                    <label class="form-label" style="font-size: 11px;">ONVIF Username</label>
+                                    <input type="text" class="form-input" id="onvifForwardingUsername" placeholder="admin" autocomplete="off">
+                                </div>
+                                <div style="flex: 1; min-width: 120px;">
+                                    <label class="form-label" style="font-size: 11px;">ONVIF Password</label>
+                                    <input type="password" class="form-input" id="onvifForwardingPassword" placeholder="password" autocomplete="new-password">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Network Settings (Linux only) -->
@@ -2480,6 +2582,9 @@ def get_web_ui_html(current_settings=None):
             if (e.key === 'Escape' && matrixActive) {{
                 toggleMatrixView(false);
             }}
+            if (e.key === 'Escape' && onvifViewActive) {{
+                toggleONVIFView(false);
+            }}
         }});
 
         function getCameraCardContent(cam, serverIp) {{
@@ -2883,6 +2988,14 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('mainPath').value = mainUrl.pathname + mainUrl.search;
                 document.getElementById('subPath').value = subUrl.pathname + subUrl.search;
                 document.getElementById('autoStart').checked = camera.autoStart || false;
+                document.getElementById('enableEventForwarding').checked = camera.enableEventForwarding || false;
+                document.getElementById('physicalOnvifPort').value = camera.physicalOnvifPort || '80';
+                const hasFwdCreds = !!(camera.onvifForwardingUsername);
+                document.getElementById('onvifUseAboveCredentials').checked = !hasFwdCreds;
+                document.getElementById('onvifForwardingUsername').value = camera.onvifForwardingUsername || '';
+                document.getElementById('onvifForwardingPassword').value = camera.onvifForwardingPassword || '';
+                toggleOnvifCredFields();
+                toggleEventForwardingFields();
                 document.getElementById('enableAudio').checked = camera.enableAudio || false;
                 document.getElementById('transcodeMainAudio').checked = camera.transcodeMainAudio || false;
                 document.getElementById('transcodeSubAudio').checked = camera.transcodeSubAudio || false;
@@ -3027,6 +3140,14 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('camera-id').value = '';
             document.getElementById('camera-form').reset();
             
+            document.getElementById('enableEventForwarding').checked = false;
+            document.getElementById('physicalOnvifPort').value = '80';
+            document.getElementById('onvifUseAboveCredentials').checked = true;
+            document.getElementById('onvifForwardingUsername').value = '';
+            document.getElementById('onvifForwardingPassword').value = '';
+            toggleOnvifCredFields();
+            toggleEventForwardingFields();
+            
             document.getElementById('transcodeSub').checked = false;
             document.getElementById('transcodeMain').checked = false;
             document.getElementById('enableAudio').checked = false;
@@ -3103,6 +3224,14 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('mainPath').value = mainUrl.pathname + mainUrl.search;
             document.getElementById('subPath').value = subUrl.pathname + subUrl.search;
             document.getElementById('autoStart').checked = camera.autoStart || false;
+            document.getElementById('enableEventForwarding').checked = camera.enableEventForwarding || false;
+            document.getElementById('physicalOnvifPort').value = camera.physicalOnvifPort || '80';
+            const hasFwdCreds2 = !!(camera.onvifForwardingUsername);
+            document.getElementById('onvifUseAboveCredentials').checked = !hasFwdCreds2;
+            document.getElementById('onvifForwardingUsername').value = camera.onvifForwardingUsername || '';
+            document.getElementById('onvifForwardingPassword').value = camera.onvifForwardingPassword || '';
+            toggleOnvifCredFields();
+            toggleEventForwardingFields();
             
             // Populate resolution and frame rate fields
             document.getElementById('mainWidth').value = camera.mainWidth || 1920;
@@ -3195,6 +3324,129 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        function toggleEventForwardingFields() {{
+            const checked = document.getElementById('enableEventForwarding').checked;
+            const portGroup = document.getElementById('physicalOnvifPortGroup');
+            const credGroup = document.getElementById('onvifForwardingCredGroup');
+            if (portGroup) portGroup.style.display = checked ? 'block' : 'none';
+            if (credGroup) credGroup.style.display = checked ? 'block' : 'none';
+        }}
+
+        function toggleOnvifCredFields() {{
+            const useAbove = document.getElementById('onvifUseAboveCredentials').checked;
+            const customFields = document.getElementById('onvifCustomCredFields');
+            if (customFields) customFields.style.display = useAbove ? 'none' : 'block';
+        }}
+
+        let onvifViewActive = false;
+        let onvifPollInterval = null;
+        let onvifEvents = [];
+
+        function toggleONVIFView(active) {{
+            onvifViewActive = active;
+            const overlay = document.getElementById('onvif-overlay');
+            if (active) {{
+                overlay.classList.add('active');
+                populateCameraFilter();
+                refreshONVIFEvents();
+                onvifPollInterval = setInterval(refreshONVIFEvents, 2000);
+            }} else {{
+                overlay.classList.remove('active');
+                if (onvifPollInterval) {{
+                    clearInterval(onvifPollInterval);
+                    onvifPollInterval = null;
+                }}
+            }}
+        }}
+
+        function populateCameraFilter() {{
+            const select = document.getElementById('onvif-camera-filter');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="all">All Cameras</option>';
+            cameras.forEach(cam => {{
+                select.innerHTML += `<option value="${{cam.id}}">${{cam.name}}</option>`;
+            }});
+            select.value = currentValue || 'all';
+        }}
+
+        async function refreshONVIFEvents() {{
+            try {{
+                const response = await fetch('/api/onvif/events');
+                if (response.ok) {{
+                    onvifEvents = await response.json();
+                    renderONVIFEvents();
+                }}
+            }} catch (err) {{
+                console.error("Error refreshing ONVIF events:", err);
+            }}
+        }}
+
+        function renderONVIFEvents() {{
+            const filterVal = document.getElementById('onvif-camera-filter').value;
+            const tbody = document.getElementById('onvif-events-body');
+            tbody.innerHTML = '';
+            
+            const filtered = onvifEvents.filter(evt => {{
+                if (filterVal === 'all') return true;
+                return String(evt.camera_id) === String(filterVal);
+            }});
+            
+            if (filtered.length === 0) {{
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #4a5568; padding: 40px;">No events matching filters logged yet.</td></tr>';
+                return;
+            }}
+            
+            const sorted = [...filtered].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            sorted.forEach(evt => {{
+                let localTime = evt.timestamp;
+                try {{
+                    const d = new Date(evt.timestamp);
+                    localTime = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+                }} catch (e) {{}}
+                
+                const valLower = String(evt.value).toLowerCase();
+                const isActive = valLower === 'true' || valLower === 'on' || valLower === '1' || valLower === 'active';
+                const badge = isActive 
+                    ? `<span class="badge-event-active">ACTIVE / MOTION</span>` 
+                    : `<span class="badge-event-inactive">INACTIVE / CLEAR</span>`;
+                
+                let tagsHtml = '';
+                if (evt.tags && Array.isArray(evt.tags)) {{
+                    evt.tags.forEach(tag => {{
+                        if (tag === 'person') {{
+                            tagsHtml += ` <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;"><i class="fas fa-user" style="font-size: 9px;"></i> Person</span>`;
+                        }} else if (tag === 'vehicle') {{
+                            tagsHtml += ` <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;"><i class="fas fa-car" style="font-size: 9px;"></i> Vehicle</span>`;
+                        }}
+                    }});
+                }}
+
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid #1a202c;">
+                        <td style="padding: 10px; color: #a0aec0;">${{localTime}}</td>
+                        <td style="padding: 10px; font-weight: 600; color: #3b82f6;">${{evt.camera_name}}</td>
+                        <td style="padding: 10px; color: #cbd5e0;">${{evt.topic}}</td>
+                        <td style="padding: 10px; color: #718096;">${{evt.data_name || 'IsMotion'}}</td>
+                        <td style="padding: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px;">${{badge}}${{tagsHtml}}</td>
+                    </tr>
+                `;
+            }});
+        }}
+
+        async function clearONVIFEvents() {{
+            if (!confirm("Are you sure you want to clear all ONVIF event logs?")) return;
+            try {{
+                const response = await fetch('/api/onvif/events/clear', {{ method: 'POST' }});
+                if (response.ok) {{
+                    onvifEvents = [];
+                    renderONVIFEvents();
+                }}
+            }} catch (err) {{
+                console.error("Error clearing ONVIF events:", err);
+            }}
+        }}
+
         async function saveCamera(event) {{
             event.preventDefault();
             
@@ -3215,6 +3467,10 @@ def get_web_ui_html(current_settings=None):
                 mainPath: document.getElementById('mainPath').value,
                 subPath: document.getElementById('subPath').value,
                 autoStart: document.getElementById('autoStart').checked,
+                enableEventForwarding: document.getElementById('enableEventForwarding').checked,
+                physicalOnvifPort: parseInt(document.getElementById('physicalOnvifPort').value || '80'),
+                onvifForwardingUsername: document.getElementById('onvifUseAboveCredentials').checked ? '' : (document.getElementById('onvifForwardingUsername').value || ''),
+                onvifForwardingPassword: document.getElementById('onvifUseAboveCredentials').checked ? '' : (document.getElementById('onvifForwardingPassword').value || ''),
                 mainWidth: parseInt(document.getElementById('mainWidth').value),
                 mainHeight: parseInt(document.getElementById('mainHeight').value),
                 subWidth: parseInt(document.getElementById('subWidth').value),

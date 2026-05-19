@@ -4,6 +4,11 @@ import socket
 import time
 import uuid
 import hashlib
+import queue
+import requests
+import xml.etree.ElementTree as ET
+from datetime import datetime
+import os
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.serving import make_server, ThreadedWSGIServer
 from .config import MEDIAMTX_PORT
@@ -95,6 +100,15 @@ class VirtualONVIFCamera:
         self.assigned_ip = None
         self.network_mgr = LinuxNetworkManager() if LinuxNetworkManager.is_linux() else None
         
+        # Event forwarding settings
+        self.enable_event_forwarding = config.get('enableEventForwarding', False)
+        self.physical_onvif_port = config.get('physicalOnvifPort', 80)
+        self.onvif_forwarding_username = config.get('onvifForwardingUsername', '')
+        self.onvif_forwarding_password = config.get('onvifForwardingPassword', '')
+        self._event_forwarding_thread = None
+        self._event_forwarding_running = False
+        self.event_logs = []
+        
         self.status = "stopped"
         self.flask_app = None
         self.flask_thread = None
@@ -149,10 +163,14 @@ class VirtualONVIFCamera:
             time.sleep(0.5)
         
         self._start_onvif_service()
+        if self.enable_event_forwarding:
+            self.start_event_forwarding()
         
     def stop(self):
         """Mark camera as stopped, shutdown ONVIF service, and cleanup networking"""
         self.status = "stopped"
+        if self.enable_event_forwarding:
+            self.stop_event_forwarding()
         
         # Stop the ONVIF WSGI server safely
         if hasattr(self, 'server') and self.server:
@@ -265,7 +283,11 @@ class VirtualONVIFCamera:
             'gateway': self.gateway,
             'assignedIp': self.assigned_ip,
             'macAddress': self.mac_address,
-            'debugMode': self.debug_mode
+            'debugMode': self.debug_mode,
+            'enableEventForwarding': self.enable_event_forwarding,
+            'physicalOnvifPort': self.physical_onvif_port,
+            'onvifForwardingUsername': self.onvif_forwarding_username,
+            'onvifForwardingPassword': self.onvif_forwarding_password
         }
     
     def to_config_dict(self):
@@ -306,5 +328,369 @@ class VirtualONVIFCamera:
             'staticIp': self.static_ip,
             'netmask': self.netmask,
             'gateway': self.gateway,
-            'debugMode': self.debug_mode
+            'debugMode': self.debug_mode,
+            'enableEventForwarding': self.enable_event_forwarding,
+            'physicalOnvifPort': self.physical_onvif_port,
+            'onvifForwardingUsername': self.onvif_forwarding_username,
+            'onvifForwardingPassword': self.onvif_forwarding_password
         }
+
+    def start_event_forwarding(self):
+        """Start ONVIF Event Forwarder background thread"""
+        self._event_forwarding_running = True
+        self._event_forwarding_thread = threading.Thread(target=self._event_forwarding_loop, daemon=True)
+        self._event_forwarding_thread.start()
+        print(f"  [Camera {self.id}] ONVIF event forwarder thread started.")
+
+    def stop_event_forwarding(self):
+        """Stop ONVIF Event Forwarder background thread"""
+        self._event_forwarding_running = False
+        print(f"  [Camera {self.id}] ONVIF event forwarder thread stopped.")
+
+    def _event_forwarding_loop(self):
+        """Background thread loop to pull event notifications from physical camera"""
+        from urllib.parse import urlparse
+        
+        while self._event_forwarding_running:
+            try:
+                from urllib.parse import unquote
+                parsed = urlparse(self.main_stream_url.replace('rtsp://', 'http://'))
+                host = parsed.hostname
+                # Use dedicated ONVIF forwarding credentials if set, otherwise fall back to stream creds
+                if self.onvif_forwarding_username:
+                    username = self.onvif_forwarding_username
+                    password = self.onvif_forwarding_password
+                else:
+                    username = unquote(parsed.username) if parsed.username else (self.username or 'admin')
+                    password = unquote(parsed.password) if parsed.password else (self.password or 'admin')
+                port = getattr(self, 'physical_onvif_port', 80) or 80
+            except Exception as e:
+                print(f"  [ONVIF Event Forwarder {self.id}] Error parsing stream URL: {e}")
+                time.sleep(10)
+                continue
+                
+            print(f"  [ONVIF Event Forwarder {self.id}] Connecting to camera events at {host}:{port}...")
+            
+            # Locate WSDLs
+            import onvif
+            wsdl_dir = os.path.join(os.path.dirname(onvif.__file__), 'wsdl')
+            if not os.path.exists(os.path.join(wsdl_dir, 'devicemgmt.wsdl')):
+                local_wsdl = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wsdl')
+                if os.path.exists(os.path.join(local_wsdl, 'devicemgmt.wsdl')):
+                    wsdl_dir = local_wsdl
+                else:
+                    wsdl_dir = None
+                    
+            try:
+                from onvif import ONVIFCamera
+                if wsdl_dir:
+                    mycam = ONVIFCamera(host, port, username, password, wsdl_dir=wsdl_dir)
+                else:
+                    mycam = ONVIFCamera(host, port, username, password)
+                    
+                # 2. Get events service XAddr
+                events_xaddr = None
+                try:
+                    caps = mycam.devicemgmt.GetCapabilities(Category=['Events', 'All'])
+                    events_xaddr = caps.Events.XAddr
+                except Exception:
+                    try:
+                        services = mycam.devicemgmt.GetServices(IncludeCapability=False)
+                        for s in services:
+                            if 'events' in s.Namespace.lower():
+                                events_xaddr = s.XAddr
+                                break
+                    except Exception:
+                        pass
+                
+                if not events_xaddr:
+                    events_xaddr = f"http://{host}:{port}/onvif/events_service"
+                
+                # 3. Create PullPoint subscription using raw SOAP POST (robust authentication handling)
+                pullpoint_addr = None
+                auth_modes = ['digest', 'text', 'none']
+                last_err = None
+                self.current_auth_mode = 'digest'
+                subscription_limit_hit = False
+                
+                for mode in auth_modes:
+                    try:
+                        sec_header = get_ws_security_header(username, password, mode=mode)
+                        sub_payload = f"""<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:tet="http://www.onvif.org/ver10/events/wsdl">
+                          <soap:Header>
+                            <wsa:Action>http://www.onvif.org/ver10/events/wsdl/EventPortType/CreatePullPointSubscriptionRequest</wsa:Action>
+                            <wsa:To>{events_xaddr}</wsa:To>
+                            {sec_header}
+                          </soap:Header>
+                          <soap:Body>
+                            <tet:CreatePullPointSubscription/>
+                          </soap:Body>
+                        </soap:Envelope>"""
+                        
+                        sub_headers = {
+                            'Content-Type': 'application/soap+xml; charset=utf-8; action="http://www.onvif.org/ver10/events/wsdl/EventPortType/CreatePullPointSubscriptionRequest"',
+                        }
+                        
+                        resp = requests.post(events_xaddr, data=sub_payload, headers=sub_headers, timeout=15)
+                        if resp.status_code == 200:
+                            sub_root = ET.fromstring(resp.text)
+                            addr_node = sub_root.find('.//{*}SubscriptionReference/{*}Address')
+                            if addr_node is None:
+                                addr_node = sub_root.find('.//{*}Address')
+                            
+                            if addr_node is not None and addr_node.text:
+                                pullpoint_addr = addr_node.text.strip()
+                                self.current_auth_mode = mode
+                                break
+                            else:
+                                raise Exception("SubscriptionReference Address node not found in XML response")
+                        elif resp.status_code == 500 and 'SubscribeCreationFailedFault' in resp.text:
+                            # Camera has hit its max concurrent subscription limit - no point
+                            # trying other auth modes, this is a capacity issue not an auth issue
+                            subscription_limit_hit = True
+                            last_err = Exception(f"Camera at max concurrent ONVIF subscriptions (HTTP 500 SubscribeCreationFailedFault)")
+                            break
+                        else:
+                            raise Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+                    except Exception as e:
+                        last_err = e
+                        continue
+                
+                if not pullpoint_addr:
+                    if subscription_limit_hit:
+                        print(f"  [ONVIF Event Forwarder {self.id}] Camera '{self.name}' is at its max concurrent ONVIF subscription limit. Another client is using the slot. Waiting 30s for a slot to free up...")
+                        time.sleep(30)
+                        continue
+                    raise Exception(f"Subscription creation failed across all auth modes. Last error: {last_err}")
+                
+                print(f"  [ONVIF Event Forwarder {self.id}] Subscription created using auth mode '{self.current_auth_mode}'. PullPoint address: {pullpoint_addr}")
+                
+                # Poll loop
+                try:
+                    while self._event_forwarding_running:
+                        payload = f"""<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:wsa="http://www.w3.org/2005/08/addressing" xmlns:tet="http://www.onvif.org/ver10/events/wsdl">
+                          <soap:Header>
+                            <wsa:Action>http://www.onvif.org/ver10/events/wsdl/PullPointSubscription/PullMessagesRequest</wsa:Action>
+                            <wsa:To>{pullpoint_addr}</wsa:To>
+                            {get_ws_security_header(username, password, mode=self.current_auth_mode)}
+                          </soap:Header>
+                          <soap:Body>
+                            <tet:PullMessages>
+                              <tet:Timeout>PT5S</tet:Timeout>
+                              <tet:MessageLimit>10</tet:MessageLimit>
+                            </tet:PullMessages>
+                          </soap:Body>
+                        </soap:Envelope>"""
+                        
+                        headers = {
+                            'Content-Type': 'application/soap+xml; charset=utf-8; action="http://www.onvif.org/ver10/events/wsdl/PullPointSubscription/PullMessagesRequest"',
+                        }
+                        
+                        try:
+                            resp = requests.post(pullpoint_addr, data=payload, headers=headers, timeout=15)
+                            if resp.status_code == 200:
+                                events_list = parse_pull_messages_response(resp.text)
+                                for evt in events_list:
+                                    # Filter: only keep relevant motion, alarm, tamper, detector, input events
+                                    topic_lower = evt['topic'].lower()
+                                    is_relevant = any(k in topic_lower for k in ['motion', 'alarm', 'tamper', 'detector', 'input', 'logicalstate', 'digital', 'image'])
+                                    if not is_relevant:
+                                        continue
+                                        
+                                    evt['camera_id'] = self.id
+                                    evt['camera_name'] = self.name
+                                    evt['timestamp'] = evt['timestamp'] or datetime.utcnow().isoformat() + 'Z'
+                                    
+                                    # Log locally (limit to 50)
+                                    self.event_logs.append(evt)
+                                    if len(self.event_logs) > 50:
+                                        self.event_logs.pop(0)
+                                        
+                                    # Broadcast to virtual clients
+                                    if self.onvif_service:
+                                        for sub in list(self.onvif_service.subscriptions.values()):
+                                            try:
+                                                sub.queue.put_nowait(evt)
+                                            except queue.Full:
+                                                try:
+                                                    sub.queue.get_nowait()
+                                                    sub.queue.put_nowait(evt)
+                                                except:
+                                                    pass
+                                                    
+                                    # Log globally (limit to 200)
+                                    if self.manager:
+                                        if not hasattr(self.manager, 'onvif_events'):
+                                            self.manager.onvif_events = []
+                                        self.manager.onvif_events.append(evt)
+                                        if len(self.manager.onvif_events) > 200:
+                                            self.manager.onvif_events.pop(0)
+                                            
+                                    if getattr(self, 'debug_mode', False):
+                                        print(f"  [ONVIF Event {self.id}] {evt['topic']} = {evt['value']}")
+                            else:
+                                print(f"  [ONVIF Event Forwarder {self.id}] PullMessages returned status {resp.status_code}. Reconnecting...")
+                                break
+                        except Exception as poll_err:
+                            print(f"  [ONVIF Event Forwarder {self.id}] PullMessages connection error: {poll_err}. Reconnecting...")
+                            break
+                finally:
+                    # Always clean up the subscription to free the camera slot
+                    if pullpoint_addr:
+                        try:
+                            unsub_payload = f"""<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2">
+                              <soap:Header>
+                                {get_ws_security_header(username, password, mode=self.current_auth_mode)}
+                              </soap:Header>
+                              <soap:Body>
+                                <wsnt:Unsubscribe/>
+                              </soap:Body>
+                            </soap:Envelope>"""
+                            unsub_headers = {
+                                'Content-Type': 'application/soap+xml; charset=utf-8; action="http://docs.oasis-open.org/wsn/bw-2/SubscriptionManager/UnsubscribeRequest"',
+                            }
+                            # Send unsubscribe to pullpoint_addr
+                            requests.post(pullpoint_addr, data=unsub_payload, headers=unsub_headers, timeout=5)
+                            print(f"  [ONVIF Event Forwarder {self.id}] Sent Unsubscribe to camera '{self.name}' to release subscription slot.")
+                        except Exception as unsub_err:
+                            print(f"  [ONVIF Event Forwarder {self.id}] Failed to unsubscribe from camera '{self.name}': {unsub_err}")
+                            
+            except Exception as conn_err:
+                print(f"  [ONVIF Event Forwarder {self.id}] ONVIF events connection failed: {conn_err}. Retrying in 10s...")
+                time.sleep(10)
+
+
+
+
+def get_ws_security_header(username, password, mode='digest'):
+    if not username:
+        return ""
+    if mode == 'none':
+        return ""
+    if mode == 'text':
+        return f"""
+        <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+          <wsse:UsernameToken>
+            <wsse:Username>{username}</wsse:Username>
+            <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{password}</wsse:Password>
+          </wsse:UsernameToken>
+        </wsse:Security>
+        """
+    # Default to digest
+    import base64
+    import hashlib
+    import secrets
+    from datetime import datetime
+    nonce_bytes = secrets.token_bytes(16)
+    nonce_b64 = base64.b64encode(nonce_bytes).decode('utf-8')
+    timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    hasher = hashlib.sha1()
+    hasher.update(nonce_bytes)
+    hasher.update(timestamp.encode('utf-8'))
+    hasher.update(password.encode('utf-8'))
+    digest_b64 = base64.b64encode(hasher.digest()).decode('utf-8')
+    return f"""
+    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+      <wsse:UsernameToken>
+        <wsse:Username>{username}</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">{digest_b64}</wsse:Password>
+        <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">{nonce_b64}</wsse:Nonce>
+        <wsu:Created>{timestamp}</wsu:Created>
+      </wsse:UsernameToken>
+    </wsse:Security>
+    """
+
+
+def parse_pull_messages_response(xml_data):
+    """Parse standard ONVIF XML response for PullMessages"""
+    events = []
+    try:
+        root = ET.fromstring(xml_data)
+        for message_node in root.findall('.//{*}NotificationMessage'):
+            topic_node = message_node.find('.//{*}Topic')
+            topic = topic_node.text.strip() if topic_node is not None else "unknown"
+            
+            # Remove namespace prefixes from topic name for cleaner display
+            clean_topic = topic
+            if '/' in topic:
+                parts = []
+                for p in topic.split('/'):
+                    if ':' in p:
+                        parts.append(p.split(':')[1])
+                    else:
+                        parts.append(p)
+                clean_topic = '/'.join(parts)
+            elif ':' in topic:
+                clean_topic = topic.split(':')[1]
+            
+            msg_node = message_node.find('.//{*}Message')
+            if msg_node is not None:
+                data_node = msg_node.find('.//{*}Data')
+                value = None
+                data_name = 'IsMotion'
+                if data_node is not None:
+                    simple_items = data_node.findall('.//{*}SimpleItem')
+                    for item in simple_items:
+                        name = item.attrib.get('Name', '')
+                        val = item.attrib.get('Value', '')
+                        if name.lower() in ['ismotion', 'active', 'state', 'value', 'status']:
+                            value = val
+                            data_name = name
+                            break
+                    if value is None and len(simple_items) > 0:
+                        value = simple_items[0].attrib.get('Value', None)
+                        data_name = simple_items[0].attrib.get('Name', 'IsMotion')
+                
+                source_node = message_node.find('.//{*}Source')
+                source = {}
+                if source_node is not None:
+                    for item in source_node.findall('.//{*}SimpleItem'):
+                        name = item.attrib.get('Name', '')
+                        val = item.attrib.get('Value', '')
+                        if name:
+                            source[name] = val
+                
+                timestamp = msg_node.attrib.get('UtcTime', None)
+                if not timestamp:
+                    child = msg_node.find('.//{*}Message')
+                    if child is not None:
+                        timestamp = child.attrib.get('UtcTime', None)
+                
+                # Scan for person / vehicle tags
+                detection_tags = []
+                def scan_str(s):
+                    if not s:
+                        return
+                    s_lower = str(s).lower()
+                    if any(x in s_lower for x in ['human', 'person', 'face', 'pedestrian', 'people']):
+                        if 'person' not in detection_tags:
+                            detection_tags.append('person')
+                    if any(x in s_lower for x in ['vehicle', 'car', 'truck', 'bus', 'bike', 'motorcycle', 'nonmotor', 'plate']):
+                        if 'vehicle' not in detection_tags:
+                            detection_tags.append('vehicle')
+
+                scan_str(clean_topic)
+                if source:
+                    for k, v in source.items():
+                        scan_str(k)
+                        scan_str(v)
+                
+                if msg_node is not None:
+                    data_node = msg_node.find('.//{*}Data')
+                    if data_node is not None:
+                        for item in data_node.findall('.//{*}SimpleItem'):
+                            for attr_name, attr_val in item.attrib.items():
+                                scan_str(attr_name)
+                                scan_str(attr_val)
+
+                events.append({
+                    'topic': clean_topic,
+                    'value': value if value is not None else 'false',
+                    'data_name': data_name,
+                    'timestamp': timestamp,
+                    'source': source,
+                    'tags': detection_tags
+                })
+    except Exception as e:
+        print(f"Error parsing PullMessages XML: {e}")
+    return events

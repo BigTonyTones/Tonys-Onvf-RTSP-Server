@@ -42,6 +42,7 @@ class CameraManager:
         # GridFusion Layouts
         self.grid_fusion_layouts = []
         self.grid_fusion_looks = []
+        self.onvif_events = []
 
         # Stream Watchdog tracking
         self.stale_path_times = {} # path_name -> first_stale_timestamp
@@ -577,7 +578,9 @@ class CameraManager:
                    disable_substream=False, use_main_as_substream=False,
                    enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
-                   static_ip='', netmask='24', gateway='', uuid=None):
+                   static_ip='', netmask='24', gateway='', uuid=None,
+                   enable_event_forwarding=False, physical_onvif_port=80,
+                   onvif_forwarding_username='', onvif_forwarding_password=''):
         """Add a new camera"""
         if not main_path.startswith('/'):
             main_path = '/' + main_path
@@ -650,7 +653,11 @@ class CameraManager:
             'netmask': netmask,
             'gateway': gateway,
             'uuid': uuid,
-            'debugMode': getattr(self, 'debug_mode', False)
+            'debugMode': getattr(self, 'debug_mode', False),
+            'enableEventForwarding': enable_event_forwarding,
+            'physicalOnvifPort': physical_onvif_port,
+            'onvifForwardingUsername': onvif_forwarding_username,
+            'onvifForwardingPassword': onvif_forwarding_password
         }
         
         camera = VirtualONVIFCamera(config, self)
@@ -671,7 +678,9 @@ class CameraManager:
                       disable_substream=False, use_main_as_substream=False,
                       enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
-                      static_ip='', netmask='24', gateway='', uuid=None):
+                      static_ip='', netmask='24', gateway='', uuid=None,
+                      enable_event_forwarding=False, physical_onvif_port=80,
+                      onvif_forwarding_username='', onvif_forwarding_password=''):
         """Update an existing camera"""
         camera = self.get_camera(camera_id)
         if not camera:
@@ -751,6 +760,10 @@ class CameraManager:
         camera.static_ip = static_ip
         camera.netmask = netmask
         camera.gateway = gateway
+        camera.enable_event_forwarding = enable_event_forwarding
+        camera.physical_onvif_port = physical_onvif_port
+        camera.onvif_forwarding_username = onvif_forwarding_username
+        camera.onvif_forwarding_password = onvif_forwarding_password
         
         if uuid:
             camera.uuid = uuid

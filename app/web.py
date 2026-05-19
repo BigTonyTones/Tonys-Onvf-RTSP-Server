@@ -322,7 +322,11 @@ def create_web_app(manager):
                 static_ip=data.get('staticIp', ''),
                 netmask=data.get('netmask', '24'),
                 gateway=data.get('gateway', ''),
-                uuid=data.get('uuid')
+                uuid=data.get('uuid'),
+                enable_event_forwarding=data.get('enableEventForwarding', False),
+                physical_onvif_port=data.get('physicalOnvifPort', 80),
+                onvif_forwarding_username=data.get('onvifForwardingUsername', ''),
+                onvif_forwarding_password=data.get('onvifForwardingPassword', '')
             )
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
@@ -366,7 +370,11 @@ def create_web_app(manager):
                 static_ip=data.get('staticIp', ''),
                 netmask=data.get('netmask', '24'),
                 gateway=data.get('gateway', ''),
-                uuid=data.get('uuid')
+                uuid=data.get('uuid'),
+                enable_event_forwarding=data.get('enableEventForwarding', False),
+                physical_onvif_port=data.get('physicalOnvifPort', 80),
+                onvif_forwarding_username=data.get('onvifForwardingUsername', ''),
+                onvif_forwarding_password=data.get('onvifForwardingPassword', '')
             )
             if camera:
                 return jsonify(camera.to_dict())
@@ -1291,5 +1299,21 @@ def create_web_app(manager):
         except Exception as e:
             print(f"  Error in MediaMTX auth hook: {e}")
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/onvif/events', methods=['GET'])
+    @login_required
+    def get_onvif_events():
+        events = getattr(manager, 'onvif_events', [])
+        return jsonify(events)
+
+    @app.route('/api/onvif/events/clear', methods=['POST'])
+    @login_required
+    def clear_onvif_events():
+        if hasattr(manager, 'onvif_events'):
+            manager.onvif_events = []
+        for cam in manager.cameras:
+            if hasattr(cam, 'event_logs'):
+                cam.event_logs = []
+        return jsonify({'status': 'success'})
 
     return app
