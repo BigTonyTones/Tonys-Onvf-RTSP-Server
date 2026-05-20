@@ -564,11 +564,24 @@ class CameraManager:
 
         return self.get_grid_fusion()
     
-    def is_port_available(self, port, exclude_camera_id=None):
-        """Check if an ONVIF port is available (not used by other cameras)"""
+    def is_port_available(self, port, exclude_camera_id=None, caller_uses_vnic=False):
+        """Check if an ONVIF port can be used by the calling camera.
+
+        Cameras with Virtual NIC enabled each get their own LAN IP, so the
+        same port can be safely reused across them — the (IP, port) tuples
+        are still unique. Port collisions only occur when both cameras share
+        the host's primary IP.
+        """
+        if caller_uses_vnic:
+            return True  # caller will be on its own vNIC IP
         for camera in self.cameras:
-            if camera.id != exclude_camera_id and camera.onvif_port == port:
-                return False
+            if camera.id == exclude_camera_id:
+                continue
+            if camera.onvif_port != port:
+                continue
+            if getattr(camera, 'use_virtual_nic', False):
+                continue  # other camera is on its own vNIC IP, no collision
+            return False
         return True
     
     def add_camera(self, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
@@ -605,7 +618,7 @@ class CameraManager:
         # Handle ONVIF port assignment
         if onvif_port is not None:
             onvif_port = int(onvif_port)
-            if not self.is_port_available(onvif_port):
+            if not self.is_port_available(onvif_port, caller_uses_vnic=use_virtual_nic):
                 raise ValueError(f"ONVIF port {onvif_port} is already in use by another camera")
         else:
             # Auto-assign port
@@ -717,7 +730,7 @@ class CameraManager:
         # Validate ONVIF port if provided
         if onvif_port is not None:
             onvif_port = int(onvif_port)
-            if not self.is_port_available(onvif_port, exclude_camera_id=camera_id):
+            if not self.is_port_available(onvif_port, exclude_camera_id=camera_id, caller_uses_vnic=use_virtual_nic):
                 raise ValueError(f"ONVIF port {onvif_port} is already in use by another camera")
         else:
             # Keep existing port if not specified
