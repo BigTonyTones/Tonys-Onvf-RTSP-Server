@@ -577,15 +577,28 @@ class CameraManager:
                    transcode_sub=False, transcode_main=False,
                    disable_substream=False, use_main_as_substream=False,
                    enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
-                   use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
-                   static_ip='', netmask='24', gateway='', uuid=None,
-                   enable_event_forwarding=False, physical_onvif_port=80,
-                   onvif_forwarding_username='', onvif_forwarding_password=''):
+                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
+                    static_ip='', netmask='24', gateway='', uuid=None,
+                    enable_event_forwarding=False, physical_onvif_port=80,
+                    onvif_forwarding_username='', onvif_forwarding_password='',
+                    event_source='onvif', ai_targets=None, ai_model='yolov8n.pt'):
         """Add a new camera"""
         if not main_path.startswith('/'):
             main_path = '/' + main_path
         if not sub_path.startswith('/'):
             sub_path = '/' + sub_path
+            
+        # Check for duplicate UUID or MAC Address (UniFi Protect requires uniqueness)
+        if uuid:
+            uuid_str = str(uuid).strip().lower()
+            for c in self.cameras:
+                if getattr(c, 'uuid', None) and str(c.uuid).strip().lower() == uuid_str:
+                    raise ValueError(f"Device UUID '{uuid}' is already in use by camera '{c.name}'")
+        if nic_mac:
+            mac_str = str(nic_mac).strip().lower().replace(':', '')
+            for c in self.cameras:
+                if getattr(c, 'nic_mac', None) and str(c.nic_mac).strip().lower().replace(':', '') == mac_str:
+                    raise ValueError(f"MAC Address '{nic_mac}' is already in use by camera '{c.name}'")
         
         rtsp_port = str(rtsp_port)
         
@@ -618,6 +631,9 @@ class CameraManager:
         path_name = ''.join(c for c in path_name if c.isalnum() or c == '_')
         
         print(f"\nAdding camera: {name}")
+        
+        if ai_targets is None:
+            ai_targets = ['person', 'vehicle']
         
         config = {
             'id': self.next_id,
@@ -657,7 +673,10 @@ class CameraManager:
             'enableEventForwarding': enable_event_forwarding,
             'physicalOnvifPort': physical_onvif_port,
             'onvifForwardingUsername': onvif_forwarding_username,
-            'onvifForwardingPassword': onvif_forwarding_password
+            'onvifForwardingPassword': onvif_forwarding_password,
+            'eventSource': event_source,
+            'aiTargets': ai_targets,
+            'aiModel': ai_model
         }
         
         camera = VirtualONVIFCamera(config, self)
@@ -680,7 +699,8 @@ class CameraManager:
                       use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway='', uuid=None,
                       enable_event_forwarding=False, physical_onvif_port=80,
-                      onvif_forwarding_username='', onvif_forwarding_password=''):
+                      onvif_forwarding_username='', onvif_forwarding_password='',
+                      event_source='onvif', ai_targets=None, ai_model='yolov8n.pt'):
         """Update an existing camera"""
         camera = self.get_camera(camera_id)
         if not camera:
@@ -707,6 +727,18 @@ class CameraManager:
             main_path = '/' + main_path
         if not sub_path.startswith('/'):
             sub_path = '/' + sub_path
+            
+        # Check for duplicate UUID or MAC Address (UniFi Protect requires uniqueness)
+        if uuid:
+            uuid_str = str(uuid).strip().lower()
+            for c in self.cameras:
+                if c.id != camera_id and getattr(c, 'uuid', None) and str(c.uuid).strip().lower() == uuid_str:
+                    raise ValueError(f"Device UUID '{uuid}' is already in use by camera '{c.name}'")
+        if nic_mac:
+            mac_str = str(nic_mac).strip().lower().replace(':', '')
+            for c in self.cameras:
+                if c.id != camera_id and getattr(c, 'nic_mac', None) and str(c.nic_mac).strip().lower().replace(':', '') == mac_str:
+                    raise ValueError(f"MAC Address '{nic_mac}' is already in use by camera '{c.name}'")
         
         rtsp_port = str(rtsp_port)
         
@@ -765,6 +797,12 @@ class CameraManager:
         camera.onvif_forwarding_username = onvif_forwarding_username
         camera.onvif_forwarding_password = onvif_forwarding_password
         
+        if ai_targets is None:
+            ai_targets = ['person', 'vehicle']
+        camera.event_source = event_source
+        camera.ai_targets = ai_targets
+        camera.ai_model = ai_model
+        
         if uuid:
             camera.uuid = uuid
         
@@ -773,10 +811,15 @@ class CameraManager:
         # Save config
         self.save_config()
         
-        # Restart camera if it was running
+        # Restart camera if it was running (non-blocking)
         if was_running:
-            camera.start()
-            self.restart_mediamtx()
+            def _async_restart():
+                try:
+                    camera.start()
+                    self.restart_mediamtx()
+                except Exception as e:
+                    print(f"Error restarting camera in background: {e}")
+            threading.Thread(target=_async_restart, daemon=True).start()
         
         return camera
     
@@ -800,16 +843,28 @@ class CameraManager:
     
 
     def start_all(self):
-        """Start all cameras"""
-        for camera in self.cameras:
-            camera.start()
-        self.restart_mediamtx()
+        """Start all cameras in parallel (non-blocking)"""
+        import threading
+        def _async_start_all():
+            try:
+                threads = []
+                for camera in self.cameras:
+                    if camera.status != "running":
+                        t = threading.Thread(target=camera.start)
+                        t.start()
+                        threads.append(t)
+                for t in threads:
+                    t.join()
+                self.restart_mediamtx()
+            except Exception as e:
+                print(f"Error in start_all: {e}")
+                
+        threading.Thread(target=_async_start_all, daemon=True).start()
     
     def stop_all(self):
         """Stop all cameras"""
         for camera in self.cameras:
             camera.stop()
-        self.restart_mediamtx()
 
     def restart_mediamtx(self):
         """Restart MediaMTX to apply changes (Non-blocking)"""

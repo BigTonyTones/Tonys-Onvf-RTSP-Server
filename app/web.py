@@ -326,7 +326,10 @@ def create_web_app(manager):
                 enable_event_forwarding=data.get('enableEventForwarding', False),
                 physical_onvif_port=data.get('physicalOnvifPort', 80),
                 onvif_forwarding_username=data.get('onvifForwardingUsername', ''),
-                onvif_forwarding_password=data.get('onvifForwardingPassword', '')
+                onvif_forwarding_password=data.get('onvifForwardingPassword', ''),
+                event_source=data.get('eventSource', 'onvif'),
+                ai_targets=data.get('aiTargets'),
+                ai_model=data.get('aiModel', 'yolov8n.pt')
             )
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
@@ -374,9 +377,16 @@ def create_web_app(manager):
                 enable_event_forwarding=data.get('enableEventForwarding', False),
                 physical_onvif_port=data.get('physicalOnvifPort', 80),
                 onvif_forwarding_username=data.get('onvifForwardingUsername', ''),
-                onvif_forwarding_password=data.get('onvifForwardingPassword', '')
+                onvif_forwarding_password=data.get('onvifForwardingPassword', ''),
+                event_source=data.get('eventSource', 'onvif'),
+                ai_targets=data.get('aiTargets'),
+                ai_model=data.get('aiModel', 'yolov8n.pt')
             )
             if camera:
+                camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
+                camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', 50)
+                camera.ai_zone = data.get('aiZone', [])
+                manager.save_config()
                 return jsonify(camera.to_dict())
             return jsonify({'error': 'Camera not found'}), 404
         except ValueError as e:
@@ -396,14 +406,21 @@ def create_web_app(manager):
     def start_camera(camera_id):
         camera = manager.get_camera(camera_id)
         if camera:
-            # Only restart MediaMTX if camera wasn't already running
+            # Start camera and restart mediamtx in a background thread (non-blocking)
             was_running = camera.status == "running"
-            camera.start()
-            manager.save_config()
-            if not was_running:
-                rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
+            
+            def _async_start():
+                try:
+                    camera.start()
+                    manager.save_config()
+                    if not was_running:
+                        manager.restart_mediamtx()
+                except Exception as e:
+                    print(f"Error starting camera {camera_id} in background: {e}")
+                    
+            import threading
+            threading.Thread(target=_async_start, daemon=True).start()
+            
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
     
@@ -422,6 +439,84 @@ def create_web_app(manager):
                 manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
+
+    @app.route('/api/cameras/<int:camera_id>/test-event', methods=['POST'])
+    @login_required
+    def test_camera_event(camera_id):
+        camera = manager.get_camera(camera_id)
+        if camera:
+            camera.trigger_test_event()
+            return jsonify({'status': 'success', 'message': 'Test event triggered successfully'})
+        return jsonify({'error': 'Camera not found'}), 404
+
+    @app.route('/api/cameras/<int:camera_id>/copy-ai-settings', methods=['POST'])
+    @login_required
+    def copy_ai_settings(camera_id):
+        source = manager.get_camera(camera_id)
+        if not source:
+            return jsonify({'error': 'Source camera not found'}), 404
+        
+        data = request.get_json()
+        target_ids = data.get('targetCameraIds', [])
+        
+        updated = []
+        for tid in target_ids:
+            target = manager.get_camera(tid)
+            if target and target.id != source.id:
+                target.enable_event_forwarding = source.enable_event_forwarding
+                target.event_source = source.event_source
+                target.ai_model = source.ai_model
+                target.ai_targets = list(source.ai_targets)
+                target.ai_motion_detection_enabled = source.ai_motion_detection_enabled
+                target.ai_motion_sensitivity = source.ai_motion_sensitivity
+                # NOTE: ai_zone is NOT copied (per user request)
+                updated.append(target.id)
+        
+        manager.save_config()
+        return jsonify({'status': 'success', 'updated': updated})
+
+    @app.route('/api/cameras/<int:camera_id>/snapshot', methods=['GET'])
+    @login_required
+    def get_ai_snapshot(camera_id):
+        """Get a snapshot for AI zone drawing"""
+        camera = manager.get_camera(camera_id)
+        if not camera:
+            return jsonify({'error': 'Camera not found'}), 404
+        
+        if camera.status == "running":
+            rtsp_port = getattr(manager, 'rtsp_port', 8554)
+            if getattr(manager, 'rtsp_auth_enabled', False):
+                user = quote(getattr(manager, 'global_username', 'admin'))
+                pw = quote(getattr(manager, 'global_password', 'admin'))
+                stream_url = f"rtsp://{user}:{pw}@localhost:{rtsp_port}/{camera.path_name}_sub"
+            else:
+                stream_url = f"rtsp://localhost:{rtsp_port}/{camera.path_name}_sub"
+        else:
+            stream_url = camera.sub_stream_url or camera.main_stream_url
+        
+        ffmpeg_mgr = FFmpegManager()
+        fd, path = tempfile.mkstemp(suffix='.jpg')
+        os.close(fd)
+        
+        try:
+            success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+            if success:
+                with open(path, 'rb') as f:
+                    content = f.read()
+                response = make_response(content)
+                response.headers['Content-Type'] = 'image/jpeg'
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                return response
+            else:
+                return jsonify({'error': error}), 500
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except:
+                    pass
 
     @app.route('/api/cameras/start-all', methods=['POST'])
     @login_required
@@ -1315,5 +1410,139 @@ def create_web_app(manager):
             if hasattr(cam, 'event_logs'):
                 cam.event_logs = []
         return jsonify({'status': 'success'})
+
+    # --- Local AI Dependancy Checker & Installer ---
+    class AIInstaller:
+        def __init__(self):
+            import threading
+            self.status = "idle"  # idle, installing, success, failed
+            self.log = []
+            self.lock = threading.Lock()
+            self._thread = None
+
+        def start_install(self):
+            with self.lock:
+                if self.status == "installing":
+                    return False
+                self.status = "installing"
+                self.log = ["Starting installation..."]
+                import threading
+                self._thread = threading.Thread(target=self._run_install, daemon=True)
+                self._thread.start()
+                return True
+
+        def _run_cmd(self, cmd, custom_env):
+            import subprocess
+            try:
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    env=custom_env
+                )
+                
+                for line in iter(process.stdout.readline, ''):
+                    line_str = line.strip()
+                    if line_str:
+                        with self.lock:
+                            self.log.append(line_str)
+                            if len(self.log) > 1000:
+                                self.log.pop(0)
+                                
+                process.stdout.close()
+                return process.wait()
+            except Exception as e:
+                with self.lock:
+                    self.log.append(f"Command execution error: {str(e)}")
+                return -1
+
+        def _run_install(self):
+            try:
+                import sys
+                import os
+                
+                # Get the root directory of the application
+                app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                local_tmp = os.path.join(app_dir, "tmp")
+                os.makedirs(local_tmp, exist_ok=True)
+                
+                try:
+                    os.chmod(local_tmp, 0o777)
+                except Exception:
+                    pass
+
+                # Copy environment and override temp variables to use local workspace directory (has 19GB free)
+                custom_env = os.environ.copy()
+                custom_env["TMPDIR"] = local_tmp
+                custom_env["TEMP"] = local_tmp
+                custom_env["TMP"] = local_tmp
+                
+                with self.lock:
+                    self.log.append("Starting installation...")
+                    self.log.append(f"Redirecting pip temporary directory to: {local_tmp}")
+
+                # Step 1: Install ultralytics
+                cmd_ultra = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "ultralytics"]
+                rc = self._run_cmd(cmd_ultra, custom_env)
+                if rc != 0:
+                    with self.lock:
+                        self.status = "failed"
+                        self.log.append(f"Failed to install ultralytics (exit code {rc})")
+                    return
+
+                # Step 2: Uninstall opencv-python (GUI version) to prevent libGL conflict
+                cmd_un = [sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python"]
+                self._run_cmd(cmd_un, custom_env)
+
+                # Step 3: Install opencv-python-headless
+                cmd_head = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "opencv-python-headless"]
+                rc = self._run_cmd(cmd_head, custom_env)
+                
+                with self.lock:
+                    if rc == 0:
+                        self.status = "success"
+                        self.log.append("Installation finished successfully!")
+                    else:
+                        self.status = "failed"
+                        self.log.append(f"Failed to install opencv-python-headless (exit code {rc})")
+            except Exception as e:
+                with self.lock:
+                    self.status = "failed"
+                    self.log.append(f"Installation error: {str(e)}")
+
+    ai_installer = AIInstaller()
+
+    @app.route('/api/ai/status', methods=['GET'])
+    @login_required
+    def get_ai_status():
+        try:
+            import importlib
+            importlib.invalidate_caches()
+            import cv2
+            import ultralytics
+            return jsonify({
+                'installed': True,
+                'opencv_version': getattr(cv2, '__version__', 'unknown'),
+                'ultralytics_version': getattr(ultralytics, '__version__', 'unknown')
+            })
+        except ImportError:
+            return jsonify({'installed': False})
+
+    @app.route('/api/ai/install', methods=['POST'])
+    @login_required
+    def start_ai_install():
+        success = ai_installer.start_install()
+        return jsonify({'success': success, 'status': ai_installer.status})
+
+    @app.route('/api/ai/install/progress', methods=['GET'])
+    @login_required
+    def get_ai_install_progress():
+        with ai_installer.lock:
+            return jsonify({
+                'status': ai_installer.status,
+                'log': ai_installer.log
+            })
 
     return app

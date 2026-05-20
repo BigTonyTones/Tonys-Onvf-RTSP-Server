@@ -1214,7 +1214,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
                 <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
                 <button class="btn" style="background: linear-gradient(135deg, #be5a83 0%, #9333ea 100%); color: white; font-weight: 600;" onclick="toggleMatrixView(true)">Matrix View</button>
-                <button class="btn" style="background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; font-weight: 600;" onclick="toggleONVIFView(true)">ONVIF</button>
+                <button class="btn" style="background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; font-weight: 600;" onclick="toggleONVIFView(true)">AI/ONVIF</button>
                 <button class="btn" style="background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: white; font-weight: 600;" onclick="window.location.href='/ip-management'">IP Management</button>
                 <button class="btn" onclick="startAll()">Start All</button>
                 <button class="btn" onclick="stopAll()">Stop All</button>
@@ -1288,17 +1288,72 @@ def get_web_ui_html(current_settings=None):
         <div id="matrix-grid" class="matrix-grid"></div>
     </div>
     
+    <!-- Copy AI Settings Modal -->
+    <div id="copy-ai-modal" class="modal" style="z-index: 1100;">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 id="copy-ai-title" style="margin: 0; color: #e2e8f0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-copy" style="color: #6366f1;"></i> Copy AI Settings
+                </h3>
+                <button class="close-btn" onclick="closeCopyAiModal()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="background: rgba(99, 102, 241, 0.1); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #6366f1; margin-bottom: 16px;">
+                    <div style="font-size: 11px; color: #a0aec0; line-height: 1.5;">
+                        Copies: Event source, AI model, target classes, and sensitivity.<br>
+                        <strong style="color: #f6ad55;">Does NOT copy:</strong> Motion detection zones.
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <div style="font-size: 13px; color: #a0aec0; font-weight: 600;">Select Target Cameras</div>
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="copyAiSelectAll" onchange="toggleCopyAiSelectAll()" style="width: auto; cursor: pointer;">
+                        <span style="font-size: 11px; color: #cbd5e0;">Select All</span>
+                    </label>
+                </div>
+                <div id="copyAiCameraList" style="max-height: 280px; overflow-y: auto; border: 1px solid #2d3748; border-radius: 8px; background: #1a202c;">
+                    <!-- Populated dynamically -->
+                </div>
+                <div style="margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeCopyAiModal()" style="padding: 8px 18px; font-size: 12px; background: #2d3748; color: #a0aec0; border: 1px solid #4a5568; border-radius: 6px; cursor: pointer;">Cancel</button>
+                    <button type="button" id="btnApplyCopyAi" onclick="applyCopyAiSettings()" style="padding: 8px 18px; font-size: 12px; font-weight: 600; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-check"></i> Apply to Selected
+                    </button>
+                </div>
+                <div id="copyAiFeedback" style="font-size: 11px; margin-top: 8px; text-align: center; color: #a0aec0;"></div>
+            </div>
+        </div>
+    </div>
+    
     <!-- ONVIF Events Overlay -->
     <div id="onvif-overlay" class="matrix-overlay">
-        <div class="matrix-controls" style="align-items: center; border-bottom: 1px solid #2d3748; padding-bottom: 15px; margin-bottom: 15px;">
+        <div class="matrix-controls" style="align-items: center; border-bottom: 1px solid #2d3748; padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
             <div style="color: white; font-size: 18px; font-weight: 600; margin-right: auto; display: flex; align-items: center; gap: 10px; padding-left: 10px;">
-                <i class="fas fa-bell" style="color: #3b82f6;"></i>
-                <span>ONVIF Event Log Stream</span>
+                <span>AI & ONVIF Event Log Stream</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
                 <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Filter by Camera:</label>
                 <select id="onvif-camera-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
                     <option value="all">All Cameras</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
+                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Event Type:</label>
+                <select id="onvif-type-filter" class="form-input" style="width: 140px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                    <option value="all">All Events</option>
+                    <option value="onvif">ONVIF Events</option>
+                    <option value="ai">AI Detections</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
+                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Target/State:</label>
+                <select id="onvif-target-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                    <option value="all">All Targets/States</option>
+                    <option value="person">Person Detections</option>
+                    <option value="vehicle">Vehicle Detections</option>
+                    <option value="animal">Animal Detections</option>
+                    <option value="active">Active Only</option>
+                    <option value="clear">Clear Only</option>
                 </select>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
@@ -1308,15 +1363,44 @@ def get_web_ui_html(current_settings=None):
             <button class="btn btn-primary" onclick="clearONVIFEvents()" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); margin-right: 10px;">Clear Events</button>
             <button class="btn-matrix" onclick="toggleONVIFView(false)" style="background: #f56565; border-radius: 6px; padding: 6px 16px;">Close Log</button>
         </div>
+        
+        <!-- AI Diagnostics Panel -->
+        <div id="ai-diagnostics-panel" style="margin-bottom: 20px; background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 15px; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="color: #ecc94b; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    Local AI Object Detection Threads Status
+                </div>
+                <div id="ai-diagnostics-summary" style="font-size: 12px; color: #94a3b8; font-weight: 500;"></div>
+            </div>
+            <div style="max-height: 180px; overflow-y: auto; border: 1px solid #1e293b; border-radius: 6px; background: #020617;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #1e293b; color: #94a3b8; background: #0b0f19;">
+                            <th style="padding: 8px 12px;">Camera</th>
+                            <th style="padding: 8px 12px;">YOLO Model</th>
+                            <th style="padding: 8px 12px; text-align: center;">FPS</th>
+                            <th style="padding: 8px 12px; text-align: center;">Inference Latency</th>
+                            <th style="padding: 8px 12px; text-align: center;">Queue Wait</th>
+                            <th style="padding: 8px 12px;">Current Detection</th>
+                            <th style="padding: 8px 12px; text-align: right;">Total Runs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ai-diagnostics-body" style="color: #cbd5e1; font-family: monospace;">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div style="flex: 1; overflow-y: auto; background: #0b0f19; border-radius: 8px; border: 1px solid #2d3748; padding: 15px;">
             <table class="diagnostics-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead>
                     <tr style="border-bottom: 2px solid #2d3748; color: #a0aec0; font-size: 14px;">
-                        <th style="padding: 10px;">Timestamp</th>
-                        <th style="padding: 10px;">Camera</th>
-                        <th style="padding: 10px;">Topic</th>
-                        <th style="padding: 10px;">Property</th>
-                        <th style="padding: 10px;">Value</th>
+                        <th style="padding: 10px; width: 180px;">Timestamp</th>
+                        <th style="padding: 10px; width: 180px;">Camera</th>
+                        <th style="padding: 10px; width: 130px;">Source Type</th>
+                        <th style="padding: 10px;">Topic / Event</th>
+                        <th style="padding: 10px; width: 220px;">State / Detections</th>
                     </tr>
                 </thead>
                 <tbody id="onvif-events-body" style="color: #e2e8f0; font-size: 13px; font-family: monospace;">
@@ -1402,7 +1486,6 @@ def get_web_ui_html(current_settings=None):
             
             <form id="camera-form" onsubmit="saveCamera(event)">
                 <input type="hidden" id="camera-id" value="">
-                <input type="hidden" id="cameraUuid" value="">
                 
                 <div class="form-group" id="copy-from-group">
                     <label class="form-label">Copy Settings From</label>
@@ -1684,9 +1767,20 @@ def get_web_ui_html(current_settings=None):
 
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
-                    <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
+                        <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
+                    </div>
+                    <div class="form-group" style="flex: 1.5;">
+                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span>Device UUID</span>
+                            <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; height: auto; background: rgba(49, 130, 206, 0.15); border: 1px solid rgba(49, 130, 206, 0.3); color: #63b3ed; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="generateNewUuid()">
+                                <i class="fas fa-random"></i> Generate
+                            </button>
+                        </label>
+                        <input type="text" class="form-input" id="cameraUuid" placeholder="Auto-assigned on first save" style="font-family: monospace; font-size: 12px;">
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 25px;">
@@ -1697,12 +1791,12 @@ def get_web_ui_html(current_settings=None):
                 </div>
 
                 <div style="border-top: 1px solid #2d3748; padding-top: 15px; margin-top: 15px; margin-bottom: 20px;">
-                    <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 12px;">ONVIF Event Forwarding</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 12px;">AI & ONVIF Event Forwarding</div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="enableEventForwarding" style="width: auto; cursor: pointer;" onchange="toggleEventForwardingFields()">
                             <span class="form-label" style="margin: 0; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
-                                Enable ONVIF Event Forwarding
+                                Enable AI Onvif Events or ONVIF Event Forwarding
                                 <span style="font-size: 10px; background-color: #d69e2e; color: #1a202c; padding: 1px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Beta</span>
                             </span>
                         </label>
@@ -1711,6 +1805,14 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                     
+                    <div class="form-group" id="eventSourceGroup" style="display: none; margin-left: 24px; margin-top: 10px;">
+                        <label class="form-label" style="font-size: 12px;">Event Source Mode</label>
+                        <select class="form-input" id="eventSource" onchange="toggleEventSourceFields()" style="background-color: #1a202c; color: #fff;">
+                            <option value="onvif">Forward Physical Camera ONVIF Events</option>
+                            <option value="ai">Local AI Object Detection (YOLOv8)</option>
+                        </select>
+                    </div>
+
                     <div class="form-group" id="physicalOnvifPortGroup" style="display: none; margin-left: 24px;">
                         <label class="form-label" style="font-size: 12px;">Physical Camera ONVIF Port</label>
                         <input type="number" class="form-input" id="physicalOnvifPort" placeholder="80" value="80" style="max-width: 150px;">
@@ -1733,6 +1835,136 @@ def get_web_ui_html(current_settings=None):
                                     <input type="password" class="form-input" id="onvifForwardingPassword" placeholder="password" autocomplete="new-password">
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="aiModelGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; display: block;">AI Object Detection Model</label>
+                        <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: #1a202c; color: #fff; max-width: 100%;">
+                            <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt) - Default</option>
+                            <option value="yolo11n.pt">YOLO11 Nano (yolo11n.pt) - Newest & Recommended</option>
+                            <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
+                            <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt)</option>
+                            <option value="yolov8m.pt">YOLOv8 Medium (yolov8m.pt)</option>
+                        </select>
+                        <div id="aiModelDescription" style="margin-top: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: #2d3748; line-height: 1.4; color: #e2e8f0; border-left: 3px solid #3182ce;">
+                            <!-- Dynamically populated description -->
+                        </div>
+                    </div>
+
+                    <div id="aiTargetClassesGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">AI Target Detection (COCO Objects)</div>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" id="aiTargetPerson" style="width: auto; cursor: pointer;" checked>
+                                <span style="font-size: 12px; color: #cbd5e0;">Person</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" id="aiTargetVehicle" style="width: auto; cursor: pointer;" checked>
+                                <span style="font-size: 12px; color: #cbd5e0;">Vehicle</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" id="aiTargetAnimal" style="width: auto; cursor: pointer;">
+                                <span style="font-size: 12px; color: #cbd5e0;">Animal</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- AI Sensitivity Slider -->
+                    <div id="aiSensitivityGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Detection Sensitivity</div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">Low</span>
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <input type="range" id="aiMotionSensitivity" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiSensitivityDisplay(this.value)">
+                                <!-- Visual track markers -->
+                                <div style="position: relative; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; margin-top: 2px;">
+                                    <!-- Indoor Rec Range Highlight (40% to 60%) -->
+                                    <div style="position: absolute; left: 35.3%; width: 23.5%; height: 100%; background: rgba(16, 185, 129, 0.45);" title="Recommended Indoor Range (40% - 60%)"></div>
+                                    <!-- Outdoor Rec Range Highlight (75% to 85%) -->
+                                    <div style="position: absolute; left: 76.5%; width: 11.8%; height: 100%; background: rgba(245, 158, 11, 0.55);" title="Recommended Outdoor Range (75% - 85%)"></div>
+                                </div>
+                                <!-- Labels for Ranges -->
+                                <div style="position: relative; height: 12px; margin-top: 2px;">
+                                    <span style="position: absolute; left: 47%; transform: translateX(-50%); font-size: 8px; color: #10b981; font-weight: bold; white-space: nowrap;">INDOOR (40-60%)</span>
+                                    <span style="position: absolute; left: 82.3%; transform: translateX(-50%); font-size: 8px; color: #f59e0b; font-weight: bold; white-space: nowrap;">OUTDOOR (75-85%)</span>
+                                </div>
+                            </div>
+                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">High</span>
+                            <span id="aiSensitivityValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">50%</span>
+                        </div>
+                        <div style="color: #718096; font-size: 10px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Higher sensitivity detects more objects. Lower is more strict.</span>
+                            <span id="aiSensitivityStatus" style="font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; border: 1px solid transparent;"></span>
+                        </div>
+                    </div>
+
+                    <!-- AI Motion Zone Drawing -->
+                    <div id="aiZoneGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="font-size: 12px; color: #a0aec0; font-weight: 600;">Detection Zone</div>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" id="btnLoadZoneSnapshot" onclick="loadZoneSnapshot()" style="padding: 4px 10px; font-size: 10px; background: #2d3748; color: #a0aec0; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-camera"></i> Load Snapshot
+                                </button>
+                                <button type="button" id="btnClearZone" onclick="clearZone()" style="padding: 4px 10px; font-size: 10px; background: #2d3748; color: #f56565; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-trash"></i> Clear Zone
+                                </button>
+                            </div>
+                        </div>
+                        <div id="zoneCanvasContainer" style="position: relative; width: 100%; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; overflow: hidden; aspect-ratio: 16/9; cursor: crosshair;">
+                            <canvas id="zoneCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                            <div id="zoneEmptyState" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                <i class="fas fa-draw-polygon" style="font-size: 24px; color: #4a5568; margin-bottom: 8px; display: block;"></i>
+                                <div style="font-size: 11px; color: #4a5568;">Click "Load Snapshot" then click to draw a detection zone polygon</div>
+                            </div>
+                        </div>
+                        <div style="color: #718096; font-size: 10px; margin-top: 4px;">
+                            Draw a polygon zone. Only detections inside this zone will trigger events. Leave empty to monitor the full frame.
+                        </div>
+                    </div>
+
+                    <!-- Copy AI Settings to Other Cameras -->
+                    <div id="aiCopySettingsGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="font-size: 12px; color: #a0aec0; font-weight: 600;">Copy AI Settings to Other Cameras</div>
+                        </div>
+                        <button type="button" onclick="openCopyAiSettingsModal()" style="padding: 6px 14px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                            <i class="fas fa-copy"></i> Copy Settings to Cameras...
+                        </button>
+                        <div style="color: #718096; font-size: 10px; margin-top: 4px;">
+                            Copies event source, AI model, targets, and sensitivity to selected cameras. Motion zones are NOT copied.
+                        </div>
+                    </div>
+
+                    <div id="aiInstallGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
+                        <div style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 12px;">
+                            <div style="font-weight: bold; color: #f6ad55; font-size: 13px; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Local AI Dependencies Missing</div>
+                            <div style="color: #cbd5e0; font-size: 12px; line-height: 1.4;">The required AI libraries (<code>ultralytics</code> and <code>opencv-python-headless</code>) are not installed on this server. This is required for local object detection.</div>
+                        </div>
+                        <button type="button" class="btn-submit" id="installAiBtn" onclick="startAiInstallation()" style="margin-top: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-download"></i> Install AI Dependencies
+                        </button>
+                        <div id="aiInstallProgressContainer" style="display: none; margin-top: 15px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <span id="aiInstallStatusText" style="font-size: 12px; font-weight: 600; color: #3182ce;">Installing...</span>
+                                <span id="aiInstallSpinner"><i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i></span>
+                            </div>
+                            <pre id="aiInstallLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
+                        </div>
+                    </div>
+                    
+                    <!-- Test ONVIF Event (only shown when editing an existing camera) -->
+                    <div id="aiTestEventGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3748;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Test Event Delivery</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button type="button" class="btn" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="fas fa-paper-plane"></i> Send Test ONVIF Event
+                            </button>
+                            <span id="aiTestEventFeedback" style="font-size: 11px; color: #a0aec0;"></span>
+                        </div>
+                        <div style="color: #718096; font-size: 10px; margin-top: 5px;">
+                            Sends a 3-second motion event to all ONVIF clients (e.g., UniFi Protect) currently subscribed to this camera.
                         </div>
                     </div>
                 </div>
@@ -2323,6 +2555,31 @@ def get_web_ui_html(current_settings=None):
                 console.error('Error fetching logs:', error);
             }}
         }}
+
+        function updateAiSensitivityDisplay(val) {{
+            val = parseInt(val);
+            document.getElementById('aiSensitivityValue').textContent = val + '%';
+            
+            const statusEl = document.getElementById('aiSensitivityStatus');
+            if (!statusEl) return;
+            
+            if (val >= 75 && val <= 85) {{
+                statusEl.textContent = 'Outdoor Rec';
+                statusEl.style.color = '#f59e0b';
+                statusEl.style.background = 'rgba(245, 158, 11, 0.15)';
+                statusEl.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+            }} else if (val >= 40 && val <= 60) {{
+                statusEl.textContent = 'Indoor Rec';
+                statusEl.style.color = '#10b981';
+                statusEl.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusEl.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+            }} else {{
+                statusEl.textContent = 'Custom';
+                statusEl.style.color = '#a0aec0';
+                statusEl.style.background = 'rgba(160, 174, 192, 0.1)';
+                statusEl.style.border = '1px solid rgba(160, 174, 192, 0.2)';
+            }}
+        }}
         
         async function loadData() {{
             try {{
@@ -2594,25 +2851,29 @@ def get_web_ui_html(current_settings=None):
         function getCameraCardContent(cam, serverIp) {{
             const displayIp = cam.assignedIp || serverIp;
             return `
-                <div class="camera-header">
-                    <div class="camera-title" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="camera-header" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div class="camera-title" style="display: flex; align-items: center; gap: 12px;">
                             <div class="status-badge ${{cam.status === 'running' ? 'running' : ''}}"></div>
                             <div class="camera-name">${{cam.name}}</div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-left: 24px;">
-                            ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
-                            ${{cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;">${{cam.nicMac}}</div>` : ''}}
-                            ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;"><i class="fas fa-volume-up" style="font-size: 9px;"></i> Audio Transcoded</div>` : ''}}
+                        <div class="camera-actions">
+                            ${{cam.status === 'running' 
+                                ? `<button class="icon-btn icon-btn-stop" onclick="stopCamera(${{cam.id}})" title="Stop"><i class="fas fa-stop"></i> Stop</button>`
+                                : `<button class="icon-btn icon-btn-start" onclick="startCamera(${{cam.id}})" title="Start"><i class="fas fa-play"></i> Start</button>`
+                            }}
+                            <button class="icon-btn icon-btn-edit" onclick="openEditModal(${{cam.id}})" title="Edit"><i class="fas fa-edit"></i> Edit</button>
+                            <button class="icon-btn icon-btn-delete" onclick="deleteCamera(${{cam.id}})" title="Delete"><i class="fas fa-trash"></i> Delete</button>
                         </div>
                     </div>
-                    <div class="camera-actions">
-                        ${{cam.status === 'running' 
-                            ? `<button class="icon-btn icon-btn-stop" onclick="stopCamera(${{cam.id}})" title="Stop"><i class="fas fa-stop"></i> Stop</button>`
-                            : `<button class="icon-btn icon-btn-start" onclick="startCamera(${{cam.id}})" title="Start"><i class="fas fa-play"></i> Start</button>`
-                        }}
-                        <button class="icon-btn icon-btn-edit" onclick="openEditModal(${{cam.id}})" title="Edit"><i class="fas fa-edit"></i> Edit</button>
-                        <button class="icon-btn icon-btn-delete" onclick="deleteCamera(${{cam.id}})" title="Delete"><i class="fas fa-trash"></i> Delete</button>
+                    
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
+                        ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
+                        ${{cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;">${{cam.nicMac}}</div>` : ''}}
+                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="${{cam.uuid}}">UUID: ${{cam.uuid.split('-').slice(0, 2).join('-')}}</div>` : ''}}
+                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap;">AI</div>` : ''}}
+                        ${{cam.enableAudio ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4299e1; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;">Audio</div>` : ''}}
+                        ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;">Audio Transcoded</div>` : ''}}
                     </div>
                 </div>
                 
@@ -2998,6 +3259,19 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('onvifUseAboveCredentials').checked = !hasFwdCreds;
                 document.getElementById('onvifForwardingUsername').value = camera.onvifForwardingUsername || '';
                 document.getElementById('onvifForwardingPassword').value = camera.onvifForwardingPassword || '';
+                
+                const eventSource = camera.eventSource || 'onvif';
+                document.getElementById('eventSource').value = eventSource;
+                document.getElementById('aiModel').value = camera.aiModel || 'yolov8n.pt';
+                const aiTargets = camera.aiTargets || ['person', 'vehicle'];
+                document.getElementById('aiTargetPerson').checked = aiTargets.includes('person');
+                document.getElementById('aiTargetVehicle').checked = aiTargets.includes('vehicle');
+                document.getElementById('aiTargetAnimal').checked = aiTargets.includes('animal');
+                
+                const copySens = camera.aiMotionSensitivity || 50;
+                document.getElementById('aiMotionSensitivity').value = copySens;
+                updateAiSensitivityDisplay(copySens);
+                
                 toggleOnvifCredFields();
                 toggleEventForwardingFields();
                 document.getElementById('enableAudio').checked = camera.enableAudio || false;
@@ -3149,6 +3423,17 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('onvifUseAboveCredentials').checked = true;
             document.getElementById('onvifForwardingUsername').value = '';
             document.getElementById('onvifForwardingPassword').value = '';
+            
+            document.getElementById('eventSource').value = 'onvif';
+            document.getElementById('aiModel').value = 'yolov8n.pt';
+            document.getElementById('aiTargetPerson').checked = true;
+            document.getElementById('aiTargetVehicle').checked = true;
+            document.getElementById('aiTargetAnimal').checked = false;
+            document.getElementById('aiMotionSensitivity').value = 50;
+            updateAiSensitivityDisplay(50);
+            currentZonePoints = [];
+            zoneSnapshotLoaded = false;
+            
             toggleOnvifCredFields();
             toggleEventForwardingFields();
             
@@ -3234,6 +3519,21 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('onvifUseAboveCredentials').checked = !hasFwdCreds2;
             document.getElementById('onvifForwardingUsername').value = camera.onvifForwardingUsername || '';
             document.getElementById('onvifForwardingPassword').value = camera.onvifForwardingPassword || '';
+            
+            const eventSource = camera.eventSource || 'onvif';
+            document.getElementById('eventSource').value = eventSource;
+            document.getElementById('aiModel').value = camera.aiModel || 'yolov8n.pt';
+            const aiTargets = camera.aiTargets || ['person', 'vehicle'];
+            document.getElementById('aiTargetPerson').checked = aiTargets.includes('person');
+            document.getElementById('aiTargetVehicle').checked = aiTargets.includes('vehicle');
+            document.getElementById('aiTargetAnimal').checked = aiTargets.includes('animal');
+            
+            const sens = camera.aiMotionSensitivity || 50;
+            document.getElementById('aiMotionSensitivity').value = sens;
+            updateAiSensitivityDisplay(sens);
+            currentZonePoints = camera.aiZone || [];
+            zoneSnapshotLoaded = false;
+            
             toggleOnvifCredFields();
             toggleEventForwardingFields();
             
@@ -3307,9 +3607,158 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('camera-modal').classList.add('active');
         }}
         
+        let isAiInstalled = false;
+        let aiInstallInterval = null;
+
+        async function checkAiStatus() {{
+            try {{
+                const response = await fetch('/api/ai/status');
+                const data = await response.json();
+                isAiInstalled = data.installed;
+                updateAiUiState();
+            }} catch (err) {{
+                console.error("Failed to check AI status:", err);
+            }}
+        }}
+
+        function updateAiUiState() {{
+            const source = document.getElementById('eventSource').value;
+            const checked = document.getElementById('enableEventForwarding').checked;
+            
+            const aiTargetGroup = document.getElementById('aiTargetClassesGroup');
+            const aiModelGroup = document.getElementById('aiModelGroup');
+            const aiInstallGroup = document.getElementById('aiInstallGroup');
+            
+            if (checked && source === 'ai') {{
+                if (isAiInstalled) {{
+                    if (aiTargetGroup) aiTargetGroup.style.display = 'block';
+                    if (aiModelGroup) {{
+                        aiModelGroup.style.display = 'block';
+                        updateModelDescription();
+                    }}
+                    if (aiInstallGroup) aiInstallGroup.style.display = 'none';
+                }} else {{
+                    if (aiTargetGroup) aiTargetGroup.style.display = 'none';
+                    if (aiModelGroup) aiModelGroup.style.display = 'none';
+                    if (aiInstallGroup) aiInstallGroup.style.display = 'block';
+                }}
+            }} else {{
+                if (aiModelGroup) aiModelGroup.style.display = 'none';
+                if (aiInstallGroup) aiInstallGroup.style.display = 'none';
+            }}
+        }}
+
+        function updateModelDescription() {{
+            const model = document.getElementById('aiModel').value;
+            const desc = document.getElementById('aiModelDescription');
+            if (!desc) return;
+            
+            let html = "";
+            if (model === "yolov8n.pt") {{
+                html = "<strong>YOLOv8 Nano (6.2 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Low (ideal for most servers).<br>" +
+                       "• <strong>Accuracy:</strong> Standard.<br>" +
+                       "• <strong>Drawbacks:</strong> Might miss small or distant objects in high-resolution streams.";
+            }} else if (model === "yolo11n.pt") {{
+                html = "<strong>YOLO11 Nano (5.6 MB) [Recommended]</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Low/Medium.<br>" +
+                       "• <strong>Accuracy:</strong> High (newer architecture with optimized features).<br>" +
+                       "• <strong>Drawbacks:</strong> Marginally higher CPU initialization load, but faster inference speed.";
+            }} else if (model === "yolo11s.pt") {{
+                html = "<strong>YOLO11 Small (19.0 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Medium (requires multi-core CPU).<br>" +
+                       "• <strong>Accuracy:</strong> Very High (detects smaller/farther details).<br>" +
+                       "• <strong>Drawbacks:</strong> Higher steady CPU usage; might cause framerate lag on slow systems.";
+            }} else if (model === "yolov8s.pt") {{
+                html = "<strong>YOLOv8 Small (22.5 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Medium (requires multi-core CPU).<br>" +
+                       "• <strong>Accuracy:</strong> High.<br>" +
+                       "• <strong>Drawbacks:</strong> Higher power consumption and slower inference speed than YOLO11 Small.";
+            }} else if (model === "yolov8m.pt") {{
+                html = "<strong>YOLOv8 Medium (52.0 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Very High (GPU recommended).<br>" +
+                       "• <strong>Accuracy:</strong> Excellent.<br>" +
+                       "• <strong>Drawbacks:</strong> Slow processing on CPU, which can lead to high latency and frame buildup.";
+            }}
+            desc.innerHTML = html;
+        }}
+
+        async function startAiInstallation() {{
+            const btn = document.getElementById('installAiBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Installer...';
+            
+            try {{
+                const response = await fetch('/api/ai/install', {{ method: 'POST' }});
+                const data = await response.json();
+                
+                document.getElementById('aiInstallProgressContainer').style.display = 'block';
+                pollAiInstallProgress();
+                aiInstallInterval = setInterval(pollAiInstallProgress, 1000);
+            }} catch (err) {{
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-download"></i> Install AI Dependencies';
+                alert("Failed to start installation: " + err);
+            }}
+        }}
+
+        async function pollAiInstallProgress() {{
+            try {{
+                const response = await fetch('/api/ai/install/progress');
+                const data = await response.json();
+                
+                const logBox = document.getElementById('aiInstallLogs');
+                if (logBox && data.log) {{
+                    logBox.textContent = data.log.join('\\n');
+                    logBox.scrollTop = logBox.scrollHeight;
+                }}
+                
+                const statusText = document.getElementById('aiInstallStatusText');
+                const spinner = document.getElementById('aiInstallSpinner');
+                const btn = document.getElementById('installAiBtn');
+                
+                if (data.status === 'success') {{
+                    clearInterval(aiInstallInterval);
+                    statusText.textContent = "Installation Completed Successfully!";
+                    statusText.style.color = "#48bb78";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-check-circle" style="color: #48bb78;"></i>';
+                    isAiInstalled = true;
+                    setTimeout(() => {{
+                        updateAiUiState();
+                    }}, 2000);
+                }} else if (data.status === 'failed') {{
+                    clearInterval(aiInstallInterval);
+                    statusText.textContent = "Installation Failed!";
+                    statusText.style.color = "#f56565";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-times-circle" style="color: #f56565;"></i>';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-redo"></i> Retry Installation';
+                }} else {{
+                    statusText.textContent = "Installing AI Dependencies (this may take a few minutes)...";
+                }}
+            }} catch (err) {{
+                console.error("Error polling progress:", err);
+            }}
+        }}
+
         function closeModal() {{
+            if (aiInstallInterval) {{
+                clearInterval(aiInstallInterval);
+                aiInstallInterval = null;
+            }}
             document.getElementById('camera-modal').classList.remove('active');
             document.getElementById('camera-form').reset();
+            const progress = document.getElementById('aiInstallProgressContainer');
+            if (progress) progress.style.display = 'none';
+            const logs = document.getElementById('aiInstallLogs');
+            if (logs) logs.textContent = '';
+            const btn = document.getElementById('installAiBtn');
+            if (btn) {{
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-download"></i> Install AI Dependencies';
+            }}
+            const feedback = document.getElementById('aiTestEventFeedback');
+            if (feedback) feedback.textContent = '';
         }}
 
         function toggleAudioSettings(type) {{
@@ -3330,16 +3779,429 @@ def get_web_ui_html(current_settings=None):
         
         function toggleEventForwardingFields() {{
             const checked = document.getElementById('enableEventForwarding').checked;
+            const esGroup = document.getElementById('eventSourceGroup');
+            if (esGroup) esGroup.style.display = checked ? 'block' : 'none';
+            
+            const cameraId = document.getElementById('camera-id').value;
+            const isEdit = cameraId !== '';
+            const testGroup = document.getElementById('aiTestEventGroup');
+            if (testGroup) testGroup.style.display = (checked && isEdit) ? 'block' : 'none';
+            
+            if (checked) {{
+                toggleEventSourceFields();
+            }} else {{
+                const portGroup = document.getElementById('physicalOnvifPortGroup');
+                const credGroup = document.getElementById('onvifForwardingCredGroup');
+                const aiGroup = document.getElementById('aiTargetClassesGroup');
+                const aiModelGroup = document.getElementById('aiModelGroup');
+                const aiInstallGroup = document.getElementById('aiInstallGroup');
+                const testGroup = document.getElementById('aiTestEventGroup');
+                const aiSensGroup = document.getElementById('aiSensitivityGroup');
+                const aiZoneGroup = document.getElementById('aiZoneGroup');
+                const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
+                if (portGroup) portGroup.style.display = 'none';
+                if (credGroup) credGroup.style.display = 'none';
+                if (aiGroup) aiGroup.style.display = 'none';
+                if (aiModelGroup) aiModelGroup.style.display = 'none';
+                if (aiInstallGroup) aiInstallGroup.style.display = 'none';
+                if (testGroup) testGroup.style.display = 'none';
+                if (aiSensGroup) aiSensGroup.style.display = 'none';
+                if (aiZoneGroup) aiZoneGroup.style.display = 'none';
+                if (aiCopyGroup) aiCopyGroup.style.display = 'none';
+            }}
+        }}
+
+        async function sendTestOnvifEvent() {{
+            const cameraId = document.getElementById('camera-id').value;
+            if (!cameraId) return;
+            
+            const btn = document.getElementById('btnTestOnvifEvent');
+            const feedback = document.getElementById('aiTestEventFeedback');
+            const originalText = btn.innerHTML;
+            
+            const camera = cameras.find(c => c.id === parseInt(cameraId));
+            if (camera && camera.status !== 'running') {{
+                feedback.textContent = 'Warning: Camera must be running to test events!';
+                feedback.style.color = '#dd6b20';
+                return;
+            }}
+            
+            try {{
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
+                feedback.textContent = '';
+                feedback.style.color = '#a0aec0';
+                
+                const response = await fetch(`/api/cameras/${{cameraId}}/test-event`, {{
+                    method: 'POST'
+                }});
+                
+                if (response.ok) {{
+                    feedback.textContent = 'Event triggered successfully! Check Protect.';
+                    feedback.style.color = '#10b981';
+                }} else {{
+                    const err = await response.json();
+                    feedback.textContent = 'Failed: ' + (err.error || 'Unknown error');
+                    feedback.style.color = '#f56565';
+                }}
+            }} catch (error) {{
+                console.error('Error sending test event:', error);
+                feedback.textContent = 'Error triggering event.';
+                feedback.style.color = '#f56565';
+            }} finally {{
+                setTimeout(() => {{
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }}, 1000);
+            }}
+        }}
+
+        function toggleEventSourceFields() {{
+            const checked = document.getElementById('enableEventForwarding').checked;
+            if (!checked) return;
+            
+            const source = document.getElementById('eventSource').value;
             const portGroup = document.getElementById('physicalOnvifPortGroup');
             const credGroup = document.getElementById('onvifForwardingCredGroup');
-            if (portGroup) portGroup.style.display = checked ? 'block' : 'none';
-            if (credGroup) credGroup.style.display = checked ? 'block' : 'none';
+            const aiGroup = document.getElementById('aiTargetClassesGroup');
+            const aiModelGroup = document.getElementById('aiModelGroup');
+            const aiSensGroup = document.getElementById('aiSensitivityGroup');
+            const aiZoneGroup = document.getElementById('aiZoneGroup');
+            const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
+            
+            const cameraId = document.getElementById('camera-id').value;
+            const isEdit = cameraId !== '';
+            
+            if (source === 'onvif') {{
+                if (portGroup) portGroup.style.display = 'block';
+                if (credGroup) credGroup.style.display = 'block';
+                if (aiGroup) aiGroup.style.display = 'none';
+                if (aiModelGroup) aiModelGroup.style.display = 'none';
+                if (aiSensGroup) aiSensGroup.style.display = 'none';
+                if (aiZoneGroup) aiZoneGroup.style.display = 'none';
+                if (aiCopyGroup) aiCopyGroup.style.display = 'none';
+                document.getElementById('aiInstallGroup').style.display = 'none';
+            }} else {{
+                if (portGroup) portGroup.style.display = 'none';
+                if (credGroup) credGroup.style.display = 'none';
+                if (aiSensGroup) aiSensGroup.style.display = 'block';
+                if (aiZoneGroup && isEdit) aiZoneGroup.style.display = 'block';
+                if (aiCopyGroup && isEdit) aiCopyGroup.style.display = 'block';
+                checkAiStatus();
+            }}
         }}
 
         function toggleOnvifCredFields() {{
             const useAbove = document.getElementById('onvifUseAboveCredentials').checked;
             const customFields = document.getElementById('onvifCustomCredFields');
             if (customFields) customFields.style.display = useAbove ? 'none' : 'block';
+        }}
+
+        // ========== Zone Drawing ==========
+        let currentZonePoints = [];
+        let zoneSnapshotLoaded = false;
+        let zoneSnapshotImage = null;
+        let zoneDragIndex = -1;
+        let zoneIsDragging = false;
+        let zoneMouseDownPos = null;
+
+        async function loadZoneSnapshot() {{
+            const cameraId = document.getElementById('camera-id').value;
+            if (!cameraId) {{
+                showToast('Save the camera first before loading a snapshot.', 'warning');
+                return;
+            }}
+            const btn = document.getElementById('btnLoadZoneSnapshot');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            btn.disabled = true;
+            try {{
+                const resp = await fetch(`/api/cameras/${{cameraId}}/snapshot`);
+                if (!resp.ok) throw new Error('Failed to capture snapshot');
+                const blob = await resp.blob();
+                const img = new Image();
+                img.onload = function() {{
+                    zoneSnapshotImage = img;
+                    zoneSnapshotLoaded = true;
+                    document.getElementById('zoneEmptyState').style.display = 'none';
+                    drawZoneCanvas();
+                }};
+                img.src = URL.createObjectURL(blob);
+            }} catch (e) {{
+                console.error('Snapshot error:', e);
+                showToast('Failed to load snapshot. Is the camera running?', 'error');
+            }} finally {{
+                btn.innerHTML = '<i class="fas fa-camera"></i> Load Snapshot';
+                btn.disabled = false;
+            }}
+        }}
+
+        function getZonePointAtPos(nx, ny, canvas) {{
+            const hitRadius = 20;
+            for (let i = 0; i < currentZonePoints.length; i++) {{
+                const pt = currentZonePoints[i];
+                const dx = (nx - pt.x) * canvas.width;
+                const dy = (ny - pt.y) * canvas.height;
+                if (Math.sqrt(dx * dx + dy * dy) < hitRadius) return i;
+            }}
+            return -1;
+        }}
+
+        function drawZoneCanvas(hoveredIdx) {{
+            const canvas = document.getElementById('zoneCanvas');
+            const container = document.getElementById('zoneCanvasContainer');
+            if (!canvas || !container) return;
+            
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (zoneSnapshotImage) {{
+                ctx.drawImage(zoneSnapshotImage, 0, 0, canvas.width, canvas.height);
+                // Darken areas outside zone
+                if (currentZonePoints.length >= 3) {{
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    ctx.moveTo(currentZonePoints[0].x * canvas.width, currentZonePoints[0].y * canvas.height);
+                    for (let i = 1; i < currentZonePoints.length; i++) {{
+                        ctx.lineTo(currentZonePoints[i].x * canvas.width, currentZonePoints[i].y * canvas.height);
+                    }}
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }}
+            }}
+            
+            // Draw zone polygon
+            if (currentZonePoints.length > 0) {{
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(currentZonePoints[0].x * canvas.width, currentZonePoints[0].y * canvas.height);
+                for (let i = 1; i < currentZonePoints.length; i++) {{
+                    ctx.lineTo(currentZonePoints[i].x * canvas.width, currentZonePoints[i].y * canvas.height);
+                }}
+                if (currentZonePoints.length >= 3) ctx.closePath();
+                ctx.stroke();
+                
+                // Fill zone area with transparent green
+                if (currentZonePoints.length >= 3) {{
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+                    ctx.fill();
+                }}
+                
+                // Draw points
+                currentZonePoints.forEach((pt, idx) => {{
+                    const isHovered = (hoveredIdx !== undefined && hoveredIdx === idx);
+                    const radius = isHovered ? 8 : 5;
+                    ctx.beginPath();
+                    ctx.arc(pt.x * canvas.width, pt.y * canvas.height, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = idx === 0 ? '#f59e0b' : (isHovered ? '#34d399' : '#10b981');
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = isHovered ? 2.5 : 1.5;
+                    ctx.stroke();
+                }});
+            }}
+        }}
+
+        // Mouse events for zone canvas: drag points + add new points
+        document.addEventListener('mousedown', function(e) {{
+            const canvas = document.getElementById('zoneCanvas');
+            if (!canvas || e.target !== canvas || !zoneSnapshotLoaded) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const nx = (e.clientX - rect.left) / rect.width;
+            const ny = (e.clientY - rect.top) / rect.height;
+            
+            const hitIdx = getZonePointAtPos(nx, ny, canvas);
+            if (hitIdx >= 0) {{
+                // Start dragging an existing point
+                zoneDragIndex = hitIdx;
+                zoneIsDragging = false;
+                zoneMouseDownPos = {{ x: nx, y: ny }};
+                e.preventDefault();
+            }} else {{
+                zoneDragIndex = -1;
+                zoneMouseDownPos = {{ x: nx, y: ny }};
+            }}
+        }});
+
+        document.addEventListener('mousemove', function(e) {{
+            const canvas = document.getElementById('zoneCanvas');
+            if (!canvas || !zoneSnapshotLoaded) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const nx = (e.clientX - rect.left) / rect.width;
+            const ny = (e.clientY - rect.top) / rect.height;
+            
+            if (zoneDragIndex >= 0) {{
+                // Dragging a point
+                zoneIsDragging = true;
+                currentZonePoints[zoneDragIndex].x = parseFloat(Math.max(0, Math.min(1, nx)).toFixed(4));
+                currentZonePoints[zoneDragIndex].y = parseFloat(Math.max(0, Math.min(1, ny)).toFixed(4));
+                drawZoneCanvas(zoneDragIndex);
+                canvas.style.cursor = 'grabbing';
+                return;
+            }}
+            
+            // Hover detection for cursor change
+            if (e.target === canvas) {{
+                const hitIdx = getZonePointAtPos(nx, ny, canvas);
+                if (hitIdx >= 0) {{
+                    canvas.style.cursor = 'grab';
+                    drawZoneCanvas(hitIdx);
+                }} else {{
+                    canvas.style.cursor = 'crosshair';
+                    drawZoneCanvas();
+                }}
+            }}
+        }});
+
+        document.addEventListener('mouseup', function(e) {{
+            const canvas = document.getElementById('zoneCanvas');
+            if (!canvas || !zoneSnapshotLoaded) return;
+            
+            if (zoneDragIndex >= 0 && zoneIsDragging) {{
+                // Finished dragging
+                zoneDragIndex = -1;
+                zoneIsDragging = false;
+                zoneMouseDownPos = null;
+                canvas.style.cursor = 'crosshair';
+                drawZoneCanvas();
+                return;
+            }}
+            
+            // If not dragging, treat as a click to add a new point
+            if (e.target === canvas && zoneDragIndex < 0 && zoneMouseDownPos) {{
+                const rect = canvas.getBoundingClientRect();
+                const nx = (e.clientX - rect.left) / rect.width;
+                const ny = (e.clientY - rect.top) / rect.height;
+                
+                // Check we didn't move much (it's a click, not a drag)
+                const dx = Math.abs(nx - zoneMouseDownPos.x) * rect.width;
+                const dy = Math.abs(ny - zoneMouseDownPos.y) * rect.height;
+                if (dx < 5 && dy < 5) {{
+                    currentZonePoints.push({{ x: parseFloat(nx.toFixed(4)), y: parseFloat(ny.toFixed(4)) }});
+                    drawZoneCanvas();
+                }}
+            }}
+            
+            zoneDragIndex = -1;
+            zoneIsDragging = false;
+            zoneMouseDownPos = null;
+        }});
+
+        // Right-click to delete a point
+        document.addEventListener('contextmenu', function(e) {{
+            const canvas = document.getElementById('zoneCanvas');
+            if (!canvas || e.target !== canvas || !zoneSnapshotLoaded) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const nx = (e.clientX - rect.left) / rect.width;
+            const ny = (e.clientY - rect.top) / rect.height;
+            const hitIdx = getZonePointAtPos(nx, ny, canvas);
+            if (hitIdx >= 0) {{
+                e.preventDefault();
+                currentZonePoints.splice(hitIdx, 1);
+                drawZoneCanvas();
+            }}
+        }});
+
+        function clearZone() {{
+            currentZonePoints = [];
+            drawZoneCanvas();
+        }}
+
+        // ========== Copy AI Settings ==========
+        function openCopyAiSettingsModal() {{
+            const cameraId = document.getElementById('camera-id').value;
+            if (!cameraId) return;
+            
+            const list = document.getElementById('copyAiCameraList');
+            list.innerHTML = '';
+            document.getElementById('copyAiSelectAll').checked = false;
+            document.getElementById('copyAiFeedback').textContent = '';
+            
+            cameras.forEach(cam => {{
+                if (cam.id === parseInt(cameraId)) return;
+                const hasAi = cam.eventSource === 'ai' && cam.enableEventForwarding;
+                const aiBadge = hasAi 
+                    ? `<span style="font-size: 9px; background-color: #d69e2e; color: #1a202c; padding: 1px 5px; border-radius: 3px; font-weight: bold; text-transform: uppercase; margin-left: 6px;">AI</span>` 
+                    : '';
+                const item = document.createElement('label');
+                item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #2d3748; cursor: pointer; transition: background 0.15s;';
+                item.onmouseover = () => item.style.background = 'rgba(99, 102, 241, 0.08)';
+                item.onmouseout = () => item.style.background = 'transparent';
+                item.innerHTML = `
+                    <input type="checkbox" class="copy-ai-cb" value="${{cam.id}}" style="width: auto; cursor: pointer;">
+                    <div style="flex: 1;">
+                        <div style="font-size: 13px; color: #e2e8f0; font-weight: 500; display: flex; align-items: center;">
+                            <span>${{cam.name}}</span>
+                            ${{aiBadge}}
+                        </div>
+                        <div style="font-size: 10px; color: #718096;">ID: ${{cam.id}} &mdash; ${{cam.status}}</div>
+                    </div>
+                `;
+                list.appendChild(item);
+            }});
+            
+            document.getElementById('copy-ai-modal').classList.add('active');
+        }}
+
+        function closeCopyAiModal() {{
+            document.getElementById('copy-ai-modal').classList.remove('active');
+        }}
+
+        function toggleCopyAiSelectAll() {{
+            const checked = document.getElementById('copyAiSelectAll').checked;
+            document.querySelectorAll('.copy-ai-cb').forEach(cb => cb.checked = checked);
+        }}
+
+        async function applyCopyAiSettings() {{
+            const cameraId = document.getElementById('camera-id').value;
+            const selected = Array.from(document.querySelectorAll('.copy-ai-cb:checked')).map(cb => parseInt(cb.value));
+            
+            if (selected.length === 0) {{
+                document.getElementById('copyAiFeedback').textContent = 'Please select at least one camera.';
+                document.getElementById('copyAiFeedback').style.color = '#f6ad55';
+                return;
+            }}
+            
+            const btn = document.getElementById('btnApplyCopyAi');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+            
+            try {{
+                const resp = await fetch(`/api/cameras/${{cameraId}}/copy-ai-settings`, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ targetCameraIds: selected }})
+                }});
+                
+                if (resp.ok) {{
+                    const result = await resp.json();
+                    document.getElementById('copyAiFeedback').textContent = `Settings copied to ${{result.updated.length}} camera(s) successfully!`;
+                    document.getElementById('copyAiFeedback').style.color = '#10b981';
+                    setTimeout(() => closeCopyAiModal(), 1500);
+                    loadData();
+                }} else {{
+                    document.getElementById('copyAiFeedback').textContent = 'Failed to copy settings.';
+                    document.getElementById('copyAiFeedback').style.color = '#f56565';
+                }}
+            }} catch (err) {{
+                console.error('Copy AI settings error:', err);
+                document.getElementById('copyAiFeedback').textContent = 'Error copying settings.';
+                document.getElementById('copyAiFeedback').style.color = '#f56565';
+            }} finally {{
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Apply to Selected';
+            }}
         }}
 
         let onvifViewActive = false;
@@ -3380,13 +4242,77 @@ def get_web_ui_html(current_settings=None):
                     onvifEvents = await response.json();
                     renderONVIFEvents();
                 }}
+                
+                const camResp = await fetch('/api/cameras');
+                if (camResp.ok) {{
+                    const latestCams = await camResp.json();
+                    renderAiThreadDiagnostics(latestCams);
+                }}
             }} catch (err) {{
                 console.error("Error refreshing ONVIF events:", err);
             }}
         }}
 
+        function renderAiThreadDiagnostics(latestCams) {{
+            const panel = document.getElementById('ai-diagnostics-panel');
+            const summary = document.getElementById('ai-diagnostics-summary');
+            const body = document.getElementById('ai-diagnostics-body');
+            if (!panel || !summary || !body) return;
+            
+            const aiCams = latestCams.filter(c => c.eventSource === 'ai' && c.enableEventForwarding);
+            
+            if (aiCams.length === 0) {{
+                panel.style.display = 'none';
+                return;
+            }}
+            
+            panel.style.display = 'block';
+            const activeCount = aiCams.filter(c => c.status === 'running').length;
+            summary.innerHTML = `<span style="color: #4ade80;">${{activeCount}} active</span> / ${{aiCams.length}} configured`;
+            
+            let html = '';
+            aiCams.forEach(cam => {{
+                const isRunning = cam.status === 'running';
+                const statusBadge = isRunning 
+                    ? `<span style="background: rgba(74, 222, 128, 0.1); color: #4ade80; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px;">Active</span>`
+                    : `<span style="background: rgba(239, 68, 68, 0.1); color: #f87171; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 11px;">Stopped</span>`;
+                
+                const fps = isRunning ? (cam.aiFpsMeasurement || 0.0).toFixed(1) : '0.0';
+                const latency = isRunning ? `${{Math.round(cam.aiAvgInferenceLatency * 1000)}}ms` : '-';
+                const queue = isRunning ? `${{Math.round(cam.aiQueueTime * 1000)}}ms` : '-';
+                const count = cam.aiInferenceCount || 0;
+                
+                let detectionStr = 'None';
+                if (isRunning && cam.aiLastDetection && cam.aiLastDetection.length > 0) {{
+                    detectionStr = cam.aiLastDetection.map(d => 
+                        `<span style="background: rgba(236, 201, 75, 0.1); color: #ecc94b; border: 1px solid rgba(236, 201, 75, 0.3); padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; text-transform: uppercase; font-weight: bold;">${{d}}</span>`
+                    ).join('');
+                }}
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 8px 12px; font-weight: 600;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                ${{statusBadge}}
+                                <span>${{cam.name}}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 8px 12px; color: #94a3b8; font-size: 11px;">${{cam.aiModel || 'yolov8n.pt'}}</td>
+                        <td style="padding: 8px 12px; text-align: center; font-weight: bold; color: ${{fps > 0 ? '#4ade80' : '#64748b'}}">${{fps}}</td>
+                        <td style="padding: 8px 12px; text-align: center; color: #f59e0b;">${{latency}}</td>
+                        <td style="padding: 8px 12px; text-align: center; color: #a855f7;">${{queue}}</td>
+                        <td style="padding: 8px 12px;">${{detectionStr}}</td>
+                        <td style="padding: 8px 12px; text-align: right; color: #64748b;">${{count.toLocaleString()}}</td>
+                    </tr>
+                `;
+            }});
+            
+            body.innerHTML = html;
+        }}
+
         function renderONVIFEvents() {{
             const filterVal = document.getElementById('onvif-camera-filter').value;
+            const typeFilterVal = document.getElementById('onvif-type-filter').value;
             const searchQuery = (document.getElementById('onvif-event-search')?.value || '').trim().toLowerCase();
             const tbody = document.getElementById('onvif-events-body');
             tbody.innerHTML = '';
@@ -3396,6 +4322,29 @@ def get_web_ui_html(current_settings=None):
                 if (filterVal !== 'all' && String(evt.camera_id) !== String(filterVal)) {{
                     return false;
                 }}
+                
+                // Type filter
+                const evtType = evt.type || 'onvif';
+                if (typeFilterVal !== 'all' && evtType !== typeFilterVal) {{
+                    return false;
+                }}
+                
+                // Target/State filter
+                const targetFilterVal = document.getElementById('onvif-target-filter')?.value || 'all';
+                if (targetFilterVal !== 'all') {{
+                    const valLower = String(evt.value).toLowerCase();
+                    const isActive = valLower === 'true' || valLower === 'on' || valLower === '1' || valLower === 'active';
+                    
+                    if (targetFilterVal === 'active') {{
+                        if (!isActive) return false;
+                    }} else if (targetFilterVal === 'clear') {{
+                        if (isActive) return false;
+                    }} else {{
+                        const tags = evt.tags || [];
+                        if (!tags.includes(targetFilterVal)) return false;
+                    }}
+                }}
+                
                 // Search query filter
                 if (searchQuery) {{
                     const cameraName = String(evt.camera_name || '').toLowerCase();
@@ -3427,19 +4376,26 @@ def get_web_ui_html(current_settings=None):
                     localTime = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
                 }} catch (e) {{}}
                 
+                const isAi = (evt.type === 'ai');
+                const typeBadge = isAi 
+                    ? `<span style="background: rgba(147, 51, 234, 0.15); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.3); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px;">AI Engine</span>`
+                    : `<span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-flex; align-items: center; gap: 4px;">ONVIF Fwd</span>`;
+
                 const valLower = String(evt.value).toLowerCase();
                 const isActive = valLower === 'true' || valLower === 'on' || valLower === '1' || valLower === 'active';
-                const badge = isActive 
-                    ? `<span class="badge-event-active">ACTIVE / MOTION</span>` 
-                    : `<span class="badge-event-inactive">INACTIVE / CLEAR</span>`;
+                const stateBadge = isActive 
+                    ? `<span class="badge-event-active">ACTIVE</span>` 
+                    : `<span class="badge-event-inactive">CLEAR</span>`;
                 
                 let tagsHtml = '';
                 if (evt.tags && Array.isArray(evt.tags)) {{
                     evt.tags.forEach(tag => {{
                         if (tag === 'person') {{
-                            tagsHtml += ` <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;"><i class="fas fa-user" style="font-size: 9px;"></i> Person</span>`;
+                            tagsHtml += ` <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Person</span>`;
                         }} else if (tag === 'vehicle') {{
-                            tagsHtml += ` <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;"><i class="fas fa-car" style="font-size: 9px;"></i> Vehicle</span>`;
+                            tagsHtml += ` <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Vehicle</span>`;
+                        }} else if (tag === 'animal') {{
+                            tagsHtml += ` <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Animal</span>`;
                         }}
                     }});
                 }}
@@ -3448,9 +4404,9 @@ def get_web_ui_html(current_settings=None):
                     <tr style="border-bottom: 1px solid #1a202c;">
                         <td style="padding: 10px; color: #a0aec0;">${{localTime}}</td>
                         <td style="padding: 10px; font-weight: 600; color: #3b82f6;">${{evt.camera_name}}</td>
+                        <td style="padding: 10px;">${{typeBadge}}</td>
                         <td style="padding: 10px; color: #cbd5e0;">${{evt.topic}}</td>
-                        <td style="padding: 10px; color: #718096;">${{evt.data_name || 'IsMotion'}}</td>
-                        <td style="padding: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px;">${{badge}}${{tagsHtml}}</td>
+                        <td style="padding: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">${{stateBadge}}${{tagsHtml}}</td>
                     </tr>
                 `;
             }});
@@ -3521,7 +4477,18 @@ def get_web_ui_html(current_settings=None):
                 staticIp: document.getElementById('staticIp').value,
                 netmask: document.getElementById('netmask').value,
                 gateway: document.getElementById('gateway').value,
-                uuid: document.getElementById('cameraUuid').value || null
+                uuid: document.getElementById('cameraUuid').value || null,
+                eventSource: document.getElementById('eventSource').value,
+                aiModel: document.getElementById('aiModel').value,
+                aiTargets: (function() {{
+                    const targets = [];
+                    if (document.getElementById('aiTargetPerson').checked) targets.push('person');
+                    if (document.getElementById('aiTargetVehicle').checked) targets.push('vehicle');
+                    if (document.getElementById('aiTargetAnimal').checked) targets.push('animal');
+                    return targets;
+                }})(),
+                aiMotionSensitivity: parseInt(document.getElementById('aiMotionSensitivity').value) || 50,
+                aiZone: currentZonePoints || []
             }};
             // Add ONVIF port if specified
             const onvifPort = document.getElementById('onvifPort').value;

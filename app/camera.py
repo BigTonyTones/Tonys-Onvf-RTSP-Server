@@ -27,7 +27,23 @@ class ThreadPoolWSGIServer(ThreadedWSGIServer):
     
     def process_request(self, request, client_address):
         """Process incoming request using thread pool instead of spawning new threads"""
-        self.executor.submit(self.process_request_thread, request, client_address)
+        try:
+            self.executor.submit(self.process_request_thread, request, client_address)
+        except (RuntimeError, AttributeError):
+            # Fall back to spawning a daemon thread if the thread pool or interpreter is shutting down
+            try:
+                t = threading.Thread(
+                    target=self.process_request_thread,
+                    args=(request, client_address),
+                    daemon=True
+                )
+                t.start()
+            except Exception:
+                # Synchronous fallback as a last resort
+                try:
+                    self.process_request_thread(request, client_address)
+                except Exception:
+                    pass
     
     def process_request_thread(self, request, client_address):
         """Handle one request in a thread from the pool"""
@@ -42,6 +58,72 @@ class ThreadPoolWSGIServer(ThreadedWSGIServer):
         """Shutdown the server and thread pool"""
         self.executor.shutdown(wait=True)
         super().shutdown()
+
+class RTSPFrameGrabber:
+    """Helper class to continuously grab RTSP frames in a background thread to prevent lag"""
+    def __init__(self, rtsp_url):
+        self.rtsp_url = rtsp_url
+        self.cap = None
+        self.latest_frame = None
+        self.running = False
+        self.thread = None
+        
+    def start(self, cv2):
+        self.running = True
+        self.cap = cv2.VideoCapture(self.rtsp_url)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.thread = threading.Thread(target=self._grab_loop, daemon=True)
+        self.thread.start()
+        
+    def _grab_loop(self):
+        import time
+        while self.running:
+            if self.cap and self.cap.isOpened():
+                try:
+                    ret, frame = self.cap.read()
+                    if ret:
+                        self.latest_frame = frame
+                    else:
+                        time.sleep(0.01)
+                except Exception:
+                    time.sleep(0.05)
+            else:
+                time.sleep(0.5)
+                
+    def stop(self):
+        self.running = False
+        if self.thread:
+            try:
+                self.thread.join(timeout=1.0)
+            except Exception:
+                pass
+            self.thread = None
+        if self.cap:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
+
+import threading
+# Global AI state for memory management across all cameras
+_AI_MODELS = {}
+_AI_MODEL_LOCK = threading.Lock()
+_AI_INFERENCE_LOCK = threading.Lock()
+
+def get_shared_ai_model(model_name):
+    global _AI_MODELS
+    with _AI_MODEL_LOCK:
+        if model_name not in _AI_MODELS:
+            from ultralytics import YOLO
+            try:
+                import torch
+                # Limit threads so multiple cameras don't oversubscribe CPU cores and exhaust memory
+                torch.set_num_threads(2)
+            except Exception:
+                pass
+            _AI_MODELS[model_name] = YOLO(model_name)
+        return _AI_MODELS[model_name]
 
 class VirtualONVIFCamera:
     """Represents a virtual ONVIF camera"""
@@ -109,6 +191,25 @@ class VirtualONVIFCamera:
         self._event_forwarding_running = False
         self.event_logs = []
         
+        # AI Event Detection settings
+        self.event_source = config.get('eventSource', 'onvif')  # 'onvif' or 'ai'
+        self.ai_targets = config.get('aiTargets', ['person', 'vehicle'])
+        self.ai_model = config.get('aiModel', 'yolov8n.pt')
+        self.ai_motion_detection_enabled = config.get('aiMotionDetectionEnabled', True)
+        self.ai_motion_sensitivity = config.get('aiMotionSensitivity', 50)
+        self.ai_zone = config.get('aiZone', [])
+        self._ai_thread = None
+        self._ai_running = False
+        
+        # AI statistics
+        self.ai_inference_count = 0
+        self.ai_last_inference_time = 0.0
+        self.ai_last_inference_latency = 0.0
+        self.ai_avg_inference_latency = 0.0
+        self.ai_queue_time = 0.0
+        self.ai_fps_measurement = 0.0
+        self.ai_last_detection = []
+        
         self.status = "stopped"
         self.flask_app = None
         self.flask_thread = None
@@ -164,20 +265,32 @@ class VirtualONVIFCamera:
         
         self._start_onvif_service()
         if self.enable_event_forwarding:
-            self.start_event_forwarding()
+            if self.event_source == 'ai':
+                self.start_ai_detection()
+            else:
+                self.start_event_forwarding()
         
     def stop(self):
         """Mark camera as stopped, shutdown ONVIF service, and cleanup networking"""
         self.status = "stopped"
         if self.enable_event_forwarding:
             self.stop_event_forwarding()
+            self.stop_ai_detection()
         
         # Stop the ONVIF WSGI server safely
         if hasattr(self, 'server') and self.server:
             try:
                 import threading
-                # shutdown() tells the serve_forever() loop to exit
-                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                srv = self.server
+                def _safe_shutdown():
+                    try:
+                        srv.shutdown()
+                        srv.server_close()
+                        if hasattr(srv, 'executor') and srv.executor:
+                            srv.executor.shutdown(wait=False)
+                    except Exception as shutdown_err:
+                        print(f"  Error during background socket shutdown for {self.name}: {shutdown_err}")
+                threading.Thread(target=_safe_shutdown, daemon=True).start()
                 self.server = None
             except Exception as e:
                 print(f"  Error shutting down ONVIF server for {self.name}: {e}")
@@ -202,17 +315,27 @@ class VirtualONVIFCamera:
         # Use assigned IP if available, otherwise 0.0.0.0
         bind_ip = self.assigned_ip if self.assigned_ip else '0.0.0.0'
         
-        # Create server with thread pool to prevent thread exhaustion
-        server = make_server(
-            bind_ip,
-            self.onvif_port,
-            app,
-            threaded=False,  # Disable default threading
-            request_handler=None,
-            passthrough_errors=False,
-            ssl_context=None,
-            fd=None
-        )
+        # Create server with thread pool to prevent thread exhaustion (with retry for port release)
+        server = None
+        for attempt in range(10):
+            try:
+                server = make_server(
+                    bind_ip,
+                    self.onvif_port,
+                    app,
+                    threaded=False,  # Disable default threading
+                    request_handler=None,
+                    passthrough_errors=False,
+                    ssl_context=None,
+                    fd=None
+                )
+                break
+            except OSError as e:
+                if attempt < 9:
+                    print(f"  [Camera ({self.name})] Port {self.onvif_port} busy, retrying in 0.3s... (attempt {attempt+1}/10)")
+                    time.sleep(0.3)
+                else:
+                    raise e
         
         # Replace the server class with our thread-pooled version
         server.__class__ = ThreadPoolWSGIServer
@@ -287,7 +410,20 @@ class VirtualONVIFCamera:
             'enableEventForwarding': self.enable_event_forwarding,
             'physicalOnvifPort': self.physical_onvif_port,
             'onvifForwardingUsername': self.onvif_forwarding_username,
-            'onvifForwardingPassword': self.onvif_forwarding_password
+            'onvifForwardingPassword': self.onvif_forwarding_password,
+            'eventSource': self.event_source,
+            'aiTargets': self.ai_targets,
+            'aiModel': self.ai_model,
+            'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
+            'aiMotionSensitivity': self.ai_motion_sensitivity,
+            'aiZone': self.ai_zone,
+            'aiInferenceCount': self.ai_inference_count,
+            'aiLastInferenceTime': self.ai_last_inference_time,
+            'aiLastInferenceLatency': self.ai_last_inference_latency,
+            'aiAvgInferenceLatency': self.ai_avg_inference_latency,
+            'aiQueueTime': self.ai_queue_time,
+            'aiFpsMeasurement': self.ai_fps_measurement,
+            'aiLastDetection': self.ai_last_detection
         }
     
     def to_config_dict(self):
@@ -332,7 +468,13 @@ class VirtualONVIFCamera:
             'enableEventForwarding': self.enable_event_forwarding,
             'physicalOnvifPort': self.physical_onvif_port,
             'onvifForwardingUsername': self.onvif_forwarding_username,
-            'onvifForwardingPassword': self.onvif_forwarding_password
+            'onvifForwardingPassword': self.onvif_forwarding_password,
+            'eventSource': self.event_source,
+            'aiTargets': self.ai_targets,
+            'aiModel': self.ai_model,
+            'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
+            'aiMotionSensitivity': self.ai_motion_sensitivity,
+            'aiZone': self.ai_zone
         }
 
     def start_event_forwarding(self):
@@ -340,12 +482,12 @@ class VirtualONVIFCamera:
         self._event_forwarding_running = True
         self._event_forwarding_thread = threading.Thread(target=self._event_forwarding_loop, daemon=True)
         self._event_forwarding_thread.start()
-        print(f"  [Camera {self.id}] ONVIF event forwarder thread started.")
+        print(f"  [Camera ({self.name})] ONVIF event forwarder thread started.")
 
     def stop_event_forwarding(self):
         """Stop ONVIF Event Forwarder background thread"""
         self._event_forwarding_running = False
-        print(f"  [Camera {self.id}] ONVIF event forwarder thread stopped.")
+        print(f"  [Camera ({self.name})] ONVIF event forwarder thread stopped.")
 
     def _event_forwarding_loop(self):
         """Background thread loop to pull event notifications from physical camera"""
@@ -365,11 +507,11 @@ class VirtualONVIFCamera:
                     password = unquote(parsed.password) if parsed.password else (self.password or 'admin')
                 port = getattr(self, 'physical_onvif_port', 80) or 80
             except Exception as e:
-                print(f"  [ONVIF Event Forwarder {self.id}] Error parsing stream URL: {e}")
+                print(f"  [ONVIF Event Forwarder ({self.name})] Error parsing stream URL: {e}")
                 time.sleep(10)
                 continue
                 
-            print(f"  [ONVIF Event Forwarder {self.id}] Connecting to camera events at {host}:{port}...")
+            print(f"  [ONVIF Event Forwarder ({self.name})] Connecting to camera events at {host}:{port}...")
             
             # Locate WSDLs
             import onvif
@@ -458,12 +600,12 @@ class VirtualONVIFCamera:
                 
                 if not pullpoint_addr:
                     if subscription_limit_hit:
-                        print(f"  [ONVIF Event Forwarder {self.id}] Camera '{self.name}' is at its max concurrent ONVIF subscription limit. Another client is using the slot. Waiting 30s for a slot to free up...")
+                        print(f"  [ONVIF Event Forwarder ({self.name})] Camera '{self.name}' is at its max concurrent ONVIF subscription limit. Another client is using the slot. Waiting 30s for a slot to free up...")
                         time.sleep(30)
                         continue
                     raise Exception(f"Subscription creation failed across all auth modes. Last error: {last_err}")
                 
-                print(f"  [ONVIF Event Forwarder {self.id}] Subscription created using auth mode '{self.current_auth_mode}'. PullPoint address: {pullpoint_addr}")
+                print(f"  [ONVIF Event Forwarder ({self.name})] Subscription created using auth mode '{self.current_auth_mode}'. PullPoint address: {pullpoint_addr}")
                 
                 # Poll loop
                 try:
@@ -499,6 +641,7 @@ class VirtualONVIFCamera:
                                         
                                     evt['camera_id'] = self.id
                                     evt['camera_name'] = self.name
+                                    evt['type'] = 'onvif'
                                     evt['timestamp'] = evt['timestamp'] or datetime.utcnow().isoformat() + 'Z'
                                     
                                     # Log locally (limit to 50)
@@ -527,12 +670,12 @@ class VirtualONVIFCamera:
                                             self.manager.onvif_events.pop(0)
                                             
                                     if getattr(self, 'debug_mode', False):
-                                        print(f"  [ONVIF Event {self.id}] {evt['topic']} = {evt['value']}")
+                                        print(f"  [ONVIF Event ({self.name})] {evt['topic']} = {evt['value']}")
                             else:
-                                print(f"  [ONVIF Event Forwarder {self.id}] PullMessages returned status {resp.status_code}. Reconnecting...")
+                                print(f"  [ONVIF Event Forwarder ({self.name})] PullMessages returned status {resp.status_code}. Reconnecting...")
                                 break
                         except Exception as poll_err:
-                            print(f"  [ONVIF Event Forwarder {self.id}] PullMessages connection error: {poll_err}. Reconnecting...")
+                            print(f"  [ONVIF Event Forwarder ({self.name})] PullMessages connection error: {poll_err}. Reconnecting...")
                             break
                 finally:
                     # Always clean up the subscription to free the camera slot
@@ -551,16 +694,308 @@ class VirtualONVIFCamera:
                             }
                             # Send unsubscribe to pullpoint_addr
                             requests.post(pullpoint_addr, data=unsub_payload, headers=unsub_headers, timeout=5)
-                            print(f"  [ONVIF Event Forwarder {self.id}] Sent Unsubscribe to camera '{self.name}' to release subscription slot.")
+                            print(f"  [ONVIF Event Forwarder ({self.name})] Sent Unsubscribe to camera '{self.name}' to release subscription slot.")
                         except Exception as unsub_err:
-                            print(f"  [ONVIF Event Forwarder {self.id}] Failed to unsubscribe from camera '{self.name}': {unsub_err}")
+                            print(f"  [ONVIF Event Forwarder ({self.name})] Failed to unsubscribe from camera '{self.name}': {unsub_err}")
                             
             except Exception as conn_err:
-                print(f"  [ONVIF Event Forwarder {self.id}] ONVIF events connection failed: {conn_err}. Retrying in 10s...")
+                print(f"  [ONVIF Event Forwarder ({self.name})] ONVIF events connection failed: {conn_err}. Retrying in 10s...")
                 time.sleep(10)
 
+    def start_ai_detection(self):
+        """Start local AI event detection background thread"""
+        self._ai_running = True
+        self._ai_thread = threading.Thread(target=self._ai_detection_loop, daemon=True)
+        self._ai_thread.start()
+        print(f"  [Camera ({self.name})] Local AI detection thread started.")
 
+    def stop_ai_detection(self):
+        """Stop local AI event detection background thread"""
+        self._ai_running = False
+        if hasattr(self, '_ai_thread') and self._ai_thread and self._ai_thread.is_alive():
+            try:
+                self._ai_thread.join(timeout=2.0)
+            except Exception:
+                pass
+        print(f"  [Camera ({self.name})] Local AI detection thread stopped.")
 
+    def _ai_detection_loop(self):
+        # Lazy imports
+        try:
+            import cv2
+            from ultralytics import YOLO
+        except ImportError as e:
+            print(f"  [AI Error] Failed to import cv2 or ultralytics. Make sure they are installed: {e}")
+            from datetime import datetime
+            self.event_logs.append({
+                'topic': 'System/Error',
+                'value': 'true',
+                'data_name': 'AIImportError',
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'camera_name': self.name,
+                'error_message': 'Failed to import cv2 or ultralytics. Check installation.'
+            })
+            self._ai_running = False
+            return
+
+        # Determine stream URL
+        stream_path = f"{self.path_name}_sub" if (self.sub_stream_url and not self.disable_substream) else self.path_name
+        local_url = f"rtsp://127.0.0.1:{self.rtsp_port}/{stream_path}"
+        fallback_url = self.sub_stream_url or self.main_stream_url
+        
+        print(f"  [AI Camera ({self.name})] Connecting to stream: {local_url}")
+        grabber = RTSPFrameGrabber(local_url)
+        grabber.start(cv2)
+        
+        # Give it a moment to connect and check if frames are arriving
+        time.sleep(1.5)
+        if grabber.latest_frame is None and fallback_url:
+            print(f"  [AI Camera ({self.name})] Local stream empty, falling back to direct url: {fallback_url}")
+            grabber.stop()
+            grabber = RTSPFrameGrabber(fallback_url)
+            grabber.start(cv2)
+            time.sleep(1.5)
+            
+        try:
+            model = get_shared_ai_model(self.ai_model)
+        except Exception as e:
+            print(f"  [AI Error] Failed to load YOLO model: {e}")
+            from datetime import datetime
+            self.event_logs.append({
+                'topic': 'System/Error',
+                'value': 'true',
+                'data_name': 'AIModelLoadError',
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'camera_name': self.name,
+                'error_message': f'Failed to load YOLO model: {e}'
+            })
+            grabber.stop()
+            self._ai_running = False
+            return
+            
+        # COCO class mapping
+        class_map = {
+            'person': [0],
+            'vehicle': [2, 3, 5, 7],
+            'animal': [15, 16, 17, 18, 19]
+        }
+        
+        monitored_classes = []
+        for target in self.ai_targets:
+            if target in class_map:
+                monitored_classes.extend(class_map[target])
+                
+        if not monitored_classes:
+            monitored_classes = [0, 2, 3, 5, 7]  # Default fallback
+            
+        print(f"  [AI Camera ({self.name})] Monitored class IDs: {monitored_classes}")
+        
+        # Map sensitivity (0-100) to motion change threshold
+        # Higher sensitivity = lower threshold = triggers on less motion
+        # sensitivity 10 -> threshold ~4.0% of pixels must change
+        # sensitivity 50 -> threshold ~1.5% of pixels must change
+        # sensitivity 95 -> threshold ~0.15% of pixels must change
+        # motion_threshold = max(0.1, 5.0 - (self.ai_motion_sensitivity / 100.0) * 5.0)
+        # conf_threshold = 0.40  # Fixed YOLO confidence
+        motion_threshold = max(0.1, 5.0 - (self.ai_motion_sensitivity / 100.0) * 5.0)
+        conf_threshold = 0.40  # Fixed YOLO confidence
+        print(f"  [AI Camera ({self.name})] Motion change threshold: {motion_threshold:.2f}% (sensitivity: {self.ai_motion_sensitivity})")
+        
+        motion_state = False
+        last_detected_time = 0
+        cooldown_period = 5.0  # seconds
+        prev_gray = None
+        startup_frames = 0
+        startup_grace = 5  # Skip first N frames to establish baseline
+        last_loop_time = 0
+        
+        while self._ai_running:
+            loop_start = time.time()
+            if last_loop_time > 0:
+                self.ai_fps_measurement = round(1.0 / (loop_start - last_loop_time), 2)
+            last_loop_time = loop_start
+            
+            raw_frame = grabber.latest_frame
+            if raw_frame is not None:
+                try:
+                    # Optimize CPU usage by resizing frame to a max width of 640px before processing
+                    h, w = raw_frame.shape[:2]
+                    if w > 640:
+                        scale = 640.0 / w
+                        frame = cv2.resize(raw_frame, (640, int(h * scale)))
+                    else:
+                        frame = raw_frame
+                        
+                    # Update w and h to resized dimensions for zone calculation
+                    h, w = frame.shape[:2]
+ 
+                    # Convert current frame to grayscale for motion comparison
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    gray = cv2.GaussianBlur(gray, (21, 21), 0)
+                    
+                    if prev_gray is None:
+                        # First frame — establish baseline, no detection
+                        prev_gray = gray
+                        startup_frames += 1
+                    elif startup_frames <= startup_grace:
+                        # Still in grace period — update baseline but don't trigger
+                        prev_gray = gray
+                        startup_frames += 1
+                    else:
+                        startup_frames += 1
+                        
+                        # Frame differencing: detect pixel-level changes
+                        frame_delta = cv2.absdiff(prev_gray, gray)
+                        thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
+                        change_pct = (cv2.countNonZero(thresh) / thresh.size) * 100.0
+                        
+                        # Update baseline for next comparison
+                        prev_gray = gray
+                        
+                        # Only run AI if enough motion detected
+                        if change_pct < motion_threshold:
+                            # No significant motion — check cooldown for clearing state
+                            self.ai_last_detection = []
+                            if motion_state and (time.time() - last_detected_time > cooldown_period):
+                                motion_state = False
+                                self._trigger_ai_motion(False, [])
+                        else:
+                            # Motion detected — run YOLO to identify what's moving
+                            # Use a global lock to prevent multiple cameras from running inference at the exact same millisecond
+                            t_queue_start = time.time()
+                            with _AI_INFERENCE_LOCK:
+                                t_inference_start = time.time()
+                                results = model(frame, verbose=False, conf=conf_threshold, classes=monitored_classes)
+                                t_inference_end = time.time()
+                                
+                            self.ai_queue_time = round(t_inference_start - t_queue_start, 3)
+                            self.ai_last_inference_latency = round(t_inference_end - t_inference_start, 3)
+                            self.ai_last_inference_time = t_inference_end
+                            self.ai_inference_count += 1
+                            if self.ai_avg_inference_latency == 0.0:
+                                self.ai_avg_inference_latency = self.ai_last_inference_latency
+                            else:
+                                self.ai_avg_inference_latency = round(0.9 * self.ai_avg_inference_latency + 0.1 * self.ai_last_inference_latency, 3)
+                            
+                            detected_tags = set()
+                            h, w = frame.shape[:2]
+                            zone = self.ai_zone if len(self.ai_zone) >= 3 else None
+                            
+                            for result in results:
+                                for box in result.boxes:
+                                    cls_id = int(box.cls[0])
+                                    
+                                    # Zone filtering: check if box center is inside zone polygon
+                                    if zone:
+                                        x1, y1, x2, y2 = box.xyxy[0].tolist()
+                                        cx = ((x1 + x2) / 2) / w  # normalize to 0-1
+                                        cy = ((y1 + y2) / 2) / h
+                                        if not self._point_in_polygon(cx, cy, zone):
+                                            continue
+                                    
+                                    if cls_id == 0:
+                                        detected_tags.add('person')
+                                    elif cls_id in [2, 3, 5, 7]:
+                                        detected_tags.add('vehicle')
+                                    elif cls_id in [15, 16, 17, 18, 19]:
+                                        detected_tags.add('animal')
+                                        
+                            self.ai_last_detection = list(detected_tags)
+                            if detected_tags:
+                                last_detected_time = time.time()
+                                if not motion_state:
+                                    motion_state = True
+                                    self._trigger_ai_motion(True, list(detected_tags))
+                            else:
+                                if motion_state and (time.time() - last_detected_time > cooldown_period):
+                                    motion_state = False
+                                    self._trigger_ai_motion(False, [])
+                                    
+                except Exception as ex:
+                    print(f"  [AI Camera ({self.name})] Error in inference loop: {ex}")
+                    
+            # Target frame rate: ~2.0 FPS (1 frame every 500ms)
+            elapsed = time.time() - loop_start
+            sleep_time = max(0.01, 0.50 - elapsed)
+            time.sleep(sleep_time)
+            
+        grabber.stop()
+        print(f"  [AI Camera ({self.name})] AI detection thread finished.")
+
+    def _point_in_polygon(self, px, py, polygon):
+        """Ray casting algorithm to check if point is inside polygon"""
+        n = len(polygon)
+        inside = False
+        j = n - 1
+        for i in range(n):
+            xi = polygon[i].get('x', 0)
+            yi = polygon[i].get('y', 0)
+            xj = polygon[j].get('x', 0)
+            yj = polygon[j].get('y', 0)
+            if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi):
+                inside = not inside
+            j = i
+        return inside
+
+    def trigger_test_event(self):
+        """Trigger a test ONVIF event (motion detected, then clear after 3 seconds)"""
+        print(f"  [AI Camera ({self.name})] User triggered test ONVIF event...")
+        # Trigger motion detected
+        self._trigger_ai_motion(is_active=True, tags=['test'])
+        
+        def _clear_after_delay():
+            time.sleep(3)
+            self._trigger_ai_motion(is_active=False, tags=['test'])
+            
+        import threading
+        threading.Thread(target=_clear_after_delay, daemon=True).start()
+        return True
+
+    def _trigger_ai_motion(self, is_active, tags):
+        """Broadcast motion state from local AI engine to subscribers"""
+        val = 'true' if is_active else 'false'
+        topic = 'RuleEngine/CellMotionDetector/Motion'
+        data_name = 'IsMotion'
+        
+        from datetime import datetime
+        evt = {
+            'topic': topic,
+            'value': val,
+            'data_name': data_name,
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'camera_id': self.id,
+            'camera_name': self.name,
+            'tags': tags,
+            'type': 'ai'
+        }
+        
+        # Log locally (limit to 50 logs)
+        self.event_logs.append(evt)
+        if len(self.event_logs) > 50:
+            self.event_logs.pop(0)
+            
+        # Log globally (limit to 200)
+        if self.manager:
+            if not hasattr(self.manager, 'onvif_events'):
+                self.manager.onvif_events = []
+            self.manager.onvif_events.append(evt)
+            if len(self.manager.onvif_events) > 200:
+                self.manager.onvif_events.pop(0)
+            
+        print(f"  [AI Camera ({self.name})] AI Event: {topic} = {val} (Tags: {tags})")
+        
+        # Broadcast to virtual clients
+        if self.onvif_service:
+            import queue
+            for sub in list(self.onvif_service.subscriptions.values()):
+                try:
+                    sub.queue.put_nowait(evt)
+                except queue.Full:
+                    try:
+                        sub.queue.get_nowait()
+                        sub.queue.put_nowait(evt)
+                    except:
+                        pass
 
 def get_ws_security_header(username, password, mode='digest'):
     if not username:

@@ -9,6 +9,9 @@ import os
 # Ensure the current directory is in sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Set YOLO_CONFIG_DIR to prevent permissions warnings when running as a systemd service
+os.environ['YOLO_CONFIG_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.ultralytics')
+
 from app.utils import check_and_install_requirements, init_logger
 
 if __name__ == "__main__":

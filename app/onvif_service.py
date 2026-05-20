@@ -343,8 +343,12 @@ class ONVIFService:
             
             try:
                 sock.bind(('', MCAST_PORT))
-                mreq = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
-                sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+                try:
+                    mreq = struct.pack('4s4s', socket.inet_aton(MCAST_GRP), socket.inet_aton(local_ip))
+                    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+                except Exception:
+                    mreq = struct.pack('4sl', socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
+                    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
                 print(f"  WS-Discovery listener started for {self.camera.name} on {local_ip}:{self.camera.onvif_port}")
             except Exception as e:
                 print(f"  Discovery service error: {e}")
@@ -397,9 +401,16 @@ class ONVIFService:
 </SOAP-ENV:Envelope>'''
                         
                         try:
-                            sock.sendto(response.encode('utf-8'), addr)
+                            # Create a temporary socket bound to the virtual IP to send the response.
+                            # This ensures the UDP packet has the correct virtual IP as the source.
+                            reply_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                            try:
+                                reply_sock.bind((local_ip, 0))
+                                reply_sock.sendto(response.encode('utf-8'), addr)
+                            finally:
+                                reply_sock.close()
                         except Exception as e:
-                            print(f"  Failed to send response: {e}")
+                            print(f"  Failed to send discovery response from {local_ip}: {e}")
                         
                 except socket.timeout:
                     continue
@@ -424,8 +435,8 @@ class ONVIFService:
                    xmlns:tds="http://www.onvif.org/ver10/device/wsdl">
     <SOAP-ENV:Body>
         <tds:GetDeviceInformationResponse>
-            <tds:Manufacturer>Tonys Virtual ONVIF Server</tds:Manufacturer>
-            <tds:Model>{self.camera.name}</tds:Model>
+            <tds:Manufacturer></tds:Manufacturer>
+            <tds:Model>ONVIF {self.camera.name}</tds:Model>
             <tds:FirmwareVersion>1.0.0</tds:FirmwareVersion>
             <tds:SerialNumber>{self.camera.mac_address.replace(':', '').upper()}</tds:SerialNumber>
             <tds:HardwareId>{self.camera.mac_address.replace(':', '').upper()}</tds:HardwareId>

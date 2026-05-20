@@ -232,6 +232,46 @@ setup_venv() {
     print_success "Python environment configured"
 }
 
+# Setup AI Object Detection Engine (Optional)
+setup_ai_engine() {
+    print_step "STEP 4b: Setting Up AI Object Detection Engine (Optional)"
+    
+    cd "$INSTALL_DIR"
+    
+    echo -e "${YELLOW}Would you like to install the local AI Object Detection Engine (YOLO)?${NC}"
+    echo -e "  This will install 'ultralytics' and 'opencv-python-headless'."
+    echo -e "  Note: This download is ~200MB+ and requires active CPU/GPU resources."
+    echo -e "  If you skip this now, you can easily install it later via the Web UI."
+    echo -ne "  ${CYAN}Install AI Engine now? (y/N):${NC} "
+    
+    # Read from /dev/tty to support piped execution (e.g. curl | bash)
+    if [ -c /dev/tty ]; then
+        read -r install_ai < /dev/tty
+    else
+        read -r install_ai
+    fi
+    
+    if [[ $install_ai == [yY] || $install_ai == [yY][eE][sS] ]]; then
+        print_info "Activating Python virtual environment..."
+        source venv/bin/activate
+        
+        print_info "Upgrading pip packages for AI engine..."
+        print_info "Installing 'ultralytics' (this may take a few minutes)..."
+        pip install --no-cache-dir ultralytics
+        
+        print_info "Uninstalling standard opencv-python if present to prevent GL conflicts..."
+        pip uninstall -y opencv-python 2>/dev/null || true
+        
+        print_info "Installing 'opencv-python-headless'..."
+        pip install --no-cache-dir opencv-python-headless
+        
+        deactivate
+        print_success "AI Object Detection Engine installed successfully"
+    else
+        print_info "Skipped AI Engine installation. You can install it later via the Web UI."
+    fi
+}
+
 # Detect system architecture
 detect_arch() {
     ARCH=$(uname -m)
@@ -596,6 +636,7 @@ main() {
     install_dependencies
     clone_repository
     setup_venv
+    setup_ai_engine
     install_mediamtx
     install_ffmpeg
     set_permissions
@@ -606,7 +647,12 @@ main() {
     # Ask if user wants to start the server now
     echo ""
     echo -e "${YELLOW}Would you like to start the server now? (y/n):${NC} "
-    read -r start_now
+    
+    if [ -c /dev/tty ]; then
+        read -r start_now < /dev/tty
+    else
+        read -r start_now
+    fi
     
     if [[ $start_now == [yY] || $start_now == [yY][eE][sS] ]]; then
         echo ""

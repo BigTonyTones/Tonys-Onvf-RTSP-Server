@@ -6,7 +6,7 @@ from pathlib import Path
 class LinuxServiceManager:
     """Manages the systemd service for the ONVIF server on Linux"""
     
-    SERVICE_NAME = "tony-onvif-server.service"
+    SERVICE_NAME = "tonys-onvif.service"
     
     @staticmethod
     def is_linux():
