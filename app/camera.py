@@ -60,35 +60,57 @@ class ThreadPoolWSGIServer(ThreadedWSGIServer):
         super().shutdown()
 
 class RTSPFrameGrabber:
-    """Helper class to continuously grab RTSP frames in a background thread to prevent lag"""
     def __init__(self, rtsp_url):
         self.rtsp_url = rtsp_url
         self.cap = None
         self.latest_frame = None
         self.running = False
         self.thread = None
+        self.cv2 = None
         
     def start(self, cv2):
+        self.cv2 = cv2
         self.running = True
-        self.cap = cv2.VideoCapture(self.rtsp_url)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.thread = threading.Thread(target=self._grab_loop, daemon=True)
         self.thread.start()
         
     def _grab_loop(self):
         import time
+        last_frame_time = time.time()
+        
         while self.running:
             if self.cap and self.cap.isOpened():
                 try:
                     ret, frame = self.cap.read()
                     if ret:
                         self.latest_frame = frame
+                        last_frame_time = time.time()
                     else:
                         time.sleep(0.01)
+                        if time.time() - last_frame_time > 5.0:
+                            print(f"  [AI Camera Grabber] Stream read timeout. Reconnecting to {self.rtsp_url}...")
+                            try:
+                                self.cap.release()
+                            except Exception:
+                                pass
+                            self.cap = self.cv2.VideoCapture(self.rtsp_url)
+                            self.cap.set(self.cv2.CAP_PROP_BUFFERSIZE, 1)
+                            last_frame_time = time.time()
                 except Exception:
                     time.sleep(0.05)
             else:
-                time.sleep(0.5)
+                try:
+                    if self.cap:
+                        self.cap.release()
+                except Exception:
+                    pass
+                try:
+                    self.cap = self.cv2.VideoCapture(self.rtsp_url)
+                    self.cap.set(self.cv2.CAP_PROP_BUFFERSIZE, 1)
+                except Exception as e:
+                    print(f"  [AI Camera Grabber] Error connecting to {self.rtsp_url}: {e}")
+                last_frame_time = time.time()
+                time.sleep(1.0)
                 
     def stop(self):
         self.running = False
@@ -741,20 +763,10 @@ class VirtualONVIFCamera:
         # Determine stream URL
         stream_path = f"{self.path_name}_sub" if (self.sub_stream_url and not self.disable_substream) else self.path_name
         local_url = f"rtsp://127.0.0.1:{self.rtsp_port}/{stream_path}"
-        fallback_url = self.sub_stream_url or self.main_stream_url
         
         print(f"  [AI Camera ({self.name})] Connecting to stream: {local_url}")
         grabber = RTSPFrameGrabber(local_url)
         grabber.start(cv2)
-        
-        # Give it a moment to connect and check if frames are arriving
-        time.sleep(1.5)
-        if grabber.latest_frame is None and fallback_url:
-            print(f"  [AI Camera ({self.name})] Local stream empty, falling back to direct url: {fallback_url}")
-            grabber.stop()
-            grabber = RTSPFrameGrabber(fallback_url)
-            grabber.start(cv2)
-            time.sleep(1.5)
             
         try:
             model = get_shared_ai_model(self.ai_model)
