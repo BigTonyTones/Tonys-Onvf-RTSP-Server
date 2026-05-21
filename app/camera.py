@@ -821,6 +821,12 @@ class VirtualONVIFCamera:
         startup_grace = 5  # Skip first N frames to establish baseline
         last_loop_time = 0
         
+        # Zone-aware motion masking: only detect motion inside the drawn zone
+        import numpy as np
+        zone_points = self.ai_zone if len(self.ai_zone) >= 3 else None
+        zone_mask = None
+        zone_pixel_count = 0
+        
         while self._ai_running:
             loop_start = time.time()
             if last_loop_time > 0:
@@ -840,6 +846,14 @@ class VirtualONVIFCamera:
                         
                     # Update w and h to resized dimensions for zone calculation
                     h, w = frame.shape[:2]
+                    
+                    # Create zone mask on first valid frame (only once)
+                    if zone_mask is None and zone_points:
+                        zone_mask = np.zeros((h, w), dtype=np.uint8)
+                        pts = np.array([[int(p.get('x', 0) * w), int(p.get('y', 0) * h)] for p in zone_points], dtype=np.int32)
+                        cv2.fillPoly(zone_mask, [pts], 255)
+                        zone_pixel_count = cv2.countNonZero(zone_mask)
+                        print(f"  [AI Camera ({self.name})] Zone mask applied: {zone_pixel_count}/{h * w} pixels monitored ({round(zone_pixel_count / (h * w) * 100, 1)}% of frame)")
  
                     # Convert current frame to grayscale for motion comparison
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -859,7 +873,13 @@ class VirtualONVIFCamera:
                         # Frame differencing: detect pixel-level changes
                         frame_delta = cv2.absdiff(prev_gray, gray)
                         thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
-                        change_pct = (cv2.countNonZero(thresh) / thresh.size) * 100.0
+                        
+                        # Apply zone mask: ignore all motion outside the drawn zone
+                        if zone_mask is not None:
+                            thresh = cv2.bitwise_and(thresh, zone_mask)
+                            change_pct = (cv2.countNonZero(thresh) / zone_pixel_count) * 100.0 if zone_pixel_count > 0 else 0.0
+                        else:
+                            change_pct = (cv2.countNonZero(thresh) / thresh.size) * 100.0
                         
                         # Update baseline for next comparison
                         prev_gray = gray
