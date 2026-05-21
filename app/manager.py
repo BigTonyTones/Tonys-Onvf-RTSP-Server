@@ -581,7 +581,7 @@ class CameraManager:
                     static_ip='', netmask='24', gateway='', uuid=None,
                     enable_event_forwarding=False, physical_onvif_port=80,
                     onvif_forwarding_username='', onvif_forwarding_password='',
-                    event_source='onvif', ai_targets=None, ai_model='yolov8n.pt'):
+                    event_source='onvif', ai_targets=None, ai_model='yolov8n.pt', send_smart_onvif_topics=True):
         """Add a new camera"""
         if not main_path.startswith('/'):
             main_path = '/' + main_path
@@ -676,7 +676,8 @@ class CameraManager:
             'onvifForwardingPassword': onvif_forwarding_password,
             'eventSource': event_source,
             'aiTargets': ai_targets,
-            'aiModel': ai_model
+            'aiModel': ai_model,
+            'sendSmartOnvifTopics': send_smart_onvif_topics
         }
         
         camera = VirtualONVIFCamera(config, self)
@@ -700,7 +701,7 @@ class CameraManager:
                       static_ip='', netmask='24', gateway='', uuid=None,
                       enable_event_forwarding=False, physical_onvif_port=80,
                       onvif_forwarding_username='', onvif_forwarding_password='',
-                      event_source='onvif', ai_targets=None, ai_model='yolov8n.pt'):
+                      event_source='onvif', ai_targets=None, ai_model='yolov8n.pt', send_smart_onvif_topics=True):
         """Update an existing camera"""
         camera = self.get_camera(camera_id)
         if not camera:
@@ -802,6 +803,7 @@ class CameraManager:
         camera.event_source = event_source
         camera.ai_targets = ai_targets
         camera.ai_model = ai_model
+        camera.send_smart_onvif_topics = send_smart_onvif_topics
         
         if uuid:
             camera.uuid = uuid

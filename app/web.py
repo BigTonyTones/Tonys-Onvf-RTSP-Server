@@ -329,7 +329,8 @@ def create_web_app(manager):
                 onvif_forwarding_password=data.get('onvifForwardingPassword', ''),
                 event_source=data.get('eventSource', 'onvif'),
                 ai_targets=data.get('aiTargets'),
-                ai_model=data.get('aiModel', 'yolov8n.pt')
+                ai_model=data.get('aiModel', 'yolov8n.pt'),
+                send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
@@ -380,12 +381,14 @@ def create_web_app(manager):
                 onvif_forwarding_password=data.get('onvifForwardingPassword', ''),
                 event_source=data.get('eventSource', 'onvif'),
                 ai_targets=data.get('aiTargets'),
-                ai_model=data.get('aiModel', 'yolov8n.pt')
+                ai_model=data.get('aiModel', 'yolov8n.pt'),
+                send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
             if camera:
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
                 camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', 50)
                 camera.ai_zone = data.get('aiZone', [])
+                camera.send_smart_onvif_topics = data.get('sendSmartOnvifTopics', True)
                 manager.save_config()
                 return jsonify(camera.to_dict())
             return jsonify({'error': 'Camera not found'}), 404
@@ -445,8 +448,13 @@ def create_web_app(manager):
     def test_camera_event(camera_id):
         camera = manager.get_camera(camera_id)
         if camera:
-            camera.trigger_test_event()
-            return jsonify({'status': 'success', 'message': 'Test event triggered successfully'})
+            tag = None
+            if request.is_json:
+                tag = request.get_json().get('tag')
+            if not tag:
+                tag = request.args.get('tag')
+            camera.trigger_test_event(tag=tag)
+            return jsonify({'status': 'success', 'message': f'Test event for {tag or "generic"} triggered successfully'})
         return jsonify({'error': 'Camera not found'}), 404
 
     @app.route('/api/cameras/<int:camera_id>/copy-ai-settings', methods=['POST'])
@@ -469,6 +477,7 @@ def create_web_app(manager):
                 target.ai_targets = list(source.ai_targets)
                 target.ai_motion_detection_enabled = source.ai_motion_detection_enabled
                 target.ai_motion_sensitivity = source.ai_motion_sensitivity
+                target.send_smart_onvif_topics = source.send_smart_onvif_topics
                 # NOTE: ai_zone is NOT copied (per user request)
                 updated.append(target.id)
         

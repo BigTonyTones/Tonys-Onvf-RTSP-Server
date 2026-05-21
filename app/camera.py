@@ -220,6 +220,9 @@ class VirtualONVIFCamera:
         self.ai_motion_detection_enabled = config.get('aiMotionDetectionEnabled', True)
         self.ai_motion_sensitivity = config.get('aiMotionSensitivity', 50)
         self.ai_zone = config.get('aiZone', [])
+        self.send_smart_onvif_topics = config.get('sendSmartOnvifTopics', True)
+        self._active_smart_tags = set()
+        self._motion_state = False
         self._ai_thread = None
         self._ai_running = False
         
@@ -439,6 +442,7 @@ class VirtualONVIFCamera:
             'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
             'aiMotionSensitivity': self.ai_motion_sensitivity,
             'aiZone': self.ai_zone,
+            'sendSmartOnvifTopics': self.send_smart_onvif_topics,
             'aiInferenceCount': self.ai_inference_count,
             'aiLastInferenceTime': self.ai_last_inference_time,
             'aiLastInferenceLatency': self.ai_last_inference_latency,
@@ -496,7 +500,8 @@ class VirtualONVIFCamera:
             'aiModel': self.ai_model,
             'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
             'aiMotionSensitivity': self.ai_motion_sensitivity,
-            'aiZone': self.ai_zone
+            'aiZone': self.ai_zone,
+            'sendSmartOnvifTopics': self.send_smart_onvif_topics
         }
 
     def start_event_forwarding(self):
@@ -789,7 +794,8 @@ class VirtualONVIFCamera:
         class_map = {
             'person': [0],
             'vehicle': [2, 3, 5, 7],
-            'animal': [15, 16, 17, 18, 19]
+            'animal': [15, 16, 17, 18, 19],
+            'package': [24, 26, 28]
         }
         
         monitored_classes = []
@@ -931,12 +937,16 @@ class VirtualONVIFCamera:
                                         detected_tags.add('vehicle')
                                     elif cls_id in [15, 16, 17, 18, 19]:
                                         detected_tags.add('animal')
+                                    elif cls_id in [24, 26, 28]:
+                                        detected_tags.add('package')
                                         
                             self.ai_last_detection = list(detected_tags)
                             if detected_tags:
                                 last_detected_time = time.time()
                                 if not motion_state:
                                     motion_state = True
+                                    self._trigger_ai_motion(True, list(detected_tags))
+                                elif self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags):
                                     self._trigger_ai_motion(True, list(detected_tags))
                             else:
                                 if motion_state and (time.time() - last_detected_time > cooldown_period):
@@ -969,15 +979,16 @@ class VirtualONVIFCamera:
             j = i
         return inside
 
-    def trigger_test_event(self):
+    def trigger_test_event(self, tag=None):
         """Trigger a test ONVIF event (motion detected, then clear after 3 seconds)"""
-        print(f"  [AI Camera ({self.name})] User triggered test ONVIF event...")
+        tags = [tag] if tag else ['test']
+        print(f"  [AI Camera ({self.name})] User triggered test ONVIF event with tags {tags}...")
         # Trigger motion detected
-        self._trigger_ai_motion(is_active=True, tags=['test'])
+        self._trigger_ai_motion(is_active=True, tags=tags)
         
         def _clear_after_delay():
             time.sleep(3)
-            self._trigger_ai_motion(is_active=False, tags=['test'])
+            self._trigger_ai_motion(is_active=False, tags=tags)
             
         import threading
         threading.Thread(target=_clear_after_delay, daemon=True).start()
@@ -985,49 +996,83 @@ class VirtualONVIFCamera:
 
     def _trigger_ai_motion(self, is_active, tags):
         """Broadcast motion state from local AI engine to subscribers"""
-        val = 'true' if is_active else 'false'
-        topic = 'RuleEngine/CellMotionDetector/Motion'
-        data_name = 'IsMotion'
-        
         from datetime import datetime
-        evt = {
-            'topic': topic,
-            'value': val,
-            'data_name': data_name,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'camera_id': self.id,
-            'camera_name': self.name,
-            'tags': tags,
-            'type': 'ai'
-        }
-        
-        # Log locally (limit to 50 logs)
-        self.event_logs.append(evt)
-        if len(self.event_logs) > 50:
-            self.event_logs.pop(0)
+        import queue
+
+        def send_evt(topic, data_name, val, event_tags):
+            evt = {
+                'topic': topic,
+                'value': val,
+                'data_name': data_name,
+                'timestamp': datetime.utcnow().isoformat() + 'Z',
+                'camera_id': self.id,
+                'camera_name': self.name,
+                'tags': event_tags,
+                'type': 'ai'
+            }
+            # Log locally (limit to 50 logs)
+            self.event_logs.append(evt)
+            if len(self.event_logs) > 50:
+                self.event_logs.pop(0)
+                
+            # Log globally (limit to 200)
+            if self.manager:
+                if not hasattr(self.manager, 'onvif_events'):
+                    self.manager.onvif_events = []
+                self.manager.onvif_events.append(evt)
+                if len(self.manager.onvif_events) > 200:
+                    self.manager.onvif_events.pop(0)
+                
+            print(f"  [AI Camera ({self.name})] AI Event: {topic} = {val} (Tags: {event_tags})")
             
-        # Log globally (limit to 200)
-        if self.manager:
-            if not hasattr(self.manager, 'onvif_events'):
-                self.manager.onvif_events = []
-            self.manager.onvif_events.append(evt)
-            if len(self.manager.onvif_events) > 200:
-                self.manager.onvif_events.pop(0)
-            
-        print(f"  [AI Camera ({self.name})] AI Event: {topic} = {val} (Tags: {tags})")
-        
-        # Broadcast to virtual clients
-        if self.onvif_service:
-            import queue
-            for sub in list(self.onvif_service.subscriptions.values()):
-                try:
-                    sub.queue.put_nowait(evt)
-                except queue.Full:
+            # Broadcast to virtual clients
+            if self.onvif_service:
+                for sub in list(self.onvif_service.subscriptions.values()):
                     try:
-                        sub.queue.get_nowait()
                         sub.queue.put_nowait(evt)
-                    except:
-                        pass
+                    except queue.Full:
+                        try:
+                            sub.queue.get_nowait()
+                            sub.queue.put_nowait(evt)
+                        except:
+                            pass
+
+        # 1. Send generic motion event if state has changed
+        if not hasattr(self, '_motion_state'):
+            self._motion_state = False
+            
+        if is_active != self._motion_state:
+            self._motion_state = is_active
+            val = 'true' if is_active else 'false'
+            send_evt('RuleEngine/CellMotionDetector/Motion', 'IsMotion', val, tags)
+
+        # 2. If smart topics are enabled, update individual smart events
+        if getattr(self, 'send_smart_onvif_topics', True):
+            # Define standard smart mappings
+            mappings = {
+                'person': ('UserAlarm/IVA/HumanShapeDetect', 'State'),
+                'vehicle': ('VehicleAlarm/IVB/VehicleDetect', 'State'),
+                'animal': ('UserAlarm/IVA/AnimalDetect', 'State'),
+                'package': ('UserAlarm/IVA/PackageDetect', 'State')
+            }
+            
+            # Check what's active in the current call
+            current_smart_tags = set()
+            if is_active:
+                for tag in mappings.keys():
+                    if tag in tags or 'test' in tags:
+                        current_smart_tags.add(tag)
+            
+            # Send events for any changes
+            for tag, (topic, data_name) in mappings.items():
+                if tag in current_smart_tags:
+                    if tag not in self._active_smart_tags:
+                        self._active_smart_tags.add(tag)
+                        send_evt(topic, data_name, 'true', [tag])
+                else:
+                    if tag in self._active_smart_tags:
+                        self._active_smart_tags.remove(tag)
+                        send_evt(topic, data_name, 'false', [tag])
 
 def get_ws_security_header(username, password, mode='digest'):
     if not username:
@@ -1123,7 +1168,7 @@ def parse_pull_messages_response(xml_data):
                     if child is not None:
                         timestamp = child.attrib.get('UtcTime', None)
                 
-                # Scan for person / vehicle tags
+                # Scan for person / vehicle / animal / package tags
                 detection_tags = []
                 def scan_str(s):
                     if not s:
@@ -1135,6 +1180,12 @@ def parse_pull_messages_response(xml_data):
                     if any(x in s_lower for x in ['vehicle', 'car', 'truck', 'bus', 'bike', 'motorcycle', 'nonmotor', 'plate']):
                         if 'vehicle' not in detection_tags:
                             detection_tags.append('vehicle')
+                    if any(x in s_lower for x in ['animal', 'dog', 'cat', 'pet', 'bird']):
+                        if 'animal' not in detection_tags:
+                            detection_tags.append('animal')
+                    if any(x in s_lower for x in ['package', 'parcel', 'bag', 'backpack', 'handbag', 'suitcase', 'box', 'delivery']):
+                        if 'package' not in detection_tags:
+                            detection_tags.append('package')
 
                 scan_str(clean_topic)
                 if source:

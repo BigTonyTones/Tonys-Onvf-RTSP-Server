@@ -1352,6 +1352,7 @@ def get_web_ui_html(current_settings=None):
                     <option value="person">Person Detections</option>
                     <option value="vehicle">Vehicle Detections</option>
                     <option value="animal">Animal Detections</option>
+                    <option value="package">Package Detections</option>
                     <option value="active">Active Only</option>
                     <option value="clear">Clear Only</option>
                 </select>
@@ -1867,6 +1868,21 @@ def get_web_ui_html(current_settings=None):
                                 <input type="checkbox" id="aiTargetAnimal" style="width: auto; cursor: pointer;">
                                 <span style="font-size: 12px; color: #cbd5e0;">Animal</span>
                             </label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="checkbox" id="aiTargetPackage" style="width: auto; cursor: pointer;">
+                                <span style="font-size: 12px; color: #cbd5e0;">Package</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="sendSmartOnvifTopicsGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">ONVIF Event Formatting</div>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="sendSmartOnvifTopics" style="width: auto; cursor: pointer;" checked>
+                            <span style="font-size: 12px; color: #cbd5e0;">Send Smart ONVIF Topics (HumanShapeDetect, VehicleDetect, AnimalDetect, PackageDetect)</span>
+                        </label>
+                        <div style="font-size: 11px; color: #718096; margin-top: 4px; margin-left: 20px; line-height: 1.4;">
+                            If enabled, triggers specific smart ONVIF events when objects are detected. If disabled, reverts to standard generic motion events.
                         </div>
                     </div>
 
@@ -1957,9 +1973,21 @@ def get_web_ui_html(current_settings=None):
                     <!-- Test ONVIF Event (only shown when editing an existing camera) -->
                     <div id="aiTestEventGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3748;">
                         <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Test Event Delivery</div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                             <button type="button" class="btn" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
                                 <i class="fas fa-paper-plane"></i> Send Test ONVIF Event
+                            </button>
+                            <button type="button" class="btn" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="fas fa-user"></i> Person
+                            </button>
+                            <button type="button" class="btn" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="fas fa-car"></i> Vehicle
+                            </button>
+                            <button type="button" class="btn" id="btnTestAnimalEvent" onclick="sendTestOnvifEvent('animal')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #38a169 0%, #2f855a 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="fas fa-paw"></i> Animal
+                            </button>
+                            <button type="button" class="btn" id="btnTestPackageEvent" onclick="sendTestOnvifEvent('package')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="fas fa-box"></i> Package
                             </button>
                             <span id="aiTestEventFeedback" style="font-size: 11px; color: #a0aec0;"></span>
                         </div>
@@ -3267,6 +3295,8 @@ def get_web_ui_html(current_settings=None):
                 document.getElementById('aiTargetPerson').checked = aiTargets.includes('person');
                 document.getElementById('aiTargetVehicle').checked = aiTargets.includes('vehicle');
                 document.getElementById('aiTargetAnimal').checked = aiTargets.includes('animal');
+                document.getElementById('aiTargetPackage').checked = aiTargets.includes('package');
+                document.getElementById('sendSmartOnvifTopics').checked = camera.sendSmartOnvifTopics !== false;
                 
                 const copySens = camera.aiMotionSensitivity || 50;
                 document.getElementById('aiMotionSensitivity').value = copySens;
@@ -3429,6 +3459,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('aiTargetPerson').checked = true;
             document.getElementById('aiTargetVehicle').checked = true;
             document.getElementById('aiTargetAnimal').checked = false;
+            document.getElementById('aiTargetPackage').checked = false;
+            document.getElementById('sendSmartOnvifTopics').checked = true;
             document.getElementById('aiMotionSensitivity').value = 50;
             updateAiSensitivityDisplay(50);
             currentZonePoints = [];
@@ -3527,6 +3559,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('aiTargetPerson').checked = aiTargets.includes('person');
             document.getElementById('aiTargetVehicle').checked = aiTargets.includes('vehicle');
             document.getElementById('aiTargetAnimal').checked = aiTargets.includes('animal');
+            document.getElementById('aiTargetPackage').checked = aiTargets.includes('package');
+            document.getElementById('sendSmartOnvifTopics').checked = camera.sendSmartOnvifTopics !== false;
             
             const sens = camera.aiMotionSensitivity || 50;
             document.getElementById('aiMotionSensitivity').value = sens;
@@ -3628,6 +3662,7 @@ def get_web_ui_html(current_settings=None):
             const aiTargetGroup = document.getElementById('aiTargetClassesGroup');
             const aiModelGroup = document.getElementById('aiModelGroup');
             const aiInstallGroup = document.getElementById('aiInstallGroup');
+            const smartGroup = document.getElementById('sendSmartOnvifTopicsGroup');
             
             if (checked && source === 'ai') {{
                 if (isAiInstalled) {{
@@ -3636,14 +3671,17 @@ def get_web_ui_html(current_settings=None):
                         aiModelGroup.style.display = 'block';
                         updateModelDescription();
                     }}
+                    if (smartGroup) smartGroup.style.display = 'block';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'none';
                 }} else {{
                     if (aiTargetGroup) aiTargetGroup.style.display = 'none';
                     if (aiModelGroup) aiModelGroup.style.display = 'none';
+                    if (smartGroup) smartGroup.style.display = 'none';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'block';
                 }}
             }} else {{
                 if (aiModelGroup) aiModelGroup.style.display = 'none';
+                if (smartGroup) smartGroup.style.display = 'none';
                 if (aiInstallGroup) aiInstallGroup.style.display = 'none';
             }}
         }}
@@ -3799,6 +3837,7 @@ def get_web_ui_html(current_settings=None):
                 const aiSensGroup = document.getElementById('aiSensitivityGroup');
                 const aiZoneGroup = document.getElementById('aiZoneGroup');
                 const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
+                const smartGroup = document.getElementById('sendSmartOnvifTopicsGroup');
                 if (portGroup) portGroup.style.display = 'none';
                 if (credGroup) credGroup.style.display = 'none';
                 if (aiGroup) aiGroup.style.display = 'none';
@@ -3808,16 +3847,33 @@ def get_web_ui_html(current_settings=None):
                 if (aiSensGroup) aiSensGroup.style.display = 'none';
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
+                if (smartGroup) smartGroup.style.display = 'none';
             }}
         }}
 
-        async function sendTestOnvifEvent() {{
+        async function sendTestOnvifEvent(tag) {{
             const cameraId = document.getElementById('camera-id').value;
             if (!cameraId) return;
             
-            const btn = document.getElementById('btnTestOnvifEvent');
+            const buttons = [
+                'btnTestOnvifEvent',
+                'btnTestPersonEvent',
+                'btnTestVehicleEvent',
+                'btnTestAnimalEvent',
+                'btnTestPackageEvent'
+            ];
+            
+            let clickedButtonId = 'btnTestOnvifEvent';
+            if (tag === 'person') clickedButtonId = 'btnTestPersonEvent';
+            else if (tag === 'vehicle') clickedButtonId = 'btnTestVehicleEvent';
+            else if (tag === 'animal') clickedButtonId = 'btnTestAnimalEvent';
+            else if (tag === 'package') clickedButtonId = 'btnTestPackageEvent';
+            
+            const clickedBtn = document.getElementById(clickedButtonId);
+            if (!clickedBtn) return;
+            
             const feedback = document.getElementById('aiTestEventFeedback');
-            const originalText = btn.innerHTML;
+            const originalHTML = clickedBtn.innerHTML;
             
             const camera = cameras.find(c => c.id === parseInt(cameraId));
             if (camera && camera.status !== 'running') {{
@@ -3827,17 +3883,27 @@ def get_web_ui_html(current_settings=None):
             }}
             
             try {{
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
+                // Disable all buttons
+                buttons.forEach(btnId => {{
+                    const b = document.getElementById(btnId);
+                    if (b) b.disabled = true;
+                }});
+                
+                clickedBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Triggering...';
                 feedback.textContent = '';
                 feedback.style.color = '#a0aec0';
                 
-                const response = await fetch(`/api/cameras/${{cameraId}}/test-event`, {{
+                let url = `/api/cameras/${{cameraId}}/test-event`;
+                if (tag) {{
+                    url += `?tag=${{encodeURIComponent(tag)}}`;
+                }}
+                
+                const response = await fetch(url, {{
                     method: 'POST'
                 }});
                 
                 if (response.ok) {{
-                    feedback.textContent = 'Event triggered successfully! Check Protect.';
+                    feedback.textContent = `Event (${{tag || 'all'}}) triggered successfully! Check Protect.`;
                     feedback.style.color = '#10b981';
                 }} else {{
                     const err = await response.json();
@@ -3850,8 +3916,12 @@ def get_web_ui_html(current_settings=None):
                 feedback.style.color = '#f56565';
             }} finally {{
                 setTimeout(() => {{
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    // Enable all buttons
+                    buttons.forEach(btnId => {{
+                        const b = document.getElementById(btnId);
+                        if (b) b.disabled = false;
+                    }});
+                    clickedBtn.innerHTML = originalHTML;
                 }}, 1000);
             }}
         }}
@@ -3880,6 +3950,7 @@ def get_web_ui_html(current_settings=None):
                 if (aiSensGroup) aiSensGroup.style.display = 'none';
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
+                if (document.getElementById('sendSmartOnvifTopicsGroup')) document.getElementById('sendSmartOnvifTopicsGroup').style.display = 'none';
                 document.getElementById('aiInstallGroup').style.display = 'none';
             }} else {{
                 if (portGroup) portGroup.style.display = 'none';
@@ -4396,6 +4467,8 @@ def get_web_ui_html(current_settings=None):
                             tagsHtml += ` <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Vehicle</span>`;
                         }} else if (tag === 'animal') {{
                             tagsHtml += ` <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Animal</span>`;
+                        }} else if (tag === 'package') {{
+                            tagsHtml += ` <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Package</span>`;
                         }}
                     }});
                 }}
@@ -4485,10 +4558,12 @@ def get_web_ui_html(current_settings=None):
                     if (document.getElementById('aiTargetPerson').checked) targets.push('person');
                     if (document.getElementById('aiTargetVehicle').checked) targets.push('vehicle');
                     if (document.getElementById('aiTargetAnimal').checked) targets.push('animal');
+                    if (document.getElementById('aiTargetPackage').checked) targets.push('package');
                     return targets;
                 }})(),
                 aiMotionSensitivity: parseInt(document.getElementById('aiMotionSensitivity').value) || 50,
-                aiZone: currentZonePoints || []
+                aiZone: currentZonePoints || [],
+                sendSmartOnvifTopics: document.getElementById('sendSmartOnvifTopics').checked
             }};
             // Add ONVIF port if specified
             const onvifPort = document.getElementById('onvifPort').value;

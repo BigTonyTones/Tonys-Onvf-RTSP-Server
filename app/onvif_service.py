@@ -1200,10 +1200,12 @@ class ONVIFService:
                 val = 'false'
                 
             # Normalize data property name depending on topic
-            if 'MotionAlarm' in topic:
-                data_name = 'State'
-            else:
-                data_name = 'IsMotion'
+            data_name = evt.get('data_name')
+            if not data_name:
+                if 'MotionAlarm' in topic or 'UserAlarm' in topic or 'VehicleAlarm' in topic or 'HumanShapeDetect' in topic or 'VehicleDetect' in topic or 'AnimalDetect' in topic or 'PackageDetect' in topic:
+                    data_name = 'State'
+                else:
+                    data_name = 'IsMotion'
                 
             timestamp = escape(evt.get('timestamp', datetime.utcnow().isoformat() + 'Z'))
             
