@@ -1915,6 +1915,22 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
+                    <!-- AI Confidence Slider -->
+                    <div id="aiConfidenceGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">AI Confidence Threshold</div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">10%</span>
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
+                                <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
+                            </div>
+                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">95%</span>
+                            <span id="aiConfidenceValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">50%</span>
+                        </div>
+                        <div style="color: #718096; font-size: 10px; margin-top: 6px;">
+                            Objects detected with confidence below this threshold will be ignored. Higher confidence reduces false positives.
+                        </div>
+                    </div>
+
                     <!-- AI Motion Zone Drawing -->
                     <div id="aiZoneGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
@@ -2607,6 +2623,11 @@ def get_web_ui_html(current_settings=None):
                 statusEl.style.background = 'rgba(160, 174, 192, 0.1)';
                 statusEl.style.border = '1px solid rgba(160, 174, 192, 0.2)';
             }}
+        }}
+        
+        function updateAiConfidenceDisplay(val) {{
+            val = parseInt(val);
+            document.getElementById('aiConfidenceValue').textContent = val + '%';
         }}
         
         async function loadData() {{
@@ -3463,6 +3484,8 @@ def get_web_ui_html(current_settings=None):
             document.getElementById('sendSmartOnvifTopics').checked = true;
             document.getElementById('aiMotionSensitivity').value = 50;
             updateAiSensitivityDisplay(50);
+            document.getElementById('aiConfidenceThreshold').value = 50;
+            updateAiConfidenceDisplay(50);
             currentZonePoints = [];
             zoneSnapshotLoaded = false;
             
@@ -3565,6 +3588,9 @@ def get_web_ui_html(current_settings=None):
             const sens = camera.aiMotionSensitivity || 50;
             document.getElementById('aiMotionSensitivity').value = sens;
             updateAiSensitivityDisplay(sens);
+            const conf = camera.aiConfidenceThreshold || 50;
+            document.getElementById('aiConfidenceThreshold').value = conf;
+            updateAiConfidenceDisplay(conf);
             currentZonePoints = camera.aiZone || [];
             zoneSnapshotLoaded = false;
             
@@ -3835,6 +3861,7 @@ def get_web_ui_html(current_settings=None):
                 const aiInstallGroup = document.getElementById('aiInstallGroup');
                 const testGroup = document.getElementById('aiTestEventGroup');
                 const aiSensGroup = document.getElementById('aiSensitivityGroup');
+                const aiConfidenceGroup = document.getElementById('aiConfidenceGroup');
                 const aiZoneGroup = document.getElementById('aiZoneGroup');
                 const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
                 const smartGroup = document.getElementById('sendSmartOnvifTopicsGroup');
@@ -3845,6 +3872,7 @@ def get_web_ui_html(current_settings=None):
                 if (aiInstallGroup) aiInstallGroup.style.display = 'none';
                 if (testGroup) testGroup.style.display = 'none';
                 if (aiSensGroup) aiSensGroup.style.display = 'none';
+                if (aiConfidenceGroup) aiConfidenceGroup.style.display = 'none';
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
                 if (smartGroup) smartGroup.style.display = 'none';
@@ -3936,6 +3964,7 @@ def get_web_ui_html(current_settings=None):
             const aiGroup = document.getElementById('aiTargetClassesGroup');
             const aiModelGroup = document.getElementById('aiModelGroup');
             const aiSensGroup = document.getElementById('aiSensitivityGroup');
+            const aiConfidenceGroup = document.getElementById('aiConfidenceGroup');
             const aiZoneGroup = document.getElementById('aiZoneGroup');
             const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
             
@@ -3948,6 +3977,7 @@ def get_web_ui_html(current_settings=None):
                 if (aiGroup) aiGroup.style.display = 'none';
                 if (aiModelGroup) aiModelGroup.style.display = 'none';
                 if (aiSensGroup) aiSensGroup.style.display = 'none';
+                if (aiConfidenceGroup) aiConfidenceGroup.style.display = 'none';
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
                 if (document.getElementById('sendSmartOnvifTopicsGroup')) document.getElementById('sendSmartOnvifTopicsGroup').style.display = 'none';
@@ -3956,6 +3986,7 @@ def get_web_ui_html(current_settings=None):
                 if (portGroup) portGroup.style.display = 'none';
                 if (credGroup) credGroup.style.display = 'none';
                 if (aiSensGroup) aiSensGroup.style.display = 'block';
+                if (aiConfidenceGroup) aiConfidenceGroup.style.display = 'block';
                 if (aiZoneGroup && isEdit) aiZoneGroup.style.display = 'block';
                 if (aiCopyGroup && isEdit) aiCopyGroup.style.display = 'block';
                 checkAiStatus();
@@ -4461,14 +4492,15 @@ def get_web_ui_html(current_settings=None):
                 let tagsHtml = '';
                 if (evt.tags && Array.isArray(evt.tags)) {{
                     evt.tags.forEach(tag => {{
+                        const pctStr = (evt.confidences && evt.confidences[tag] !== undefined) ? ' (' + evt.confidences[tag] + '%)' : '';
                         if (tag === 'person') {{
-                            tagsHtml += ` <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Person</span>`;
+                            tagsHtml += ` <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Person` + pctStr + `</span>`;
                         }} else if (tag === 'vehicle') {{
-                            tagsHtml += ` <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Vehicle</span>`;
+                            tagsHtml += ` <span style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Vehicle` + pctStr + `</span>`;
                         }} else if (tag === 'animal') {{
-                            tagsHtml += ` <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Animal</span>`;
+                            tagsHtml += ` <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Animal` + pctStr + `</span>`;
                         }} else if (tag === 'package') {{
-                            tagsHtml += ` <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Package</span>`;
+                            tagsHtml += ` <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-left: 5px;">Package` + pctStr + `</span>`;
                         }}
                     }});
                 }}
@@ -4562,6 +4594,7 @@ def get_web_ui_html(current_settings=None):
                     return targets;
                 }})(),
                 aiMotionSensitivity: parseInt(document.getElementById('aiMotionSensitivity').value) || 50,
+                aiConfidenceThreshold: parseInt(document.getElementById('aiConfidenceThreshold').value) || 50,
                 aiZone: currentZonePoints || [],
                 sendSmartOnvifTopics: document.getElementById('sendSmartOnvifTopics').checked
             }};

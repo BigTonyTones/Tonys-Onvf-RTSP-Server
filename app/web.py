@@ -332,6 +332,12 @@ def create_web_app(manager):
                 ai_model=data.get('aiModel', 'yolov8n.pt'),
                 send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
+            if camera:
+                camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
+                camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', 50)
+                camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', 50)
+                camera.ai_zone = data.get('aiZone', [])
+                manager.save_config()
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
@@ -387,6 +393,7 @@ def create_web_app(manager):
             if camera:
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
                 camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', 50)
+                camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', 50)
                 camera.ai_zone = data.get('aiZone', [])
                 camera.send_smart_onvif_topics = data.get('sendSmartOnvifTopics', True)
                 manager.save_config()
@@ -477,6 +484,7 @@ def create_web_app(manager):
                 target.ai_targets = list(source.ai_targets)
                 target.ai_motion_detection_enabled = source.ai_motion_detection_enabled
                 target.ai_motion_sensitivity = source.ai_motion_sensitivity
+                target.ai_confidence_threshold = getattr(source, 'ai_confidence_threshold', 50)
                 target.send_smart_onvif_topics = source.send_smart_onvif_topics
                 # NOTE: ai_zone is NOT copied (per user request)
                 updated.append(target.id)

@@ -219,6 +219,7 @@ class VirtualONVIFCamera:
         self.ai_model = config.get('aiModel', 'yolov8n.pt')
         self.ai_motion_detection_enabled = config.get('aiMotionDetectionEnabled', True)
         self.ai_motion_sensitivity = config.get('aiMotionSensitivity', 50)
+        self.ai_confidence_threshold = config.get('aiConfidenceThreshold', 50)
         self.ai_zone = config.get('aiZone', [])
         self.send_smart_onvif_topics = config.get('sendSmartOnvifTopics', True)
         self._active_smart_tags = set()
@@ -441,6 +442,7 @@ class VirtualONVIFCamera:
             'aiModel': self.ai_model,
             'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
             'aiMotionSensitivity': self.ai_motion_sensitivity,
+            'aiConfidenceThreshold': self.ai_confidence_threshold,
             'aiZone': self.ai_zone,
             'sendSmartOnvifTopics': self.send_smart_onvif_topics,
             'aiInferenceCount': self.ai_inference_count,
@@ -500,6 +502,7 @@ class VirtualONVIFCamera:
             'aiModel': self.ai_model,
             'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
             'aiMotionSensitivity': self.ai_motion_sensitivity,
+            'aiConfidenceThreshold': self.ai_confidence_threshold,
             'aiZone': self.ai_zone,
             'sendSmartOnvifTopics': self.send_smart_onvif_topics
         }
@@ -816,8 +819,8 @@ class VirtualONVIFCamera:
         # motion_threshold = max(0.1, 5.0 - (self.ai_motion_sensitivity / 100.0) * 5.0)
         # conf_threshold = 0.40  # Fixed YOLO confidence
         motion_threshold = max(0.1, 5.0 - (self.ai_motion_sensitivity / 100.0) * 5.0)
-        conf_threshold = 0.40  # Fixed YOLO confidence
-        print(f"  [AI Camera ({self.name})] Motion change threshold: {motion_threshold:.2f}% (sensitivity: {self.ai_motion_sensitivity})")
+        conf_threshold = self.ai_confidence_threshold / 100.0
+        print(f"  [AI Camera ({self.name})] Motion change threshold: {motion_threshold:.2f}% (sensitivity: {self.ai_motion_sensitivity}), confidence threshold: {self.ai_confidence_threshold}%")
         
         motion_state = False
         last_detected_time = 0
@@ -916,12 +919,14 @@ class VirtualONVIFCamera:
                                 self.ai_avg_inference_latency = round(0.9 * self.ai_avg_inference_latency + 0.1 * self.ai_last_inference_latency, 3)
                             
                             detected_tags = set()
+                            tag_confidences = {}
                             h, w = frame.shape[:2]
                             zone = self.ai_zone if len(self.ai_zone) >= 3 else None
                             
                             for result in results:
                                 for box in result.boxes:
                                     cls_id = int(box.cls[0])
+                                    conf = float(box.conf[0])
                                     
                                     # Zone filtering: check if box center is inside zone polygon
                                     if zone:
@@ -931,23 +936,28 @@ class VirtualONVIFCamera:
                                         if not self._point_in_polygon(cx, cy, zone):
                                             continue
                                     
+                                    tag = None
                                     if cls_id == 0:
-                                        detected_tags.add('person')
+                                        tag = 'person'
                                     elif cls_id in [2, 3, 5, 7]:
-                                        detected_tags.add('vehicle')
+                                        tag = 'vehicle'
                                     elif cls_id in [15, 16, 17, 18, 19]:
-                                        detected_tags.add('animal')
+                                        tag = 'animal'
                                     elif cls_id in [24, 26, 28]:
-                                        detected_tags.add('package')
+                                        tag = 'package'
+                                        
+                                    if tag:
+                                        detected_tags.add(tag)
+                                        tag_confidences[tag] = max(tag_confidences.get(tag, 0.0), conf)
                                         
                             self.ai_last_detection = list(detected_tags)
                             if detected_tags:
                                 last_detected_time = time.time()
                                 if not motion_state:
                                     motion_state = True
-                                    self._trigger_ai_motion(True, list(detected_tags))
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences)
                                 elif self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags):
-                                    self._trigger_ai_motion(True, list(detected_tags))
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences)
                             else:
                                 if motion_state and (time.time() - last_detected_time > cooldown_period):
                                     motion_state = False
@@ -982,9 +992,15 @@ class VirtualONVIFCamera:
     def trigger_test_event(self, tag=None):
         """Trigger a test ONVIF event (motion detected, then clear after 3 seconds)"""
         tags = [tag] if tag else ['test']
-        print(f"  [AI Camera ({self.name})] User triggered test ONVIF event with tags {tags}...")
+        tag_conf = {}
+        if tag:
+            tag_conf[tag] = 1.0
+        else:
+            for t in ['person', 'vehicle', 'animal', 'package']:
+                tag_conf[t] = 1.0
+        print(f"  [AI Camera ({self.name})] User triggered test ONVIF event with tags {tags} and mock confidences {tag_conf}...")
         # Trigger motion detected
-        self._trigger_ai_motion(is_active=True, tags=tags)
+        self._trigger_ai_motion(is_active=True, tags=tags, tag_confidences=tag_conf)
         
         def _clear_after_delay():
             time.sleep(3)
@@ -994,12 +1010,12 @@ class VirtualONVIFCamera:
         threading.Thread(target=_clear_after_delay, daemon=True).start()
         return True
 
-    def _trigger_ai_motion(self, is_active, tags):
+    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None):
         """Broadcast motion state from local AI engine to subscribers"""
         from datetime import datetime
         import queue
 
-        def send_evt(topic, data_name, val, event_tags):
+        def send_evt(topic, data_name, val, event_tags, confidences=None):
             evt = {
                 'topic': topic,
                 'value': val,
@@ -1010,6 +1026,8 @@ class VirtualONVIFCamera:
                 'tags': event_tags,
                 'type': 'ai'
             }
+            if confidences:
+                evt['confidences'] = confidences
             # Log locally (limit to 50 logs)
             self.event_logs.append(evt)
             if len(self.event_logs) > 50:
@@ -1023,7 +1041,7 @@ class VirtualONVIFCamera:
                 if len(self.manager.onvif_events) > 200:
                     self.manager.onvif_events.pop(0)
                 
-            print(f"  [AI Camera ({self.name})] AI Event: {topic} = {val} (Tags: {event_tags})")
+            print(f"  [AI Camera ({self.name})] AI Event: {topic} = {val} (Tags: {event_tags}) (Confidences: {confidences})")
             
             # Broadcast to virtual clients
             if self.onvif_service:
@@ -1044,7 +1062,10 @@ class VirtualONVIFCamera:
         if is_active != self._motion_state:
             self._motion_state = is_active
             val = 'true' if is_active else 'false'
-            send_evt('RuleEngine/CellMotionDetector/Motion', 'IsMotion', val, tags)
+            conf_pct = None
+            if is_active and tag_confidences:
+                conf_pct = {t: int(c * 100) for t, c in tag_confidences.items() if t in tags}
+            send_evt('RuleEngine/CellMotionDetector/Motion', 'IsMotion', val, tags, confidences=conf_pct)
 
         # 2. If smart topics are enabled, update individual smart events
         if getattr(self, 'send_smart_onvif_topics', True):
@@ -1068,7 +1089,10 @@ class VirtualONVIFCamera:
                 if tag in current_smart_tags:
                     if tag not in self._active_smart_tags:
                         self._active_smart_tags.add(tag)
-                        send_evt(topic, data_name, 'true', [tag])
+                        conf_pct = None
+                        if tag_confidences and tag in tag_confidences:
+                            conf_pct = {tag: int(tag_confidences[tag] * 100)}
+                        send_evt(topic, data_name, 'true', [tag], confidences=conf_pct)
                 else:
                     if tag in self._active_smart_tags:
                         self._active_smart_tags.remove(tag)
