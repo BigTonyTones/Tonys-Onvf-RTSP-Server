@@ -1921,10 +1921,10 @@ def get_web_ui_html(current_settings=None):
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span style="font-size: 10px; color: #718096; white-space: nowrap;">10%</span>
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
-                                <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
+                                <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="40" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
                             </div>
                             <span style="font-size: 10px; color: #718096; white-space: nowrap;">95%</span>
-                            <span id="aiConfidenceValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">50%</span>
+                            <span id="aiConfidenceValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">40%</span>
                         </div>
                         <div style="color: #718096; font-size: 10px; margin-top: 6px;">
                             Objects detected with confidence below this threshold will be ignored. Higher confidence reduces false positives.

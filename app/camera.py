@@ -219,7 +219,7 @@ class VirtualONVIFCamera:
         self.ai_model = config.get('aiModel', 'yolov8n.pt')
         self.ai_motion_detection_enabled = config.get('aiMotionDetectionEnabled', True)
         self.ai_motion_sensitivity = config.get('aiMotionSensitivity', 50)
-        self.ai_confidence_threshold = config.get('aiConfidenceThreshold', 50)
+        self.ai_confidence_threshold = config.get('aiConfidenceThreshold', 40)
         self.ai_zone = config.get('aiZone', [])
         self.send_smart_onvif_topics = config.get('sendSmartOnvifTopics', True)
         self._active_smart_tags = set()
