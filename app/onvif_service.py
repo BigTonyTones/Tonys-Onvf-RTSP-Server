@@ -102,15 +102,38 @@ class ONVIFService:
                 data = request.get_data(as_text=True)
                 
                 if 'UsernameToken' in data:
-                    # Robust check for Username and Password in SOAP XML
-                    # Supports namespaced tags (wsse:Username) and cleartext passwords
-                    has_user = f'<Username>{self.camera.onvif_username}</Username>' in data or \
-                               f':Username>{self.camera.onvif_username}</' in data
-                    
-                    has_pass = f'>{self.camera.onvif_password}</' in data and \
-                               ('<Password' in data or ':Password' in data)
+                    import re, hashlib, base64
 
-                    if has_user and has_pass:
+                    # Extract username (supports wsse: namespace prefix or none)
+                    user_match = re.search(r'(?:<|:)Username>(.*?)</', data)
+                    token_user = user_match.group(1).strip() if user_match else ''
+                    has_user = (token_user == self.camera.onvif_username)
+
+                    auth_ok = False
+                    if has_user:
+                        # Check if this is a PasswordDigest request
+                        if 'PasswordDigest' in data:
+                            try:
+                                digest_match  = re.search(r'(?:<|:)Password[^>]*>(.*?)</', data)
+                                nonce_match   = re.search(r'(?:<|:)Nonce[^>]*>(.*?)</', data)
+                                created_match = re.search(r'(?:<|:)Created[^>]*>(.*?)</', data)
+                                if digest_match and nonce_match and created_match:
+                                    client_digest = digest_match.group(1).strip()
+                                    nonce_b64     = nonce_match.group(1).strip()
+                                    created       = created_match.group(1).strip()
+                                    nonce_bytes   = base64.b64decode(nonce_b64)
+                                    raw           = nonce_bytes + created.encode('utf-8') + self.camera.onvif_password.encode('utf-8')
+                                    expected      = base64.b64encode(hashlib.sha1(raw).digest()).decode('utf-8')
+                                    auth_ok       = (client_digest == expected)
+                            except Exception:
+                                auth_ok = False
+                        else:
+                            # PasswordText (cleartext) fallback
+                            has_pass = f'>{self.camera.onvif_password}</' in data and \
+                                       ('<Password' in data or ':Password' in data)
+                            auth_ok = has_pass
+
+                    if auth_ok:
                         # Cache successful authentication
                         self.auth_cache[client_ip] = current_time
                         return f(*args, **kwargs)
