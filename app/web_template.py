@@ -3164,10 +3164,18 @@ def get_web_ui_html(current_settings=None):
             const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
             const streamUrl = `http://${{serverIp}}:8888/${{pathName}}_sub/index.m3u8${{credentials}}`;
             
-            if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {{
-                // Native HLS support (Safari)
+            // Browser routing: prefer hls.js wherever MSE for H.264 is available
+            // (Chrome / Firefox / Edge / Android). canPlayType('vnd.apple.mpegurl')
+            // returns "maybe" in Chrome — a truthy string — even though Chrome
+            // cannot actually decode HLS in <video> natively. Routing on
+            // canPlayType alone silently breaks playback for ~80% of users.
+            // Hls.isSupported() is the only reliable check; fall back to native
+            // HLS only when hls.js can't run (Safari/iOS, where Apple restricts
+            // MSE for H.264 but the <video> element has native HLS).
+            if ((typeof Hls === 'undefined' || !Hls.isSupported()) && videoElement.canPlayType('application/vnd.apple.mpegurl')) {{
+                // Native HLS (Safari / iOS)
                 videoElement.src = streamUrl;
-            }} else if (typeof Hls !== 'undefined') {{
+            }} else if (typeof Hls !== 'undefined' && Hls.isSupported()) {{
                 // Optimized HLS.js configuration for multiple cameras
                 const hlsConfig = {{
                     debug: false,
