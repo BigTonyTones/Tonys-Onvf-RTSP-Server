@@ -3164,11 +3164,8 @@ def get_web_ui_html(current_settings=None):
             const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
             const streamUrl = `http://${{serverIp}}:8888/${{pathName}}_sub/index.m3u8${{credentials}}`;
             
-            if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {{
-                // Native HLS support (Safari)
-                videoElement.src = streamUrl;
-            }} else if (typeof Hls !== 'undefined') {{
-                // Optimized HLS.js configuration for multiple cameras
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {{
+                // Prefer HLS.js if available and supported (Chrome, Firefox, Edge, Android, etc.)
                 const hlsConfig = {{
                     debug: false,
                     enableWorker: true,
@@ -3199,6 +3196,11 @@ def get_web_ui_html(current_settings=None):
                 
                 hls.loadSource(streamUrl);
                 hls.attachMedia(videoElement);
+
+                // Play video as soon as manifest is parsed
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {{
+                    videoElement.play().catch(e => console.warn("HLS autoplay failed:", e));
+                }});
                 
                 // Enhanced error handling with exponential backoff
                 hls.on(Hls.Events.ERROR, function(event, data) {{
@@ -3217,6 +3219,7 @@ def get_web_ui_html(current_settings=None):
                                     const delay = Math.min(1000 * Math.pow(2, attempts), 16000);
                                     setTimeout(() => {{
                                         console.log(`Retrying network connection for ${{videoId}}...`);
+                                        hls.loadSource(streamUrl);
                                         hls.startLoad();
                                     }}, delay);
                                 }} else {{
@@ -3261,9 +3264,17 @@ def get_web_ui_html(current_settings=None):
                     // Buffer is healthy, reset recovery attempts
                     recoveryAttempts.set(videoId, 0);
                 }});
-                
+
+            }} else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {{
+                // Fallback: Native HLS support (Safari / iOS)
+                videoElement.src = streamUrl;
+                videoElement.play().catch(e => console.warn("Native HLS autoplay failed:", e));
             }} else {{
-                showVideoError(cameraId, 'HLS not supported in this browser');
+                if (typeof Hls === 'undefined') {{
+                    showVideoError(cameraId, 'Failed to load HLS player library (offline mode?)');
+                }} else {{
+                    showVideoError(cameraId, 'HLS not supported in this browser');
+                }}
             }}
         }}
         
