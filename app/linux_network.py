@@ -69,6 +69,10 @@ class LinuxNetworkManager:
             # This is crucial for stability when multiple IPs are on one physical interface
             subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_ignore=1'], check=False)
             subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_announce=2'], check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{parent_if}.arp_ignore=1'], check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{parent_if}.arp_announce=2'], check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', 'net.ipv4.conf.all.arp_ignore=1'], check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', 'net.ipv4.conf.all.arp_announce=2'], check=False)
             
             return True
         except subprocess.CalledProcessError as e:
