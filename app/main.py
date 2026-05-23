@@ -108,9 +108,9 @@ def main():
     
     print(f"Web UI started!")
     
-    # Check settings to see if we should open the browser
+    # Check settings to see if we should open the browser (default to False)
     settings = manager.load_settings()
-    if settings.get('openBrowser', True) is not False:
+    if settings.get('openBrowser', False) is True:
         print(f"Opening browser...\n")
         try:
             webbrowser.open(f'http://localhost:{WEB_UI_PORT}')
