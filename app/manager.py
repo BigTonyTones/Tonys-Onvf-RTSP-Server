@@ -104,7 +104,7 @@ class CameraManager:
             
             # Load settings
             self.server_ip = config.get('settings', {}).get('serverIp', 'localhost')
-            self.open_browser = config.get('settings', {}).get('openBrowser', True)
+            self.open_browser = config.get('settings', {}).get('openBrowser', False)
             self.theme = config.get('settings', {}).get('theme', 'dracula')
             self.grid_columns = config.get('settings', {}).get('gridColumns', 3)
             self.rtsp_port = config.get('settings', {}).get('rtspPort', 8554)
@@ -164,7 +164,7 @@ class CameraManager:
             self.password_hash = auth.get('password_hash')
         else:
             self.server_ip = 'localhost'
-            self.open_browser = True
+            self.open_browser = False
             self.theme = 'dracula'
             self.grid_columns = 3
             self.rtsp_port = 8554
@@ -249,7 +249,7 @@ class CameraManager:
                 'globalPassword': self.global_password,
                 'rtspAuthEnabled': self.rtsp_auth_enabled,
                 'rtspPort': self.rtsp_port,
-                'openBrowser': getattr(self, 'open_browser', True),
+                'openBrowser': getattr(self, 'open_browser', False),
                 'theme': getattr(self, 'theme', 'classic'),
                 'gridColumns': getattr(self, 'grid_columns', 3),
                 'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
@@ -309,7 +309,7 @@ class CameraManager:
                 
                 # Update attributes from settings
                 self.server_ip = settings.get('serverIp', 'localhost')
-                self.open_browser = settings.get('openBrowser', True)
+                self.open_browser = settings.get('openBrowser', False)
                 self.theme = settings.get('theme', 'dracula')
                 self.grid_columns = settings.get('gridColumns', 3)
                 self.rtsp_port = settings.get('rtspPort', 8554)

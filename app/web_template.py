@@ -4954,7 +4954,7 @@ def get_web_ui_html(current_settings=None):
                     if (ipField) ipField.value = settings.serverIp || 'localhost';
                     
                     const browserField = document.getElementById('openBrowser');
-                    if (browserField) browserField.checked = settings.openBrowser !== false;
+                    if (browserField) browserField.checked = settings.openBrowser === true;
                     const themeField = document.getElementById('themeSelect');
                     if (themeField) themeField.value = settings.theme || 'dracula';
                     
