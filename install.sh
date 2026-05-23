@@ -222,6 +222,7 @@ setup_venv() {
     export TMPDIR="$local_tmp"
     export TEMP="$local_tmp"
     export TMP="$local_tmp"
+    print_info "Redirecting pip temporary directory to: $local_tmp"
 
     print_info "Upgrading pip..."
     pip install --quiet --upgrade pip 2>/dev/null
@@ -276,6 +277,7 @@ setup_ai_engine() {
         export TMPDIR="$local_tmp"
         export TEMP="$local_tmp"
         export TMP="$local_tmp"
+        print_info "Redirecting pip temporary directory to: $local_tmp"
         
         print_info "Upgrading pip packages for AI engine..."
         print_info "Installing 'ultralytics' (this may take a few minutes)..."
