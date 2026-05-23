@@ -1476,6 +1476,8 @@ def create_web_app(manager):
                 return -1
 
         def _run_install(self):
+            import shutil
+            local_tmp = None
             try:
                 import sys
                 import os
@@ -1528,6 +1530,12 @@ def create_web_app(manager):
                 with self.lock:
                     self.status = "failed"
                     self.log.append(f"Installation error: {str(e)}")
+            finally:
+                if local_tmp and os.path.exists(local_tmp):
+                    try:
+                        shutil.rmtree(local_tmp, ignore_errors=True)
+                    except Exception:
+                        pass
 
     ai_installer = AIInstaller()
 

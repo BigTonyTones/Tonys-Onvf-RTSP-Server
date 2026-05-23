@@ -215,6 +215,14 @@ setup_venv() {
     
     source venv/bin/activate
     
+    # Create a local tmp directory for pip to prevent "no space left on device" errors on systems with a small /tmp
+    local_tmp="$INSTALL_DIR/tmp"
+    mkdir -p "$local_tmp"
+    chmod 777 "$local_tmp" 2>/dev/null || true
+    export TMPDIR="$local_tmp"
+    export TEMP="$local_tmp"
+    export TMP="$local_tmp"
+
     print_info "Upgrading pip..."
     pip install --quiet --upgrade pip 2>/dev/null
     
@@ -226,6 +234,12 @@ setup_venv() {
     print_info "  - psutil (system utilities)"
     print_info "  - onvif-zeep (ONVIF protocol)"
     pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep 2>/dev/null
+    
+    # Clean up local tmp directory
+    rm -rf "$local_tmp"
+    unset TMPDIR
+    unset TEMP
+    unset TMP
     
     deactivate
     
@@ -255,6 +269,14 @@ setup_ai_engine() {
         print_info "Activating Python virtual environment..."
         source venv/bin/activate
         
+        # Create a local tmp directory for pip to prevent "no space left on device" errors on systems with a small /tmp
+        local_tmp="$INSTALL_DIR/tmp"
+        mkdir -p "$local_tmp"
+        chmod 777 "$local_tmp" 2>/dev/null || true
+        export TMPDIR="$local_tmp"
+        export TEMP="$local_tmp"
+        export TMP="$local_tmp"
+        
         print_info "Upgrading pip packages for AI engine..."
         print_info "Installing 'ultralytics' (this may take a few minutes)..."
         pip install --no-cache-dir ultralytics
@@ -264,6 +286,12 @@ setup_ai_engine() {
         
         print_info "Installing 'opencv-python-headless'..."
         pip install --no-cache-dir opencv-python-headless
+        
+        # Clean up local tmp directory
+        rm -rf "$local_tmp"
+        unset TMPDIR
+        unset TEMP
+        unset TMP
         
         deactivate
         print_success "AI Object Detection Engine installed successfully"
