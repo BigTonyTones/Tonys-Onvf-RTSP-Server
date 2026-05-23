@@ -701,6 +701,10 @@ class VirtualONVIFCamera:
                                             
                                     if getattr(self, 'debug_mode', False):
                                         print(f"  [ONVIF Event ({self.name})] {evt['topic']} = {evt['value']}")
+                                
+                                # Add a small sleep to prevent tight loop floods, especially with cameras 
+                                # that don't respect the PullMessages timeout and return immediately.
+                                time.sleep(1.0)
                             else:
                                 print(f"  [ONVIF Event Forwarder ({self.name})] PullMessages returned status {resp.status_code}. Reconnecting...")
                                 break
