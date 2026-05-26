@@ -11,14 +11,14 @@ import shlex
 import secrets
 import threading
 from pathlib import Path
-from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT, WEB_UI_PORT
+from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT, WEB_UI_PORT, DATA_DIR
 
 class MediaMTXManager:
     """Manages MediaMTX RTSP server"""
     
     def __init__(self):
         self.process = None
-        self.config_file = "mediamtx.yml"
+        self.config_file = os.path.join(DATA_DIR, "mediamtx.yml")
         self.executable = self._get_executable_name()
         self.log_buffer = [] # Store last 100 lines for debug
         self._log_lock = threading.Lock()

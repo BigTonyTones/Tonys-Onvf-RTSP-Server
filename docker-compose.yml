@@ -10,6 +10,5 @@ services:
     # Optional: If your system restricts certain sysctl modifications, uncomment privileged mode
     # privileged: true
     volumes:
-      - ./camera_config.json:/app/camera_config.json
-      - ./mediamtx.yml:/app/mediamtx.yml
+      - ./data:/app/data
     restart: unless-stopped
