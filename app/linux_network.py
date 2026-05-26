@@ -56,22 +56,18 @@ class LinuxNetworkManager:
             # 2. Check if interface already exists and remove it
             if os.path.exists(f'/sys/class/net/{name}'):
                 try:
-                    subprocess.run['sudo', 'nmcli', 'connection', 'delete', 'macvlan-{name}'])
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'delete', f'macvlan-{name}'])
                 except FileNotFoundError:
                     subprocess.run(['sudo', 'ip', 'link', 'delete', name], check=False)
                     pass
             
             # 3. Create the link and bring it up
             try:
-                subprocess.run(['nmcli', '--version'], capture_output=True, check=False)
-                subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'ethernet.cloned-mac-address', mac, 'ipv4.ignore-auto-routes', 'yes', 'ipv4.ignore-auto-dns', 'yes'], check=True)
-                nmcli = subprocess.Popen(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', 'macvlan-{name}'], stdout = subprocess.PIPE)
-                awk = subprocess.Popen(['sudo', 'awk \'{print $2}\''], stdin = nmcli.stdout, stdout = subprocess.PIPE)
-                nmcli.stdout.close()
-                out,err = awk.communicate()
-
-                if out != "activated":
-                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', 'macvlan-{name}'], check=True)
+                subprocess.run(['nmcli', '--version'], check=False)
+                subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', '+ethernet.cloned-mac-address', mac, '+ipv4.ignore-auto-routes', 'yes', '+ipv4.ignore-auto-dns', 'yes'], check=True)
+                nmcli = subprocess.run(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', f'macvlan-{name}'], capture_output=True, text=True)
+                if not re.search('GENERAL.STATE:\s+activated', nmcli.stdout):
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', f'macvlan-{name}'], check=True)
             except FileNotFoundError:
                 subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
                 subprocess.run(['sudo', 'ip', 'link', 'set', name, 'up'], check=True)
@@ -102,8 +98,8 @@ class LinuxNetworkManager:
                 
                 # Use built-in nmcli
                 try:
-                    subprocess.run(['sudo', 'nmcli', 'connection', 'modify', name, 'ipv4.method', 'auto'], check=False, timeout=5)
-                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', name], check=False, timeout=5)
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'modify', f'macvlan-{name}', 'ipv4.method', 'auto'], check=False, timeout=5)
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', f'macvlan-{name}'], check=False, timeout=5)
                     # Wait up to 5 seconds for IP (most fast networks respond in 1-2s)
                     for _ in range(5):
                         result = subprocess.run(['ip', '-4', 'addr', 'show', name], capture_output=True, text=True)
