@@ -23,8 +23,7 @@ GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/rel
 
 # Directories and files to exclude from updates
 EXCLUDE_FROM_UPDATE = [
-    'camera_config.json',
-    'mediamtx.yml',
+    'data',
     'mediamtx',
     'mediamtx.exe',
     'ffmpeg',
