@@ -55,14 +55,18 @@ class LinuxNetworkManager:
 
             # 2. Check if interface already exists and remove it
             if os.path.exists(f'/sys/class/net/{name}'):
-                subprocess.run(['sudo', 'ip', 'link', 'delete', name], check=False)
+                try:
+                    subprocess.run['sudo', 'nmcli', 'connection', 'delete', 'macvlan-{name}'])
+                except FileNotFoundError:
+                    subprocess.run(['sudo', 'ip', 'link', 'delete', name], check=False)
+                    pass
             
             # 3. Create the link and bring it up
             try:
                 subprocess.run(['nmcli', '--version'], capture_output=True, check=False)
                 subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'ethernet.cloned-mac-address', mac, 'ipv4.ignore-auto-routes', 'yes', 'ipv4.ignore-auto-dns', 'yes'], check=True)
-                nmcli = subprocess.Popen(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', name], stdout = PIPE)
-                awk = subprocess.Popen(['sudo', 'awk \'{print $2}\''], stdin = nmcli.stdout, stdout = PIPE)
+                nmcli = subprocess.Popen(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', 'macvlan-{name}'], stdout = subprocess.PIPE)
+                awk = subprocess.Popen(['sudo', 'awk \'{print $2}\''], stdin = nmcli.stdout, stdout = subprocess.PIPE)
                 nmcli.stdout.close()
                 out,err = awk.communicate()
 
