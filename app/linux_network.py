@@ -57,16 +57,18 @@ class LinuxNetworkManager:
             if os.path.exists(f'/sys/class/net/{name}'):
                 subprocess.run(['sudo', 'ip', 'link', 'delete', name], check=False)
             
-            # 3. Create the link
-            #subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
-            subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'ethernet.cloned-mac-address', mac], check=True)
-            
-            # 5. Bring it up
-            #subprocess.run(['sudo', 'ip', 'link', 'set', name, 'up'], check=True)
-            if subprocess.run(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', name, "| awk '{print $2}'"], capture_output=True, text=True) != "activated":
-                subprocess.run(['sudo', 'nmcli', 'connection', 'up', 'macvlan-{name}'], check=True)
+            # 3. Create the link and bring it up
+            try:
+                subprocess.run(['nmcli', '--version'], capture_output=True, check=False)
+                subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'ethernet.cloned-mac-address', mac], check=True)
+                if subprocess.run(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', name, "| awk '{print $2}'"], capture_output=True, text=True) != "activated":
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', 'macvlan-{name}'], check=True)
+            except FileNotFoundError:
+                subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
+                subprocess.run(['sudo', 'ip', 'link', 'set', name, 'up'], check=True)
+                pass
 
-            # 6. Apply ARP isolation to prevent host from "hijacking" the virtual IP (ARP Flux)
+            # 5. Apply ARP isolation to prevent host from "hijacking" the virtual IP (ARP Flux)
             # This is crucial for stability when multiple IPs are on one physical interface
             subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_ignore=1'], check=False)
             subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_announce=2'], check=False)
