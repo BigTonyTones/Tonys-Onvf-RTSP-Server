@@ -1235,7 +1235,7 @@ def get_web_ui_html(current_settings=None):
                             <button onclick="stopServer()" style="color: #f56565; border-top: 1px solid var(--border-color);">
                                 <i class="fas fa-stop-circle"></i> Stop Server
                             </button>
-                            <button onclick="rebootServer()" class="linux-only" style="border-top: 1px solid var(--border-color);">
+                            <button onclick="rebootServer()" class="reboot-host" style="border-top: 1px solid var(--border-color);">
                                 <i class="fas fa-power-off"></i> Reboot Host
                             </button>
                         </div>
@@ -2387,7 +2387,7 @@ def get_web_ui_html(current_settings=None):
             </div>
             
             <!-- Reboot Server Button (Linux Only) -->
-            <button type="button" class="btn linux-only" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
+            <button type="button" class="btn reboot-host" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
                 <i class="fas fa-power-off"></i> Reboot Server
             </button>
         </div>
@@ -2545,6 +2545,7 @@ def get_web_ui_html(current_settings=None):
 
         // Platform detection for UI features
         const isLinux = {str(platform.system().lower() == "linux").lower()};
+        const isDocker = {str(os.path.exists("/.dockerenv")).lower()};
         window.addEventListener('DOMContentLoaded', () => {{
             if (!isLinux) {{
                 const linuxSections = document.querySelectorAll('.linux-only');
@@ -2553,6 +2554,10 @@ def get_web_ui_html(current_settings=None):
                 // Legacy support for specific ID
                 const linuxSection = document.getElementById('linux-network-section');
                 if (linuxSection) linuxSection.style.display = 'none';
+            }}
+            // Hide host-reboot buttons when running inside Docker or on non-Linux
+            if (isDocker || !isLinux) {{
+                document.querySelectorAll('.reboot-host').forEach(s => s.style.display = 'none');
             }}
         }});
 
