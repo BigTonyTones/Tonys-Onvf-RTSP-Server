@@ -85,8 +85,13 @@ class CameraManager:
     def load_config(self):
         """Load camera configuration"""
         if Path(self.config_file).exists():
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
+            config = {}
+            try:
+                if os.path.getsize(self.config_file) > 0:
+                    with open(self.config_file, 'r') as f:
+                        config = json.load(f)
+            except Exception as e:
+                print(f"  [Config] Warning: Failed to load config ({e}). Initializing clean config.")
             
             # Clear existing cameras before loading to prevent duplicates
             self.cameras.clear()
