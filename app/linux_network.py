@@ -61,7 +61,12 @@ class LinuxNetworkManager:
             try:
                 subprocess.run(['nmcli', '--version'], capture_output=True, check=False)
                 subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'ethernet.cloned-mac-address', mac, 'ipv4.ignore-auto-routes', 'yes', 'ipv4.ignore-auto-dns', 'yes'], check=True)
-                if subprocess.run(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', name, "| awk '{print $2}'"], capture_output=True, text=True) != "activated":
+                nmcli = subprocess.Popen(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', name], stdout = PIPE)
+                awk = subprocess.Popen(['sudo', 'awk \'{print $2}\''], stdin = nmcli.stdout, stdout = PIPE)
+                nmcli.stdout.close()
+                out,err = awk.communicate()
+
+                if out != "activated":
                     subprocess.run(['sudo', 'nmcli', 'connection', 'up', 'macvlan-{name}'], check=True)
             except FileNotFoundError:
                 subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
