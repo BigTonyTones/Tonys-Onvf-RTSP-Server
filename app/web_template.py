@@ -2461,7 +2461,7 @@ def get_web_ui_html(current_settings=None):
             <div id="update-modal-content">
                 <div id="docker-update-warning" style="display: none; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; color: #ed8936; line-height: 1.4; text-align: left;">
                     <i class="fas fa-exclamation-triangle"></i> <strong>Running in Docker:</strong> Self-updating through the Web UI is disabled to prevent configuration and data loss. Please update your container using:
-                    <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 8px; color: #cbd5e0; word-break: break-all; font-family: monospace;">git pull && docker compose build && docker compose up -d</code>
+                    <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 8px; color: #cbd5e0; word-break: break-all; font-family: monospace;">git pull && docker compose down && docker compose up -d --build</code>
                 </div>
                 <div id="update-info" style="display: none;">
                     <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.3);">
