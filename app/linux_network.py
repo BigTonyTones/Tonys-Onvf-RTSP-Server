@@ -58,12 +58,13 @@ class LinuxNetworkManager:
                 subprocess.run(['sudo', 'ip', 'link', 'delete', name], check=False)
             
             # 3. Create the link
-            subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
-            # 4. Set MAC address
-            subprocess.run(['sudo', 'ip', 'link', 'set', name, 'address', mac], check=True)
+            #subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
+            subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'ethernet.cloned-mac-address', mac], check=True)
             
             # 5. Bring it up
-            subprocess.run(['sudo', 'ip', 'link', 'set', name, 'up'], check=True)
+            #subprocess.run(['sudo', 'ip', 'link', 'set', name, 'up'], check=True)
+            if subprocess.run(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', name, "| awk '{print $2}'"], capture_output=True, text=True) != "activated":
+                subprocess.run(['sudo', 'nmcli', 'connection', 'up', 'macvlan-{name}'], check=True)
 
             # 6. Apply ARP isolation to prevent host from "hijacking" the virtual IP (ARP Flux)
             # This is crucial for stability when multiple IPs are on one physical interface
@@ -88,6 +89,22 @@ class LinuxNetworkManager:
             if mode == 'dhcp':
                 print(f"  Requesting DHCP for {name} (timeout 15s)...")
                 
+                # Use built-in nmcli
+                try:
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'modify', name, 'ipv4.method', 'auto'], check=False, timeout=5)
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', name], check=False, timeout=5)
+                    # Wait up to 5 seconds for IP (most fast networks respond in 1-2s)
+                    for _ in range(5):
+                        result = subprocess.run(['ip', '-4', 'addr', 'show', name], capture_output=True, text=True)
+                        match = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', result.stdout)
+                        if match:
+                            assigned_ip = match.group(1)
+                            print(f"  IP assigned: {assigned_ip}")
+                            return assigned_ip
+                        time.sleep(1)
+                except Exception as e:
+                    print(f"  'nmcli' attempt failed: {e}")
+
                 # Try dhclient with a custom config to prevent it from touching host DNS/Routes
                 try:
                     # Create a minimal dhclient.conf that doesn't request DNS or Routers
