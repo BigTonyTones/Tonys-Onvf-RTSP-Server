@@ -64,9 +64,9 @@ class LinuxNetworkManager:
             # 3. Create the link and bring it up
             try:
                 subprocess.run(['nmcli', '--version'], check=False)
-                subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', '+ethernet.cloned-mac-address', mac, '+ipv4.ignore-auto-routes', 'yes', '+ipv4.ignore-auto-dns', 'yes'], check=True)
+                subprocess.run(['sudo', 'nmcli', 'connection', 'add', 'ifname', name, 'dev', parent_if, 'type', 'macvlan', 'mode', 'bridge', 'connection.autoconnect', 'no', '+ethernet.cloned-mac-address', mac], check=True)
                 nmcli = subprocess.run(['sudo', 'nmcli', '-f', 'GENERAL.STATE', 'connection', 'show', f'macvlan-{name}'], capture_output=True, text=True)
-                if not re.search('GENERAL.STATE:\s+activated', nmcli.stdout):
+                if not re.search(r'GENERAL.STATE:\s+activated', nmcli.stdout):
                     subprocess.run(['sudo', 'nmcli', 'connection', 'up', f'macvlan-{name}'], check=True)
             except FileNotFoundError:
                 subprocess.run(['sudo', 'ip', 'link', 'add', name, 'link', parent_if, 'type', 'macvlan', 'mode', 'bridge'], check=True)
@@ -98,8 +98,8 @@ class LinuxNetworkManager:
                 
                 # Use built-in nmcli
                 try:
-                    subprocess.run(['sudo', 'nmcli', 'connection', 'modify', f'macvlan-{name}', 'ipv4.method', 'auto'], check=False, timeout=5)
-                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', f'macvlan-{name}'], check=False, timeout=5)
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'modify', f'macvlan-{name}', 'ipv4.method', 'auto', '+ipv4.ignore-auto-routes', 'yes', '+ipv4.ignore-auto-dns', 'yes'], check=False)
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', f'macvlan-{name}'], check=False, timeout=15)
                     # Wait up to 5 seconds for IP (most fast networks respond in 1-2s)
                     for _ in range(5):
                         result = subprocess.run(['ip', '-4', 'addr', 'show', name], capture_output=True, text=True)
@@ -184,6 +184,12 @@ class LinuxNetworkManager:
                 print(f"  Setting static IP {ip} for {name}...")
                 full_ip = f"{ip}/{mask}" if mask else ip
                 # Add the IP address
+                try:
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'modify', f'macvlan-{name}', 'ipv4.method', 'manual', 'ipv4.addresses', full_ip], check=False)
+                    subprocess.run(['sudo', 'nmcli', 'connection', 'up', f'macvlan-{name}'], check=False, timeout=15)
+                    return ip
+                except FileNotFoundError:
+                    pass
                 subprocess.run(['sudo', 'ip', 'addr', 'add', full_ip, 'dev', name], check=True)
                 
                 # IMPORTANT: We do NOT add a 'default gateway' here.
@@ -205,6 +211,12 @@ class LinuxNetworkManager:
             
         print(f"Removing Virtual NIC {name}...")
         try:
+            subprocess.run(['sudo', 'nmcli', 'connection', 'down', f'macvlan-{name}'], check=False)
+            subprocess.run(['sudo', 'nmcli', 'connection', 'delete', f'macvlan-{name}'], check=False)
+            return
+        except FileNotFoundError:
+            pass
+        try:
             # Release DHCP
             try:
                 subprocess.run(['sudo', 'dhclient', '-r', name], check=False)
@@ -221,22 +233,28 @@ class LinuxNetworkManager:
             return
             
         print("Cleaning up old virtual network interfaces...")
+        vnics = []
+        try:
+            result = subprocess.run(['nmcli', 'connection', 'show'], capture_output=True, text=True)
+            vnics = re.findall(r'macvlan-vnic_[^:@\s]+', result.stdout)
+        except FileNotFoundError:
+            pass
         try:
             # Get list of all interfaces
             result = subprocess.run(['ip', 'link', 'show'], capture_output=True, text=True)
             # Find all interfaces starting with vnic_
             vnics = re.findall(r'vnic_[^:@\s]+', result.stdout)
-            
-            # Remove duplicates and clean up
-            cleaned = []
-            for vnic in set(vnics):
-                if vnic not in cleaned:
-                    self.remove_interface(vnic)
-                    cleaned.append(vnic)
-            
-            if cleaned:
-                print(f"  Cleaned up {len(cleaned)} stale virtual interfaces.")
-            else:
-                print("  No stale virtual interfaces found.")
         except Exception as e:
             print(f"  Error during global NIC cleanup: {e}")
+            
+        # Remove duplicates and clean up
+        cleaned = []
+        for vnic in set(vnics):
+            if vnic not in cleaned:
+                self.remove_interface(vnic)
+                cleaned.append(vnic)
+        
+        if cleaned:
+            print(f"  Cleaned up {len(cleaned)} stale virtual interfaces.")
+        else:
+            print("  No stale virtual interfaces found.")
