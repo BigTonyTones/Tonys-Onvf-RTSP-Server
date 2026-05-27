@@ -1,0 +1,14 @@
+services:
+  onvif-rtsp-server:
+    build: .
+    container_name: onvif-rtsp-server
+    # Shares the host network stack (required for macvlan Virtual NICs to function)
+    network_mode: host
+    # Grants privileges to configure host interfaces, DHCP, and sysctls
+    cap_add:
+      - NET_ADMIN
+    # Optional: If your system restricts certain sysctl modifications, uncomment privileged mode
+    # privileged: true
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

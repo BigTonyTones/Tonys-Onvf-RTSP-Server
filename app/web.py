@@ -316,6 +316,7 @@ def create_web_app(manager):
                 transcode_main_audio=data.get('transcodeMainAudio', False),
                 transcode_sub_audio=data.get('transcodeSubAudio', False),
                 use_virtual_nic=data.get('useVirtualNic', False),
+                vnic_keepalive=data.get('vnicKeepalive', False),
                 parent_interface=data.get('parentInterface', ''),
                 nic_mac=data.get('nicMac', ''),
                 ip_mode=data.get('ipMode', 'dhcp'),
@@ -374,6 +375,7 @@ def create_web_app(manager):
                 transcode_main_audio=data.get('transcodeMainAudio', False),
                 transcode_sub_audio=data.get('transcodeSubAudio', False),
                 use_virtual_nic=data.get('useVirtualNic', False),
+                vnic_keepalive=data.get('vnicKeepalive', False),
                 parent_interface=data.get('parentInterface', ''),
                 nic_mac=data.get('nicMac', ''),
                 ip_mode=data.get('ipMode', 'dhcp'),
@@ -974,6 +976,7 @@ def create_web_app(manager):
         try:
             update_info = check_for_updates()
             if update_info:
+                update_info['is_docker'] = os.path.exists('/.dockerenv')
                 return jsonify(update_info)
             else:
                 return jsonify({'error': 'Failed to check for updates'}), 500
@@ -984,6 +987,9 @@ def create_web_app(manager):
     @login_required
     def apply_update():
         """Download and apply update"""
+        if os.path.exists('/.dockerenv'):
+            return jsonify({'error': 'Self-updating is disabled in Docker. Please rebuild or pull the new image.'}), 400
+            
         data = request.json
         download_url = data.get('download_url')
         

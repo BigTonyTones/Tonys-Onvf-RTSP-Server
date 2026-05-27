@@ -240,6 +240,8 @@ class VirtualONVIFCamera:
         self.flask_app = None
         self.flask_thread = None
         self.onvif_service = None
+        self._keepalive_running = False
+        self._keepalive_thread = None
 
     @property
     def mac_address(self):
@@ -288,6 +290,8 @@ class VirtualONVIFCamera:
                 )
             # Give the system and router a moment to stabilize
             time.sleep(0.5)
+            if self.assigned_ip:
+                self._start_keepalive(vnic_name)
         
         self._start_onvif_service()
         if self.enable_event_forwarding:
@@ -323,6 +327,7 @@ class VirtualONVIFCamera:
         
         # Cleanup Virtual NIC
         if self.use_virtual_nic and self.network_mgr:
+            self._stop_keepalive()
             vnic_name = f"vnic_{self.uuid.replace('-', '')[:10]}"
             self.network_mgr.remove_interface(vnic_name)
             self.assigned_ip = None
@@ -506,6 +511,61 @@ class VirtualONVIFCamera:
             'aiZone': self.ai_zone,
             'sendSmartOnvifTopics': self.send_smart_onvif_topics
         }
+
+    def _start_keepalive(self, vnic_name):
+        """Start the background keepalive loop for the Virtual NIC"""
+        self._keepalive_running = True
+        self._keepalive_thread = threading.Thread(
+            target=self._keepalive_loop,
+            args=(vnic_name,),
+            daemon=True,
+            name=f"Keepalive-{self.name}"
+        )
+        self._keepalive_thread.start()
+        if getattr(self, 'debug_mode', False):
+            print(f"  [Camera ({self.name})] Keepalive thread started for {vnic_name} ({self.assigned_ip})")
+
+    def _stop_keepalive(self):
+        """Stop the background keepalive loop"""
+        self._keepalive_running = False
+        self._keepalive_thread = None
+
+    def _keepalive_loop(self, vnic_name):
+        """Periodically sends a dummy UDP packet to keep switch/gateway MAC tables warm"""
+        # 1. Determine target IP: check manual gateway -> read routing table -> fallback to broadcast
+        target_ip = self.gateway
+        if not target_ip or target_ip == '0.0.0.0':
+            if self.network_mgr:
+                target_ip = self.network_mgr.get_interface_gateway(vnic_name)
+        if not target_ip:
+            target_ip = '255.255.255.255'
+            
+        print(f"  [Keepalive ({self.name})] Starting keepalive loop targeting {target_ip} every 60s")
+        
+        while self._keepalive_running and self.status == "running":
+            try:
+                # Create UDP socket
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                if target_ip == '255.255.255.255':
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                
+                # Bind to the virtual camera IP to force outbound routing through the VNIC
+                sock.bind((self.assigned_ip, 0))
+                
+                # Send 1-byte dummy payload to Discard port (9)
+                sock.sendto(b'\x00', (target_ip, 9))
+                sock.close()
+                
+                if getattr(self, 'debug_mode', False):
+                    print(f"  [Keepalive ({self.name})] Sent keepalive packet to {target_ip} via {vnic_name}")
+            except Exception as e:
+                print(f"  [Keepalive ({self.name})] Error sending keepalive: {e}")
+                
+            # Intermittent sleep to allow fast shutdown reaction
+            for _ in range(60):
+                if not self._keepalive_running or self.status != "running":
+                    break
+                time.sleep(1.0)
 
     def start_event_forwarding(self):
         """Start ONVIF Event Forwarder background thread"""

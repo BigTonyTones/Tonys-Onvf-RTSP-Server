@@ -33,6 +33,7 @@ ffprobe
 ffprobe.exe
 
 # Project Specific Configs/Data
+data/
 camera_config.json
 mediamtx.yml
 *.log

@@ -11,14 +11,14 @@ import shlex
 import secrets
 import threading
 from pathlib import Path
-from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT, WEB_UI_PORT
+from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT, WEB_UI_PORT, DATA_DIR
 
 class MediaMTXManager:
     """Manages MediaMTX RTSP server"""
     
     def __init__(self):
         self.process = None
-        self.config_file = "mediamtx.yml"
+        self.config_file = os.path.join(DATA_DIR, "mediamtx.yml")
         self.executable = self._get_executable_name()
         self.log_buffer = [] # Store last 100 lines for debug
         self._log_lock = threading.Lock()
@@ -66,8 +66,19 @@ class MediaMTXManager:
             # Check current version
             try:
                 exe_path = os.path.abspath(self.executable)
-                result = subprocess.run([exe_path, "--version"],
-                                       capture_output=True, text=True, check=False)
+                import errno
+                # Retry loop in case the text file is temporarily busy
+                for attempt in range(5):
+                    try:
+                        result = subprocess.run([exe_path, "--version"],
+                                               capture_output=True, text=True, check=False)
+                        break
+                    except OSError as e:
+                        if e.errno == getattr(errno, 'ETXTBSY', 26) and attempt < 4:
+                            time.sleep(0.2)
+                            continue
+                        raise
+                
                 current_version = result.stdout.strip()
                 if current_version and not current_version.startswith('v'):
                     current_version = 'v' + current_version
@@ -737,13 +748,23 @@ class MediaMTXManager:
             print(f"   Executable: {exe_path}")
             print(f"   Config: {config_path}")
             
-            self.process = subprocess.Popen(
-                [exe_path, config_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1  # Line buffered
-            )
+            import errno
+            for attempt in range(5):
+                try:
+                    self.process = subprocess.Popen(
+                        [exe_path, config_path],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        bufsize=1  # Line buffered
+                    )
+                    break
+                except OSError as e:
+                    if e.errno == getattr(errno, 'ETXTBSY', 26) and attempt < 4:
+                        print(f"   MediaMTX binary busy (ETXTBSY), retrying in 0.2s... (attempt {attempt+1}/5)")
+                        time.sleep(0.2)
+                        continue
+                    raise
             
             # Start thread to capture output and send to our Logger
             def capture_output(process):

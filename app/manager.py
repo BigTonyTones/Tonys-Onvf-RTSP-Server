@@ -85,8 +85,13 @@ class CameraManager:
     def load_config(self):
         """Load camera configuration"""
         if Path(self.config_file).exists():
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
+            config = {}
+            try:
+                if os.path.getsize(self.config_file) > 0:
+                    with open(self.config_file, 'r') as f:
+                        config = json.load(f)
+            except Exception as e:
+                print(f"  [Config] Warning: Failed to load config ({e}). Initializing clean config.")
             
             # Clear existing cameras before loading to prevent duplicates
             self.cameras.clear()
@@ -577,7 +582,7 @@ class CameraManager:
                    transcode_sub=False, transcode_main=False,
                    disable_substream=False, use_main_as_substream=False,
                    enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
-                    use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
+                    use_virtual_nic=False, vnic_keepalive=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                     static_ip='', netmask='24', gateway='', uuid=None,
                     enable_event_forwarding=False, physical_onvif_port=80,
                     onvif_forwarding_username='', onvif_forwarding_password='',
@@ -662,6 +667,7 @@ class CameraManager:
             'transcodeMainAudio': transcode_main_audio,
             'transcodeSubAudio': transcode_sub_audio,
             'useVirtualNic': use_virtual_nic,
+            'vnicKeepalive': vnic_keepalive,
             'parentInterface': parent_interface,
             'nicMac': nic_mac,
             'ipMode': ip_mode,
@@ -697,7 +703,7 @@ class CameraManager:
                       transcode_sub=False, transcode_main=False,
                       disable_substream=False, use_main_as_substream=False,
                       enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
-                      use_virtual_nic=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
+                      use_virtual_nic=False, vnic_keepalive=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway='', uuid=None,
                       enable_event_forwarding=False, physical_onvif_port=80,
                       onvif_forwarding_username='', onvif_forwarding_password='',
@@ -787,6 +793,7 @@ class CameraManager:
         camera.transcode_main_audio = transcode_main_audio
         camera.transcode_sub_audio = transcode_sub_audio
         camera.use_virtual_nic = use_virtual_nic
+        camera.vnic_keepalive = vnic_keepalive
         camera.parent_interface = parent_interface
         camera.nic_mac = nic_mac
         camera.ip_mode = ip_mode

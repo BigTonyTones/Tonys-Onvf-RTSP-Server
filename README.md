@@ -54,6 +54,32 @@ After installation, access the web interface at **http://localhost:5552**
 
 ---
 
+## Docker Installation (Alternative Setup)
+
+Run the server inside a Docker container. No manual dependency setup or `touch` commands are required:
+
+1. **Clone the Repository & Navigate to Folder:**
+   ```bash
+   git clone https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git
+   cd Tonys-Onvf-RTSP-Server
+   ```
+
+2. **Start the Container:**
+   ```bash
+   sudo docker compose up -d --build
+   ```
+
+Access the web interface at **http://localhost:5552**. All settings and database files are automatically initialized and persisted inside the `./data` directory.
+
+### Updating the Docker Container
+To update the server to the latest version when running in Docker, navigate to your cloned repository and run:
+```bash
+git pull && docker compose down && docker compose up -d --build
+```
+This safely stops the running container, pulls the latest code, and rebuilds the image without losing your settings (which are safely persisted in the `./data` directory).
+
+---
+
 ## Manual Installation
 
 ### Linux
