@@ -168,6 +168,14 @@ def check_and_install_system_dependencies():
     if platform.system().lower() != "linux":
         return
 
+    # Check for nmcli
+    try:
+        subprocess.run(['nmcli', '--version'], capture_output=True, check=False)
+        return # Already installed
+    except FileNotFoundError:
+        print("  nmcli not found. Checking dhclient.")
+        pass
+
     # Check for dhclient
     try:
         subprocess.run(['dhclient', '--version'], capture_output=True, check=False)

@@ -57,29 +57,32 @@ RestartSec=10
 WantedBy=multi-user.target
 """
         
-        try:
-            # Create a temporary service file
-            temp_path = "/tmp/tony-onvif.service"
-            with open(temp_path, "w") as f:
-                f.write(service_content)
-            
-            # Move to /etc/systemd/system (requires sudo)
-            print(f"📦 Installing systemd service to {self.service_path}...")
-            subprocess.run(['sudo', 'mv', temp_path, self.service_path], check=True)
-            subprocess.run(['sudo', 'chmod', '644', self.service_path], check=True)
-            
-            # Reload, enable and start
-            subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
-            subprocess.run(['sudo', 'systemctl', 'enable', self.SERVICE_NAME], check=True)
-            
-            return True, "Service installed and enabled successfully"
-        except subprocess.CalledProcessError as e:
-            return False, f"Failed to install service: {e}"
-        except Exception as e:
-            return False, f"Error: {e}"
+        if not os.path.exists(self.service_path):
+            try:
+                # Create a temporary service file
+                temp_path = "/tmp/tony-onvif.service"
+                with open(temp_path, "w") as f:
+                    f.write(service_content)
+                
+                # Move to /etc/systemd/system (requires sudo)
+                print(f"📦 Installing systemd service to {self.service_path}...")
+                subprocess.run(['sudo', 'mv', temp_path, self.service_path], check=True)
+                subprocess.run(['sudo', 'chmod', '644', self.service_path], check=True)
+                if subprocess.run(['sudo', 'getenforce'],capture_output=True, text=True) == "Enforcing":
+                    subprocess.run(['sudo', 'restorecon -v', self.service_path], check=True)
+                
+                # Reload, enable and start
+                subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
+                subprocess.run(['sudo', 'systemctl', 'enable', self.SERVICE_NAME], check=True)
+                
+                return True, "Service installed and enabled successfully"
+            except subprocess.CalledProcessError as e:
+                return False, f"Failed to install service: {e}"
+            except Exception as e:
+                return False, f"Error: {e}"
 
     def uninstall_service(self):
-        """Stop, disable and remove the systemd service"""
+        """Stop and disable systemd service"""
         if not self.is_linux():
             return False, "Not running on Linux"
             
@@ -88,12 +91,9 @@ WantedBy=multi-user.target
 
         try:
             print(f"🧹 Disabling systemd service (removing from boot)...")
-            # Only disable and remove the file. DO NOT 'stop' here, 
+            # Only disable the file. DO NOT 'stop' here, 
             # or the server will kill itself while trying to respond to the web request.
             subprocess.run(['sudo', 'systemctl', 'disable', self.SERVICE_NAME], check=False)
-            if os.path.exists(self.service_path):
-                subprocess.run(['sudo', 'rm', self.service_path], check=True)
-            subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
             
             return True, "Service removed from system boot"
         except subprocess.CalledProcessError as e:

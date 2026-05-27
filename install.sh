@@ -85,7 +85,11 @@ detect_os() {
     # Check for Linux distributions
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        OS=$ID
+	if [ -v $ID_LIKE ]; then
+		OS=$ID_LIKE
+	else
+		OS=$ID
+	fi
         OS_VERSION=$VERSION_ID
         print_info "Operating System: $PRETTY_NAME"
         print_info "ID: $OS"
