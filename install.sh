@@ -88,7 +88,7 @@ detect_os() {
 	if [ -v $ID_LIKE ]; then
 		OS=$ID_LIKE
 	else
-        	OS=$ID
+		OS=$ID
 	fi
         OS_VERSION=$VERSION_ID
         print_info "Operating System: $PRETTY_NAME"
