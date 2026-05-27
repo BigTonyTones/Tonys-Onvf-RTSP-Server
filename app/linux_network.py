@@ -240,3 +240,23 @@ class LinuxNetworkManager:
                 print("  No stale virtual interfaces found.")
         except Exception as e:
             print(f"  Error during global NIC cleanup: {e}")
+
+    def get_interface_gateway(self, name):
+        """Attempt to read the gateway for a specific interface from /proc/net/route"""
+        if not self.is_linux():
+            return None
+        try:
+            with open('/proc/net/route', 'r') as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) >= 3 and parts[0] == name:
+                        # Gateway is in hex format (e.g. 013CA8C0 for 192.168.60.1)
+                        gw_hex = parts[2]
+                        if gw_hex != '00000000':
+                            import struct
+                            import socket
+                            gw_ip = socket.inet_ntoa(struct.pack("<L", int(gw_hex, 16)))
+                            return gw_ip
+        except Exception as e:
+            print(f"  [Network Manager] Failed to read gateway from /proc/net/route for {name}: {e}")
+        return None

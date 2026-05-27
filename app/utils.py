@@ -256,6 +256,8 @@ def cleanup_stale_processes():
                 subprocess.check_call(["pgrep", "mediamtx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 print("  Found stale mediamtx, terminating...")
                 subprocess.run(["pkill", "-9", "mediamtx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                import time
+                time.sleep(0.5)  # Allow the kernel a moment to release the file handles
                 print("  Stale mediamtx terminated")
             except subprocess.CalledProcessError:
                 pass  # Not running

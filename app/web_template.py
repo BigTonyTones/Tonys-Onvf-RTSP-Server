@@ -1,4 +1,5 @@
 import json
+import os
 import platform
 from .version import CURRENT_VERSION
 
@@ -1235,7 +1236,7 @@ def get_web_ui_html(current_settings=None):
                             <button onclick="stopServer()" style="color: #f56565; border-top: 1px solid var(--border-color);">
                                 <i class="fas fa-stop-circle"></i> Stop Server
                             </button>
-                            <button onclick="rebootServer()" class="linux-only" style="border-top: 1px solid var(--border-color);">
+                            <button onclick="rebootServer()" class="reboot-host" style="border-top: 1px solid var(--border-color);">
                                 <i class="fas fa-power-off"></i> Reboot Host
                             </button>
                         </div>
@@ -2027,6 +2028,16 @@ def get_web_ui_html(current_settings=None):
                     </div>
 
                     <div id="vnic-fields" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="vnicKeepalive" style="width: auto; cursor: pointer;">
+                                <span class="form-label" style="margin: 0; font-weight: normal;">Enable Switch Keepalive (Pings gateway/broadcast every 60s)</span>
+                            </label>
+                            <div style="font-size: 11px; color: #718096; margin-left: 22px; margin-top: 4px; line-height: 1.4;">
+                                Highly recommended if using UniFi or switches that drop inactive MAC addresses, preventing streams from timing out.
+                            </div>
+                        </div>
+
                         <div class="form-group" style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 20px;">
                             <div style="font-size: 12px; color: #f6ad55; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
                             <div style="font-size: 11px; color: #a0aec0; line-height: 1.4;">
@@ -2377,7 +2388,7 @@ def get_web_ui_html(current_settings=None):
             </div>
             
             <!-- Reboot Server Button (Linux Only) -->
-            <button type="button" class="btn linux-only" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
+            <button type="button" class="btn reboot-host" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
                 <i class="fas fa-power-off"></i> Reboot Server
             </button>
         </div>
@@ -2449,6 +2460,10 @@ def get_web_ui_html(current_settings=None):
                 <button class="close-btn" onclick="closeUpdateModal()">×</button>
             </div>
             <div id="update-modal-content">
+                <div id="docker-update-warning" style="display: none; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; color: #ed8936; line-height: 1.4; text-align: left;">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Running in Docker:</strong> Self-updating through the Web UI is disabled to prevent configuration and data loss. Please update your container using:
+                    <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 8px; color: #cbd5e0; word-break: break-all; font-family: monospace;">git pull && docker compose down && docker compose up -d --build</code>
+                </div>
                 <div id="update-info" style="display: none;">
                     <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.3);">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
@@ -2474,7 +2489,7 @@ def get_web_ui_html(current_settings=None):
                         <i class="fas fa-download"></i> Download and Install
                     </button>
                     
-                    <button class="btn btn-secondary" onclick="reinstallCurrentVersion()" style="width:100%; margin-top: 10px; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                    <button class="btn btn-secondary reinstall-btn" onclick="reinstallCurrentVersion()" style="width:100%; margin-top: 10px; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
                         <i class="fas fa-redo"></i> Reinstall Current Version
                     </button>
                 </div>
@@ -2504,7 +2519,7 @@ def get_web_ui_html(current_settings=None):
                     <div style="font-size: 18px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">You're up to date!</div>
                     <div id="no-update-version" style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;"></div>
                     
-                    <button class="btn btn-secondary" onclick="reinstallCurrentVersion()" style="background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                    <button class="btn btn-secondary reinstall-btn" onclick="reinstallCurrentVersion()" style="background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
                         <i class="fas fa-redo"></i> Reinstall Current Version
                     </button>
                 </div>
@@ -2531,6 +2546,7 @@ def get_web_ui_html(current_settings=None):
 
         // Platform detection for UI features
         const isLinux = {str(platform.system().lower() == "linux").lower()};
+        const isDocker = {str(os.path.exists("/.dockerenv")).lower()};
         window.addEventListener('DOMContentLoaded', () => {{
             if (!isLinux) {{
                 const linuxSections = document.querySelectorAll('.linux-only');
@@ -2539,6 +2555,10 @@ def get_web_ui_html(current_settings=None):
                 // Legacy support for specific ID
                 const linuxSection = document.getElementById('linux-network-section');
                 if (linuxSection) linuxSection.style.display = 'none';
+            }}
+            // Hide host-reboot buttons when running inside Docker or on non-Linux
+            if (isDocker || !isLinux) {{
+                document.querySelectorAll('.reboot-host').forEach(s => s.style.display = 'none');
             }}
         }});
 
@@ -3523,6 +3543,7 @@ def get_web_ui_html(current_settings=None):
             
             // Network reset
             document.getElementById('useVirtualNic').checked = false;
+            document.getElementById('vnicKeepalive').checked = false;
             document.getElementById('parentInterface').value = '';
             document.getElementById('nicMac').value = '';
             document.getElementById('ipMode').value = 'dhcp';
@@ -3640,6 +3661,7 @@ def get_web_ui_html(current_settings=None):
             
             // Populate Network fields
             document.getElementById('useVirtualNic').checked = camera.useVirtualNic || false;
+            document.getElementById('vnicKeepalive').checked = camera.vnicKeepalive || false;
             document.getElementById('parentInterface').value = camera.parentInterface || '';
             document.getElementById('nicMac').value = camera.nicMac || '';
             document.getElementById('ipMode').value = camera.ipMode || 'dhcp';
@@ -4585,6 +4607,7 @@ def get_web_ui_html(current_settings=None):
                 audioSampleRateSub: document.getElementById('audioSampleRateSub').value,
                 audioBitrateSub: document.getElementById('audioBitrateSub').value,
                 useVirtualNic: document.getElementById('useVirtualNic').checked,
+                vnicKeepalive: document.getElementById('vnicKeepalive').checked,
                 parentInterface: document.getElementById('parentInterface').value === "__manual__" 
                     ? document.getElementById('parentInterfaceManual').value 
                     : document.getElementById('parentInterface').value,
@@ -5216,6 +5239,21 @@ def get_web_ui_html(current_settings=None):
                 const response = await fetch('/api/updates/check');
                 if (response.ok) {{
                     updateInfo = await response.json();
+                    
+                    // Handle Docker warnings and button visibility
+                    const warningEl = document.getElementById('docker-update-warning');
+                    const reinstallBtns = document.querySelectorAll('.reinstall-btn');
+                    const downloadBtn = document.getElementById('download-update-btn');
+                    
+                    if (updateInfo.is_docker) {{
+                        if (warningEl) warningEl.style.display = 'block';
+                        if (downloadBtn) downloadBtn.style.display = 'none';
+                        reinstallBtns.forEach(btn => btn.style.display = 'none');
+                    }} else {{
+                        if (warningEl) warningEl.style.display = 'none';
+                        if (downloadBtn) downloadBtn.style.display = 'block';
+                        reinstallBtns.forEach(btn => btn.style.display = 'inline-block');
+                    }}
                     
                     if (updateInfo.update_available) {{
                         // Show update info

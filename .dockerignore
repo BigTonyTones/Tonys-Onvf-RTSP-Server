@@ -1,0 +1,16 @@
+.git
+.github
+venv/
+__pycache__/
+*.pyc
+*.log
+ffmpeg/
+mediamtx.yml
+mediamtx
+mediamtx.tar.gz
+ffmpeg_temp/
+*.zip
+*.tar.gz
+camera_config.json
+config/
+scratch/

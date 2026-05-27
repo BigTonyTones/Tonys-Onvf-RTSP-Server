@@ -55,6 +55,18 @@ def main():
     # Check for MediaMTX updates BEFORE starting cameras to ensure prompt is visible
     manager.mediamtx.download_mediamtx()
     
+    # Pre-import AI modules on the main thread before starting cameras.
+    # This prevents a race condition where multiple camera AI threads try to
+    # import cv2/ultralytics simultaneously, causing transient ImportErrors
+    # for all threads except the first one that grabs the import lock.
+    # See: https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server/issues/38
+    try:
+        import cv2
+        from ultralytics import YOLO
+        print("AI dependencies loaded successfully.")
+    except ImportError:
+        pass  # AI not installed — individual camera threads will handle gracefully
+
     # Auto-start cameras that have autoStart enabled
     # Note: We check auto_start setting, NOT the saved status
     # This ensures cameras start fresh based on their auto-start preference
