@@ -16,8 +16,9 @@ from urllib.parse import quote
 from .ffmpeg_manager import FFmpegManager
 
 class VirtualSubscription:
-    def __init__(self, sub_id):
+    def __init__(self, sub_id, client_ip=None):
         self.sub_id = sub_id
+        self.client_ip = client_ip
         self.queue = queue.Queue(maxsize=100)
         import time
         self.last_active = time.time()
@@ -1145,7 +1146,8 @@ class ONVIFService:
     def _handle_create_pull_point_subscription(self, local_ip):
         import uuid
         sub_id = str(uuid.uuid4())
-        self.subscriptions[sub_id] = VirtualSubscription(sub_id)
+        client_ip = request.remote_addr
+        self.subscriptions[sub_id] = VirtualSubscription(sub_id, client_ip)
         
         # Build subscription reference URL
         sub_ref = f"http://{local_ip}:{self.camera.onvif_port}/onvif/subscription/{sub_id}"

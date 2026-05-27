@@ -1185,6 +1185,30 @@ def get_web_ui_html(current_settings=None):
             align-items: center;
             gap: 10px;
         }}
+
+        /* Custom Tooltip Styling */
+        .custom-tooltip {{
+            position: absolute;
+            z-index: 10000;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+            max-width: 280px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+            border: 1px solid #334155;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease-in-out;
+            white-space: normal;
+            word-wrap: break-word;
+        }}
+        .custom-tooltip.visible {{
+            opacity: 1;
+        }}
     </style>
 </head>
 <body class="theme-{current_settings.get('theme', 'classic') if current_settings else 'classic'}">
@@ -1879,11 +1903,14 @@ def get_web_ui_html(current_settings=None):
                     <div id="sendSmartOnvifTopicsGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
                         <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">ONVIF Event Formatting</div>
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="checkbox" id="sendSmartOnvifTopics" style="width: auto; cursor: pointer;" checked>
+                            <input type="checkbox" id="sendSmartOnvifTopics" style="width: auto; cursor: pointer;" checked onchange="toggleSmartOnvifWarning()">
                             <span style="font-size: 12px; color: #cbd5e0;">Send Smart ONVIF Topics (HumanShapeDetect, VehicleDetect, AnimalDetect, PackageDetect)</span>
                         </label>
                         <div style="font-size: 11px; color: #718096; margin-top: 4px; margin-left: 20px; line-height: 1.4;">
                             If enabled, triggers specific smart ONVIF events when objects are detected. If disabled, reverts to standard generic motion events.
+                        </div>
+                        <div id="smartOnvifWarning" style="display: none; margin-top: 12px; margin-left: 20px; padding: 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 11px; color: #f6ad55; line-height: 1.5;">
+                            ⚠️ <strong>UniFi NVR Compatibility Note:</strong> To display Smart Detections (Person, Vehicle, etc.) in UniFi Protect, you currently need to run this third party project <a href="https://github.com/danielwoz/ubiquiti-protect-onvif-event-listener" target="_blank" style="color: #63b3ed; text-decoration: underline; font-weight: 500;">ubiquiti-protect-onvif-event-listener</a>. Without it, smart events will not be registered by the NVR. While I expect native support from Ubiquiti in a future update, this event listener is required for now. It is recommended you reboot the NVR after adding all your cameras.
                         </div>
                     </div>
 
@@ -2000,10 +2027,10 @@ def get_web_ui_html(current_settings=None):
                             <button type="button" class="btn" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
                                 <i class="fas fa-car"></i> Vehicle
                             </button>
-                            <button type="button" class="btn" id="btnTestAnimalEvent" onclick="sendTestOnvifEvent('animal')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #38a169 0%, #2f855a 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                            <button type="button" class="btn" id="btnTestAnimalEvent" onclick="sendTestOnvifEvent('animal')" disabled style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #38a169 0%, #2f855a 100%); color: white; border: none; border-radius: 4px; cursor: not-allowed; opacity: 0.5; transition: all 0.2s ease;">
                                 <i class="fas fa-paw"></i> Animal
                             </button>
-                            <button type="button" class="btn" id="btnTestPackageEvent" onclick="sendTestOnvifEvent('package')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                            <button type="button" class="btn" id="btnTestPackageEvent" onclick="sendTestOnvifEvent('package')" disabled style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%); color: white; border: none; border-radius: 4px; cursor: not-allowed; opacity: 0.5; transition: all 0.2s ease;">
                                 <i class="fas fa-box"></i> Package
                             </button>
                             <span id="aiTestEventFeedback" style="font-size: 11px; color: #a0aec0;"></span>
@@ -2937,12 +2964,32 @@ def get_web_ui_html(current_settings=None):
                     </div>
                     
                     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
-                        ${{cam.assignedIp ? `<div class="status-badge running" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">${{cam.assignedIp}}</div>` : ''}}
-                        ${{cam.nicMac ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;">${{cam.nicMac}}</div>` : ''}}
-                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="${{cam.uuid}}">UUID: ${{cam.uuid.split('-').slice(0, 2).join('-')}}</div>` : ''}}
-                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap;">AI</div>` : ''}}
-                        ${{cam.enableAudio ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4299e1; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;">Audio</div>` : ''}}
-                        ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;">Audio Transcoded</div>` : ''}}
+                        <div class="status-badge ${{cam.assignedIp ? 'running' : ''}}" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; ${{!cam.assignedIp ? 'background: #4a5568; color: white;' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
+                        <div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
+                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="UUID: Unique device identifier used by ONVIF discovery clients (e.g. UniFi Protect). Full UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-').slice(0, 2).join('-')}}...</div>` : ''}}
+                        ${{(() => {{
+                            let onvifText = 'ONVIF: Offline';
+                            let onvifBg = '#4a5568';
+                            let onvifTooltip = 'Camera is offline/stopped.';
+                            if (cam.status === 'running') {{
+                                const subs = cam.onvifActiveSubscriptions || 0;
+                                const ips = cam.onvifSubscribersIPs || [];
+                                if (subs > 0) {{
+                                    onvifText = 'ONVIF: Subscribed (' + subs + ')';
+                                    onvifBg = '#48bb78';
+                                    const ipListStr = ips.length > 0 ? ' (IPs: ' + ips.join(', ') + ')' : '';
+                                    onvifTooltip = 'ONVIF Events Subscription is Active: ' + subs + ' NVR/Client(s)' + ipListStr + ' are actively subscribed to receive ONVIF events.';
+                                }} else {{
+                                    onvifText = 'ONVIF: No Subs';
+                                    onvifBg = '#e53e3e';
+                                    onvifTooltip = 'ONVIF Events: No NVR/Client is currently subscribed to events from this virtual camera. If the camera is not receiving ONVIF events in Protect, try removing the camera from Protect and adding it again.';
+                                }}
+                            }}
+                            return '<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: ' + onvifBg + '; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="' + onvifTooltip.replace(/"/g, '&quot;') + '">' + onvifText + '</div>';
+                        }})()}}
+                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}">AI</div>` : ''}}
+                        ${{cam.enableAudio ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4299e1; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio: RTSP audio stream forwarding is enabled for main/sub streams (AAC format).">Audio</div>` : ''}}
+                        ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio Transcoded: Audio stream is actively transcoded to AAC format for compatibility (e.g. with UniFi Protect).">Audio Transcoded</div>` : ''}}
                     </div>
                 </div>
                 
@@ -3522,6 +3569,7 @@ def get_web_ui_html(current_settings=None):
             
             toggleOnvifCredFields();
             toggleEventForwardingFields();
+            toggleSmartOnvifWarning();
             
             document.getElementById('transcodeSub').checked = false;
             document.getElementById('transcodeMain').checked = false;
@@ -3628,6 +3676,7 @@ def get_web_ui_html(current_settings=None):
             
             toggleOnvifCredFields();
             toggleEventForwardingFields();
+            toggleSmartOnvifWarning();
             
             // Populate resolution and frame rate fields
             document.getElementById('mainWidth').value = camera.mainWidth || 1920;
@@ -4030,6 +4079,14 @@ def get_web_ui_html(current_settings=None):
             const useAbove = document.getElementById('onvifUseAboveCredentials').checked;
             const customFields = document.getElementById('onvifCustomCredFields');
             if (customFields) customFields.style.display = useAbove ? 'none' : 'block';
+        }}
+
+        function toggleSmartOnvifWarning() {{
+            const warningEl = document.getElementById('smartOnvifWarning');
+            const checkbox = document.getElementById('sendSmartOnvifTopics');
+            if (warningEl && checkbox) {{
+                warningEl.style.display = checkbox.checked ? 'block' : 'none';
+            }}
         }}
 
         // ========== Zone Drawing ==========
@@ -5821,6 +5878,83 @@ def get_web_ui_html(current_settings=None):
                 renderMatrix();
             }}
         }}
+
+        // Global Custom Tooltip System
+        (function() {{
+            let tooltipEl = null;
+            let activeElement = null;
+            let showTimeout = null;
+
+            function getTooltipEl() {{
+                if (!tooltipEl) {{
+                    tooltipEl = document.createElement('div');
+                    tooltipEl.className = 'custom-tooltip';
+                    document.body.appendChild(tooltipEl);
+                }}
+                return tooltipEl;
+            }}
+
+            document.addEventListener('mouseover', function(e) {{
+                const el = e.target.closest('[title]');
+                if (!el) return;
+
+                clearTimeout(showTimeout);
+
+                activeElement = el;
+                const titleText = el.getAttribute('title');
+                
+                el.setAttribute('data-title', titleText);
+                el.removeAttribute('title');
+
+                showTimeout = setTimeout(() => {{
+                    if (activeElement !== el) return;
+                    
+                    const tooltip = getTooltipEl();
+                    tooltip.textContent = titleText;
+                    tooltip.classList.add('visible');
+
+                    positionTooltip(el, tooltip);
+                }}, 120);
+            }});
+
+            document.addEventListener('mouseout', function(e) {{
+                const el = e.target.closest('[data-title]');
+                if (!el || activeElement !== el) return;
+
+                clearTimeout(showTimeout);
+                activeElement = null;
+
+                const titleText = el.getAttribute('data-title');
+                el.setAttribute('title', titleText);
+                el.removeAttribute('data-title');
+
+                if (tooltipEl) {{
+                    tooltipEl.classList.remove('visible');
+                }}
+            }});
+
+            function positionTooltip(target, tooltip) {{
+                const targetRect = target.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+
+                let top = window.scrollY + targetRect.top - tooltipRect.height - 8;
+                let left = window.scrollX + targetRect.left + (targetRect.width - tooltipRect.width) / 2;
+
+                if (targetRect.top - tooltipRect.height - 8 < 0) {{
+                    top = window.scrollY + targetRect.bottom + 8;
+                }}
+
+                if (left < 10) {{
+                    left = 10;
+                }}
+                if (left + tooltipRect.width > window.innerWidth - 10) {{
+                    left = window.innerWidth - tooltipRect.width - 10;
+                }}
+
+                tooltip.style.top = top + 'px';
+                tooltip.style.left = left + 'px';
+            }}
+        }})();
 
     </script>
 </body>
