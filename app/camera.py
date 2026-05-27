@@ -242,6 +242,10 @@ class VirtualONVIFCamera:
         self.onvif_service = None
         self._keepalive_running = False
         self._keepalive_thread = None
+        
+        # ONVIF subscription status
+        self.onvif_subscription_active = False
+        self.onvif_subscription_error = None
 
     @property
     def mac_address(self):
@@ -296,9 +300,14 @@ class VirtualONVIFCamera:
         self._start_onvif_service()
         if self.enable_event_forwarding:
             if self.event_source == 'ai':
+                self.onvif_subscription_active = False
+                self.onvif_subscription_error = "Using local AI event detection; ONVIF camera subscription inactive."
                 self.start_ai_detection()
             else:
                 self.start_event_forwarding()
+        else:
+            self.onvif_subscription_active = False
+            self.onvif_subscription_error = "Event forwarding is disabled in settings."
         
     def stop(self):
         """Mark camera as stopped, shutdown ONVIF service, and cleanup networking"""
@@ -450,6 +459,10 @@ class VirtualONVIFCamera:
             'aiConfidenceThreshold': self.ai_confidence_threshold,
             'aiZone': self.ai_zone,
             'sendSmartOnvifTopics': self.send_smart_onvif_topics,
+            'onvifSubscriptionActive': self.onvif_subscription_active,
+            'onvifSubscriptionError': self.onvif_subscription_error,
+            'onvifActiveSubscriptions': len(self.onvif_service.subscriptions) if self.onvif_service else 0,
+            'onvifSubscribersIPs': [sub.client_ip for sub in self.onvif_service.subscriptions.values() if sub.client_ip] if self.onvif_service else [],
             'aiInferenceCount': self.ai_inference_count,
             'aiLastInferenceTime': self.ai_last_inference_time,
             'aiLastInferenceLatency': self.ai_last_inference_latency,
@@ -577,6 +590,8 @@ class VirtualONVIFCamera:
     def stop_event_forwarding(self):
         """Stop ONVIF Event Forwarder background thread"""
         self._event_forwarding_running = False
+        self.onvif_subscription_active = False
+        self.onvif_subscription_error = "Event forwarding stopped"
         print(f"  [Camera ({self.name})] ONVIF event forwarder thread stopped.")
 
     def _event_forwarding_loop(self):
@@ -584,6 +599,8 @@ class VirtualONVIFCamera:
         from urllib.parse import urlparse
         
         while self._event_forwarding_running:
+            self.onvif_subscription_active = False
+            self.onvif_subscription_error = "Connecting..."
             try:
                 from urllib.parse import unquote
                 parsed = urlparse(self.main_stream_url.replace('rtsp://', 'http://'))
@@ -673,6 +690,8 @@ class VirtualONVIFCamera:
                             if addr_node is not None and addr_node.text:
                                 pullpoint_addr = addr_node.text.strip()
                                 self.current_auth_mode = mode
+                                self.onvif_subscription_active = True
+                                self.onvif_subscription_error = None
                                 break
                             else:
                                 raise Exception("SubscriptionReference Address node not found in XML response")
@@ -681,6 +700,8 @@ class VirtualONVIFCamera:
                             # trying other auth modes, this is a capacity issue not an auth issue
                             subscription_limit_hit = True
                             last_err = Exception(f"Camera at max concurrent ONVIF subscriptions (HTTP 500 SubscribeCreationFailedFault)")
+                            self.onvif_subscription_active = False
+                            self.onvif_subscription_error = "Maximum concurrent ONVIF subscription limit reached on physical camera."
                             break
                         else:
                             raise Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
@@ -689,12 +710,17 @@ class VirtualONVIFCamera:
                         continue
                 
                 if not pullpoint_addr:
+                    self.onvif_subscription_active = False
                     if subscription_limit_hit:
+                        self.onvif_subscription_error = "Maximum concurrent ONVIF subscription limit reached on physical camera."
                         print(f"  [ONVIF Event Forwarder ({self.name})] Camera '{self.name}' is at its max concurrent ONVIF subscription limit. Another client is using the slot. Waiting 30s for a slot to free up...")
                         time.sleep(30)
                         continue
+                    self.onvif_subscription_error = f"Subscription creation failed: {last_err}"
                     raise Exception(f"Subscription creation failed across all auth modes. Last error: {last_err}")
                 
+                self.onvif_subscription_active = True
+                self.onvif_subscription_error = None
                 print(f"  [ONVIF Event Forwarder ({self.name})] Subscription created using auth mode '{self.current_auth_mode}'. PullPoint address: {pullpoint_addr}")
                 
                 # Poll loop
@@ -766,13 +792,19 @@ class VirtualONVIFCamera:
                                 # that don't respect the PullMessages timeout and return immediately.
                                 time.sleep(1.0)
                             else:
+                                self.onvif_subscription_active = False
+                                self.onvif_subscription_error = f"PullMessages returned status {resp.status_code}"
                                 print(f"  [ONVIF Event Forwarder ({self.name})] PullMessages returned status {resp.status_code}. Reconnecting...")
                                 break
                         except Exception as poll_err:
+                            self.onvif_subscription_active = False
+                            self.onvif_subscription_error = f"PullMessages connection error: {poll_err}"
                             print(f"  [ONVIF Event Forwarder ({self.name})] PullMessages connection error: {poll_err}. Reconnecting...")
                             break
                 finally:
                     # Always clean up the subscription to free the camera slot
+                    self.onvif_subscription_active = False
+                    self.onvif_subscription_error = "Subscription closed"
                     if pullpoint_addr:
                         try:
                             unsub_payload = f"""<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:wsnt="http://docs.oasis-open.org/wsn/b-2">
@@ -793,6 +825,8 @@ class VirtualONVIFCamera:
                             print(f"  [ONVIF Event Forwarder ({self.name})] Failed to unsubscribe from camera '{self.name}': {unsub_err}")
                             
             except Exception as conn_err:
+                self.onvif_subscription_active = False
+                self.onvif_subscription_error = f"ONVIF connection failed: {conn_err}"
                 print(f"  [ONVIF Event Forwarder ({self.name})] ONVIF events connection failed: {conn_err}. Retrying in 10s...")
                 time.sleep(10)
 
