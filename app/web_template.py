@@ -960,6 +960,36 @@ def get_web_ui_html(current_settings=None):
         }}
         .tab:hover {{ color: #4a5568; }}
         
+        /* Form Tabs */
+        .form-tabs {{
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            gap: 5px;
+        }}
+        .form-tab {{
+            padding: 10px 18px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #a0aec0;
+            margin-bottom: -2px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }}
+        .form-tab:hover {{
+            color: #63b3ed;
+        }}
+        .form-tab.active {{
+            color: #3182ce;
+            border-bottom: 2px solid #3182ce;
+        }}
+        .form-section {{
+            display: none;
+        }}
+        .form-section.active {{
+            display: block;
+        }}
+        
         .result-item {{
             background: #f7fafc;
             border: 1px solid #e2e8f0;
@@ -1509,8 +1539,7 @@ def get_web_ui_html(current_settings=None):
                 
                 <div id="probe-results" style="margin-top: 20px;"></div>
             </div>
-            
-            <form id="camera-form" onsubmit="saveCamera(event)">
+                 <form id="camera-form" onsubmit="saveCamera(event)">
                 <input type="hidden" id="camera-id" value="">
                 
                 <div class="form-group" id="copy-from-group">
@@ -1525,33 +1554,199 @@ def get_web_ui_html(current_settings=None):
                 
                 <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;">
                 
-                <div class="form-group">
-                    <label class="form-label">Camera Name</label>
-                    <input type="text" class="form-input" id="name" placeholder="Front Door" required>
+                <!-- Form Tabs -->
+                <div class="form-tabs">
+                    <div class="form-tab active" onclick="switchFormTab('camera')" id="form-tab-camera"><i class="fas fa-video"></i> Camera</div>
+                    <div class="form-tab" onclick="switchFormTab('audio')" id="form-tab-audio"><i class="fas fa-volume-up"></i> Audio</div>
+                    <div class="form-tab" onclick="switchFormTab('ai')" id="form-tab-ai"><i class="fas fa-brain"></i> AI Settings</div>
+                    <div class="form-tab" onclick="switchFormTab('networking')" id="form-tab-networking"><i class="fas fa-network-wired"></i> Networking</div>
                 </div>
-                
-                <div class="form-row">
+
+                <!-- CAMERA SECTION -->
+                <div id="form-sec-camera" class="form-section active">
                     <div class="form-group">
-                        <label class="form-label">Camera IP/Host</label>
-                        <input type="text" class="form-input" id="host" placeholder="192.168.1.100" required>
+                        <label class="form-label">Camera Name</label>
+                        <input type="text" class="form-input" id="name" placeholder="Front Door" required>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">RTSP Port</label>
-                        <input type="number" class="form-input" id="rtspPort" value="554" required>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Camera IP/Host</label>
+                            <input type="text" class="form-input" id="host" placeholder="192.168.1.100" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">RTSP Port</label>
+                            <input type="number" class="form-input" id="rtspPort" value="554" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-input" id="username" value="admin">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="text" class="form-input" id="password">
+                        </div>
+                    </div>
+
+                    <div id="sub-stream-management-header" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-microchip"></i> Sub Stream Management
+                        </h3>
+                        
+                        <div class="form-row" style="gap: 24px; margin-bottom: 0;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                 <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Disable Substream</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="disableSubstream" onchange="toggleSubStreamFields()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </label>
+                                <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
+                            </div>
+
+                            <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                 <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Use Main as Substream</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="useMainAsSubstream" onchange="toggleSubStreamFields()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </label>
+                                <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; padding-top: 24px; margin-top: 24px;">
+                        <!-- Main Stream Column -->
+                        <div class="form-col" style="flex: 1; padding-right: 12px; border-right: 1px solid #e2e8f0;">
+                            <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-video"></i> Main Stream Settings
+                            </h3>
+                            
+                            <div style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 20px;">
+                                <div class="form-group">
+                                    <label class="form-label">Main Stream Path</label>
+                                    <input type="text" class="form-input" id="mainPath" placeholder="/stream1" value="/stream1" required>
+                                </div>
+                                
+                                <label class="form-label">Resolution & FPS</label>
+                                <div class="form-row" style="margin-bottom: 0;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="number" class="form-input" id="mainWidth" placeholder="Width" value="1920" required>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <input type="number" class="form-input" id="mainHeight" placeholder="Height" value="1080" required>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
+                                        <input type="number" class="form-input" id="mainFramerate" placeholder="FPS" value="30" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('main')" style="width:100%; margin-bottom: 20px; font-size: 13px;">
+                                Fetch Main Stream Info
+                            </button>
+                            
+                            <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                <div class="auto-start-row" style="margin-bottom: 0;">
+                                    <span class="auto-start-label" style="font-size: 13px;">Transcode Main Video Stream</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="transcodeMain" onchange="toggleTranscodeNotice('main')">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div id="mainTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: 10px; font-weight: 500;">
+                                    <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub Stream Column -->
+                        <div class="form-col" style="flex: 1; padding-left: 12px;" id="sub-stream-col">
+                            <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-compress-alt"></i> Sub Stream Settings
+                            </h3>
+                            
+                            <div id="sub-stream-fields-container">
+                                <div style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 20px;">
+                                    <div class="form-group" id="subPathContainer">
+                                        <label class="form-label">Sub Stream Path</label>
+                                        <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2">
+                                    </div>
+                                    
+                                    <label class="form-label">Resolution & FPS</label>
+                                    <div class="form-row" style="margin-bottom: 0;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
+                                            <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-bottom: 20px; font-size: 13px;">
+                                    Fetch Sub Stream Info
+                                </button>
+
+                                <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                                    <div class="auto-start-row" style="margin-bottom: 0;">
+                                        <span class="auto-start-label" style="font-size: 13px;">Transcode Sub Video Stream</span>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" id="transcodeSub" onchange="toggleTranscodeNotice('sub')">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                    <div id="subTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: 10px; font-weight: 500;">
+                                        <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 24px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
+                            <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
+                        </div>
+                        <div class="form-group" style="flex: 1.5;">
+                            <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span>Device UUID</span>
+                                <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; height: auto; background: rgba(49, 130, 206, 0.15); border: 1px solid rgba(49, 130, 206, 0.3); color: #63b3ed; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="generateNewUuid()">
+                                    <i class="fas fa-random"></i> Generate
+                                </button>
+                            </label>
+                            <input type="text" class="form-input" id="cameraUuid" placeholder="Auto-assigned on first save" style="font-family: monospace; font-size: 12px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="autoStart" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0;">Auto-start camera on server startup</span>
+                        </label>
+                    </div>
+                    
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <strong>Common formats:</strong><br>
+                        Hikvision: /Streaming/Channels/101<br>
+                        Reolink: /h264Preview_01_main<br>
+                        Dahua: /cam/realmonitor?channel=1&subtype=0
                     </div>
                 </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-input" id="username" value="admin">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <input type="text" class="form-input" id="password">
-                    </div>
-                </div>
-                
+
+                <!-- AUDIO SECTION -->
+                <div id="form-sec-audio" class="form-section">
+                    <div style="background: rgba(0,0,0,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 24px;">
                         <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
@@ -1559,8 +1754,7 @@ def get_web_ui_html(current_settings=None):
                                 </div>
                                 <div>
                                     <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
-                                    <small style="color: #718096; font-size: 11px;">Enable AAC audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
-                                    <small style="color: #f6ad55; font-size: 11px; display: block; margin-top: 4px;"><i class="fas fa-info-circle"></i> If you're running UniFi Protect version 7.1 or newer, make sure to enable "Stream Compatibility Mode – Improved" in your UniFi Console's camera settings to ensure audio is properly supported.</small>
+                                    <small style="color: #718096; font-size: 11px;">Enable audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
                                 </div>
                             </div>
                             <label class="toggle-switch">
@@ -1568,70 +1762,12 @@ def get_web_ui_html(current_settings=None):
                                 <span class="toggle-slider"></span>
                             </label>
                         </label>
+                        <small style="color: #f6ad55; font-size: 11px; display: block; margin-top: 10px;"><i class="fas fa-info-circle"></i> If you're running UniFi Protect version 7.1 or newer, make sure to enable "Stream Compatibility Mode – Improved" in your UniFi Console's camera settings to ensure audio is properly supported.</small>
+                    </div>
 
-                        <div id="sub-stream-management-header" style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
-                            <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-microchip"></i> Sub Stream Management
-                            </h3>
-                            
-                            <div class="form-row" style="gap: 24px; margin-bottom: 0;">
-                                <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
-                                     <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Disable Substream</span>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="disableSubstream" onchange="toggleSubStreamFields()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </label>
-                                    <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
-                                </div>
-
-                                <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
-                                     <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Use Main as Substream</span>
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="useMainAsSubstream" onchange="toggleSubStreamFields()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                    </label>
-                                    <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-row" style="align-items: flex-start; gap: 24px; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 24px 0; margin: 24px 0;">
-                    
-                    <!-- Main Stream Column -->
-                    <div class="form-col" style="flex: 1; padding-right: 12px; border-right: 1px solid #e2e8f0;">
-                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-video"></i> Main Stream Settings
-                        </h3>
-                        
-                        <div style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 20px;">
-                            <div class="form-group">
-                                <label class="form-label">Main Stream Path</label>
-                                <input type="text" class="form-input" id="mainPath" placeholder="/stream1" value="/stream1" required>
-                            </div>
-                            
-                            <label class="form-label">Resolution & FPS</label>
-                            <div class="form-row" style="margin-bottom: 0;">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <input type="number" class="form-input" id="mainWidth" placeholder="Width" value="1920" required>
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <input type="number" class="form-input" id="mainHeight" placeholder="Height" value="1080" required>
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
-                                    <input type="number" class="form-input" id="mainFramerate" placeholder="FPS" value="30" required>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button type="button" class="btn btn-secondary" onclick="fetchStreamInfo('main')" style="width:100%; margin-bottom: 20px; font-size: 13px;">
-                            Fetch Main Stream Info
-                        </button>
-                        
-                        <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    <div class="form-row" style="align-items: flex-start; gap: 24px;">
+                        <!-- Main Stream Audio -->
+                        <div class="form-col" style="flex: 1; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                                 <div>
                                     <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Main Audio</span>
@@ -1643,7 +1779,7 @@ def get_web_ui_html(current_settings=None):
                                 </label>
                             </label>
 
-                            <div id="mainAudioSettings" style="display: none; margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                            <div id="mainAudioSettings" style="display: none; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
                                 <div class="form-group" style="margin-bottom: 12px;">
                                     <label class="form-label" style="font-size: 11px;">Audio Encoding</label>
                                     <select class="form-input" id="audioEncodingMain" style="font-size: 12px; padding: 6px 10px;">
@@ -1680,144 +1816,64 @@ def get_web_ui_html(current_settings=None):
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="auto-start-row" style="margin-bottom: 15px;">
-                                <span class="auto-start-label" style="font-size: 13px;">Transcode Main Video Stream</span>
+                        <!-- Sub Stream Audio -->
+                        <div class="form-col" style="flex: 1; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                            <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                                <div>
+                                    <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio</span>
+                                    <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
+                                </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="transcodeMain" onchange="toggleTranscodeNotice('main')">
+                                    <input type="checkbox" id="transcodeSubAudio" onchange="toggleAudioSettings('sub')">
                                     <span class="toggle-slider"></span>
                                 </label>
-                            </div>
-                            <div id="mainTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: -10px; margin-bottom: 15px; font-weight: 500;">
-                                <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
-                            </div>
-                        </div>
-                        
-                    </div>
+                            </label>
 
-                    <!-- Sub Stream Column -->
-                    <div class="form-col" style="flex: 1; padding-left: 12px;" id="sub-stream-col">
-                        <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-microchip"></i> Sub Stream Settings
-                        </h3>
-                        
-                        <div id="sub-stream-fields-container">
-
-                            <div style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 20px;">
-                                <div class="form-group" id="subPathContainer">
-                                    <label class="form-label">Sub Stream Path</label>
-                                    <input type="text" class="form-input" id="subPath" placeholder="/stream2" value="/stream2">
+                            <div id="subAudioSettings" style="display: none; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 11px;">Audio Encoding</label>
+                                    <select class="form-input" id="audioEncodingSub" style="font-size: 12px; padding: 6px 10px;">
+                                        <option value="aac">AAC</option>
+                                        <option value="g711ulaw">G.711ulaw</option>
+                                        <option value="g711alaw">G.711alaw</option>
+                                        <option value="g722.1">G.722.1</option>
+                                        <option value="mp2l2">MP2L2</option>
+                                        <option value="g726">G.726</option>
+                                        <option value="pcm">PCM</option>
+                                        <option value="mp3">MP3</option>
+                                    </select>
                                 </div>
-                                
-                                <label class="form-label">Resolution & FPS</label>
-                                <div class="form-row" style="margin-bottom: 0;">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480">
-                                    </div>
-                                    <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
-                                        <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <button type="button" class="btn btn-secondary" id="btnFetchSub" onclick="fetchStreamInfo('sub')" style="width:100%; margin-bottom: 20px; font-size: 13px;">
-                                Fetch Sub Stream Info
-                            </button>
-
-                            <div class="form-group" style="background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
-                                <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                                    <div>
-                                        <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio</span>
-                                        <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
-                                    </div>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="transcodeSubAudio" onchange="toggleAudioSettings('sub')">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </label>
-
-                                <div id="subAudioSettings" style="display: none; margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-                                    <div class="form-group" style="margin-bottom: 12px;">
-                                        <label class="form-label" style="font-size: 11px;">Audio Encoding</label>
-                                        <select class="form-input" id="audioEncodingSub" style="font-size: 12px; padding: 6px 10px;">
-                                            <option value="aac">AAC</option>
-                                            <option value="g711ulaw">G.711ulaw</option>
-                                            <option value="g711alaw">G.711alaw</option>
-                                            <option value="g722.1">G.722.1</option>
-                                            <option value="mp2l2">MP2L2</option>
-                                            <option value="g726">G.726</option>
-                                            <option value="pcm">PCM</option>
-                                            <option value="mp3">MP3</option>
+                                <div class="form-row" style="gap: 12px; margin-bottom: 0;">
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Sampling Rate</label>
+                                        <select class="form-input" id="audioSampleRateSub" style="font-size: 12px; padding: 6px 10px;">
+                                            <option value="8000">8kHz</option>
+                                            <option value="16000">16kHz</option>
+                                            <option value="32000">32kHz</option>
+                                            <option value="44100">44.1kHz</option>
+                                            <option value="48000">48kHz</option>
                                         </select>
                                     </div>
-                                    <div class="form-row" style="gap: 12px; margin-bottom: 0;">
-                                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                            <label class="form-label" style="font-size: 11px;">Sampling Rate</label>
-                                            <select class="form-input" id="audioSampleRateSub" style="font-size: 12px; padding: 6px 10px;">
-                                                <option value="8000">8kHz</option>
-                                                <option value="16000">16kHz</option>
-                                                <option value="32000">32kHz</option>
-                                                <option value="44100">44.1kHz</option>
-                                                <option value="48000">48kHz</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                            <label class="form-label" style="font-size: 11px;">Audio Stream Bitrate</label>
-                                            <select class="form-input" id="audioBitrateSub" style="font-size: 12px; padding: 6px 10px;">
-                                                <option value="16k">16kbps</option>
-                                                <option value="32k">32kbps</option>
-                                                <option value="64k">64kbps</option>
-                                                <option value="128k">128kbps</option>
-                                                <option value="256k">256kbps</option>
-                                            </select>
-                                        </div>
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Audio Stream Bitrate</label>
+                                        <select class="form-input" id="audioBitrateSub" style="font-size: 12px; padding: 6px 10px;">
+                                            <option value="16k">16kbps</option>
+                                            <option value="32k">32kbps</option>
+                                            <option value="64k">64kbps</option>
+                                            <option value="128k">128kbps</option>
+                                            <option value="256k">256kbps</option>
+                                        </select>
                                     </div>
-                                </div>
-                                
-                                <div class="auto-start-row" style="margin-bottom: 15px;">
-                                    <span class="auto-start-label" style="font-size: 13px;">Transcode Sub Video Stream</span>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="transcodeSub" onchange="toggleTranscodeNotice('sub')">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                                <div id="subTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: -10px; margin-bottom: 15px; font-weight: 500;">
-                                    <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
                                 </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group" style="flex: 1;">
-                        <label class="form-label">ONVIF Port (leave empty for auto-assign)</label>
-                        <input type="number" class="form-input" id="onvifPort" placeholder="Auto-assigned">
-                    </div>
-                    <div class="form-group" style="flex: 1.5;">
-                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span>Device UUID</span>
-                            <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; height: auto; background: rgba(49, 130, 206, 0.15); border: 1px solid rgba(49, 130, 206, 0.3); color: #63b3ed; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="generateNewUuid()">
-                                <i class="fas fa-random"></i> Generate
-                            </button>
-                        </label>
-                        <input type="text" class="form-input" id="cameraUuid" placeholder="Auto-assigned on first save" style="font-family: monospace; font-size: 12px;">
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 25px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="autoStart" style="width: auto; cursor: pointer;">
-                        <span class="form-label" style="margin: 0;">Auto-start camera on server startup</span>
-                    </label>
-                </div>
-
-                <div style="border-top: 1px solid #2d3748; padding-top: 15px; margin-top: 15px; margin-bottom: 20px;">
-                    <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 12px;">AI & ONVIF Event Forwarding</div>
+                <!-- AI SECTION -->
+                <div id="form-sec-ai" class="form-section">
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="enableEventForwarding" style="width: auto; cursor: pointer;" onchange="toggleEventForwardingFields()">
@@ -1919,21 +1975,16 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
-                    <!-- AI Sensitivity Slider -->
                     <div id="aiSensitivityGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
                         <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Detection Sensitivity</div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span style="font-size: 10px; color: #718096; white-space: nowrap;">Low</span>
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
                                 <input type="range" id="aiMotionSensitivity" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiSensitivityDisplay(this.value)">
-                                <!-- Visual track markers -->
                                 <div style="position: relative; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; margin-top: 2px;">
-                                    <!-- Indoor Rec Range Highlight (40% to 60%) -->
                                     <div style="position: absolute; left: 35.3%; width: 23.5%; height: 100%; background: rgba(16, 185, 129, 0.45);" title="Recommended Indoor Range (40% - 60%)"></div>
-                                    <!-- Outdoor Rec Range Highlight (75% to 85%) -->
                                     <div style="position: absolute; left: 76.5%; width: 11.8%; height: 100%; background: rgba(245, 158, 11, 0.55);" title="Recommended Outdoor Range (75% - 85%)"></div>
                                 </div>
-                                <!-- Labels for Ranges -->
                                 <div style="position: relative; height: 12px; margin-top: 2px;">
                                     <span style="position: absolute; left: 47%; transform: translateX(-50%); font-size: 8px; color: #10b981; font-weight: bold; white-space: nowrap;">INDOOR (40-60%)</span>
                                     <span style="position: absolute; left: 82.3%; transform: translateX(-50%); font-size: 8px; color: #f59e0b; font-weight: bold; white-space: nowrap;">OUTDOOR (75-85%)</span>
@@ -1948,7 +1999,6 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
-                    <!-- AI Confidence Slider -->
                     <div id="aiConfidenceGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
                         <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">AI Confidence Threshold</div>
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -1964,7 +2014,6 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
-                    <!-- AI Motion Zone Drawing -->
                     <div id="aiZoneGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                             <div style="font-size: 12px; color: #a0aec0; font-weight: 600;">Detection Zone</div>
@@ -1989,7 +2038,6 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
-                    <!-- Copy AI Settings to Other Cameras -->
                     <div id="aiCopySettingsGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
                             <div style="font-size: 12px; color: #a0aec0; font-weight: 600;">Copy AI Settings to Other Cameras</div>
@@ -2019,7 +2067,6 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                     
-                    <!-- Test ONVIF Event (only shown when editing an existing camera) -->
                     <div id="aiTestEventGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3748;">
                         <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Test Event Delivery</div>
                         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -2046,96 +2093,91 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
 
-                <!-- Network Settings (Linux only) -->
-                <div id="linux-network-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #2d3748;">
-                    <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                        <span>Network Settings (Linux Only)</span>
-                    </div>
-
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="useVirtualNic" onchange="toggleNetworkFields()" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0;">Use Virtual Network Interface (MACVLAN)</span>
-                        </label>
-                    </div>
-
-                    <div id="vnic-fields" style="display: none;">
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                                <input type="checkbox" id="vnicKeepalive" style="width: auto; cursor: pointer;">
-                                <span class="form-label" style="margin: 0; font-weight: normal;">Enable Switch Keepalive (Pings gateway/broadcast every 60s)</span>
-                            </label>
-                            <div style="font-size: 11px; color: #718096; margin-left: 22px; margin-top: 4px; line-height: 1.4;">
-                                Highly recommended if using UniFi or switches that drop inactive MAC addresses, preventing streams from timing out.
-                            </div>
-                        </div>
-
-                        <div class="form-group" style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 20px;">
-                            <div style="font-size: 12px; color: #f6ad55; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
-                            <div style="font-size: 11px; color: #a0aec0; line-height: 1.4;">
-                                UniFi Protect requires each camera to have a unique MAC address.
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label class="form-label">Virtual NIC MAC Address (Optional)</label>
-                            <div style="display: flex; gap: 8px;">
-                                <input type="text" class="form-input" id="nicMac" placeholder="00:00:00:00:00:00" style="flex: 1; font-family: monospace; font-size: 13px;">
-                                <button type="button" class="btn btn-secondary" onclick="randomizeMac()" style="padding: 0 15px; font-size: 12px;">Randomize</button>
-                            </div>
+                <!-- NETWORKING SECTION -->
+                <div id="form-sec-networking" class="form-section">
+                    <div id="linux-network-section">
+                        <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                            <span>Network Settings (Linux Only)</span>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Parent Interface</label>
-                            <select class="form-input" id="parentInterface" onchange="toggleManualInterface()">
-                                <option value="">Detecting interfaces...</option>
-                            </select>
-                            <div id="manual-interface-container" style="display: none; margin-top: 10px;">
-                                <input type="text" class="form-input" id="parentInterfaceManual" placeholder="Type interface name (e.g. ens34)">
-                                <small style="color: #a0aec0; font-size: 11px; margin-top: 4px; display: block;">
-                                    Enter the exact name from 'ip link' command
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="useVirtualNic" onchange="toggleNetworkFields()" style="width: auto; cursor: pointer;">
+                                <span class="form-label" style="margin: 0;">Use Virtual Network Interface (MACVLAN)</span>
+                            </label>
+                        </div>
+
+                        <div id="vnic-fields" style="display: none;">
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="vnicKeepalive" style="width: auto; cursor: pointer;">
+                                    <span class="form-label" style="margin: 0; font-weight: normal;">Enable Switch Keepalive (Pings gateway/broadcast every 60s)</span>
+                                </label>
+                                <div style="font-size: 11px; color: #718096; margin-left: 22px; margin-top: 4px; line-height: 1.4;">
+                                    Highly recommended if using UniFi or switches that drop inactive MAC addresses, preventing streams from timing out.
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 20px;">
+                                <div style="font-size: 12px; color: #f6ad55; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
+                                <div style="font-size: 11px; color: #a0aec0; line-height: 1.4;">
+                                    UniFi Protect requires each camera to have a unique MAC address.
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label class="form-label">Virtual NIC MAC Address (Optional)</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" class="form-input" id="nicMac" placeholder="00:00:00:00:00:00" style="flex: 1; font-family: monospace; font-size: 13px;">
+                                    <button type="button" class="btn btn-secondary" onclick="randomizeMac()" style="padding: 0 15px; font-size: 12px;">Randomize</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Parent Interface</label>
+                                <select class="form-input" id="parentInterface" onchange="toggleManualInterface()">
+                                    <option value="">Detecting interfaces...</option>
+                                </select>
+                                <div id="manual-interface-container" style="display: none; margin-top: 10px;">
+                                    <input type="text" class="form-input" id="parentInterfaceManual" placeholder="Type interface name (e.g. ens34)">
+                                    <small style="color: #a0aec0; font-size: 11px; margin-top: 4px; display: block;">
+                                        Enter the exact name from 'ip link' command
+                                    </small>
+                                </div>
+                                <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block;">
+                                    Select the physical network port to bridge with
                                 </small>
                             </div>
-                            <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block;">
-                                Select the physical network port to bridge with
-                            </small>
-                        </div>
 
-                        <div class="form-group">
-                            <label class="form-label">IP Configuration</label>
-                            <select class="form-input" id="ipMode" onchange="toggleStaticFields()">
-                                <option value="dhcp">DHCP (Automatic)</option>
-                                <option value="static">Static IP</option>
-                            </select>
-                        </div>
-
-                        <div id="static-ip-fields" style="display: none;">
                             <div class="form-group">
-                                <label class="form-label">Static IP Address</label>
-                                <input type="text" class="form-input" id="staticIp" placeholder="192.168.1.50">
+                                <label class="form-label">IP Configuration</label>
+                                <select class="form-input" id="ipMode" onchange="toggleStaticFields()">
+                                    <option value="dhcp">DHCP (Automatic)</option>
+                                    <option value="static">Static IP</option>
+                                </select>
                             </div>
-                            <div class="form-row">
-                                <div class="form-col">
-                                    <div class="form-group">
-                                        <label class="form-label">Netmask (CIDR)</label>
-                                        <input type="text" class="form-input" id="netmask" value="24" placeholder="24">
-                                    </div>
+
+                            <div id="static-ip-fields" style="display: none;">
+                                <div class="form-group">
+                                    <label class="form-label">Static IP Address</label>
+                                    <input type="text" class="form-input" id="staticIp" placeholder="192.168.1.50">
                                 </div>
-                                <div class="form-col">
-                                    <div class="form-group">
-                                        <label class="form-label">Gateway</label>
-                                        <input type="text" class="form-input" id="gateway" placeholder="192.168.1.1">
+                                <div class="form-row">
+                                    <div class="form-col">
+                                        <div class="form-group">
+                                            <label class="form-label">Netmask (CIDR)</label>
+                                            <input type="text" class="form-input" id="netmask" value="24" placeholder="24">
+                                        </div>
+                                    </div>
+                                    <div class="form-col">
+                                        <div class="form-group">
+                                            <label class="form-label">Gateway</label>
+                                            <input type="text" class="form-input" id="gateway" placeholder="192.168.1.1">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <strong>Common formats:</strong><br>
-                    Hikvision: /Streaming/Channels/101<br>
-                    Reolink: /h264Preview_01_main<br>
-                    Dahua: /cam/realmonitor?channel=1&subtype=0
                 </div>
                 
                 <button type="submit" class="btn btn-success" style="width:100%">Save Camera</button>
@@ -3571,6 +3613,7 @@ def get_web_ui_html(current_settings=None):
         }}
 
         async function openAddModal() {{
+            switchFormTab('camera');
             document.getElementById('modal-title').textContent = 'Add New Camera';
             document.getElementById('camera-id').value = '';
             document.getElementById('camera-form').reset();
@@ -3657,6 +3700,7 @@ def get_web_ui_html(current_settings=None):
         }}
         
         async function openEditModal(id) {{
+            switchFormTab('camera');
             document.getElementById('copy-from-group').style.display = 'none';
             const camera = cameras.find(c => c.id === id);
             if (!camera) return;
@@ -3937,6 +3981,16 @@ def get_web_ui_html(current_settings=None):
             }}
             const feedback = document.getElementById('aiTestEventFeedback');
             if (feedback) feedback.textContent = '';
+        }}
+
+        function switchFormTab(tabName) {{
+            document.querySelectorAll('.form-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+            
+            const selectedTab = document.getElementById(`form-tab-${{tabName}}`);
+            const selectedSec = document.getElementById(`form-sec-${{tabName}}`);
+            if (selectedTab) selectedTab.classList.add('active');
+            if (selectedSec) selectedSec.classList.add('active');
         }}
 
         function toggleAudioSettings(type) {{
