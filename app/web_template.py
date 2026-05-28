@@ -1509,10 +1509,6 @@ def get_web_ui_html(current_settings=None):
                 <button class="close-btn" onclick="closeModal()">×</button>
             </div>
             
-            <div class="alert alert-warning">
-                <strong>Special Characters:</strong><br>
-                Passwords with # @ : / etc. are automatically URL-encoded
-            </div>
             
             <div class="tabs">
                 <div class="tab active" onclick="switchAddMode('manual')" id="tab-manual">Manual Entry</div>
