@@ -283,6 +283,26 @@ def create_web_app(manager):
         from .gridfusion_template import get_gridfusion_html
         return get_gridfusion_html(settings, grid_fusion_config)
     
+    @app.route('/api/cameras/reorder', methods=['POST'])
+    @login_required
+    def reorder_cameras():
+        data = request.json
+        ordered_ids = data.get('ordered_ids', [])
+        try:
+            manager.reorder_cameras(ordered_ids)
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/cameras/reorder/reset', methods=['POST'])
+    @login_required
+    def reset_cameras_order():
+        try:
+            manager.reset_camera_order()
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
     @app.route('/api/cameras', methods=['GET'])
     @login_required
     def get_cameras():

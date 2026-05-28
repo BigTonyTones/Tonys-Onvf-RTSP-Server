@@ -119,6 +119,15 @@ class CameraManager:
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             self.debug_mode = config.get('settings', {}).get('debugMode', False)
             self.watchdog_enabled = config.get('settings', {}).get('watchdogEnabled', False)
+            self.matrix_stretch_fill = config.get('settings', {}).get('matrixStretchFill', False)
+            self.matrix_hide_names = config.get('settings', {}).get('matrixHideNames', False)
+            self.matrix_ai_flash = config.get('settings', {}).get('matrixAiFlash', False)
+            self.matrix_audio_hover = config.get('settings', {}).get('matrixAudioHover', False)
+            self.matrix_carousel = config.get('settings', {}).get('matrixCarousel', False)
+            self.carousel_size = int(config.get('settings', {}).get('carouselSize', 4))
+            self.carousel_interval = int(config.get('settings', {}).get('carouselInterval', 10000))
+            self.matrix_force_high_stream = config.get('settings', {}).get('matrixForceHighStream', False)
+            self.matrix_cams_per_page = config.get('settings', {}).get('matrixCamsPerPage', 'All')
             self.ip_whitelist = config.get('settings', {}).get('ipWhitelist', [])
             
             # Load GridFusion settings (Support multiple layouts)
@@ -178,6 +187,14 @@ class CameraManager:
             self.global_password = 'admin'
             self.rtsp_auth_enabled = False
             self.debug_mode = False
+            self.matrix_stretch_fill = False
+            self.matrix_hide_names = False
+            self.matrix_ai_flash = False
+            self.matrix_audio_hover = False
+            self.matrix_carousel = False
+            self.carousel_size = 4
+            self.carousel_interval = 10000
+            self.matrix_force_high_stream = False
             self.ip_whitelist = []
             # Default layouts if config missing
             self.grid_fusion_layouts = [{
@@ -258,6 +275,15 @@ class CameraManager:
                 'theme': getattr(self, 'theme', 'classic'),
                 'gridColumns': getattr(self, 'grid_columns', 3),
                 'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
+                'matrixStretchFill': getattr(self, 'matrix_stretch_fill', False),
+                'matrixHideNames': getattr(self, 'matrix_hide_names', False),
+                'matrixAiFlash': getattr(self, 'matrix_ai_flash', False),
+                'matrixAudioHover': getattr(self, 'matrix_audio_hover', False),
+                'matrixCarousel': getattr(self, 'matrix_carousel', False),
+                'carouselSize': getattr(self, 'carousel_size', 4),
+                'carouselInterval': getattr(self, 'carousel_interval', 10000),
+                'matrixForceHighStream': getattr(self, 'matrix_force_high_stream', False),
+                'matrixCamsPerPage': getattr(self, 'matrix_cams_per_page', 'All'),
                 'ipWhitelist': getattr(self, 'ip_whitelist', []),
                 'debugMode': self.debug_mode
             },
@@ -324,10 +350,28 @@ class CameraManager:
                 self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
                 self.debug_mode = settings.get('debugMode', False)
                 self.watchdog_enabled = settings.get('watchdogEnabled', False)
+                self.matrix_stretch_fill = settings.get('matrixStretchFill', False)
+                self.matrix_hide_names = settings.get('matrixHideNames', False)
+                self.matrix_ai_flash = settings.get('matrixAiFlash', False)
+                self.matrix_audio_hover = settings.get('matrixAudioHover', False)
+                self.matrix_carousel = settings.get('matrixCarousel', False)
+                self.carousel_size = int(settings.get('carouselSize', 4))
+                self.carousel_interval = int(settings.get('carouselInterval', 10000))
+                self.matrix_force_high_stream = settings.get('matrixForceHighStream', False)
+                self.matrix_cams_per_page = settings.get('matrixCamsPerPage', 'All')
                 
                 # Ensure whitelist exists
                 self.ip_whitelist = settings.get('ipWhitelist', [])
                 settings['ipWhitelist'] = self.ip_whitelist
+                settings['matrixStretchFill'] = self.matrix_stretch_fill
+                settings['matrixHideNames'] = self.matrix_hide_names
+                settings['matrixAiFlash'] = self.matrix_ai_flash
+                settings['matrixAudioHover'] = self.matrix_audio_hover
+                settings['matrixCarousel'] = self.matrix_carousel
+                settings['carouselSize'] = self.carousel_size
+                settings['carouselInterval'] = self.carousel_interval
+                settings['matrixForceHighStream'] = self.matrix_force_high_stream
+                settings['matrixCamsPerPage'] = self.matrix_cams_per_page
                 
                 return settings
         except Exception as e:
@@ -360,6 +404,15 @@ class CameraManager:
         self.global_password = settings.get('globalPassword', self.global_password)
         self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', self.rtsp_auth_enabled)
         self.debug_mode = settings.get('debugMode', self.debug_mode)
+        self.matrix_stretch_fill = settings.get('matrixStretchFill', self.matrix_stretch_fill)
+        self.matrix_hide_names = settings.get('matrixHideNames', self.matrix_hide_names)
+        self.matrix_ai_flash = settings.get('matrixAiFlash', self.matrix_ai_flash)
+        self.matrix_audio_hover = settings.get('matrixAudioHover', self.matrix_audio_hover)
+        self.matrix_carousel = settings.get('matrixCarousel', self.matrix_carousel)
+        self.carousel_size = int(settings.get('carouselSize', self.carousel_size))
+        self.carousel_interval = int(settings.get('carouselInterval', self.carousel_interval))
+        self.matrix_force_high_stream = settings.get('matrixForceHighStream', self.matrix_force_high_stream)
+        self.matrix_cams_per_page = settings.get('matrixCamsPerPage', self.matrix_cams_per_page)
         self.ip_whitelist = settings.get('ipWhitelist', self.ip_whitelist)
 
         # Handle watchdog enable/disable dynamically
@@ -697,6 +750,27 @@ class CameraManager:
         self.save_config()
         return camera
     
+    def reorder_cameras(self, ordered_ids):
+        """Reorder self.cameras based on the list of camera IDs passed from the UI"""
+        with self._lock:
+            id_map = {cam.id: cam for cam in self.cameras}
+            new_list = []
+            for cid in ordered_ids:
+                if cid in id_map:
+                    new_list.append(id_map[cid])
+            # Add any cameras that weren't in ordered_ids list to the end (failsafe)
+            for cam in self.cameras:
+                if cam.id not in ordered_ids:
+                    new_list.append(cam)
+            self.cameras = new_list
+            self.save_config()
+
+    def reset_camera_order(self):
+        """Reset self.cameras order to be sorted by their ID (creation order)"""
+        with self._lock:
+            self.cameras.sort(key=lambda x: x.id)
+            self.save_config()
+
     def update_camera(self, camera_id, name, host, rtsp_port, username, password, main_path, sub_path, auto_start=False,
                       main_width=1920, main_height=1080, sub_width=640, sub_height=480,
                       main_framerate=30, sub_framerate=15, onvif_port=None,

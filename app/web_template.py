@@ -849,7 +849,7 @@ def get_web_ui_html(current_settings=None):
             padding: 10px;
             overflow: hidden;
         }}
-        .matrix-overlay.active {{ display: flex; flex-direction: column; }}
+        .matrix-overlay.active {{ display: flex; flex-direction: column-reverse; }}
         
         .matrix-grid {{
             display: grid;
@@ -868,6 +868,14 @@ def get_web_ui_html(current_settings=None):
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: grab;
+        }}
+        .matrix-item:active {{
+            cursor: grabbing;
+        }}
+        .matrix-item.dragging {{
+            opacity: 0.4;
+            border: 2px dashed #6366f1 !important;
         }}
         
         .matrix-item video {{
@@ -892,12 +900,146 @@ def get_web_ui_html(current_settings=None):
         .matrix-controls {{
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
-            padding: 10px 0;
-            background: #000;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 20px;
+            background: #111827;
+            border-top: 1px solid #1f2937;
+            margin-top: 8px;
+            border-radius: 6px;
+        }}
+        
+        .matrix-controls label {{
+            color: #f3f4f6 !important;
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }}
+        
+        .matrix-controls span {{
+            color: #d1d5db !important;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }}
         
         .btn-matrix:hover {{ background: #2d3748; }}
+        
+        /* Stretch Fill & Hide Names Styles */
+        .matrix-overlay.stretch-fill {{
+            padding: 0px !important;
+        }}
+        .matrix-overlay.stretch-fill .matrix-grid {{
+            gap: 0px !important;
+            height: 100vh !important;
+            width: 100vw !important;
+        }}
+        .matrix-overlay.stretch-fill .matrix-item {{
+            border: none !important;
+            border-radius: 0px !important;
+        }}
+        .matrix-overlay.stretch-fill .matrix-item video {{
+            object-fit: cover !important;
+        }}
+        .matrix-overlay.stretch-fill .matrix-controls {{
+            position: absolute;
+            bottom: 15px; right: 15px; left: 15px;
+            top: auto !important;
+            z-index: 10000;
+            background: rgba(17, 24, 39, 0.95) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 8px !important;
+            padding: 12px 20px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            margin-bottom: 0 !important;
+        }}
+        .matrix-overlay.stretch-fill .matrix-controls * {{
+            pointer-events: auto;
+        }}
+        .matrix-overlay.stretch-fill:hover .matrix-controls {{
+            opacity: 1;
+        }}
+        .matrix-overlay.hide-names .matrix-label {{
+            display: none !important;
+        }}
+        
+        /* Focused Camera Grid Styles */
+        .matrix-grid.focused-active .matrix-item:not(.focused) {{
+            display: none !important;
+        }}
+        .matrix-grid.focused-active .matrix-item.focused {{
+            grid-column: 1 / -1 !important;
+            grid-row: 1 / -1 !important;
+            width: 100% !important;
+            height: 100% !important;
+        }}
+        
+        /* AI alert pulsing border style */
+        @keyframes alert-pulse {{
+            0% {{ box-shadow: inset 0 0 0 4px #f56565; border-color: #f56565; }}
+            50% {{ box-shadow: inset 0 0 0 8px #e53e3e; border-color: #e53e3e; }}
+            100% {{ box-shadow: inset 0 0 0 4px #f56565; border-color: #f56565; }}
+        }}
+        .matrix-item.ai-alert {{
+            animation: alert-pulse 1.2s infinite !important;
+            border: 2px solid #f56565 !important;
+        }}
+        
+        /* Hover details overlay inside matrix-item */
+        .matrix-item-overlay {{
+            position: absolute;
+            bottom: 8px; right: 8px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+        }}
+        .matrix-item:hover .matrix-item-overlay {{
+            opacity: 1;
+        }}
+        .matrix-item-badge {{
+            background: rgba(0, 0, 0, 0.75);
+            color: #e2e8f0;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }}
+        .matrix-item-btn {{
+            background: rgba(0, 0, 0, 0.75);
+            color: #cbd5e0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }}
+        .matrix-item-btn:hover {{
+            background: #2d3748;
+            color: #fff;
+            transform: scale(1.05);
+        }}
+        .matrix-item-btn.active {{
+            background: #48bb78;
+            color: #fff;
+            border-color: #48bb78;
+        }}
         
         /* ONVIF Event Table Styles */
         .diagnostics-table th {{
@@ -1345,6 +1487,60 @@ def get_web_ui_html(current_settings=None):
             <span style="color: #718096; margin-right: auto; padding-left: 10px; font-size: 14px; align-self: center;">
                 F11 for Full Screen • ESC to Exit
             </span>
+            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Flash red border around camera feed on active AI detections">
+                <input type="checkbox" id="matrixAiFlashToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> AI Alerts
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Automatically unmute audio when hovering over a camera feed">
+                <input type="checkbox" id="matrixAudioHoverToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> Audio Hover
+            </label>
+            <!-- Cams Per Page Dropdown -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px; border-left: 1px solid #2d3748; padding-left: 15px;">
+                <span style="color: #cbd5e1; font-size: 13px; font-weight: 600; user-select: none;">Cams Per Page:</span>
+                <select id="matrixCamsPerPageSelect" onchange="updateCamsPerPage()" style="background: #1a202c; color: #a0aec0; border: 1px solid #2d3748; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer;" title="Number of cameras to display per page">
+                    <option value="All">All</option>
+                    <option value="1">1 Cam</option>
+                    <option value="2">2 Cams</option>
+                    <option value="4">4 Cams</option>
+                    <option value="6">6 Cams</option>
+                    <option value="9">9 Cams</option>
+                    <option value="12">12 Cams</option>
+                    <option value="16">16 Cams</option>
+                </select>
+            </div>
+            
+            <!-- Manual Navigation Controls -->
+            <div id="matrixNavControls" style="display: none; align-items: center; gap: 8px; margin-right: 15px; border-left: 1px solid #2d3748; padding-left: 15px;">
+                <button class="btn-matrix" onclick="changeMatrixPage(-1)" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">&lt; Prev</button>
+                <span id="matrixPageIndicator" style="color: #cbd5e1; font-size: 12px; font-weight: 600; user-select: none;">Page 1 of 1</span>
+                <button class="btn-matrix" onclick="changeMatrixPage(1)" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">Next &gt;</button>
+            </div>
+
+            <!-- Carousel Settings Group -->
+            <div id="matrixCarouselGroup" style="display: none; align-items: center; gap: 6px; margin-right: 15px; border-left: 1px solid #2d3748; padding-left: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="matrixCarouselToggle" onchange="toggleCarouselMode()" style="width: 16px; height: 16px; cursor: pointer;"> Carousel
+                </label>
+                <select id="carouselIntervalSelect" onchange="updateCarouselSettings()" style="background: #1a202c; color: #a0aec0; border: 1px solid #2d3748; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer;" title="Rotate interval duration">
+                    <option value="3000">3s</option>
+                    <option value="5000">5s</option>
+                    <option value="10000">10s</option>
+                    <option value="15000">15s</option>
+                    <option value="30000">30s</option>
+                    <option value="60000">1m</option>
+                    <option value="120000">2m</option>
+                    <option value="300000">5m</option>
+                </select>
+            </div>
+            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Force high-definition (Main) streams for all cameras in Matrix View">
+                <input type="checkbox" id="matrixForceHighStreamToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> High Stream All
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;">
+                <input type="checkbox" id="matrixStretchToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> Stretch Fill
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;">
+                <input type="checkbox" id="matrixHideNamesToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> Hide Names
+            </label>
+            <button class="btn-matrix" onclick="resetMatrixOrder()" style="background: #4a5568;" title="Reset drag-and-drop order to default (creation order)">Reset Order</button>
             <button class="btn-matrix" onclick="toggleFullScreen()">Full Screen</button>
             <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: #f56565;">Close Matrix</button>
         </div>
@@ -2999,14 +3195,46 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
 
+        let focusedCameraId = null;
+        let matrixStreamProfiles = {{}}; // cameraId -> 'sub' | 'main'
+        let matrixMutedStates = {{}}; // cameraId -> boolean
+        let carouselIntervalId = null;
+        let carouselPage = 0;
+        let cachedAnalytics = {{}};
+
         function toggleMatrixView(active) {{
             matrixActive = active;
             const overlay = document.getElementById('matrix-overlay');
             if (active) {{
                 overlay.classList.add('active');
+                
+                // Initialize checkboxes from global settings
+                document.getElementById('matrixStretchToggle').checked = settings.matrixStretchFill === true;
+                document.getElementById('matrixHideNamesToggle').checked = settings.matrixHideNames === true;
+                document.getElementById('matrixAiFlashToggle').checked = settings.matrixAiFlash === true;
+                document.getElementById('matrixAudioHoverToggle').checked = settings.matrixAudioHover === true;
+                document.getElementById('matrixCarouselToggle').checked = settings.matrixCarousel === true;
+                document.getElementById('matrixForceHighStreamToggle').checked = settings.matrixForceHighStream === true;
+                document.getElementById('matrixCamsPerPageSelect').value = settings.matrixCamsPerPage || 'All';
+                document.getElementById('carouselIntervalSelect').value = settings.carouselInterval || '10000';
+                
+                // Apply classes
+                overlay.classList.toggle('stretch-fill', settings.matrixStretchFill === true);
+                overlay.classList.toggle('hide-names', settings.matrixHideNames === true);
+                overlay.classList.toggle('ai-flash-active', settings.matrixAiFlash === true);
+                
+                // Initialize carousel mode
+                if (settings.matrixCarousel === true && settings.matrixCamsPerPage !== 'All') {{
+                    startCarousel();
+                }} else {{
+                    stopCarousel();
+                }}
+                
                 renderMatrix();
             }} else {{
                 overlay.classList.remove('active');
+                stopCarousel();
+                focusedCameraId = null;
                 // Stop any video players in matrix
                 const grid = document.getElementById('matrix-grid');
                 if (grid) {{
@@ -3017,55 +3245,476 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
 
+        async function updateMatrixSettings() {{
+            const stretchFill = document.getElementById('matrixStretchToggle').checked;
+            const hideNames = document.getElementById('matrixHideNamesToggle').checked;
+            const aiFlash = document.getElementById('matrixAiFlashToggle').checked;
+            const audioHover = document.getElementById('matrixAudioHoverToggle').checked;
+            const forceHighStream = document.getElementById('matrixForceHighStreamToggle').checked;
+            const camsPerPage = document.getElementById('matrixCamsPerPageSelect').value;
+            const carousel = document.getElementById('matrixCarouselToggle').checked;
+            
+            const overlay = document.getElementById('matrix-overlay');
+            overlay.classList.toggle('stretch-fill', stretchFill);
+            overlay.classList.toggle('hide-names', hideNames);
+            overlay.classList.toggle('ai-flash-active', aiFlash);
+            
+            // If global override is changed, we need to re-initialize video streams that changed profile
+            const recreateStreams = settings.matrixForceHighStream !== forceHighStream;
+            
+            // Update global settings
+            settings.matrixStretchFill = stretchFill;
+            settings.matrixHideNames = hideNames;
+            settings.matrixAiFlash = aiFlash;
+            settings.matrixAudioHover = audioHover;
+            settings.matrixForceHighStream = forceHighStream;
+            settings.matrixCamsPerPage = camsPerPage;
+            settings.matrixCarousel = carousel;
+            
+            try {{
+                await fetch('/api/settings', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify(settings)
+                }});
+            }} catch (e) {{
+                console.error('Failed to save matrix settings:', e);
+            }}
+            
+            if (recreateStreams) {{
+                // Stop all video players and force full re-render to load main streams
+                const grid = document.getElementById('matrix-grid');
+                if (grid) {{
+                    grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                    grid.innerHTML = ''; // Force complete DOM rebuild on next render
+                }}
+            }}
+            
+            renderMatrix();
+        }}
+
+        // Carousel & Pagination Controller Functions
+        function startCarousel() {{
+            stopCarousel();
+            const camsPerPageVal = document.getElementById('matrixCamsPerPageSelect').value;
+            if (camsPerPageVal === 'All') return;
+            const interval = parseInt(document.getElementById('carouselIntervalSelect').value) || 10000;
+            
+            carouselIntervalId = setInterval(() => {{
+                const runningCameras = cameras.filter(c => c.status === 'running');
+                if (runningCameras.length === 0) return;
+                const pageSize = parseInt(camsPerPageVal) || 4;
+                const pageCount = Math.ceil(runningCameras.length / pageSize);
+                if (pageCount <= 1) return;
+                
+                // Force destroy existing player resources before transition to avoid leaking contexts
+                const grid = document.getElementById('matrix-grid');
+                if (grid) {{
+                    grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                    grid.innerHTML = '';
+                }}
+                
+                carouselPage = (carouselPage + 1) % pageCount;
+                renderMatrix();
+            }}, interval);
+        }}
+
+        function stopCarousel() {{
+            if (carouselIntervalId) {{
+                clearInterval(carouselIntervalId);
+                carouselIntervalId = null;
+            }}
+            carouselPage = 0;
+        }}
+
+        function toggleCarouselMode() {{
+            const isEnabled = document.getElementById('matrixCarouselToggle').checked;
+            settings.matrixCarousel = isEnabled;
+            if (isEnabled) {{
+                startCarousel();
+            }} else {{
+                stopCarousel();
+            }}
+            updateMatrixSettings();
+        }}
+
+        function updateCarouselSettings() {{
+            const interval = parseInt(document.getElementById('carouselIntervalSelect').value) || 10000;
+            settings.carouselInterval = interval;
+            
+            if (document.getElementById('matrixCarouselToggle').checked) {{
+                startCarousel();
+            }}
+            updateMatrixSettings();
+        }}
+
+        function updateCamsPerPage() {{
+            const camsPerPage = document.getElementById('matrixCamsPerPageSelect').value;
+            settings.matrixCamsPerPage = camsPerPage;
+            
+            // If camsPerPage is 'All', disable carousel
+            if (camsPerPage === 'All') {{
+                settings.matrixCarousel = false;
+                document.getElementById('matrixCarouselToggle').checked = false;
+                stopCarousel();
+            }}
+            
+            // Reset page counters
+            carouselPage = 0;
+            
+            // Stop all video players and force full re-render to load correct cameras
+            const grid = document.getElementById('matrix-grid');
+            if (grid) {{
+                grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                grid.innerHTML = '';
+            }}
+            
+            if (settings.matrixCarousel === true) {{
+                startCarousel();
+            }} else {{
+                stopCarousel();
+            }}
+            
+            updateMatrixSettings();
+        }}
+
+        function changeMatrixPage(direction) {{
+            const runningCameras = cameras.filter(c => c.status === 'running');
+            if (runningCameras.length === 0) return;
+            
+            const camsPerPageVal = document.getElementById('matrixCamsPerPageSelect').value;
+            if (camsPerPageVal === 'All') return;
+            
+            const pageSize = parseInt(camsPerPageVal) || 4;
+            const pageCount = Math.ceil(runningCameras.length / pageSize);
+            if (pageCount <= 1) return;
+            
+            // Change page with wrap-around
+            carouselPage = (carouselPage + direction + pageCount) % pageCount;
+            
+            // Force destroy existing player resources before transition
+            const grid = document.getElementById('matrix-grid');
+            if (grid) {{
+                grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                grid.innerHTML = '';
+            }}
+            
+            // Reset carousel timer if it's currently running
+            if (carouselIntervalId) {{
+                startCarousel();
+            }}
+            
+            renderMatrix();
+        }}
+
+        // Drag and Drop Sorting for Matrix View
+        let draggedCameraId = null;
+
+        function handleDragStart(e, cameraId) {{
+            draggedCameraId = cameraId;
+            e.dataTransfer.effectAllowed = 'move';
+            
+            const item = document.querySelector(`.matrix-item[data-id="${{cameraId}}"]`);
+            if (item) {{
+                item.classList.add('dragging');
+            }}
+        }}
+
+        function handleDragOver(e) {{
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }}
+
+        async function handleDrop(e, targetCameraId) {{
+            e.preventDefault();
+            if (draggedCameraId === null || draggedCameraId === targetCameraId) return;
+            
+            // Find indices in global cameras array
+            const draggedIdx = cameras.findIndex(c => c.id === draggedCameraId);
+            const targetIdx = cameras.findIndex(c => c.id === targetCameraId);
+            
+            if (draggedIdx !== -1 && targetIdx !== -1) {{
+                // Swap/Move item in cameras array
+                const [movedCam] = cameras.splice(draggedIdx, 1);
+                cameras.splice(targetIdx, 0, movedCam);
+                
+                // Get all camera IDs in order
+                const orderedIds = cameras.map(c => c.id);
+                
+                // Save sorting order to backend
+                try {{
+                    await fetch('/api/cameras/reorder', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify({{ ordered_ids: orderedIds }})
+                    }});
+                }} catch (err) {{
+                    console.error('Failed to save sorted camera order:', err);
+                }}
+                
+                // Force full rebuild of grid players
+                const grid = document.getElementById('matrix-grid');
+                if (grid) {{
+                    grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                    grid.innerHTML = '';
+                }}
+                
+                renderMatrix();
+                
+                // Re-render main page camera list to match new order
+                renderCameras();
+            }}
+        }}
+
+        function handleDragEnd(e) {{
+            draggedCameraId = null;
+            const items = document.querySelectorAll('.matrix-item');
+            items.forEach(item => item.classList.remove('dragging'));
+        }}
+
+        async function resetMatrixOrder() {{
+            if (!confirm('Are you sure you want to reset the camera order to default?')) return;
+            try {{
+                const resp = await fetch('/api/cameras/reorder/reset', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }}
+                }});
+                if (resp.ok) {{
+                    cameras.sort((a, b) => a.id - b.id);
+                    
+                    const grid = document.getElementById('matrix-grid');
+                    if (grid) {{
+                        grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                        grid.innerHTML = '';
+                    }}
+                    
+                    renderMatrix();
+                    renderCameras();
+                }}
+            }} catch (err) {{
+                console.error('Failed to reset camera order:', err);
+            }}
+        }}
+
+        // Double-click grid focus toggle
+        function toggleCameraFocus(cameraId) {{
+            const grid = document.getElementById('matrix-grid');
+            const items = grid.querySelectorAll('.matrix-item');
+            const clickedItem = grid.querySelector(`.matrix-item[data-id="${{cameraId}}"]`);
+            
+            if (focusedCameraId === cameraId) {{
+                // Release focus
+                focusedCameraId = null;
+                grid.classList.remove('focused-active');
+                if (clickedItem) clickedItem.classList.remove('focused');
+            }} else {{
+                // Focus this camera
+                focusedCameraId = cameraId;
+                items.forEach(el => el.classList.remove('focused'));
+                grid.classList.add('focused-active');
+                if (clickedItem) clickedItem.classList.add('focused');
+            }}
+        }}
+
+        // Stream profile (HD/SD) switcher
+        function toggleMatrixStreamProfile(cameraId, pathName) {{
+            const current = matrixStreamProfiles[cameraId] || 'sub';
+            const next = current === 'sub' ? 'main' : 'sub';
+            matrixStreamProfiles[cameraId] = next;
+            
+            // Re-create the player with the new profile suffix
+            const videoId = `matrix-player-${{cameraId}}`;
+            destroyPlayer(videoId);
+            
+            // Re-initialize player
+            initVideoPlayer(cameraId, pathName, videoId);
+            
+            // Update button label / style
+            const btn = document.querySelector(`.matrix-item[data-id="${{cameraId}}"] .stream-profile-btn`);
+            if (btn) {{
+                btn.textContent = next === 'main' ? 'HD' : 'SD';
+                btn.classList.toggle('active', next === 'main');
+            }}
+        }}
+
+        // Audio controls
+        function toggleMatrixAudio(cameraId) {{
+            const video = document.getElementById(`matrix-player-${{cameraId}}`);
+            if (!video) return;
+            
+            const isMuted = !video.muted;
+            video.muted = isMuted;
+            matrixMutedStates[cameraId] = isMuted;
+            
+            // Update button UI
+            const btn = document.querySelector(`.matrix-item[data-id="${{cameraId}}"] .audio-btn`);
+            if (btn) {{
+                btn.innerHTML = isMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+                btn.classList.toggle('active', !isMuted);
+            }}
+        }}
+
+        function handleMatrixItemHover(cameraId, isHover) {{
+            const audioHoverEnabled = document.getElementById('matrixAudioHoverToggle').checked;
+            if (!audioHoverEnabled) return;
+            
+            const video = document.getElementById(`matrix-player-${{cameraId}}`);
+            if (!video) return;
+            
+            if (isHover) {{
+                // Unmute on hover
+                video.muted = false;
+            }} else {{
+                // Mute when mouse leaves
+                // Only if user hasn't explicitly set unmuted via button
+                if (matrixMutedStates[cameraId] !== false) {{
+                    video.muted = true;
+                }}
+            }}
+            
+            // Update button UI state
+            const btn = document.querySelector(`.matrix-item[data-id="${{cameraId}}"] .audio-btn`);
+            if (btn) {{
+                btn.innerHTML = video.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+                btn.classList.toggle('active', !video.muted);
+            }}
+        }}
+
         function renderMatrix() {{
             const grid = document.getElementById('matrix-grid');
-            const runningCameras = cameras.filter(c => c.status === 'running');
+            let runningCameras = cameras.filter(c => c.status === 'running');
             
             if (runningCameras.length === 0) {{
                 grid.innerHTML = '<div style="color: white; grid-column: 1/-1; text-align: center; padding-top: 100px;">No cameras are currently running.</div>';
                 return;
             }}
             
+            // Pagination/Carousel calculations
+            const camsPerPageVal = document.getElementById('matrixCamsPerPageSelect').value;
+            const hasCamsPerPage = camsPerPageVal !== 'All';
+            const navControls = document.getElementById('matrixNavControls');
+            const carouselGroup = document.getElementById('matrixCarouselGroup');
+            
+            if (hasCamsPerPage) {{
+                const pageSize = parseInt(camsPerPageVal) || 4;
+                const pageCount = Math.ceil(runningCameras.length / pageSize);
+                if (carouselPage >= pageCount) carouselPage = 0;
+                if (carouselPage < 0) carouselPage = pageCount - 1;
+                
+                // Show or hide Prev/Next controls and Page Indicator
+                if (pageCount > 1) {{
+                    if (navControls) navControls.style.display = 'flex';
+                    const indicator = document.getElementById('matrixPageIndicator');
+                    if (indicator) indicator.textContent = `Page ${{carouselPage + 1}} of ${{pageCount}}`;
+                }} else {{
+                    if (navControls) navControls.style.display = 'none';
+                }}
+                
+                // Enable carousel options since we have pages
+                if (carouselGroup) carouselGroup.style.display = 'flex';
+                
+                runningCameras = runningCameras.slice(carouselPage * pageSize, (carouselPage + 1) * pageSize);
+            }} else {{
+                if (navControls) navControls.style.display = 'none';
+                if (carouselGroup) carouselGroup.style.display = 'none';
+            }}
+            
             const count = runningCameras.length;
             let cols = 1;
-            if (count > 9) cols = 4;
+            if (focusedCameraId) cols = 1;
+            else if (count > 9) cols = 4;
             else if (count > 4) cols = 3;
             else if (count > 1) cols = 2;
             
             grid.style.gridTemplateColumns = `repeat(${{cols}}, 1fr)`;
             
+            // Toggle focus-active class
+            grid.classList.toggle('focused-active', focusedCameraId !== null);
+            
             // Check if we need to re-render
             const currentMatrixIds = Array.from(grid.querySelectorAll('.matrix-item')).map(el => el.dataset.id).join(',');
             const newMatrixIds = runningCameras.map(c => c.id).join(',');
             
-            if (currentMatrixIds === newMatrixIds) return;
-            
-            // Cleanup existing players before re-rendering
-            grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
-            
-            grid.innerHTML = runningCameras.map(cam => {{
-                if (cam.disableSubstream) {{
+            if (currentMatrixIds !== newMatrixIds) {{
+                // Cleanup existing players before re-rendering
+                grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
+                
+                grid.innerHTML = runningCameras.map(cam => {{
+                    const isFocused = focusedCameraId === cam.id;
+                    const hasAiAlert = settings.matrixAiFlash && cam.aiLastDetection && cam.aiLastDetection.length > 0;
+                    
+                    if (cam.disableSubstream) {{
+                        return `
+                            <div class="matrix-item ${{isFocused ? 'focused' : ''}} ${{hasAiAlert ? 'ai-alert' : ''}}" data-id="${{cam.id}}" draggable="true" ondragstart="handleDragStart(event, ${{cam.id}})" ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${{cam.id}})" ondragend="handleDragEnd(event)" ondblclick="toggleCameraFocus(${{cam.id}})" style="display: flex; align-items: center; justify-content: center; background: #1a202c; border: 1px solid var(--border-color); flex-direction: column;">
+                                <div class="matrix-label">${{cam.name}}</div>
+                                <div style="font-size: 24px; color: #a0aec0; margin-bottom: 5px;"><i class="fas fa-video-slash"></i></div>
+                                <div style="color: #a0aec0; font-size: 12px; font-weight: 500;">Substream Disabled</div>
+                            </div>
+                        `;
+                    }}
+                    
+                    const isForceHigh = settings.matrixForceHighStream === true;
+                    const profile = isForceHigh ? 'main' : (matrixStreamProfiles[cam.id] || 'sub');
+                    const isMuted = matrixMutedStates[cam.id] !== false; // Muted by default
+                    const hdBtnText = isForceHigh ? 'HD (Forced)' : (profile === 'main' ? 'HD' : 'SD');
+                    const hdDisabledAttr = isForceHigh ? 'disabled style="opacity: 0.6; cursor: not-allowed;" title="HD forced globally"' : '';
+                    
                     return `
-                        <div class="matrix-item" data-id="${{cam.id}}" style="display: flex; align-items: center; justify-content: center; background: #1a202c; border: 1px solid var(--border-color); flex-direction: column;">
+                        <div class="matrix-item ${{isFocused ? 'focused' : ''}} ${{hasAiAlert ? 'ai-alert' : ''}}" data-id="${{cam.id}}" draggable="true" ondragstart="handleDragStart(event, ${{cam.id}})" ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${{cam.id}})" ondragend="handleDragEnd(event)" ondblclick="toggleCameraFocus(${{cam.id}})" onmouseenter="handleMatrixItemHover(${{cam.id}}, true)" onmouseleave="handleMatrixItemHover(${{cam.id}}, false)">
                             <div class="matrix-label">${{cam.name}}</div>
-                            <div style="font-size: 24px; color: #a0aec0; margin-bottom: 5px;"><i class="fas fa-video-slash"></i></div>
-                            <div style="color: #a0aec0; font-size: 12px; font-weight: 500;">Substream Disabled</div>
+                            <video id="matrix-player-${{cam.id}}" autoplay ${{isMuted ? 'muted' : ''}} playsinline></video>
+                            
+                            <!-- Hover Tools Overlay -->
+                            <div class="matrix-item-overlay">
+                                <span class="matrix-item-badge codec-badge" id="matrix-codec-${{cam.id}}">-</span>
+                                <span class="matrix-item-badge bitrate-badge" id="matrix-bitrate-${{cam.id}}">-</span>
+                                <button class="matrix-item-btn stream-profile-btn ${{profile === 'main' ? 'active' : ''}}" ${{hdDisabledAttr}} onclick="event.stopPropagation(); toggleMatrixStreamProfile(${{cam.id}}, '${{cam.pathName}}')">${{hdBtnText}}</button>
+                                <button class="matrix-item-btn audio-btn ${{!isMuted ? 'active' : ''}}" onclick="event.stopPropagation(); toggleMatrixAudio(${{cam.id}})">
+                                    ${{isMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>'}}
+                                </button>
+                            </div>
                         </div>
                     `;
-                }}
-                return `
-                    <div class="matrix-item" data-id="${{cam.id}}">
-                        <div class="matrix-label">${{cam.name}}</div>
-                        <video id="matrix-player-${{cam.id}}" autoplay muted playsinline></video>
-                    </div>
-                `;
-            }}).join('');
-            
-            runningCameras.forEach(cam => {{
-                if (!cam.disableSubstream) {{
-                    initVideoPlayer(cam.id, cam.pathName, `matrix-player-${{cam.id}}`);
-                }}
-            }});
+                }}).join('');
+                
+                runningCameras.forEach(cam => {{
+                    if (!cam.disableSubstream) {{
+                        initVideoPlayer(cam.id, cam.pathName, `matrix-player-${{cam.id}}`);
+                    }}
+                }});
+            }} else {{
+                // Update dynamic properties: focus class, alert status, metrics
+                runningCameras.forEach(cam => {{
+                    const el = grid.querySelector(`.matrix-item[data-id="${{cam.id}}"]`);
+                    if (el) {{
+                        el.classList.toggle('focused', focusedCameraId === cam.id);
+                        
+                        const hasAiAlert = settings.matrixAiFlash && cam.aiLastDetection && cam.aiLastDetection.length > 0;
+                        el.classList.toggle('ai-alert', hasAiAlert);
+                        
+                        // Update metrics overlay
+                        const pName = cam.pathName || cam.path_name;
+                        const profile = (settings.matrixForceHighStream === true) ? 'main' : (matrixStreamProfiles[cam.id] || 'sub');
+                        const stats = cachedAnalytics[pName + '_' + profile];
+                        
+                        const codecEl = el.querySelector('.codec-badge');
+                        const bitrateEl = el.querySelector('.bitrate-badge');
+                        
+                        if (stats) {{
+                            if (bitrateEl) bitrateEl.textContent = stats.bitrate ? stats.bitrate.toFixed(0) + ' kbps' : '0 kbps';
+                            if (codecEl && stats.tracks && stats.tracks.length > 0) {{
+                                // Find video track codec name
+                                let codec = 'H264';
+                                stats.tracks.forEach(track => {{
+                                    const t = (typeof track === 'string' ? track : JSON.stringify(track)).toLowerCase();
+                                    if (t.includes('h265') || t.includes('hevc')) codec = 'H265';
+                                }});
+                                codecEl.textContent = codec;
+                            }}
+                        }}
+                    }}
+                }});
+            }}
         }}
 
         function toggleFullScreen() {{
@@ -3323,7 +3972,12 @@ def get_web_ui_html(current_settings=None):
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 
-                const whepUrl = `http://${{serverIp}}:8889/${{pathName}}_sub/whep`;
+                let suffix = '_sub';
+                if (videoId.startsWith('matrix-player-')) {{
+                    const profile = (settings.matrixForceHighStream === true) ? 'main' : (matrixStreamProfiles[cameraId] || 'sub');
+                    suffix = profile === 'main' ? '_main' : '_sub';
+                }}
+                const whepUrl = `http://${{serverIp}}:8889/${{pathName}}${{suffix}}/whep`;
                 
                 const response = await fetch(whepUrl, {{
                     method: 'POST',
@@ -3392,9 +4046,15 @@ def get_web_ui_html(current_settings=None):
                 credentials = `?user=${{u}}&pass=${{p}}`;
             }}
             
+            let suffix = '_sub';
+            if (videoId.startsWith('matrix-player-')) {{
+                const profile = (settings.matrixForceHighStream === true) ? 'main' : (matrixStreamProfiles[cameraId] || 'sub');
+                suffix = profile === 'main' ? '_main' : '_sub';
+            }}
+            
             // Construct stream URL - Use current protocol if possible to support reverse proxies
             const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-            const streamUrl = `http://${{serverIp}}:8888/${{pathName}}_sub/index.m3u8${{credentials}}`;
+            const streamUrl = `http://${{serverIp}}:8888/${{pathName}}${{suffix}}/index.m3u8${{credentials}}`;
             
             if (typeof Hls !== 'undefined' && Hls.isSupported()) {{
                 // Prefer HLS.js if available and supported (Chrome, Firefox, Edge, Android, etc.)
@@ -5441,6 +6101,13 @@ def get_web_ui_html(current_settings=None):
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
                 debugMode: document.getElementById('debugMode').checked,
                 watchdogEnabled: document.getElementById('watchdogEnabled') ? document.getElementById('watchdogEnabled').checked : false,
+                matrixStretchFill: settings.matrixStretchFill === true,
+                matrixHideNames: settings.matrixHideNames === true,
+                matrixAiFlash: settings.matrixAiFlash === true,
+                matrixAudioHover: settings.matrixAudioHover === true,
+                matrixCarousel: settings.matrixCarousel === true,
+                carouselSize: parseInt(settings.carouselSize) || 4,
+                carouselInterval: parseInt(settings.carouselInterval) || 10000,
                 advancedSettings: {{
                     mediamtx: {{
                         writeQueueSize: parseInt(document.getElementById('mediamtx_writeQueueSize').value) || 32768,
@@ -5756,6 +6423,11 @@ def get_web_ui_html(current_settings=None):
                 
                 const stats = await statsResp.json();
                 const analytics = await analyticsResp.json();
+                cachedAnalytics = analytics;
+                
+                if (matrixActive) {{
+                    renderMatrix();
+                }}
                 
                 // Update global server stats
                 if (stats.cpu_percent !== undefined) {{
