@@ -1230,12 +1230,12 @@ def get_web_ui_html(current_settings=None):
             z-index: 10000;
             background: #1e293b;
             color: #f8fafc;
-            padding: 8px 12px;
+            padding: 10px 14px;
             border-radius: 6px;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 500;
-            line-height: 1.4;
-            max-width: 280px;
+            line-height: 1.5;
+            max-width: 360px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
             border: 1px solid #334155;
             pointer-events: none;
@@ -3059,13 +3059,10 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                     
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px; margin-bottom: 6px;">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
                         <div class="status-badge ${{cam.assignedIp ? 'running' : ''}}" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; ${{!cam.assignedIp ? 'background: #4a5568; color: white;' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
                         <div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
-                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="UUID: Unique device identifier used by ONVIF discovery clients (e.g. UniFi Protect).">UUID: ${{cam.uuid}}</div>` : ''}}
-                    </div>
-                    
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
+                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
                         ${{(() => {{
                             let onvifText = 'ONVIF: Offline';
                             let onvifBg = '#4a5568';
@@ -3074,7 +3071,7 @@ def get_web_ui_html(current_settings=None):
                                 const subs = cam.onvifActiveSubscriptions || 0;
                                 const ips = cam.onvifSubscribersIPs || [];
                                 if (subs > 0) {{
-                                    onvifText = 'ONVIF: Subscribed (' + subs + ')';
+                                    onvifText = 'ONVIF: (' + subs + ')';
                                     onvifBg = '#48bb78';
                                     const ipListStr = ips.length > 0 ? ' (IPs: ' + ips.join(', ') + ')' : '';
                                     onvifTooltip = 'ONVIF Events Subscription is Active: ' + subs + ' NVR/Client(s)' + ipListStr + ' are actively subscribed to receive ONVIF events.';
