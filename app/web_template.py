@@ -2689,9 +2689,40 @@ def get_web_ui_html(current_settings=None):
                     const container = document.getElementById('logs-container');
                     
                     // Simple ANSI escape code stripping (common in terminal output)
-                    const cleanLogs = data.logs.replace(/\u001b\\[[0-9;]*[a-zA-Z]/g, '');
+                    const cleanLogs = data.logs.replace(/\\u001b\\[[0-9;]*[a-zA-Z]/g, '');
                     
-                    container.textContent = cleanLogs || "No logs available.";
+                    function formatLogText(text) {{
+                        if (!text) return "No logs available.";
+                        let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        
+                        // Phrases
+                        const cyanPhrases = ['Starting Web UI', 'SERVER RUNNING', 'Web Interface:', 'RTSP Server:', '\\\\\\* Serving Flask app'];
+                        cyanPhrases.forEach(phrase => {{
+                            html = html.replace(new RegExp('(' + phrase + ')', 'g'), '<span style="color: #8be9fd;">$1</span>');
+                        }});
+                        
+                        // Words
+                        html = html.replace(/\\b(successfully)\\b/gi, '<span style="color: #50fa7b;">$&</span>');
+                        html = html.replace(/\\b(Shutdown|stopped|Warning)\\b/gi, '<span style="color: #f1fa8c;">$&</span>');
+                        html = html.replace(/\\b(failed|Error|Exception|faile)\\b/gi, '<span style="color: #ff5555;">$&</span>');
+                        
+                        // rtsp tags
+                        html = html.replace(/(\\[rtsp @ 0x[0-9a-f]+\\])/gi, '<span style="color: #ff79c6;">$1</span>');
+                        
+                        // General brackets
+                        html = html.replace(/(\\[([^\\]]+)\\])/g, function(match) {{
+                            if (match.includes('rtsp @')) return match;
+                            if (match.includes('<span')) return match;
+                            return '<span style="color: #8be9fd;">' + match + '</span>';
+                        }});
+                        
+                        // IP addresses
+                        html = html.replace(/\\b(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\b/g, '<span style="color: #ff79c6;">$1</span>');
+                        
+                        return html;
+                    }}
+                    
+                    container.innerHTML = formatLogText(cleanLogs);
                     
                     if (document.getElementById('autoScrollLogs').checked) {{
                         container.scrollTop = container.scrollHeight;
