@@ -2059,7 +2059,33 @@ def get_web_ui_html(current_settings=None):
                             <div style="font-weight: bold; color: #f6ad55; font-size: 13px; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Local AI Dependencies Missing</div>
                             <div style="color: #cbd5e0; font-size: 12px; line-height: 1.4;">The required AI libraries (<code>ultralytics</code> and <code>opencv-python-headless</code>) are not installed on this server. This is required for local object detection.</div>
                         </div>
-                        <button type="button" class="btn-submit" id="installAiBtn" onclick="startAiInstallation()" style="margin-top: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        <div style="margin-top: 10px;">
+                            <div style="font-size: 11px; font-weight: 600; color: #a0aec0; margin-bottom: 6px;">PyTorch Backend:</div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid #2d3748;">
+                                    <input type="radio" name="aiBackend" value="cpu" checked style="width: auto; accent-color: #3182ce;">
+                                    <div>
+                                        <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">CPU Only</span>
+                                        <span style="font-size: 10px; color: #718096; margin-left: 6px;">~200MB download, works everywhere</span>
+                                    </div>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid #2d3748;">
+                                    <input type="radio" name="aiBackend" value="cuda" style="width: auto; accent-color: #48bb78;">
+                                    <div>
+                                        <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">NVIDIA CUDA GPU</span>
+                                        <span style="font-size: 10px; color: #718096; margin-left: 6px;">~2.5GB download, requires NVIDIA GPU</span>
+                                    </div>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid #2d3748;">
+                                    <input type="radio" name="aiBackend" value="mps" style="width: auto; accent-color: #9f7aea;">
+                                    <div>
+                                        <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Apple Silicon (MPS)</span>
+                                        <span style="font-size: 10px; color: #718096; margin-left: 6px;">Auto-detect, uses Metal on macOS</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-submit" id="installAiBtn" onclick="startAiInstallation()" style="margin-top: 15px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             <i class="fas fa-download"></i> Install AI Dependencies
                         </button>
                         <div id="aiInstallProgressContainer" style="display: none; margin-top: 15px;">
@@ -2093,6 +2119,16 @@ def get_web_ui_html(current_settings=None):
                         </div>
                         <div style="color: #718096; font-size: 10px; margin-top: 5px;">
                             Sends a 3-second motion event to all ONVIF clients (e.g., UniFi Protect) currently subscribed to this camera.
+                        </div>
+                    </div>
+                    
+                    <div id="aiUninstallGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3748;">
+                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Maintenance</div>
+                        <button type="button" class="btn" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background-color: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
+                            <i class="fas fa-trash-alt"></i> Uninstall AI Dependencies
+                        </button>
+                        <div style="color: #718096; font-size: 10px; margin-top: 5px;">
+                            Uninstalls YOLO framework, PyTorch, and related components from the python environment to free up disk space or allow a fresh reinstall.
                         </div>
                     </div>
                 </div>
@@ -3903,6 +3939,7 @@ def get_web_ui_html(current_settings=None):
             const aiInstallGroup = document.getElementById('aiInstallGroup');
             const smartGroup = document.getElementById('sendSmartOnvifTopicsGroup');
             const aiHwInfoGroup = document.getElementById('aiHardwareInfoGroup');
+            const aiUninstallGroup = document.getElementById('aiUninstallGroup');
             
             if (checked && source === 'ai') {{
                 if (isAiInstalled) {{
@@ -3914,18 +3951,21 @@ def get_web_ui_html(current_settings=None):
                     if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'block';
                     if (smartGroup) smartGroup.style.display = 'block';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'none';
+                    if (aiUninstallGroup) aiUninstallGroup.style.display = 'block';
                 }} else {{
                     if (aiTargetGroup) aiTargetGroup.style.display = 'none';
                     if (aiModelGroup) aiModelGroup.style.display = 'none';
                     if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
                     if (smartGroup) smartGroup.style.display = 'none';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'block';
+                    if (aiUninstallGroup) aiUninstallGroup.style.display = 'none';
                 }}
             }} else {{
                 if (aiModelGroup) aiModelGroup.style.display = 'none';
                 if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
                 if (smartGroup) smartGroup.style.display = 'none';
                 if (aiInstallGroup) aiInstallGroup.style.display = 'none';
+                if (aiUninstallGroup) aiUninstallGroup.style.display = 'none';
             }}
         }}
 
@@ -3966,11 +4006,17 @@ def get_web_ui_html(current_settings=None):
 
         async function startAiInstallation() {{
             const btn = document.getElementById('installAiBtn');
+            const selectedBackend = document.querySelector('input[name="aiBackend"]:checked');
+            const mode = selectedBackend ? selectedBackend.value : 'cpu';
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Installer...';
             
             try {{
-                const response = await fetch('/api/ai/install', {{ method: 'POST' }});
+                const response = await fetch('/api/ai/install', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{mode: mode}})
+                }});
                 const data = await response.json();
                 
                 document.getElementById('aiInstallProgressContainer').style.display = 'block';
@@ -3980,6 +4026,26 @@ def get_web_ui_html(current_settings=None):
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-download"></i> Install AI Dependencies';
                 alert("Failed to start installation: " + err);
+            }}
+        }}
+
+        async function startAiUninstall() {{
+            if (!confirm("Are you sure you want to uninstall all AI dependencies (PyTorch, YOLO framework, OpenCV Headless)? This will disable local AI object detection until reinstalled.")) return;
+            const btn = document.getElementById('uninstallAiBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Uninstaller...';
+            
+            try {{
+                const response = await fetch('/api/ai/uninstall', {{ method: 'POST' }});
+                const data = await response.json();
+                
+                document.getElementById('aiInstallProgressContainer').style.display = 'block';
+                pollAiInstallProgress();
+                aiInstallInterval = setInterval(pollAiInstallProgress, 1000);
+            }} catch (err) {{
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i> Uninstall AI Dependencies';
+                alert("Failed to start uninstallation: " + err);
             }}
         }}
 
@@ -3996,7 +4062,8 @@ def get_web_ui_html(current_settings=None):
                 
                 const statusText = document.getElementById('aiInstallStatusText');
                 const spinner = document.getElementById('aiInstallSpinner');
-                const btn = document.getElementById('installAiBtn');
+                const installBtn = document.getElementById('installAiBtn');
+                const uninstallBtn = document.getElementById('uninstallAiBtn');
                 
                 if (data.status === 'success') {{
                     clearInterval(aiInstallInterval);
@@ -4009,13 +4076,34 @@ def get_web_ui_html(current_settings=None):
                     }}, 2000);
                 }} else if (data.status === 'failed') {{
                     clearInterval(aiInstallInterval);
-                    statusText.textContent = "Installation Failed!";
+                    statusText.textContent = "Operation Failed!";
                     statusText.style.color = "#f56565";
                     if (spinner) spinner.innerHTML = '<i class="fas fa-times-circle" style="color: #f56565;"></i>';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-redo"></i> Retry Installation';
+                    if (installBtn) {{
+                        installBtn.disabled = false;
+                        installBtn.innerHTML = '<i class="fas fa-redo"></i> Retry Installation';
+                    }}
+                    if (uninstallBtn) {{
+                        uninstallBtn.disabled = false;
+                        uninstallBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Uninstall AI Dependencies';
+                    }}
+                }} else if (data.status === 'uninstalling') {{
+                    statusText.textContent = "Uninstalling AI Dependencies (this may take a minute)...";
+                    statusText.style.color = "#3182ce";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i>';
+                }} else if (data.status === 'idle') {{
+                    clearInterval(aiInstallInterval);
+                    statusText.textContent = "Uninstall Completed Successfully!";
+                    statusText.style.color = "#48bb78";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-check-circle" style="color: #48bb78;"></i>';
+                    isAiInstalled = false;
+                    setTimeout(() => {{
+                        updateAiUiState();
+                    }}, 2000);
                 }} else {{
                     statusText.textContent = "Installing AI Dependencies (this may take a few minutes)...";
+                    statusText.style.color = "#3182ce";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i>';
                 }}
             }} catch (err) {{
                 console.error("Error polling progress:", err);

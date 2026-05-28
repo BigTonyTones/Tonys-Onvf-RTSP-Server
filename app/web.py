@@ -1454,14 +1454,25 @@ def create_web_app(manager):
             self.lock = threading.Lock()
             self._thread = None
 
-        def start_install(self):
+        def start_install(self, mode="cpu"):
             with self.lock:
-                if self.status == "installing":
+                if self.status in ("installing", "uninstalling"):
                     return False
                 self.status = "installing"
                 self.log = ["Starting installation..."]
                 import threading
-                self._thread = threading.Thread(target=self._run_install, daemon=True)
+                self._thread = threading.Thread(target=self._run_install, args=(mode,), daemon=True)
+                self._thread.start()
+                return True
+
+        def start_uninstall(self):
+            with self.lock:
+                if self.status in ("installing", "uninstalling"):
+                    return False
+                self.status = "uninstalling"
+                self.log = ["Starting uninstallation..."]
+                import threading
+                self._thread = threading.Thread(target=self._run_uninstall, daemon=True)
                 self._thread.start()
                 return True
 
@@ -1492,7 +1503,7 @@ def create_web_app(manager):
                     self.log.append(f"Command execution error: {str(e)}")
                 return -1
 
-        def _run_install(self):
+        def _run_install(self, mode="cpu"):
             import shutil
             local_tmp = None
             try:
@@ -1518,8 +1529,56 @@ def create_web_app(manager):
                 with self.lock:
                     self.log.append("Starting installation...")
                     self.log.append(f"Redirecting pip temporary directory to: {local_tmp}")
+                    self.log.append(f"Selected PyTorch backend: {mode}")
 
-                # Step 1: Install ultralytics
+                # Step 1: Install PyTorch with the selected backend
+                if mode == "cuda":
+                    with self.lock:
+                        self.log.append("Installing PyTorch with NVIDIA CUDA support (~2.5GB download)...")
+                    # Try to detect CUDA version via nvidia-smi
+                    torch_index = "https://download.pytorch.org/whl/cu121"
+                    try:
+                        import subprocess as _sp
+                        nv = _sp.run(["nvidia-smi"], capture_output=True, text=True, timeout=10)
+                        if nv.returncode == 0:
+                            import re
+                            m = re.search(r'CUDA Version:\s+([\d]+)', nv.stdout)
+                            if m:
+                                cuda_major = int(m.group(1))
+                                if cuda_major >= 13:
+                                    torch_index = "https://download.pytorch.org/whl/cu130"
+                                    with self.lock:
+                                        self.log.append(f"Detected CUDA {cuda_major}.x — using cu130 wheels")
+                                else:
+                                    with self.lock:
+                                        self.log.append(f"Detected CUDA {cuda_major}.x — using cu121 wheels")
+                    except Exception:
+                        with self.lock:
+                            self.log.append("Could not detect CUDA version, defaulting to cu121")
+                    cmd_torch = [sys.executable, "-m", "pip", "install", "--no-cache-dir",
+                                 "torch", "torchvision", "torchaudio", "--index-url", torch_index]
+                elif mode == "mps":
+                    with self.lock:
+                        self.log.append("Installing PyTorch with Apple Silicon auto-detect...")
+                    cmd_torch = [sys.executable, "-m", "pip", "install", "--no-cache-dir",
+                                 "torch", "torchvision", "torchaudio"]
+                else:
+                    with self.lock:
+                        self.log.append("Installing PyTorch CPU-only (~200MB download)...")
+                    cmd_torch = [sys.executable, "-m", "pip", "install", "--no-cache-dir",
+                                 "torch", "torchvision", "torchaudio",
+                                 "--index-url", "https://download.pytorch.org/whl/cpu"]
+
+                rc = self._run_cmd(cmd_torch, custom_env)
+                if rc != 0:
+                    with self.lock:
+                        self.status = "failed"
+                        self.log.append(f"Failed to install PyTorch (exit code {rc})")
+                    return
+
+                # Step 2: Install ultralytics
+                with self.lock:
+                    self.log.append("Installing ultralytics (YOLO framework)...")
                 cmd_ultra = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "ultralytics"]
                 rc = self._run_cmd(cmd_ultra, custom_env)
                 if rc != 0:
@@ -1528,11 +1587,11 @@ def create_web_app(manager):
                         self.log.append(f"Failed to install ultralytics (exit code {rc})")
                     return
 
-                # Step 2: Uninstall opencv-python (GUI version) to prevent libGL conflict
+                # Step 3: Uninstall opencv-python (GUI version) to prevent libGL conflict
                 cmd_un = [sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python"]
                 self._run_cmd(cmd_un, custom_env)
 
-                # Step 3: Install opencv-python-headless
+                # Step 4: Install opencv-python-headless
                 cmd_head = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "opencv-python-headless"]
                 rc = self._run_cmd(cmd_head, custom_env)
                 
@@ -1553,6 +1612,42 @@ def create_web_app(manager):
                         shutil.rmtree(local_tmp, ignore_errors=True)
                     except Exception:
                         pass
+
+        def _run_uninstall(self):
+            try:
+                import sys
+                import os
+                import time
+                with self.lock:
+                    self.log.append("Uninstalling AI dependencies...")
+                
+                cmd = [sys.executable, "-m", "pip", "uninstall", "-y", "ultralytics", "torch", "torchvision", "torchaudio", "opencv-python-headless"]
+                rc = self._run_cmd(cmd, os.environ.copy())
+                
+                with self.lock:
+                    if rc == 0:
+                        self.status = "idle"
+                        self.log.append("Uninstall completed successfully! Restarting server...")
+                    else:
+                        self.status = "failed"
+                        self.log.append(f"Failed to uninstall dependencies (exit code {rc})")
+                
+                if rc == 0:
+                    time.sleep(2)
+                    print("\n\nUninstall complete! Restarting server...")
+                    if hasattr(manager, 'mediamtx') and manager.mediamtx:
+                        try:
+                            manager.mediamtx.stop()
+                        except Exception:
+                            pass
+                    if sys.platform.startswith('linux'):
+                        os._exit(42)
+                    else:
+                        os._exit(0)
+            except Exception as e:
+                with self.lock:
+                    self.status = "failed"
+                    self.log.append(f"Uninstall error: {str(e)}")
 
     ai_installer = AIInstaller()
 
@@ -1575,7 +1670,17 @@ def create_web_app(manager):
     @app.route('/api/ai/install', methods=['POST'])
     @login_required
     def start_ai_install():
-        success = ai_installer.start_install()
+        data = request.json or {}
+        mode = data.get('mode', 'cpu')
+        if mode not in ('cpu', 'cuda', 'mps'):
+            mode = 'cpu'
+        success = ai_installer.start_install(mode=mode)
+        return jsonify({'success': success, 'status': ai_installer.status})
+
+    @app.route('/api/ai/uninstall', methods=['POST'])
+    @login_required
+    def start_ai_uninstall():
+        success = ai_installer.start_uninstall()
         return jsonify({'success': success, 'status': ai_installer.status})
 
     @app.route('/api/ai/install/progress', methods=['GET'])

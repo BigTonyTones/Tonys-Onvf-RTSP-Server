@@ -255,7 +255,6 @@ setup_ai_engine() {
     
     echo -e "${YELLOW}Would you like to install the local AI Object Detection Engine (YOLO)?${NC}"
     echo -e "  This will install 'ultralytics' and 'opencv-python-headless'."
-    echo -e "  Note: This download is ~200MB+ and requires active CPU/GPU resources."
     echo -e "  If you skip this now, you can easily install it later via the Web UI."
     echo -ne "  ${CYAN}Install AI Engine now? (y/N):${NC} "
     
@@ -267,6 +266,21 @@ setup_ai_engine() {
     fi
     
     if [[ $install_ai == [yY] || $install_ai == [yY][eE][sS] ]]; then
+        echo ""
+        echo -e "  ${CYAN}Which PyTorch backend would you like to install?${NC}"
+        echo ""
+        echo -e "    ${GREEN}1)${NC} CPU Only           (~200MB download, works everywhere)"
+        echo -e "    ${GREEN}2)${NC} NVIDIA CUDA GPU    (~2.5GB download, requires NVIDIA GPU + drivers)"
+        echo -e "    ${GREEN}3)${NC} Auto-detect         (Recommended for Apple Silicon / macOS)"
+        echo ""
+        echo -ne "  ${CYAN}Select an option [1/2/3] (default: 1):${NC} "
+        
+        if [ -c /dev/tty ]; then
+            read -r ai_backend < /dev/tty
+        else
+            read -r ai_backend
+        fi
+        
         print_info "Activating Python virtual environment..."
         source venv/bin/activate
         
@@ -279,8 +293,43 @@ setup_ai_engine() {
         export TMP="$local_tmp"
         print_info "Redirecting pip temporary directory to: $local_tmp"
         
-        print_info "Upgrading pip packages for AI engine..."
-        print_info "Installing 'ultralytics' (this may take a few minutes)..."
+        case $ai_backend in
+            2)
+                print_info "Installing PyTorch with NVIDIA CUDA support (~2.5GB download)..."
+                print_info "This may take several minutes depending on your internet speed."
+                # Detect best CUDA version available
+                if command -v nvidia-smi &> /dev/null; then
+                    CUDA_VER=$(nvidia-smi 2>/dev/null | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+' || echo "")
+                    CUDA_MAJOR=$(echo "$CUDA_VER" | cut -d. -f1)
+                    if [ "$CUDA_MAJOR" -ge 13 ] 2>/dev/null; then
+                        TORCH_INDEX="https://download.pytorch.org/whl/cu130"
+                        print_info "Detected CUDA $CUDA_VER — using cu130 wheels"
+                    elif [ "$CUDA_MAJOR" -ge 12 ] 2>/dev/null; then
+                        TORCH_INDEX="https://download.pytorch.org/whl/cu121"
+                        print_info "Detected CUDA $CUDA_VER — using cu121 wheels"
+                    else
+                        TORCH_INDEX="https://download.pytorch.org/whl/cu121"
+                        print_info "Detected CUDA $CUDA_VER — defaulting to cu121 wheels"
+                    fi
+                else
+                    TORCH_INDEX="https://download.pytorch.org/whl/cu121"
+                    print_warning "nvidia-smi not found. Defaulting to CUDA 12.1 wheels."
+                    print_info "Make sure NVIDIA drivers are installed for GPU acceleration."
+                fi
+                pip install --no-cache-dir torch torchvision torchaudio --index-url "$TORCH_INDEX"
+                ;;
+            3)
+                print_info "Installing PyTorch with auto-detection (default pip)..."
+                print_info "On Apple Silicon this will use Metal Performance Shaders (MPS)."
+                pip install --no-cache-dir torch torchvision torchaudio
+                ;;
+            *)
+                print_info "Installing PyTorch CPU-only (~200MB download)..."
+                pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+                ;;
+        esac
+        
+        print_info "Installing 'ultralytics' (YOLO framework)..."
         pip install --no-cache-dir ultralytics
         
         print_info "Uninstalling standard opencv-python if present to prevent GL conflicts..."
