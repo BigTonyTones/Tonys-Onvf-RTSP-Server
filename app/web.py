@@ -15,6 +15,7 @@ from flask_cors import CORS
 from .web_template import get_web_ui_html
 from .diagnostics_template import get_diagnostics_html
 from .ip_management_template import get_ip_management_html
+from .config import AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY
 
 from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
@@ -330,13 +331,13 @@ def create_web_app(manager):
                 onvif_forwarding_password=data.get('onvifForwardingPassword', ''),
                 event_source=data.get('eventSource', 'onvif'),
                 ai_targets=data.get('aiTargets'),
-                ai_model=data.get('aiModel', 'yolov8n.pt'),
+                ai_model=data.get('aiModel', AI_DEFAULT_MODEL),
                 send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
             if camera:
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
-                camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', 50)
-                camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', 50)
+                camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
+                camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
                 camera.ai_zone = data.get('aiZone', [])
                 manager.save_config()
             return jsonify(camera.to_dict()), 201
@@ -389,13 +390,13 @@ def create_web_app(manager):
                 onvif_forwarding_password=data.get('onvifForwardingPassword', ''),
                 event_source=data.get('eventSource', 'onvif'),
                 ai_targets=data.get('aiTargets'),
-                ai_model=data.get('aiModel', 'yolov8n.pt'),
+                ai_model=data.get('aiModel', AI_DEFAULT_MODEL),
                 send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
             if camera:
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
-                camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', 50)
-                camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', 50)
+                camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
+                camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
                 camera.ai_zone = data.get('aiZone', [])
                 camera.send_smart_onvif_topics = data.get('sendSmartOnvifTopics', True)
                 manager.save_config()
@@ -778,9 +779,19 @@ def create_web_app(manager):
             else:
                 ffmpeg_version = "Not installed"
             
+            from .ai_device import select_device
+            device = select_device()
+            if device == 'cuda':
+                ai_device_str = "NVIDIA GPU (CUDA)"
+            elif device == 'mps':
+                ai_device_str = "Apple Silicon GPU/ANE (MPS)"
+            else:
+                ai_device_str = "CPU (No acceleration)"
+
             return jsonify({
                 'mediamtx': mediamtx_version,
-                'ffmpeg': ffmpeg_version
+                'ffmpeg': ffmpeg_version,
+                'ai_device': ai_device_str
             })
         except Exception as e:
             return jsonify({'error': str(e)}), 500

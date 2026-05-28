@@ -11,16 +11,21 @@ from datetime import datetime
 import os
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.serving import make_server, ThreadedWSGIServer
-from .config import MEDIAMTX_PORT
+from .config import (
+    MEDIAMTX_PORT, AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY, 
+    GRABBER_RECONNECT_BASE, GRABBER_RECONNECT_MAX, WSGI_MAX_WORKERS,
+    AI_INFERENCE_FRAME_WIDTH, AI_COOLDOWN_SECONDS, AI_TARGET_INTERVAL
+)
 from .onvif_service import ONVIFService
 from .linux_network import LinuxNetworkManager
 from .utils import get_local_ip
+from .ai_device import get_shared_model as get_shared_ai_model, AI_INFERENCE_LOCK as _AI_INFERENCE_LOCK
 
 
 class ThreadPoolWSGIServer(ThreadedWSGIServer):
     """Custom WSGI server with a fixed-size thread pool to prevent thread exhaustion"""
     
-    def __init__(self, host, port, app, max_workers=20, **kwargs):
+    def __init__(self, host, port, app, max_workers=WSGI_MAX_WORKERS, **kwargs):
         super().__init__(host, port, app, **kwargs)
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.max_workers = max_workers
@@ -77,6 +82,7 @@ class RTSPFrameGrabber:
     def _grab_loop(self):
         import time
         last_frame_time = time.time()
+        reconnect_delay = GRABBER_RECONNECT_BASE
         
         while self.running:
             if self.cap and self.cap.isOpened():
@@ -85,6 +91,7 @@ class RTSPFrameGrabber:
                     if ret:
                         self.latest_frame = frame
                         last_frame_time = time.time()
+                        reconnect_delay = GRABBER_RECONNECT_BASE
                     else:
                         time.sleep(0.01)
                         if time.time() - last_frame_time > 5.0:
@@ -93,6 +100,8 @@ class RTSPFrameGrabber:
                                 self.cap.release()
                             except Exception:
                                 pass
+                            time.sleep(reconnect_delay)
+                            reconnect_delay = min(reconnect_delay * 2, GRABBER_RECONNECT_MAX)
                             self.cap = self.cv2.VideoCapture(self.rtsp_url)
                             self.cap.set(self.cv2.CAP_PROP_BUFFERSIZE, 1)
                             last_frame_time = time.time()
@@ -109,8 +118,12 @@ class RTSPFrameGrabber:
                     self.cap.set(self.cv2.CAP_PROP_BUFFERSIZE, 1)
                 except Exception as e:
                     print(f"  [AI Camera Grabber] Error connecting to {self.rtsp_url}: {e}")
+                if self.cap and self.cap.isOpened():
+                    reconnect_delay = GRABBER_RECONNECT_BASE
+                else:
+                    time.sleep(reconnect_delay)
+                    reconnect_delay = min(reconnect_delay * 2, GRABBER_RECONNECT_MAX)
                 last_frame_time = time.time()
-                time.sleep(1.0)
                 
     def stop(self):
         self.running = False
@@ -127,25 +140,6 @@ class RTSPFrameGrabber:
                 pass
             self.cap = None
 
-import threading
-# Global AI state for memory management across all cameras
-_AI_MODELS = {}
-_AI_MODEL_LOCK = threading.Lock()
-_AI_INFERENCE_LOCK = threading.Lock()
-
-def get_shared_ai_model(model_name):
-    global _AI_MODELS
-    with _AI_MODEL_LOCK:
-        if model_name not in _AI_MODELS:
-            from ultralytics import YOLO
-            try:
-                import torch
-                # Limit threads so multiple cameras don't oversubscribe CPU cores and exhaust memory
-                torch.set_num_threads(2)
-            except Exception:
-                pass
-            _AI_MODELS[model_name] = YOLO(model_name)
-        return _AI_MODELS[model_name]
 
 class VirtualONVIFCamera:
     """Represents a virtual ONVIF camera"""
@@ -216,10 +210,10 @@ class VirtualONVIFCamera:
         # AI Event Detection settings
         self.event_source = config.get('eventSource', 'onvif')  # 'onvif' or 'ai'
         self.ai_targets = config.get('aiTargets', ['person', 'vehicle'])
-        self.ai_model = config.get('aiModel', 'yolov8n.pt')
+        self.ai_model = config.get('aiModel', AI_DEFAULT_MODEL)
         self.ai_motion_detection_enabled = config.get('aiMotionDetectionEnabled', True)
-        self.ai_motion_sensitivity = config.get('aiMotionSensitivity', 50)
-        self.ai_confidence_threshold = config.get('aiConfidenceThreshold', 40)
+        self.ai_motion_sensitivity = config.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
+        self.ai_confidence_threshold = config.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
         self.ai_zone = config.get('aiZone', [])
         self.send_smart_onvif_topics = config.get('sendSmartOnvifTopics', True)
         self._active_smart_tags = set()
@@ -379,8 +373,8 @@ class VirtualONVIFCamera:
         
         # Replace the server class with our thread-pooled version
         server.__class__ = ThreadPoolWSGIServer
-        server.executor = ThreadPoolExecutor(max_workers=20)
-        server.max_workers = 20
+        server.executor = ThreadPoolExecutor(max_workers=WSGI_MAX_WORKERS)
+        server.max_workers = WSGI_MAX_WORKERS
         
         self.server = server
         
@@ -952,11 +946,13 @@ class VirtualONVIFCamera:
         
         motion_state = False
         last_detected_time = 0
-        cooldown_period = 5.0  # seconds
+        cooldown_period = AI_COOLDOWN_SECONDS
         prev_gray = None
         startup_frames = 0
         startup_grace = 5  # Skip first N frames to establish baseline
         last_loop_time = 0
+        consecutive_errors = 0
+        max_consecutive_errors = 20
         
         # Zone-aware motion masking: only detect motion inside the drawn zone
         import numpy as np
@@ -973,11 +969,11 @@ class VirtualONVIFCamera:
             raw_frame = grabber.latest_frame
             if raw_frame is not None:
                 try:
-                    # Optimize CPU usage by resizing frame to a max width of 640px before processing
+                    # Optimize CPU usage by resizing frame before processing
                     h, w = raw_frame.shape[:2]
-                    if w > 640:
-                        scale = 640.0 / w
-                        frame = cv2.resize(raw_frame, (640, int(h * scale)))
+                    if w > AI_INFERENCE_FRAME_WIDTH:
+                        scale = float(AI_INFERENCE_FRAME_WIDTH) / w
+                        frame = cv2.resize(raw_frame, (AI_INFERENCE_FRAME_WIDTH, max(1, int(h * scale))))
                     else:
                         frame = raw_frame
                         
@@ -1034,7 +1030,10 @@ class VirtualONVIFCamera:
                             t_queue_start = time.time()
                             with _AI_INFERENCE_LOCK:
                                 t_inference_start = time.time()
-                                results = model(frame, verbose=False, conf=conf_threshold, classes=monitored_classes)
+                                infer_kwargs = {"verbose": False, "conf": conf_threshold, "classes": monitored_classes}
+                                if hasattr(model, "device") and model.device is not None:
+                                    infer_kwargs["device"] = model.device
+                                results = model(frame, **infer_kwargs)
                                 t_inference_end = time.time()
                                 
                             self.ai_queue_time = round(t_inference_start - t_queue_start, 3)
@@ -1091,12 +1090,18 @@ class VirtualONVIFCamera:
                                     motion_state = False
                                     self._trigger_ai_motion(False, [])
                                     
+                    consecutive_errors = 0
                 except Exception as ex:
+                    consecutive_errors += 1
                     print(f"  [AI Camera ({self.name})] Error in inference loop: {ex}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"  [AI Camera ({self.name})] AI disabled after {consecutive_errors} consecutive errors")
+                        self._ai_running = False
+                        break
                     
-            # Target frame rate: ~2.0 FPS (1 frame every 500ms)
+            # Target frame rate
             elapsed = time.time() - loop_start
-            sleep_time = max(0.01, 0.50 - elapsed)
+            sleep_time = max(0.01, AI_TARGET_INTERVAL - elapsed)
             time.sleep(sleep_time)
             
         grabber.stop()

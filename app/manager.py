@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 from werkzeug.security import generate_password_hash, check_password_hash
 import ipaddress
-from .config import CONFIG_FILE, MEDIAMTX_PORT, MEDIAMTX_API_PORT
+from .config import CONFIG_FILE, MEDIAMTX_PORT, MEDIAMTX_API_PORT, AI_DEFAULT_MODEL
 from .camera import VirtualONVIFCamera
 from .onvif_service import ONVIFService
 from .mediamtx_manager import MediaMTXManager
@@ -586,7 +586,7 @@ class CameraManager:
                     static_ip='', netmask='24', gateway='', uuid=None,
                     enable_event_forwarding=False, physical_onvif_port=80,
                     onvif_forwarding_username='', onvif_forwarding_password='',
-                    event_source='onvif', ai_targets=None, ai_model='yolov8n.pt', send_smart_onvif_topics=True):
+                    event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True):
         """Add a new camera"""
         if not main_path.startswith('/'):
             main_path = '/' + main_path
@@ -707,7 +707,7 @@ class CameraManager:
                       static_ip='', netmask='24', gateway='', uuid=None,
                       enable_event_forwarding=False, physical_onvif_port=80,
                       onvif_forwarding_username='', onvif_forwarding_password='',
-                      event_source='onvif', ai_targets=None, ai_model='yolov8n.pt', send_smart_onvif_topics=True):
+                      event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True):
         """Update an existing camera"""
         camera = self.get_camera(camera_id)
         if not camera:

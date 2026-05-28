@@ -1864,6 +1864,11 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
+                    <div id="aiHardwareInfoGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: #2d3748; color: #e2e8f0; border-left: 3px solid #10b981; line-height: 1.5;">
+                        <i class="fas fa-microchip"></i> <strong>AI HW Acceleration:</strong> Supported on NVIDIA (CUDA) and Apple Silicon (MPS/CoreML).<br>
+                        <i class="fas fa-desktop"></i> <strong>Active Host Hardware:</strong> <span id="settings-ai-device" style="color: #38bdf8; font-weight: bold;">Loading...</span>
+                    </div>
+
                     <div id="aiModelGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 12px;">
                         <label class="form-label" style="font-size: 12px; margin-bottom: 4px; display: block;">AI Object Detection Model</label>
                         <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: #1a202c; color: #fff; max-width: 100%;">
@@ -1949,10 +1954,10 @@ def get_web_ui_html(current_settings=None):
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span style="font-size: 10px; color: #718096; white-space: nowrap;">10%</span>
                             <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
-                                <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="40" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
+                                <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
                             </div>
                             <span style="font-size: 10px; color: #718096; white-space: nowrap;">95%</span>
-                            <span id="aiConfidenceValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">40%</span>
+                            <span id="aiConfidenceValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">50%</span>
                         </div>
                         <div style="color: #718096; font-size: 10px; margin-top: 6px;">
                             Objects detected with confidence below this threshold will be ignored. Higher confidence reduces false positives.
@@ -2451,7 +2456,7 @@ def get_web_ui_html(current_settings=None):
                         <i class="fas fa-info-circle" style="color: #667eea;"></i>
                         <span>System Information</span>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; font-size: 12px;">
                         <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
                             <div style="color: var(--text-muted); margin-bottom: 4px;">MediaMTX Version</div>
                             <div id="about-mediamtx-version" style="color: var(--text-title); font-weight: 600; font-family: monospace;">Loading...</div>
@@ -2459,6 +2464,10 @@ def get_web_ui_html(current_settings=None):
                         <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
                             <div style="color: var(--text-muted); margin-bottom: 4px;">FFmpeg Version</div>
                             <div id="about-ffmpeg-version" style="color: var(--text-title); font-weight: 600; font-family: monospace;">Loading...</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">AI Acceleration</div>
+                            <div id="about-ai-device" style="color: var(--text-title); font-weight: 600; font-family: monospace; font-size: 11px;">Loading...</div>
                         </div>
                     </div>
                 </div>
@@ -3790,6 +3799,7 @@ def get_web_ui_html(current_settings=None):
             const aiModelGroup = document.getElementById('aiModelGroup');
             const aiInstallGroup = document.getElementById('aiInstallGroup');
             const smartGroup = document.getElementById('sendSmartOnvifTopicsGroup');
+            const aiHwInfoGroup = document.getElementById('aiHardwareInfoGroup');
             
             if (checked && source === 'ai') {{
                 if (isAiInstalled) {{
@@ -3798,16 +3808,19 @@ def get_web_ui_html(current_settings=None):
                         aiModelGroup.style.display = 'block';
                         updateModelDescription();
                     }}
+                    if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'block';
                     if (smartGroup) smartGroup.style.display = 'block';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'none';
                 }} else {{
                     if (aiTargetGroup) aiTargetGroup.style.display = 'none';
                     if (aiModelGroup) aiModelGroup.style.display = 'none';
+                    if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
                     if (smartGroup) smartGroup.style.display = 'none';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'block';
                 }}
             }} else {{
                 if (aiModelGroup) aiModelGroup.style.display = 'none';
+                if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
                 if (smartGroup) smartGroup.style.display = 'none';
                 if (aiInstallGroup) aiInstallGroup.style.display = 'none';
             }}
@@ -4082,6 +4095,7 @@ def get_web_ui_html(current_settings=None):
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
                 if (document.getElementById('sendSmartOnvifTopicsGroup')) document.getElementById('sendSmartOnvifTopicsGroup').style.display = 'none';
+                if (document.getElementById('aiHardwareInfoGroup')) document.getElementById('aiHardwareInfoGroup').style.display = 'none';
                 document.getElementById('aiInstallGroup').style.display = 'none';
             }} else {{
                 if (portGroup) portGroup.style.display = 'none';
@@ -5148,14 +5162,21 @@ def get_web_ui_html(current_settings=None):
                     const data = await response.json();
                     document.getElementById('about-mediamtx-version').textContent = data.mediamtx || 'Unknown';
                     document.getElementById('about-ffmpeg-version').textContent = data.ffmpeg || 'Not installed';
+                    
+                    const aiDev = data.ai_device || 'Unknown';
+                    document.getElementById('about-ai-device').textContent = aiDev;
+                    const settingsAi = document.getElementById('settings-ai-device');
+                    if (settingsAi) settingsAi.textContent = aiDev;
                 }} else {{
                     document.getElementById('about-mediamtx-version').textContent = 'Error';
                     document.getElementById('about-ffmpeg-version').textContent = 'Error';
+                    document.getElementById('about-ai-device').textContent = 'Error';
                 }}
             }} catch (error) {{
                 console.error('Failed to fetch system versions:', error);
                 document.getElementById('about-mediamtx-version').textContent = 'Error';
                 document.getElementById('about-ffmpeg-version').textContent = 'Error';
+                document.getElementById('about-ai-device').textContent = 'Error';
             }}
         }}
         
@@ -5678,6 +5699,7 @@ def get_web_ui_html(current_settings=None):
             if (settings.theme) applyTheme(settings.theme);
             if (settings.gridColumns) applyGridLayout(settings.gridColumns);
             await updateStats();
+            fetchSystemVersions();
             
             // Auto-refresh data and stats
             setInterval(loadData, 5000);
