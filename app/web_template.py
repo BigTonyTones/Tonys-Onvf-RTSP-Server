@@ -3208,6 +3208,11 @@ def get_web_ui_html(current_settings=None):
             if (active) {{
                 overlay.classList.add('active');
                 
+                // Update URL to support bookmarking/direct link
+                const url = new URL(window.location.href);
+                url.searchParams.set('view', 'matrix');
+                window.history.replaceState({{}}, '', url.toString());
+                
                 // Initialize checkboxes from global settings
                 document.getElementById('matrixStretchToggle').checked = settings.matrixStretchFill === true;
                 document.getElementById('matrixHideNamesToggle').checked = settings.matrixHideNames === true;
@@ -3233,6 +3238,12 @@ def get_web_ui_html(current_settings=None):
                 renderMatrix();
             }} else {{
                 overlay.classList.remove('active');
+                
+                // Remove view=matrix from URL
+                const url = new URL(window.location.href);
+                url.searchParams.delete('view');
+                window.history.replaceState({{}}, '', url.toString());
+                
                 stopCarousel();
                 focusedCameraId = null;
                 // Stop any video players in matrix
@@ -6575,6 +6586,12 @@ def get_web_ui_html(current_settings=None):
             if (settings.gridColumns) applyGridLayout(settings.gridColumns);
             await updateStats();
             fetchSystemVersions();
+            
+            // Check if matrix view is requested via URL search param or hash
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('view') === 'matrix' || window.location.hash === '#matrix') {{
+                toggleMatrixView(true);
+            }}
             
             // Auto-refresh data and stats
             setInterval(loadData, 5000);
