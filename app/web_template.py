@@ -3051,7 +3051,7 @@ def get_web_ui_html(current_settings=None):
                             }}
                             return '<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: ' + onvifBg + '; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="' + onvifTooltip.replace(/"/g, '&quot;') + '">' + onvifText + '</div>';
                         }})()}}
-                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}">AI</div>` : ''}}
+                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer;" onclick="event.stopPropagation(); toggleONVIFView(true, ${{cam.id}}, 'ai');" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}. Click to view AI events.">AI</div>` : ''}}
                         ${{cam.enableAudio ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4299e1; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio: RTSP audio stream forwarding is enabled for main/sub streams (AAC format).">Audio</div>` : ''}}
                         ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio Transcoded: Audio stream is actively transcoded to AAC format for compatibility (e.g. with UniFi Protect).">Audio Transcoded</div>` : ''}}
                     </div>
@@ -4487,12 +4487,18 @@ def get_web_ui_html(current_settings=None):
         let onvifPollInterval = null;
         let onvifEvents = [];
 
-        function toggleONVIFView(active) {{
+        function toggleONVIFView(active, initialCameraId = null, initialEventType = null) {{
             onvifViewActive = active;
             const overlay = document.getElementById('onvif-overlay');
             if (active) {{
                 overlay.classList.add('active');
                 populateCameraFilter();
+                if (initialCameraId !== null) {{
+                    document.getElementById('onvif-camera-filter').value = initialCameraId;
+                }}
+                if (initialEventType !== null) {{
+                    document.getElementById('onvif-type-filter').value = initialEventType;
+                }}
                 refreshONVIFEvents();
                 onvifPollInterval = setInterval(refreshONVIFEvents, 2000);
             }} else {{
