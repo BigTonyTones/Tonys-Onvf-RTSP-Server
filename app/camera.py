@@ -166,11 +166,11 @@ class VirtualONVIFCamera:
         # Resolution settings
         self.main_width = config.get('mainWidth', 1920)
         self.main_height = config.get('mainHeight', 1080)
-        self.sub_width = config.get('subWidth', 640)
-        self.sub_height = config.get('subHeight', 480)
+        self._sub_width = config.get('subWidth', 640)
+        self._sub_height = config.get('subHeight', 480)
         # Frame rate settings
         self.main_framerate = config.get('mainFramerate', 30)
-        self.sub_framerate = config.get('subFramerate', 15)
+        self._sub_framerate = config.get('subFramerate', 15)
         
         # ONVIF authentication credentials
         self.onvif_username = config.get('onvifUsername', 'admin')
@@ -400,6 +400,36 @@ class VirtualONVIFCamera:
         print(f"  ONVIF service started on port {self.onvif_port}")
         print(f"  Add manually in ODM: {local_ip}:{self.onvif_port}\n")
         
+    @property
+    def sub_width(self):
+        if getattr(self, 'use_main_as_substream', False):
+            return self.main_width
+        return self._sub_width
+
+    @sub_width.setter
+    def sub_width(self, value):
+        self._sub_width = value
+
+    @property
+    def sub_height(self):
+        if getattr(self, 'use_main_as_substream', False):
+            return self.main_height
+        return self._sub_height
+
+    @sub_height.setter
+    def sub_height(self, value):
+        self._sub_height = value
+
+    @property
+    def sub_framerate(self):
+        if getattr(self, 'use_main_as_substream', False):
+            return self.main_framerate
+        return self._sub_framerate
+
+    @sub_framerate.setter
+    def sub_framerate(self, value):
+        self._sub_framerate = value
+
     def to_dict(self):
         """Convert to dictionary for API"""
         return {
