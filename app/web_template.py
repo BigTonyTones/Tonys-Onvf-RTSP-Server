@@ -933,6 +933,14 @@ def get_web_ui_html(current_settings=None):
             font-weight: bold;
             display: inline-block;
         }}
+        @keyframes badge-flash {{
+            0% {{ background-color: #ecc94b; transform: scale(1); }}
+            50% {{ background-color: #ffffff; transform: scale(1.2); box-shadow: 0 0 12px #ecc94b; }}
+            100% {{ background-color: #ecc94b; transform: scale(1); }}
+        }}
+        .ai-badge-flash {{
+            animation: badge-flash 0.5s ease-in-out 3;
+        }}
         
         .view-toggle-btn {{
             background: #ed64a6;
@@ -2863,6 +2871,11 @@ def get_web_ui_html(current_settings=None):
                         const autoStartEl = card.querySelector('.toggle-switch input');
                         if (autoStartEl && autoStartEl.checked !== cam.autoStart) autoStartEl.checked = cam.autoStart;
 
+                        // Check if AI detection count increased to trigger flash
+                        const oldAiBadge = card.querySelector('.ai-badge');
+                        const oldCount = oldAiBadge ? parseInt(oldAiBadge.dataset.count || '0') : 0;
+                        const newCount = cam.aiDetectionCount || 0;
+
                         // Always update info section to ensure IP is correct
                         // This is safe because it doesn't affect the video player (video-preview div)
                         const existingWarning = card.querySelector(`#codec-warning-${{cam.id}}`);
@@ -2871,12 +2884,31 @@ def get_web_ui_html(current_settings=None):
                         const newInfoContent = getCameraCardContent(cam, serverIp);
                         const tempDiv = document.createElement('div');
                         tempDiv.innerHTML = newInfoContent;
+                        
+                        // Update camera header (to refresh status badges)
+                        const headerEl = card.querySelector('.camera-header');
+                        if (headerEl) {{
+                            headerEl.innerHTML = tempDiv.querySelector('.camera-header').innerHTML;
+                        }}
+                        
+                        // Update info section
                         card.querySelector('.info-section').innerHTML = tempDiv.querySelector('.info-section').innerHTML;
                         
                         // Restore warning
                         if (warningHtml) {{
                             const newWarning = card.querySelector(`#codec-warning-${{cam.id}}`);
                             if (newWarning) newWarning.innerHTML = warningHtml;
+                        }}
+
+                        // If count increased, trigger flash on the new badge
+                        if (newCount > oldCount && oldCount > 0) {{
+                            const newAiBadge = card.querySelector('.ai-badge');
+                            if (newAiBadge) {{
+                                newAiBadge.classList.add('ai-badge-flash');
+                                setTimeout(() => {{
+                                    newAiBadge.classList.remove('ai-badge-flash');
+                                }}, 1500);
+                            }}
                         }}
                     }}
                 }}
@@ -3027,10 +3059,13 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                     
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px; margin-bottom: 6px;">
                         <div class="status-badge ${{cam.assignedIp ? 'running' : ''}}" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; ${{!cam.assignedIp ? 'background: #4a5568; color: white;' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
                         <div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
-                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="UUID: Unique device identifier used by ONVIF discovery clients (e.g. UniFi Protect). Full UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-').slice(0, 2).join('-')}}...</div>` : ''}}
+                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="UUID: Unique device identifier used by ONVIF discovery clients (e.g. UniFi Protect).">UUID: ${{cam.uuid}}</div>` : ''}}
+                    </div>
+                    
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
                         ${{(() => {{
                             let onvifText = 'ONVIF: Offline';
                             let onvifBg = '#4a5568';
@@ -3051,9 +3086,9 @@ def get_web_ui_html(current_settings=None):
                             }}
                             return '<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: ' + onvifBg + '; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="' + onvifTooltip.replace(/"/g, '&quot;') + '">' + onvifText + '</div>';
                         }})()}}
-                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer;" onclick="event.stopPropagation(); toggleONVIFView(true, ${{cam.id}}, 'ai');" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}. Click to view AI events.">AI</div>` : ''}}
                         ${{cam.enableAudio ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4299e1; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio: RTSP audio stream forwarding is enabled for main/sub streams (AAC format).">Audio</div>` : ''}}
                         ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio Transcoded: Audio stream is actively transcoded to AAC format for compatibility (e.g. with UniFi Protect).">Audio Transcoded</div>` : ''}}
+                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge ai-badge" data-count="${{cam.aiDetectionCount || 0}}" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; transition: transform 0.2s;" onclick="event.stopPropagation(); toggleONVIFView(true, ${{cam.id}}, 'ai');" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}. Click to view AI events.">AI: ${{cam.aiDetectionCount || 0}}</div>` : ''}}
                     </div>
                 </div>
                 

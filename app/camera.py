@@ -229,6 +229,7 @@ class VirtualONVIFCamera:
         self.ai_queue_time = 0.0
         self.ai_fps_measurement = 0.0
         self.ai_last_detection = []
+        self.ai_detection_count = 0
         
         self.status = "stopped"
         self.flask_app = None
@@ -488,6 +489,7 @@ class VirtualONVIFCamera:
             'onvifActiveSubscriptions': len(self.onvif_service.subscriptions) if self.onvif_service else 0,
             'onvifSubscribersIPs': [sub.client_ip for sub in self.onvif_service.subscriptions.values() if sub.client_ip] if self.onvif_service else [],
             'aiInferenceCount': self.ai_inference_count,
+            'aiDetectionCount': self.ai_detection_count,
             'aiLastInferenceTime': self.ai_last_inference_time,
             'aiLastInferenceLatency': self.ai_last_inference_latency,
             'aiAvgInferenceLatency': self.ai_avg_inference_latency,
@@ -1195,6 +1197,8 @@ class VirtualONVIFCamera:
             
         if is_active != self._motion_state:
             self._motion_state = is_active
+            if is_active:
+                self.ai_detection_count += 1
             val = 'true' if is_active else 'false'
             conf_pct = None
             if is_active and tag_confidences:
