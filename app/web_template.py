@@ -4493,12 +4493,8 @@ def get_web_ui_html(current_settings=None):
             if (active) {{
                 overlay.classList.add('active');
                 populateCameraFilter();
-                if (initialCameraId !== null) {{
-                    document.getElementById('onvif-camera-filter').value = initialCameraId;
-                }}
-                if (initialEventType !== null) {{
-                    document.getElementById('onvif-type-filter').value = initialEventType;
-                }}
+                document.getElementById('onvif-camera-filter').value = initialCameraId !== null ? initialCameraId : 'all';
+                document.getElementById('onvif-type-filter').value = initialEventType !== null ? initialEventType : 'all';
                 refreshONVIFEvents();
                 onvifPollInterval = setInterval(refreshONVIFEvents, 2000);
             }} else {{
