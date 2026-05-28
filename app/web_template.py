@@ -2897,15 +2897,28 @@ def get_web_ui_html(current_settings=None):
             // Cleanup existing players before re-rendering
             grid.querySelectorAll('video').forEach(el => destroyPlayer(el.id));
             
-            grid.innerHTML = runningCameras.map(cam => `
-                <div class="matrix-item" data-id="${{cam.id}}">
-                    <div class="matrix-label">${{cam.name}}</div>
-                    <video id="matrix-player-${{cam.id}}" autoplay muted playsinline></video>
-                </div>
-            `).join('');
+            grid.innerHTML = runningCameras.map(cam => {{
+                if (cam.disableSubstream) {{
+                    return `
+                        <div class="matrix-item" data-id="${{cam.id}}" style="display: flex; align-items: center; justify-content: center; background: #1a202c; border: 1px solid var(--border-color); flex-direction: column;">
+                            <div class="matrix-label">${{cam.name}}</div>
+                            <div style="font-size: 24px; color: #a0aec0; margin-bottom: 5px;"><i class="fas fa-video-slash"></i></div>
+                            <div style="color: #a0aec0; font-size: 12px; font-weight: 500;">Substream Disabled</div>
+                        </div>
+                    `;
+                }}
+                return `
+                    <div class="matrix-item" data-id="${{cam.id}}">
+                        <div class="matrix-label">${{cam.name}}</div>
+                        <video id="matrix-player-${{cam.id}}" autoplay muted playsinline></video>
+                    </div>
+                `;
+            }}).join('');
             
             runningCameras.forEach(cam => {{
-                initVideoPlayer(cam.id, cam.pathName, `matrix-player-${{cam.id}}`);
+                if (!cam.disableSubstream) {{
+                    initVideoPlayer(cam.id, cam.pathName, `matrix-player-${{cam.id}}`);
+                }}
             }});
         }}
 
@@ -2996,8 +3009,14 @@ def get_web_ui_html(current_settings=None):
                 <div class="video-preview" id="video-${{cam.id}}">
                     <div id="metrics-${{cam.id}}" class="metrics-overlay"></div>
                     ${{cam.status === 'running' 
-                        ? `<video id="player-${{cam.id}}" autoplay muted playsinline></video>
-                           <button class="fullscreen-btn" onclick="toggleFullScreenPlayer(${{cam.id}})" title="Maximize">Full Screen</button>`
+                        ? (cam.disableSubstream 
+                            ? `<div class="video-placeholder" style="background: #1a202c; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                                <div style="font-size: 48px; color: #a0aec0; margin-bottom: 10px;"><i class="fas fa-video-slash"></i></div>
+                                <div style="color: #e2e8f0; font-weight: 500;">Substream Disabled</div>
+                                <div style="font-size: 12px; color: #a0aec0; margin-top: 4px;">Enable substream in settings to preview video here</div>
+                               </div>`
+                            : `<video id="player-${{cam.id}}" autoplay muted playsinline></video>
+                               <button class="fullscreen-btn" onclick="toggleFullScreenPlayer(${{cam.id}})" title="Maximize">Full Screen</button>`)
                         : `<div class="video-placeholder">
                             <div style="font-size: 48px;"></div>
                             <div>Camera Stopped</div>
