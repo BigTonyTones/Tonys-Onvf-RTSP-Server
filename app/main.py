@@ -67,6 +67,17 @@ def main():
     except ImportError:
         pass  # AI not installed — individual camera threads will handle gracefully
 
+    # Load settings to get RTSP port
+    settings = manager.load_settings()
+    rtsp_port = settings.get('rtspPort', MEDIAMTX_PORT)
+    debug_mode = settings.get('debugMode', False)
+    advanced_settings = settings.get('advancedSettings', {})
+    
+    # Get credentials only if RTSP auth is enabled
+    rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
+    rtsp_username = settings.get('globalUsername', 'admin') if rtsp_auth_enabled else ''
+    rtsp_password = settings.get('globalPassword', 'admin') if rtsp_auth_enabled else ''
+    
     # Auto-start cameras that have autoStart enabled
     # Note: We check auto_start setting, NOT the saved status
     # This ensures cameras start fresh based on their auto-start preference
@@ -81,18 +92,7 @@ def main():
     else:
         print("\n  No cameras configured for auto-start")
         print("=" * 60)
-    
-    # Load settings to get RTSP port
-    settings = manager.load_settings()
-    rtsp_port = settings.get('rtspPort', MEDIAMTX_PORT)
-    debug_mode = settings.get('debugMode', False)
-    advanced_settings = settings.get('advancedSettings', {})
-    
-    # Get credentials only if RTSP auth is enabled
-    rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
-    rtsp_username = settings.get('globalUsername', 'admin') if rtsp_auth_enabled else ''
-    rtsp_password = settings.get('globalPassword', 'admin') if rtsp_auth_enabled else ''
-    
+
     # Start MediaMTX
     # Pass manager.cameras so it can generate config
     print("\nInitializing MediaMTX RTSP Server...")

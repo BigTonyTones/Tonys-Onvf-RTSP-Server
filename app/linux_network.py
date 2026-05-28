@@ -67,12 +67,26 @@ class LinuxNetworkManager:
 
             # 6. Apply ARP isolation to prevent host from "hijacking" the virtual IP (ARP Flux)
             # This is crucial for stability when multiple IPs are on one physical interface
-            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_ignore=1'], check=False)
-            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_announce=2'], check=False)
-            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{parent_if}.arp_ignore=1'], check=False)
-            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{parent_if}.arp_announce=2'], check=False)
-            subprocess.run(['sudo', 'sysctl', '-w', 'net.ipv4.conf.all.arp_ignore=1'], check=False)
-            subprocess.run(['sudo', 'sysctl', '-w', 'net.ipv4.conf.all.arp_announce=2'], check=False)
+            debug_mode = False
+            try:
+                from .config import CONFIG_FILE
+                import json
+                if os.path.exists(CONFIG_FILE):
+                    with open(CONFIG_FILE, 'r') as f:
+                        config = json.load(f)
+                        debug_mode = config.get('settings', {}).get('debugMode', False)
+            except Exception:
+                pass
+
+            _stdout = None if debug_mode else subprocess.DEVNULL
+            _stderr = None if debug_mode else subprocess.DEVNULL
+
+            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_ignore=1'], stdout=_stdout, stderr=_stderr, check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{name}.arp_announce=2'], stdout=_stdout, stderr=_stderr, check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{parent_if}.arp_ignore=1'], stdout=_stdout, stderr=_stderr, check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', f'net.ipv4.conf.{parent_if}.arp_announce=2'], stdout=_stdout, stderr=_stderr, check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', 'net.ipv4.conf.all.arp_ignore=1'], stdout=_stdout, stderr=_stderr, check=False)
+            subprocess.run(['sudo', 'sysctl', '-w', 'net.ipv4.conf.all.arp_announce=2'], stdout=_stdout, stderr=_stderr, check=False)
             
             return True
         except subprocess.CalledProcessError as e:

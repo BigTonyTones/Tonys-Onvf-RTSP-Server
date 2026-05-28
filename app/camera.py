@@ -577,7 +577,8 @@ class VirtualONVIFCamera:
         if not target_ip:
             target_ip = '255.255.255.255'
             
-        print(f"  [Keepalive ({self.name})] Starting keepalive loop targeting {target_ip} every 60s")
+        if getattr(self, 'debug_mode', False):
+            print(f"  [Keepalive ({self.name})] Starting keepalive loop targeting {target_ip} every 60s")
         
         while self._keepalive_running and self.status == "running":
             try:
