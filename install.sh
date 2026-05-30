@@ -661,6 +661,9 @@ EOF
 create_commands() {
     print_step "Creating convenience commands..."
     
+    # Ensure /usr/local/bin directory exists (common issue on modern macOS)
+    mkdir -p /usr/local/bin
+    
     # Create a 'tonys-onvif' command
     cat > /usr/local/bin/tonys-onvif << 'EOF'
 #!/bin/bash
