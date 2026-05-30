@@ -23,12 +23,13 @@ else
     # Piped from curl, use default directory
     INSTALL_DIR="/opt/tonys-onvif-server"
 fi
+INSTALLER_VERSION="2.0"
 REPO_URL="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git"
 
 print_banner() {
     echo ""
     echo -e "${CYAN}==============================================================${NC}"
-    echo -e "${YELLOW}     Tonys Onvif-RTSP Server - Automated Installer${NC}"
+    echo -e "${YELLOW}     Tonys Onvif-RTSP Server - Automated Installer (v${INSTALLER_VERSION})${NC}"
     echo -e "${CYAN}==============================================================${NC}"
     echo ""
     echo -e "  ${CYAN}Installation Directory:${NC} $INSTALL_DIR"
