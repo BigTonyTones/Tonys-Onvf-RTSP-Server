@@ -762,6 +762,131 @@ def get_web_ui_html(current_settings=None):
             background: none;
             border: none;
         }}
+        /* Settings Tabs */
+        .settings-tabs {{
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 24px;
+            padding-bottom: 2px;
+            flex-wrap: wrap;
+        }}
+        .settings-tab-btn {{
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: -2px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }}
+        .settings-tab-btn i {{
+            font-size: 14px;
+            transition: transform 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+            opacity: 0.6;
+        }}
+        .settings-tab-btn:hover i {{
+            transform: scale(1.15);
+            opacity: 1 !important;
+        }}
+        
+        /* Individual Styling for Server Settings Tabs (Normal, Hover, Active) */
+        
+        /* General Tab (Blue) */
+        #settings-tab-general {{
+            color: rgba(99, 179, 237, 0.65);
+        }}
+        #settings-tab-general i {{
+            color: #63b3ed;
+        }}
+        #settings-tab-general:hover {{
+            color: #63b3ed;
+            background: rgba(49, 130, 206, 0.05);
+        }}
+        #settings-tab-general.active {{
+            color: #3182ce !important;
+            background: rgba(49, 130, 206, 0.08) !important;
+            border-bottom: 2px solid #3182ce !important;
+        }}
+        #settings-tab-general.active i {{
+            color: #3182ce;
+            opacity: 1;
+        }}
+        
+        /* Security Tab (Orange) */
+        #settings-tab-security {{
+            color: rgba(246, 173, 85, 0.65);
+        }}
+        #settings-tab-security i {{
+            color: #f6ad55;
+        }}
+        #settings-tab-security:hover {{
+            color: #f6ad55;
+            background: rgba(221, 107, 32, 0.05);
+        }}
+        #settings-tab-security.active {{
+            color: #dd6b20 !important;
+            background: rgba(221, 107, 32, 0.08) !important;
+            border-bottom: 2px solid #dd6b20 !important;
+        }}
+        #settings-tab-security.active i {{
+            color: #dd6b20;
+            opacity: 1;
+        }}
+        
+        /* Engine Tab (Purple) */
+        #settings-tab-engine {{
+            color: rgba(214, 188, 250, 0.65);
+        }}
+        #settings-tab-engine i {{
+            color: #d6bcfa;
+        }}
+        #settings-tab-engine:hover {{
+            color: #d6bcfa;
+            background: rgba(159, 122, 234, 0.05);
+        }}
+        #settings-tab-engine.active {{
+            color: #9f7aea !important;
+            background: rgba(159, 122, 234, 0.08) !important;
+            border-bottom: 2px solid #9f7aea !important;
+        }}
+        #settings-tab-engine.active i {{
+            color: #9f7aea;
+            opacity: 1;
+        }}
+        
+        /* Maintenance Tab (Teal) */
+        #settings-tab-maintenance {{
+            color: rgba(79, 209, 197, 0.65);
+        }}
+        #settings-tab-maintenance i {{
+            color: #4fd1c5;
+        }}
+        #settings-tab-maintenance:hover {{
+            color: #4fd1c5;
+            background: rgba(56, 178, 172, 0.05);
+        }}
+        #settings-tab-maintenance.active {{
+            color: #38b2ac !important;
+            background: rgba(56, 178, 172, 0.08) !important;
+            border-bottom: 2px solid #38b2ac !important;
+        }}
+        #settings-tab-maintenance.active i {{
+            color: #38b2ac;
+            opacity: 1;
+        }}
+        .settings-tab-content {{
+            display: none;
+        }}
+        .settings-tab-content.active {{
+            display: block;
+        }}
         .empty-state {{
             background: var(--header-bg);
             border-radius: 12px;
@@ -1111,33 +1236,142 @@ def get_web_ui_html(current_settings=None):
         .tab:hover {{ color: #4a5568; }}
         
         /* Form Tabs */
+        /* Form Tabs */
         .form-tabs {{
             display: flex;
             margin-bottom: 20px;
             border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-            gap: 5px;
+            gap: 8px;
+            padding-bottom: 2px;
         }}
         .form-tab {{
             padding: 10px 18px;
             cursor: pointer;
             font-weight: 600;
-            color: #a0aec0;
             margin-bottom: -2px;
             border-bottom: 2px solid transparent;
-            transition: all 0.2s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }}
-        .form-tab:hover {{
+        .form-tab i {{
+            transition: transform 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+            opacity: 0.6;
+        }}
+        .form-tab:hover i {{
+            transform: scale(1.15);
+            opacity: 1 !important;
+        }}
+        
+        /* Individual Styling for Tabs (Normal, Hover, Active) */
+        
+        /* Camera Tab (Blue) */
+        #form-tab-camera {{
+            color: rgba(99, 179, 237, 0.65);
+        }}
+        #form-tab-camera i {{
             color: #63b3ed;
         }}
-        .form-tab.active {{
+        #form-tab-camera:hover {{
+            color: #63b3ed;
+            background: rgba(49, 130, 206, 0.05);
+        }}
+        #form-tab-camera.active {{
             color: #3182ce;
             border-bottom: 2px solid #3182ce;
+            background: rgba(49, 130, 206, 0.08);
+        }}
+        #form-tab-camera.active i {{
+            color: #3182ce;
+            opacity: 1;
+        }}
+        
+        /* Audio Tab (Orange) */
+        #form-tab-audio {{
+            color: rgba(246, 173, 85, 0.65);
+        }}
+        #form-tab-audio i {{
+            color: #f6ad55;
+        }}
+        #form-tab-audio:hover {{
+            color: #f6ad55;
+            background: rgba(221, 107, 32, 0.05);
+        }}
+        #form-tab-audio.active {{
+            color: #dd6b20;
+            border-bottom: 2px solid #dd6b20;
+            background: rgba(221, 107, 32, 0.08);
+        }}
+        #form-tab-audio.active i {{
+            color: #dd6b20;
+            opacity: 1;
+        }}
+        
+        /* AI Settings Tab (Purple) */
+        #form-tab-ai {{
+            color: rgba(214, 188, 250, 0.65);
+        }}
+        #form-tab-ai i {{
+            color: #d6bcfa;
+        }}
+        #form-tab-ai:hover {{
+            color: #d6bcfa;
+            background: rgba(159, 122, 234, 0.05);
+        }}
+        #form-tab-ai.active {{
+            color: #9f7aea;
+            border-bottom: 2px solid #9f7aea;
+            background: rgba(159, 122, 234, 0.08);
+        }}
+        #form-tab-ai.active i {{
+            color: #9f7aea;
+            opacity: 1;
+        }}
+        
+        /* Networking Tab (Teal) */
+        #form-tab-networking {{
+            color: rgba(79, 209, 197, 0.65);
+        }}
+        #form-tab-networking i {{
+            color: #4fd1c5;
+        }}
+        #form-tab-networking:hover {{
+            color: #4fd1c5;
+            background: rgba(56, 178, 172, 0.05);
+        }}
+        #form-tab-networking.active {{
+            color: #38b2ac;
+            border-bottom: 2px solid #38b2ac;
+            background: rgba(56, 178, 172, 0.08);
+        }}
+        #form-tab-networking.active i {{
+            color: #38b2ac;
+            opacity: 1;
         }}
         .form-section {{
             display: none;
         }}
         .form-section.active {{
             display: block;
+        }}
+        
+        /* Make AI settings section text slightly larger and easier to read */
+        #form-sec-ai, #form-sec-ai div, #form-sec-ai label, #form-sec-ai span, #form-sec-ai small, #form-sec-ai input, #form-sec-ai select {{
+            font-size: 13.5px !important;
+        }}
+        #form-sec-ai [style*="font-size: 12px"], #form-sec-ai [style*="font-size:12px"] {{
+            font-size: 14.5px !important;
+        }}
+        #form-sec-ai [style*="font-size: 11px"], #form-sec-ai [style*="font-size:11px"] {{
+            font-size: 13.5px !important;
+        }}
+        #form-sec-ai [style*="font-size: 10px"], #form-sec-ai [style*="font-size:10px"] {{
+            font-size: 12.5px !important;
+        }}
+        #form-sec-ai [style*="font-size: 8px"], #form-sec-ai [style*="font-size:8px"] {{
+            font-size: 10.5px !important;
         }}
         
         .result-item {{
@@ -2428,279 +2662,306 @@ def get_web_ui_html(current_settings=None):
                 <button class="close-btn" onclick="closeSettingsModal()">×</button>
             </div>
             
+            <div class="settings-tabs">
+                <button type="button" class="settings-tab-btn active" onclick="switchSettingsTab('settings-general')" id="settings-tab-general">
+                    <i class="fas fa-cog"></i> General
+                </button>
+                <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-security')" id="settings-tab-security">
+                    <i class="fas fa-shield-alt"></i> Security
+                </button>
+                <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-engine')" id="settings-tab-engine">
+                    <i class="fas fa-sliders-h"></i> Engine
+                </button>
+                <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-maintenance')" id="settings-tab-maintenance">
+                    <i class="fas fa-wrench"></i> Maintenance
+                </button>
+            </div>
+
             <form onsubmit="saveSettings(event)">
-                <div class="form-group">
-                    <label class="form-label">Server IP / Hostname (for RTSP URLs)</label>
-                    <input type="text" class="form-input" id="serverIp" placeholder="192.168.1.10">
-                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
-                        Leave as 'localhost' for local access, or enter your server's IP address for network access
-                    </small>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">RTSP Server Port</label>
-                    <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554">
-                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
-                        The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.
-                    </small>
-                </div>
-                
-                <div class="form-group" style="background: rgba(255, 121, 198, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color);">
-                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                        <span>Global RTSP & ONVIF Credentials</span>
+                <!-- Tab 1: General Settings -->
+                <div id="settings-general" class="settings-tab-content active">
+                    <div class="form-group">
+                        <label class="form-label">Server IP / Hostname (for RTSP URLs)</label>
+                        <input type="text" class="form-input" id="serverIp" placeholder="192.168.1.10">
+                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                            Leave as 'localhost' for local access, or enter your server's IP address for network access
+                        </small>
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-col">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">Global Username</label>
-                                <input type="text" class="form-input" id="globalUsername" placeholder="admin" value="admin">
-                            </div>
-                        </div>
-                        <div class="form-col">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label">Global Password</label>
-                                <input type="text" class="form-input" id="globalPassword" placeholder="admin" value="admin">
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">RTSP Server Port</label>
+                        <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554">
+                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                            The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">UI Theme</label>
+                        <select class="form-input" id="themeSelect">
+                            <option value="classic">Classic (Purple Gradient)</option>
+                            <option value="dark">Modern Dark (Blue Contrast)</option>
+                            <option value="nord">Nordic Frost (Arctic Blue)</option>
+                            <option value="dracula">Dracula (Pro Dark)</option>
+                            <option value="solar-light">Solarized Light (Earthy Warmth)</option>
+                            <option value="midnight">Midnight Ocean (Deep Blue)</option>
+                            <option value="emerald">Emerald Forest (Nature Green)</option>
+                            <option value="sunset">Sunset Glow (Vibrant Gradient)</option>
+                            <option value="matrix">Matrix Code (Digital Rain)</option>
+                            <option value="slate">Slate Professional (Neutral Grey)</option>
+                            <option value="cyberpunk">Cyberpunk 2077 (Neon Yellow)</option>
+                            <option value="amoled">Amoled Black (Pure OLED)</option>
+                        </select>
                     </div>
                     
-                    <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                    <div class="form-group">
+                        <label class="form-label">Dashboard Layout</label>
+                        <select class="form-input" id="gridColumnsSelect">
+                            <option value="2">2 Columns (Large Cards)</option>
+                            <option value="3">3 Columns (Compact View)</option>
+                            <option value="4">4 Columns (Extra Compact View)</option>
+                            <option value="5">5 Columns (Super Compact View)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="rtspAuthEnabled" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0; color: var(--text-body);">Enable RTSP Authentication</span>
+                            <input type="checkbox" id="openBrowser" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0;">Open Browser on Startup</span>
                         </label>
-                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
-                            If enabled, RTSP streams will require the Global Username/Password above. Disabling will allow anonymous RTSP access.
+                    </div>
+
+                    <div class="form-group linux-only">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="autoBoot" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0;">Auto-start on System Boot (Ubuntu Service)</span>
+                        </label>
+                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                            Creates and enables a systemd service to start this server automatically when the computer turns on.
                         </small>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">UI Theme</label>
-                    <select class="form-input" id="themeSelect">
-                        <option value="classic">Classic (Purple Gradient)</option>
-                        <option value="dark">Modern Dark (Blue Contrast)</option>
-                        <option value="nord">Nordic Frost (Arctic Blue)</option>
-                        <option value="dracula">Dracula (Pro Dark)</option>
-                        <option value="solar-light">Solarized Light (Earthy Warmth)</option>
-                        <option value="midnight">Midnight Ocean (Deep Blue)</option>
-                        <option value="emerald">Emerald Forest (Nature Green)</option>
-                        <option value="sunset">Sunset Glow (Vibrant Gradient)</option>
-                        <option value="matrix">Matrix Code (Digital Rain)</option>
-                        <option value="slate">Slate Professional (Neutral Grey)</option>
-                        <option value="cyberpunk">Cyberpunk 2077 (Neon Yellow)</option>
-                        <option value="amoled">Amoled Black (Pure OLED)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Dashboard Layout</label>
-                    <select class="form-input" id="gridColumnsSelect">
-                        <option value="2">2 Columns (Large Cards)</option>
-                        <option value="3">3 Columns (Compact View)</option>
-                        <option value="4">4 Columns (Extra Compact View)</option>
-                        <option value="5">5 Columns (Super Compact View)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="openBrowser" style="width: auto; cursor: pointer;">
-                        <span class="form-label" style="margin: 0;">Open Browser on Startup</span>
-                    </label>
-                </div>
 
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
-                        <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
-                    </label>
-                    <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
-                        Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="debugMode" style="width: auto; cursor: pointer;">
-                        <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Debug Mode (Show detailed logs)</span>
-                    </label>
-                    <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
-                        Enables verbose MediaMTX logging. Helpful for troubleshooting stream issues.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="watchdogEnabled" style="width: auto; cursor: pointer;">
-                        <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">
-                            <i class="fas fa-flask" style="font-size: 11px; margin-right: 3px;"></i>
-                            Stream Watchdog (Experimental)
-                        </span>
-                    </label>
-                    <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
-                        Monitors running streams and automatically restarts MediaMTX if a stream is dead or stale for &gt;2 minutes.
-                        Disabled by default. May cause unexpected restarts — enable only if you experience persistent stream failures.
-                    </small>
-                </div>
-
-                <div class="form-group linux-only">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="autoBoot" style="width: auto; cursor: pointer;">
-                        <span class="form-label" style="margin: 0;">Auto-start on System Boot (Ubuntu Service)</span>
-                    </label>
-                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
-                        Creates and enables a systemd service to start this server automatically when the computer turns on.
-                    </small>
-                </div>
-
-                <div class="form-group" style="margin-top: 15px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleAdvancedSettings()">
-                        <span class="form-label" style="margin: 0; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 5px;">
-                            <i class="fas fa-tools"></i> Advanced Settings (MediaMTX & FFmpeg)
-                            <i id="advancedChevron" class="fas fa-chevron-down" style="font-size: 12px; transition: transform 0.3s; margin-left: auto;"></i>
-                        </span>
-                    </label>
-                </div>
-
-                <div id="advancedSettingsSection" style="display: none; padding: 20px; background: rgba(0,0,0,0.35); border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 25px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div>
-                            <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-server" style="font-size: 12px; color: var(--primary-color);"></i> MediaMTX Core
-                            </h3>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Queue Size</label>
-                                <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                <!-- Tab 2: Security Settings -->
+                <div id="settings-security" class="settings-tab-content">
+                    <div class="form-group" style="background: rgba(255, 121, 198, 0.05); padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color);">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <span>Global RTSP & ONVIF Credentials</span>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Global Username</label>
+                                    <input type="text" class="form-input" id="globalUsername" placeholder="admin" value="admin">
+                                </div>
                             </div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Read Timeout (duration)</label>
-                                <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Timeout (duration)</label>
-                                <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">UDP Max Payload</label>
-                                <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                            <div class="form-col">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Global Password</label>
+                                    <input type="text" class="form-input" id="globalPassword" placeholder="admin" value="admin">
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-stream" style="font-size: 12px; color: var(--primary-color);"></i> HLS Optimized
-                            </h3>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Count</label>
-                                <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Duration</label>
-                                <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
-                            </div>
-                            <div class="form-group" style="margin-bottom: 12px;">
-                                <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Part Duration</label>
-                                <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
-                            </div>
+                        
+                        <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="rtspAuthEnabled" style="width: auto; cursor: pointer;">
+                                <span class="form-label" style="margin: 0; color: var(--text-body);">Enable RTSP Authentication</span>
+                            </label>
+                            <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                                If enabled, RTSP streams will require the Global Username/Password above. Disabling will allow anonymous RTSP access.
+                            </small>
                         </div>
                     </div>
 
-                    <h3 style="font-size: 14px; margin: 20px 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-video" style="font-size: 12px; color: var(--primary-color);"></i> FFmpeg Transcoding Global
-                    </h3>
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Global Arguments (Flags)</label>
-                        <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="authEnabled" style="width: auto; cursor: pointer;" onchange="toggleAuthFields()">
+                                <span class="form-label" style="margin: 0; color: #667eea; font-weight: 700;">Enable Web Interface Login</span>
+                            </label>
+                            <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                                Require a username and password to access this dashboard.
+                            </small>
+                        </div>
+                        
+                        <div id="auth-settings-fields" style="display: none; padding: 15px; background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px dashed #667eea;">
+                            <div class="form-group">
+                                <label class="form-label">Admin Username</label>
+                                <input type="text" class="form-input" id="authUsername" placeholder="admin">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">New Password (leave blank to keep current)</label>
+                                <input type="password" class="form-input" id="authPassword" placeholder="••••••••">
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Input Arguments (Before -i)</label>
-                        <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Process & Codec Arguments</label>
-                        <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
-                    </div>
+                </div>
 
-                    <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-top: 15px; border-radius: 4px;">
-                        <small style="color: #f6ad55; font-size: 11px; font-weight: 600; display: block;">
-                            <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
+                <!-- Tab 3: Engine & Advanced -->
+                <div id="settings-engine" class="settings-tab-content">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
+                        </label>
+                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                            Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
                         </small>
                     </div>
-                    <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                        <button type="button" class="btn btn-primary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 6px 14px; color: #ffffff;" onclick="resetAdvancedSettings()">
-                            <i class="fas fa-undo"></i> Reset to Defaults
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="debugMode" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Debug Mode (Show detailed logs)</span>
+                        </label>
+                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                            Enables verbose MediaMTX logging. Helpful for troubleshooting stream issues.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="watchdogEnabled" style="width: auto; cursor: pointer;">
+                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">
+                                <i class="fas fa-flask" style="font-size: 11px; margin-right: 3px;"></i>
+                                Stream Watchdog (Experimental)
+                            </span>
+                        </label>
+                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                            Monitors running streams and automatically restarts MediaMTX if a stream is dead or stale for &gt;2 minutes.
+                            Disabled by default. May cause unexpected restarts — enable only if you experience persistent stream failures.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleAdvancedSettings()">
+                            <span class="form-label" style="margin: 0; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-tools"></i> Advanced Settings (MediaMTX & FFmpeg)
+                                <i id="advancedChevron" class="fas fa-chevron-down" style="font-size: 12px; transition: transform 0.3s; margin-left: auto;"></i>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div id="advancedSettingsSection" style="display: none; padding: 20px; background: rgba(0,0,0,0.35); border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 25px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-server" style="font-size: 12px; color: var(--primary-color);"></i> MediaMTX Core
+                                </h3>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Queue Size</label>
+                                    <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Read Timeout (duration)</label>
+                                    <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Timeout (duration)</label>
+                                    <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">UDP Max Payload</label>
+                                    <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                            </div>
+                            <div>
+                                <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-stream" style="font-size: 12px; color: var(--primary-color);"></i> HLS Optimized
+                                </h3>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Count</label>
+                                    <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Duration</label>
+                                    <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 12px;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Part Duration</label>
+                                    <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 style="font-size: 14px; margin: 20px 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-video" style="font-size: 12px; color: var(--primary-color);"></i> FFmpeg Transcoding Global
+                        </h3>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Global Arguments (Flags)</label>
+                            <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Input Arguments (Before -i)</label>
+                            <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Process & Codec Arguments</label>
+                            <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                        </div>
+
+                        <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-top: 15px; border-radius: 4px;">
+                            <small style="color: #f6ad55; font-size: 11px; font-weight: 600; display: block;">
+                                <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
+                            </small>
+                        </div>
+                        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-primary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 6px 14px; color: #ffffff;" onclick="resetAdvancedSettings()">
+                                <i class="fas fa-undo"></i> Reset to Defaults
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="settings-save-btn" type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
+            </form>
+
+            <!-- Tab 4: Maintenance -->
+            <div id="settings-maintenance" class="settings-tab-content">
+                <!-- Maintenance & Extra Tools (OUTSIDE form to prevent submit confusion) -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllUUIDs()">
+                            <i class="fas fa-id-card"></i> Reset All UUIDs
+                        </button>
+                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllMACs()">
+                            <i class="fas fa-network-wired"></i> Reset All MACs
+                        </button>
+                    </div>
+                    <small style="color: #718096; font-size: 11px; margin-top: 8px; display: block;">
+                        Warning: Resetting UUIDs or MAC addresses will force clients (like Ubiquiti or NVRs) to re-discover/re-add the cameras.
+                    </small>
+                </div>
+                
+                <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                            <i class="fas fa-download"></i> Backup Config
+                        </button>
+                        <button type="button" id="restoreBtn" class="btn btn-secondary" onclick="restoreBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                            <i class="fas fa-upload"></i> Restore Config
                         </button>
                     </div>
                 </div>
-
+                
                 <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="authEnabled" style="width: auto; cursor: pointer;" onchange="toggleAuthFields()">
-                            <span class="form-label" style="margin: 0; color: #667eea; font-weight: 700;">Enable Web Interface Login</span>
-                        </label>
-                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
-                            Require a username and password to access this dashboard.
-                        </small>
-                    </div>
-                    
-                    <div id="auth-settings-fields" style="display: none; padding: 15px; background: rgba(102, 126, 234, 0.05); border-radius: 8px; border: 1px dashed #667eea;">
-                        <div class="form-group">
-                            <label class="form-label">Admin Username</label>
-                            <input type="text" class="form-input" id="authUsername" placeholder="admin">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">New Password (leave blank to keep current)</label>
-                            <input type="password" class="form-input" id="authPassword" placeholder="••••••••">
-                        </div>
-                    </div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">System Updates</div>
+                    <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
+                        <i class="fas fa-sync-alt"></i> Check for Updates
+                    </button>
                 </div>
                 
-                <button type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
-            </form>
-
-            <!-- Maintenance & Extra Tools (OUTSIDE form to prevent submit confusion) -->
-            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllUUIDs()">
-                        <i class="fas fa-id-card"></i> Reset All UUIDs
-                    </button>
-                    <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllMACs()">
-                        <i class="fas fa-network-wired"></i> Reset All MACs
-                    </button>
-                </div>
-                <small style="color: #718096; font-size: 11px; margin-top: 8px; display: block;">
-                    Warning: Resetting UUIDs or MAC addresses will force clients (like Ubiquiti or NVRs) to re-discover/re-add the cameras.
-                </small>
-            </div>
-            
-            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
-                        <i class="fas fa-download"></i> Backup Config
-                    </button>
-                    <button type="button" id="restoreBtn" class="btn btn-secondary" onclick="restoreBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
-                        <i class="fas fa-upload"></i> Restore Config
-                    </button>
-                </div>
-            </div>
-            
-            <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">System Updates</div>
-                <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
-                    <i class="fas fa-sync-alt"></i> Check for Updates
+                <!-- Reboot Server Button (Linux Only) -->
+                <button type="button" class="btn reboot-host" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
+                    <i class="fas fa-power-off"></i> Reboot Server
                 </button>
             </div>
-            
-            <!-- Reboot Server Button (Linux Only) -->
-            <button type="button" class="btn reboot-host" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
-                <i class="fas fa-power-off"></i> Reboot Server
-            </button>
         </div>
     </div>
     
@@ -5692,6 +5953,35 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        function switchSettingsTab(tabId) {{
+            // Hide all tab content
+            document.querySelectorAll('.settings-tab-content').forEach(el => {{
+                el.classList.remove('active');
+            }});
+            // Remove active class from all buttons
+            document.querySelectorAll('.settings-tab-btn').forEach(el => {{
+                el.classList.remove('active');
+            }});
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Find active button and make it active
+            const btn = Array.from(document.querySelectorAll('.settings-tab-btn')).find(b => {{
+                return b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId);
+            }});
+            if (btn) btn.classList.add('active');
+            
+            // Toggle Save Settings button visibility based on tab
+            const saveBtn = document.getElementById('settings-save-btn');
+            if (saveBtn) {{
+                if (tabId === 'settings-maintenance') {{
+                    saveBtn.style.display = 'none';
+                }} else {{
+                    saveBtn.style.display = 'block';
+                }}
+            }}
+        }}
         
         function toggleAuthFields() {{
             const enabled = document.getElementById('authEnabled').checked;
@@ -6027,6 +6317,7 @@ def get_web_ui_html(current_settings=None):
             }}
             
             document.getElementById('settings-modal').classList.add('active');
+            switchSettingsTab('settings-general');
         }}
         
         async function fetchSystemVersions() {{
