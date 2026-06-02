@@ -2367,6 +2367,10 @@ def get_web_ui_html(current_settings=None):
                             <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
                             <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt)</option>
                             <option value="yolov8m.pt">YOLOv8 Medium (yolov8m.pt)</option>
+                            <option value="yolo11l.pt">YOLO11 Large (yolo11l.pt)</option>
+                            <option value="yolo11x.pt">YOLO11 Extra-Large (yolo11x.pt)</option>
+                            <option value="yolov8l.pt">YOLOv8 Large (yolov8l.pt)</option>
+                            <option value="yolov8x.pt">YOLOv8 Extra-Large (yolov8x.pt)</option>
                         </select>
                         <div id="aiModelDescription" style="margin-top: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: #2d3748; line-height: 1.4; color: #e2e8f0; border-left: 3px solid #3182ce;">
                             <!-- Dynamically populated description -->
@@ -4932,6 +4936,26 @@ def get_web_ui_html(current_settings=None):
                        "• <strong>CPU Cost:</strong> Very High (GPU recommended).<br>" +
                        "• <strong>Accuracy:</strong> Excellent.<br>" +
                        "• <strong>Drawbacks:</strong> Slow processing on CPU, which can lead to high latency and frame buildup.";
+            }} else if (model === "yolo11l.pt") {{
+                html = "<strong>YOLO11 Large (51.5 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Extremely High (GPU highly recommended).<br>" +
+                       "• <strong>Accuracy:</strong> Outstanding (precise detection of tiny/far objects).<br>" +
+                       "• <strong>Drawbacks:</strong> Heavy model; will struggle or cause lag on CPU inference.";
+            }} else if (model === "yolo11x.pt") {{
+                html = "<strong>YOLO11 Extra-Large (114.0 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Maximum (GPU required for real-time).<br>" +
+                       "• <strong>Accuracy:</strong> Peak detection capability.<br>" +
+                       "• <strong>Drawbacks:</strong> High memory footprint and slow speed unless run on hardware acceleration.";
+            }} else if (model === "yolov8l.pt") {{
+                html = "<strong>YOLOv8 Large (87.5 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Extremely High (GPU highly recommended).<br>" +
+                       "• <strong>Accuracy:</strong> Very High.<br>" +
+                       "• <strong>Drawbacks:</strong> Slower and uses more parameters than YOLO11 Large.";
+            }} else if (model === "yolov8x.pt") {{
+                html = "<strong>YOLOv8 Extra-Large (130.5 MB)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Maximum (GPU required).<br>" +
+                       "• <strong>Accuracy:</strong> Outstanding.<br>" +
+                       "• <strong>Drawbacks:</strong> Very resource intensive.";
             }}
             desc.innerHTML = html;
         }}
