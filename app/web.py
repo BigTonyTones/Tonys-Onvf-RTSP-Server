@@ -1257,6 +1257,188 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/api/diagnostics/network-scan', methods=['POST'])
+    @login_required
+    def diag_network_scan():
+        """Scan the local subnet for all devices using ping sweep + ARP table + vendor lookup + port probing"""
+        import socket
+        import threading
+        import ipaddress
+        from .mac_vendor import lookup_vendor, probe_ports
+
+        data = request.json or {}
+        subnet = data.get('subnet', '')  # optional manual override
+
+        try:
+            # Auto-detect local IP and subnet if not provided
+            if not subnet:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                try:
+                    s.connect(('8.8.8.8', 80))
+                    local_ip = s.getsockname()[0]
+                finally:
+                    s.close()
+                # Assume /24 subnet
+                network = ipaddress.IPv4Network(f"{local_ip}/24", strict=False)
+            else:
+                network = ipaddress.IPv4Network(subnet, strict=False)
+                local_ip = str(list(network.hosts())[0])
+
+            # Phase 1: Parallel ping sweep to populate ARP table
+            pinged_hosts = set()
+            ping_lock = threading.Lock()
+
+            def ping_host(ip_str):
+                try:
+                    param = '-n' if sys.platform.startswith('win') else '-c'
+                    timeout_flag = '-w' if sys.platform.startswith('win') else '-W'
+                    timeout_val = '500' if sys.platform.startswith('win') else '1'
+                    cmd = ['ping', param, '1', timeout_flag, timeout_val, ip_str]
+                    result = subprocess.run(cmd, capture_output=True, timeout=3)
+                    if result.returncode == 0:
+                        with ping_lock:
+                            pinged_hosts.add(ip_str)
+                except Exception:
+                    pass
+
+            threads = []
+            for host in network.hosts():
+                t = threading.Thread(target=ping_host, args=(str(host),), daemon=True)
+                threads.append(t)
+                t.start()
+
+            # Wait for all pings to complete (max ~4 seconds)
+            for t in threads:
+                t.join(timeout=5)
+
+            # Phase 2: Read ARP table
+            arp_entries = {}
+            try:
+                if sys.platform.startswith('win'):
+                    result = subprocess.run(['arp', '-a'], capture_output=True, text=True, timeout=5)
+                    import re
+                    for line in result.stdout.splitlines():
+                        match = re.search(r'(\d+\.\d+\.\d+\.\d+)\s+([\da-fA-F]{2}[:-][\da-fA-F]{2}[:-][\da-fA-F]{2}[:-][\da-fA-F]{2}[:-][\da-fA-F]{2}[:-][\da-fA-F]{2})\s+(\w+)', line)
+                        if match:
+                            ip = match.group(1)
+                            mac = match.group(2).replace('-', ':').upper()
+                            entry_type = match.group(3)
+                            if mac != 'FF:FF:FF:FF:FF:FF' and ip != '255.255.255.255':
+                                arp_entries[ip] = {'mac': mac, 'type': entry_type}
+                else:
+                    # Try 'ip neigh' first (modern Linux), fallback to 'arp -a'
+                    result = subprocess.run(['ip', 'neigh'], capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        import re
+                        for line in result.stdout.splitlines():
+                            match = re.search(r'(\d+\.\d+\.\d+\.\d+)\s+.*lladdr\s+([\da-fA-F:]+)', line)
+                            if match:
+                                ip = match.group(1)
+                                mac = match.group(2).upper()
+                                arp_entries[ip] = {'mac': mac, 'type': 'dynamic'}
+                    else:
+                        result = subprocess.run(['arp', '-a'], capture_output=True, text=True, timeout=5)
+                        import re
+                        for line in result.stdout.splitlines():
+                            match = re.search(r'\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([\da-fA-F:]+)', line)
+                            if match:
+                                ip = match.group(1)
+                                mac = match.group(2).upper()
+                                arp_entries[ip] = {'mac': mac, 'type': 'dynamic'}
+            except Exception:
+                pass
+
+            # Phase 3: Merge ping results + ARP
+            all_ips = pinged_hosts | set(arp_entries.keys())
+            # Filter to only IPs in our subnet
+            all_ips = {ip for ip in all_ips if ipaddress.IPv4Address(ip) in network}
+
+            # Phase 4: Parallel port probing + hostname resolution for all discovered IPs
+            device_data = {}
+            data_lock = threading.Lock()
+
+            def enrich_device(ip_str):
+                info = {}
+                
+                # Hostname resolution
+                try:
+                    hostname = socket.getfqdn(ip_str)
+                    if hostname == ip_str:
+                        hostname = socket.gethostbyaddr(ip_str)[0]
+                    info['hostname'] = hostname
+                except Exception:
+                    info['hostname'] = ''
+                
+                # Port probing (only for reachable hosts to save time)
+                if ip_str in pinged_hosts:
+                    port_info = probe_ports(ip_str, timeout=0.4)
+                    info['open_ports'] = port_info['open_ports']
+                    info['device_type'] = port_info['device_type']
+                else:
+                    info['open_ports'] = []
+                    info['device_type'] = ''
+                
+                with data_lock:
+                    device_data[ip_str] = info
+
+            enrich_threads = []
+            for ip in all_ips:
+                t = threading.Thread(target=enrich_device, args=(ip,), daemon=True)
+                enrich_threads.append(t)
+                t.start()
+            
+            for t in enrich_threads:
+                t.join(timeout=8)
+
+            # Phase 5: Build final device list
+            devices = []
+            for ip in sorted(all_ips, key=lambda x: ipaddress.IPv4Address(x)):
+                mac = arp_entries.get(ip, {}).get('mac', '')
+                entry_type = arp_entries.get(ip, {}).get('type', '')
+                enriched = device_data.get(ip, {})
+
+                # MAC vendor lookup
+                vendor = lookup_vendor(mac)
+                
+                # Determine if this is the local machine
+                is_self = (ip == local_ip)
+
+                devices.append({
+                    'ip': ip,
+                    'mac': mac,
+                    'hostname': enriched.get('hostname', ''),
+                    'vendor': vendor,
+                    'device_type': enriched.get('device_type', ''),
+                    'open_ports': enriched.get('open_ports', []),
+                    'type': entry_type,
+                    'is_self': is_self,
+                    'reachable': ip in pinged_hosts,
+                })
+
+            return jsonify({
+                'success': True,
+                'devices': devices,
+                'count': len(devices),
+                'local_ip': local_ip,
+                'subnet': str(network),
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/onvif-scan', methods=['POST'])
+    @login_required
+    def diag_onvif_scan():
+        """Scan the local network for ONVIF cameras using WS-Discovery"""
+        data = request.json or {}
+        timeout = min(10, int(data.get('timeout', 4)))
+        
+        try:
+            prober = ONVIFProber()
+            devices = prober.network_scan(timeout=timeout)
+            return jsonify({'success': True, 'devices': devices, 'count': len(devices)})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @app.route('/api/diagnostics/onvif', methods=['POST'])
     @login_required
     def diag_onvif():
@@ -1339,6 +1521,383 @@ def create_web_app(manager):
                 
             return jsonify(system_info)
         except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/ai-info')
+    @login_required
+    def diag_ai_info():
+        """Get detailed AI and YOLO environment/metrics info"""
+        try:
+            from .ai_device import select_device, _AI_MODELS
+            
+            # Check packages
+            yolo_installed = False
+            torch_installed = False
+            yolo_version = "Not Installed"
+            torch_version = "Not Installed"
+            cuda_available = False
+            cuda_device_count = 0
+            cuda_device_name = "N/A"
+            mps_available = False
+            torch_threads = "N/A"
+            
+            try:
+                import ultralytics
+                yolo_installed = True
+                yolo_version = ultralytics.__version__
+            except ImportError:
+                pass
+                
+            try:
+                import torch
+                torch_installed = True
+                torch_version = torch.__version__
+                cuda_available = torch.cuda.is_available()
+                if cuda_available:
+                    cuda_device_count = torch.cuda.device_count()
+                    try:
+                        cuda_device_name = torch.cuda.get_device_name(0)
+                    except Exception:
+                        cuda_device_name = "Unknown CUDA Device"
+                mps_available = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+                torch_threads = torch.get_num_threads()
+            except ImportError:
+                pass
+                
+            selected_device = select_device()
+            
+            # Active cached models
+            cached_models = list(_AI_MODELS.keys())
+            
+            # Active camera AI threads
+            active_ai_cameras = []
+            for cam in manager.cameras:
+                if getattr(cam, '_ai_running', False):
+                    active_ai_cameras.append({
+                        'name': cam.name,
+                        'model': cam.ai_model,
+                        'targets': cam.ai_targets,
+                        'fps': getattr(cam, 'ai_fps_measurement', 0.0),
+                        'inference_count': getattr(cam, 'ai_inference_count', 0),
+                        'avg_latency_ms': round(getattr(cam, 'ai_avg_inference_latency', 0.0) * 1000, 1),
+                        'last_detection': getattr(cam, 'ai_last_detection', [])
+                    })
+                    
+            from .config import AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY, AI_INFERENCE_FRAME_WIDTH, AI_COOLDOWN_SECONDS, AI_TARGET_INTERVAL
+            
+            return jsonify({
+                'success': True,
+                'yolo_installed': yolo_installed,
+                'yolo_version': yolo_version,
+                'torch_installed': torch_installed,
+                'torch_version': torch_version,
+                'cuda_available': cuda_available,
+                'cuda_device_count': cuda_device_count,
+                'cuda_device_name': cuda_device_name,
+                'mps_available': mps_available,
+                'torch_threads': torch_threads,
+                'selected_device': selected_device,
+                'cached_models': cached_models,
+                'active_ai_cameras': active_ai_cameras,
+                'config': {
+                    'default_model': AI_DEFAULT_MODEL,
+                    'confidence_threshold': AI_CONFIDENCE_THRESHOLD,
+                    'motion_sensitivity': AI_MOTION_SENSITIVITY,
+                    'inference_width': AI_INFERENCE_FRAME_WIDTH,
+                    'cooldown_seconds': AI_COOLDOWN_SECONDS,
+                    'target_interval': AI_TARGET_INTERVAL
+                }
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/rtsp-analyzer', methods=['POST'])
+    @login_required
+    def diag_rtsp_analyzer():
+        """Probes RTSP stream for latency, frame drops, and network speed"""
+        try:
+            data = request.json or {}
+            camera_id = data.get('camera_id')
+            url = data.get('url')
+            
+            if camera_id is not None:
+                cam = manager.get_camera(int(camera_id))
+                if cam:
+                    url = cam.main_stream_url
+                    
+            if not url:
+                return jsonify({'success': False, 'error': 'No camera_id or stream URL provided'}), 400
+                
+            ffmpeg_mgr = FFmpegManager()
+            ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
+            if not ffmpeg_exe:
+                return jsonify({'success': False, 'error': 'FFmpeg executable not found'}), 404
+                
+            # Construct a test command that copies frames to null for 3 seconds
+            cmd = [
+                ffmpeg_exe,
+                '-y',
+                '-rtsp_transport', 'tcp',
+                '-i', url,
+                '-t', '3',
+                '-f', 'null',
+                '-'
+            ]
+            
+            start_time = time.time()
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            duration = time.time() - start_time
+            
+            stderr = result.stderr or ""
+            
+            fps = 0.0
+            speed = 1.0
+            frame_count = 0
+            dropped_frames = 0
+            dup_frames = 0
+            bitrate_kbps = 0.0
+            
+            import re
+            frame_match = re.search(r'frame=\s*(\d+)', stderr)
+            fps_match = re.search(r'fps=\s*([\d\.]+)', stderr)
+            speed_match = re.search(r'speed=\s*([\d\.]+)x', stderr)
+            drop_match = re.search(r'drop=\s*(\d+)', stderr)
+            dup_match = re.search(r'dup=\s*(\d+)', stderr)
+            bitrate_match = re.search(r'bitrate=\s*([\d\.]+)kbits/s', stderr)
+            
+            if frame_match:
+                frame_count = int(frame_match.group(1))
+            if fps_match:
+                fps = float(fps_match.group(1))
+            if speed_match:
+                speed = float(speed_match.group(1))
+            if drop_match:
+                dropped_frames = int(drop_match.group(1))
+            if dup_match:
+                dup_frames = int(dup_match.group(1))
+            if bitrate_match:
+                bitrate_kbps = float(bitrate_match.group(1))
+                
+            stream_health = "Excellent"
+            if dropped_frames > 5 or speed < 0.90:
+                stream_health = "Poor (Frame drops/slowdowns detected)"
+            elif dropped_frames > 0 or speed < 0.98:
+                stream_health = "Fair (Minor jitter/dropped frames)"
+                
+            return jsonify({
+                'success': True,
+                'health': stream_health,
+                'connect_time_seconds': round(duration, 2),
+                'fps': fps,
+                'speed': f"{speed}x",
+                'frames_probed': frame_count,
+                'dropped_frames': dropped_frames,
+                'duplicated_frames': dup_frames,
+                'bitrate_kbps': bitrate_kbps,
+                'raw_stderr': stderr[-1500:]
+            })
+        except subprocess.TimeoutExpired:
+            return jsonify({'success': False, 'error': 'Connection to RTSP stream timed out (10s limit)'}), 504
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/bandwidth-monitor', methods=['GET'])
+    @login_required
+    def diag_bandwidth_monitor():
+        """Measures network interface bandwidth RX/TX rates"""
+        try:
+            if not psutil:
+                return jsonify({'success': False, 'error': 'psutil library not available'}), 500
+                
+            io1 = psutil.net_io_counters(pernic=True)
+            time.sleep(1.0)
+            io2 = psutil.net_io_counters(pernic=True)
+            
+            interfaces = []
+            for nic, counters in io2.items():
+                if nic in io1:
+                    prev = io1[nic]
+                    rx_speed = counters.bytes_recv - prev.bytes_recv
+                    tx_speed = counters.bytes_sent - prev.bytes_sent
+                    
+                    if rx_speed == 0 and tx_speed == 0 and counters.bytes_recv == 0:
+                        continue
+                        
+                    interfaces.append({
+                        'interface': nic,
+                        'rx_speed_kbps': round(rx_speed / 1024, 1),
+                        'tx_speed_kbps': round(tx_speed / 1024, 1),
+                        'rx_total_mb': round(counters.bytes_recv / (1024*1024), 1),
+                        'tx_total_mb': round(counters.bytes_sent / (1024*1024), 1)
+                    })
+                    
+            return jsonify({
+                'success': True,
+                'interfaces': interfaces,
+                'timestamp': time.time()
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/transcode-calculator', methods=['POST'])
+    @login_required
+    def diag_transcode_calculator():
+        """Runs a mock transcode test to calculate transcoding speed and resource load"""
+        try:
+            data = request.json or {}
+            camera_id = data.get('camera_id')
+            encoder = data.get('encoder', 'libx264')
+            
+            if not camera_id:
+                return jsonify({'success': False, 'error': 'camera_id is required'}), 400
+                
+            cam = manager.get_camera(int(camera_id))
+            if not cam:
+                return jsonify({'success': False, 'error': f'Camera ID {camera_id} not found'}), 404
+                
+            url = cam.main_stream_url
+            
+            ffmpeg_mgr = FFmpegManager()
+            ffmpeg_exe = ffmpeg_mgr.get_ffmpeg_path()
+            if not ffmpeg_exe:
+                return jsonify({'success': False, 'error': 'FFmpeg executable not found'}), 404
+                
+            cmd = [
+                ffmpeg_exe,
+                '-y',
+                '-rtsp_transport', 'tcp',
+                '-i', url,
+                '-t', '4',
+                '-c:v', encoder,
+                '-preset', 'veryfast' if encoder == 'libx264' else 'fast',
+                '-f', 'null',
+                '-'
+            ]
+            
+            start_time = time.time()
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            cpu_samples = []
+            if psutil:
+                for _ in range(2):
+                    cpu_samples.append(psutil.cpu_percent(interval=1.0))
+            else:
+                time.sleep(2.0)
+                
+            try:
+                stdout, stderr = proc.communicate(timeout=6)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                stdout, stderr = proc.communicate()
+                
+            duration = time.time() - start_time
+            stderr = stderr or ""
+            
+            import re
+            fps_match = re.search(r'fps=\s*([\d\.]+)', stderr)
+            speed_match = re.search(r'speed=\s*([\d\.]+)x', stderr)
+            frame_match = re.search(r'frame=\s*(\d+)', stderr)
+            
+            fps = float(fps_match.group(1)) if fps_match else 0.0
+            speed = float(speed_match.group(1)) if speed_match else 0.0
+            frames = int(frame_match.group(1)) if frame_match else 0
+            
+            avg_cpu = round(sum(cpu_samples) / len(cpu_samples), 1) if cpu_samples else 0.0
+            success = proc.returncode == 0 and frames > 0
+            
+            status_msg = "Success"
+            if not success:
+                status_msg = "Failed (Check FFmpeg output for driver/encoder error)"
+            elif speed < 1.0:
+                status_msg = "Slow (Transcoding speed is below 1.0x - stream will lag in real-time!)"
+            elif speed >= 1.0:
+                status_msg = "Optimal (Can handle real-time transcoding)"
+                
+            return jsonify({
+                'success': True,
+                'status': status_msg,
+                'encoder_used': encoder,
+                'fps': fps,
+                'speed': f"{speed}x",
+                'frames_transcoded': frames,
+                'probed_duration_seconds': round(duration, 2),
+                'cpu_load_percent': avg_cpu if psutil else 'N/A',
+                'return_code': proc.returncode,
+                'raw_stderr': stderr[-1500:]
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/diagnostics/storage-check', methods=['GET'])
+    @login_required
+    def diag_storage_check():
+        """Benchmarks read/write speeds of the storage disk and reports capacity"""
+        try:
+            from .config import DATA_DIR
+            
+            total_gb = 0.0
+            free_gb = 0.0
+            used_percent = 0.0
+            
+            if psutil:
+                disk = psutil.disk_usage(DATA_DIR)
+                total_gb = round(disk.total / (1024**3), 1)
+                free_gb = round(disk.free / (1024**3), 1)
+                used_percent = disk.percent
+            else:
+                if hasattr(os, 'statvfs'):
+                    st = os.statvfs(DATA_DIR)
+                    free_gb = round((st.f_bavail * st.f_frsize) / (1024**3), 1)
+                    total_gb = round((st.f_blocks * st.f_frsize) / (1024**3), 1)
+                    used_percent = round((1 - free_gb/total_gb)*100, 1) if total_gb > 0 else 0
+                    
+            test_file = os.path.join(DATA_DIR, ".storage_bench.tmp")
+            data_size_mb = 20
+            payload = os.urandom(data_size_mb * 1024 * 1024)
+            
+            t0 = time.time()
+            with open(test_file, 'wb') as f:
+                f.write(payload)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except:
+                    pass
+            write_duration = time.time() - t0
+            write_speed = round(data_size_mb / write_duration, 1) if write_duration > 0 else 0.0
+            
+            t0 = time.time()
+            with open(test_file, 'rb') as f:
+                read_payload = f.read()
+            read_duration = time.time() - t0
+            read_speed = round(data_size_mb / read_duration, 1) if read_duration > 0 else 0.0
+            
+            if os.path.exists(test_file):
+                os.remove(test_file)
+                
+            rating = "Excellent (SSD/NVMe)"
+            if write_speed < 15.0 or read_speed < 30.0:
+                rating = "Poor (USB 2.0 or failing HDD)"
+            elif write_speed < 50.0 or read_speed < 80.0:
+                rating = "Fair (Standard HDD or slow network share)"
+                
+            return jsonify({
+                'success': True,
+                'storage_path': os.path.abspath(DATA_DIR),
+                'total_gb': total_gb,
+                'free_gb': free_gb,
+                'used_percent': used_percent,
+                'write_speed_mbs': write_speed,
+                'read_speed_mbs': read_speed,
+                'performance_rating': rating
+            })
+        except Exception as e:
+            test_file = os.path.join(DATA_DIR, ".storage_bench.tmp")
+            if os.path.exists(test_file):
+                try:
+                    os.remove(test_file)
+                except:
+                    pass
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/api/server/restart', methods=['POST'])

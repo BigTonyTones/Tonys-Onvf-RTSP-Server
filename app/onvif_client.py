@@ -1,15 +1,241 @@
 import sys
 import os
 import logging
+import socket
+import struct
+import uuid
+import time
+import re
 from urllib.parse import urlparse
+from xml.etree import ElementTree as ET
 
 # Suppress zeep logging
 logging.getLogger('zeep').setLevel(logging.ERROR)
+
+logger = logging.getLogger(__name__)
 
 class ONVIFProber:
     def __init__(self):
         self.wsdl_dir = None
         # Try to locate WSDL files if needed, but onvif-zeep usually finds them
+
+    # ----------------------------------------------------------------
+    #  WS-Discovery based ONVIF Network Scanner
+    # ----------------------------------------------------------------
+    WS_DISCOVERY_MULTICAST = '239.255.255.250'
+    WS_DISCOVERY_PORT = 3702
+
+    # SOAP probe template for WS-Discovery
+    _PROBE_TEMPLATE = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"'
+        ' xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"'
+        ' xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"'
+        ' xmlns:dn="http://www.onvif.org/ver10/network/wsdl">'
+        '<s:Header>'
+        '<a:Action s:mustUnderstand="1">'
+        'http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe'
+        '</a:Action>'
+        '<a:MessageID>uuid:{msg_id}</a:MessageID>'
+        '<a:ReplyTo><a:Address>'
+        'http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous'
+        '</a:Address></a:ReplyTo>'
+        '<a:To s:mustUnderstand="1">'
+        'urn:schemas-xmlsoap-org:ws:2005:04:discovery'
+        '</a:To>'
+        '</s:Header>'
+        '<s:Body>'
+        '<d:Probe>'
+        '<d:Types>dn:NetworkVideoTransmitter</d:Types>'
+        '</d:Probe>'
+        '</s:Body>'
+        '</s:Envelope>'
+    )
+
+    def network_scan(self, timeout=4):
+        """
+        Discover ONVIF cameras on the local network using WS-Discovery.
+        Returns a list of discovered devices with their addresses and basic info.
+        """
+        msg_id = str(uuid.uuid4())
+        probe_msg = self._PROBE_TEMPLATE.format(msg_id=msg_id).encode('utf-8')
+
+        devices = {}  # keyed by XAddr to de-duplicate
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.settimeout(0.5)
+
+        # Set multicast TTL
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack('b', 4))
+
+        try:
+            # Send the probe multiple times for reliability
+            for _ in range(3):
+                sock.sendto(probe_msg, (self.WS_DISCOVERY_MULTICAST, self.WS_DISCOVERY_PORT))
+                time.sleep(0.1)
+
+            # Collect responses until timeout
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+                try:
+                    data, addr = sock.recvfrom(65535)
+                    sender_ip = addr[0]
+                    device = self._parse_probe_match(data, sender_ip)
+                    if device:
+                        # Use first XAddr as key for de-duplication
+                        key = device.get('xaddrs', [None])[0] or sender_ip
+                        if key not in devices:
+                            devices[key] = device
+                except socket.timeout:
+                    continue
+                except Exception as e:
+                    logger.debug(f"Error receiving WS-Discovery response: {e}")
+                    continue
+        finally:
+            sock.close()
+
+        result = list(devices.values())
+
+        # Try to get device info for each discovered camera using GetDeviceInformation
+        for device in result:
+            self._enrich_device_info(device)
+
+        return result
+
+    def _parse_probe_match(self, data, sender_ip):
+        """Parse a WS-Discovery ProbeMatch XML response."""
+        try:
+            root = ET.fromstring(data)
+        except ET.ParseError:
+            return None
+
+        # Define namespace map
+        ns = {
+            's': 'http://www.w3.org/2003/05/soap-envelope',
+            'd': 'http://schemas.xmlsoap.org/ws/2005/04/discovery',
+            'a': 'http://schemas.xmlsoap.org/ws/2004/08/addressing',
+        }
+
+        # Find ProbeMatch elements
+        matches = root.findall('.//d:ProbeMatch', ns)
+        if not matches:
+            return None
+
+        match = matches[0]
+
+        # Extract endpoint reference (EPR)
+        epr_el = match.find('.//a:Address', ns)
+        epr = epr_el.text.strip() if epr_el is not None and epr_el.text else ''
+
+        # Extract types
+        types_el = match.find('d:Types', ns)
+        types = types_el.text.strip() if types_el is not None and types_el.text else ''
+
+        # Extract scopes  
+        scopes_el = match.find('d:Scopes', ns)
+        scopes_text = scopes_el.text.strip() if scopes_el is not None and scopes_el.text else ''
+        scopes = scopes_text.split() if scopes_text else []
+
+        # Extract XAddrs (service URLs)
+        xaddrs_el = match.find('d:XAddrs', ns)
+        xaddrs_text = xaddrs_el.text.strip() if xaddrs_el is not None and xaddrs_el.text else ''
+        xaddrs = xaddrs_text.split() if xaddrs_text else []
+
+        # Parse useful scope data
+        hardware_name = ''
+        scope_name = ''
+        location = ''
+        for scope in scopes:
+            scope_lower = scope.lower()
+            if '/name/' in scope_lower:
+                scope_name = scope.split('/name/')[-1]
+            elif '/hardware/' in scope_lower:
+                hardware_name = scope.split('/hardware/')[-1]
+            elif '/location/' in scope_lower:
+                location = scope.split('/location/')[-1]
+
+        # Extract host and port from XAddrs
+        onvif_host = sender_ip
+        onvif_port = 80
+        if xaddrs:
+            try:
+                parsed = urlparse(xaddrs[0])
+                onvif_host = parsed.hostname or sender_ip
+                onvif_port = parsed.port or 80
+            except Exception:
+                pass
+
+        return {
+            'ip': sender_ip,
+            'host': onvif_host,
+            'port': onvif_port,
+            'name': scope_name or hardware_name or f'ONVIF Device ({sender_ip})',
+            'hardware': hardware_name,
+            'location': location,
+            'types': types,
+            'xaddrs': xaddrs,
+            'scopes': scopes,
+            'epr': epr,
+            'manufacturer': '',
+            'model': '',
+            'firmware': '',
+        }
+
+    def _enrich_device_info(self, device):
+        """Try a quick unauthenticated GetDeviceInformation call to populate manufacturer/model."""
+        if not device.get('xaddrs'):
+            return
+
+        xaddr = device['xaddrs'][0]
+        soap_body = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"'
+            ' xmlns:tds="http://www.onvif.org/ver10/device/wsdl">'
+            '<s:Header/>'
+            '<s:Body><tds:GetDeviceInformation/></s:Body>'
+            '</s:Envelope>'
+        )
+        try:
+            parsed = urlparse(xaddr)
+            host = parsed.hostname
+            port = parsed.port or 80
+            path = parsed.path or '/onvif/device_service'
+
+            conn = socket.create_connection((host, port), timeout=2)
+            http_req = (
+                f"POST {path} HTTP/1.1\r\n"
+                f"Host: {host}:{port}\r\n"
+                f"Content-Type: application/soap+xml; charset=utf-8\r\n"
+                f"Content-Length: {len(soap_body)}\r\n"
+                f"Connection: close\r\n"
+                f"\r\n"
+                f"{soap_body}"
+            )
+            conn.sendall(http_req.encode('utf-8'))
+
+            response = b''
+            while True:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+            conn.close()
+
+            resp_text = response.decode('utf-8', errors='replace')
+
+            # Parse manufacturer, model, firmware from response
+            for tag, key in [('Manufacturer', 'manufacturer'), ('Model', 'model'),
+                             ('FirmwareVersion', 'firmware')]:
+                m = re.search(rf'<[^>]*{tag}[^>]*>([^<]+)</', resp_text)
+                if m:
+                    device[key] = m.group(1).strip()
+
+        except Exception:
+            # Silently ignore — many cameras require auth for GetDeviceInformation
+            pass
+
+
         
     def probe(self, host, port, username, password):
         """
