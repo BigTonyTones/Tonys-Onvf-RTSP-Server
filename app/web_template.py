@@ -2075,6 +2075,8 @@ def get_web_ui_html(current_settings=None):
         </div>
     </div>
     
+    <!-- ONVIF Events Overlay -->
+    <div id="onvif-overlay" class="matrix-overlay">
         <div class="matrix-controls" style="align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
             <div style="color: var(--text-title); font-size: 18px; font-weight: 600; margin-right: auto; display: flex; align-items: center; gap: 10px; padding-left: 10px;">
                 <span>AI & ONVIF Event Log Stream</span>
