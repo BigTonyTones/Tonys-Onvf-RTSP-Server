@@ -322,16 +322,166 @@ def get_web_ui_html(current_settings=None):
         .header {{
             background: var(--header-bg);
             border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 20px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
             box-shadow: var(--shadow);
-            position: relative;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
             width: 100%;
-            display: block;
         }}
-        .header h1 {{ color: var(--text-title); margin-bottom: 10px; }}
-        .header p {{ color: var(--text-body); font-size: 14px; }}
-        .actions {{ display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }}
+        
+        .header-top {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }}
+        
+        .header-title-area {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }}
+        
+        .header-title-area h1 {{
+            color: var(--text-title);
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        
+        .version-badge {{
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            align-self: center;
+        }}
+        
+        body.theme-dark .version-badge,
+        body.theme-dracula .version-badge,
+        body.theme-nord .version-badge,
+        body.theme-slate .version-badge,
+        body.theme-midnight .version-badge {{
+            background: rgba(189, 147, 249, 0.15);
+            color: #bd93f9;
+            border-color: rgba(189, 147, 249, 0.3);
+        }}
+        
+        .header-meta-area {{
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }}
+        
+        .stats-badge {{
+            padding: 6px 12px;
+            background: var(--body-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--text-body);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 11px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        
+        .theme-select-container {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-left: 16px;
+            border-left: 1px solid var(--border-color);
+        }}
+        
+        .theme-select-container span {{
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        
+        .theme-select {{
+            width: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: var(--body-bg);
+            color: var(--text-title);
+            border-radius: 6px;
+            outline: none;
+            transition: all 0.2s;
+        }}
+        
+        .theme-select:focus {{
+            border-color: var(--btn-primary);
+        }}
+
+        .header-bottom {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            width: 100%;
+        }}
+
+        .actions {{
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 0;
+            align-items: center;
+        }}
+        
+        .control-toggles {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }}
+        
+        .toggle-stack {{
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }}
+        
+        .toggle-group {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--body-bg);
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            height: 22px;
+            min-width: 140px;
+            gap: 8px;
+        }}
+        
+        .toggle-group span {{
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-title);
+            white-space: nowrap;
+        }}
         .btn {{
             padding: 10px 20px;
             border: 1px solid var(--border-color);
@@ -1628,74 +1778,120 @@ def get_web_ui_html(current_settings=None):
 <body class="theme-{current_settings.get('theme', 'classic') if current_settings else 'classic'}">
     <div class="container">
         <div class="header">
-            <div style="position: absolute; top: 15px; right: 15px; display: flex; align-items: center; gap: 15px;">
-                <span id="server-stats" style="padding: 6px 10px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px; font-weight: 600; color: var(--text-muted); font-family: monospace; font-size: 11px; white-space: nowrap; box-shadow: var(--shadow-sm);">CPU: ... | MEM: ...</span>
-                <div style="display: flex; align-items: center; gap: 8px; padding-left: 15px; border-left: 1px solid var(--card-border);">
-                    <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Theme</span>
-                    <select id="themeSwitcher" class="form-input" style="width: auto; padding: 4px 8px; font-size: 13px; cursor: pointer; border-color: var(--card-border);" onchange="changeTheme(this.value)">
-                        <option value="classic" {"selected" if current_settings and current_settings.get('theme') == 'classic' else ""}>Classic</option>
-                        <option value="dark" {"selected" if current_settings and current_settings.get('theme') == 'dark' else ""}>Modern Dark</option>
-                        <option value="nord" {"selected" if current_settings and current_settings.get('theme') == 'nord' else ""}>Nordic</option>
-                        <option value="dracula" {"selected" if not current_settings or current_settings.get('theme') == 'dracula' else ""}>Dracula (Pro Dark)</option>
-                        <option value="solar-light" {"selected" if current_settings and current_settings.get('theme') == 'solar-light' else ""}>Solarized</option>
-                        <option value="midnight" {"selected" if current_settings and current_settings.get('theme') == 'midnight' else ""}>Midnight</option>
-                        <option value="emerald" {"selected" if current_settings and current_settings.get('theme') == 'emerald' else ""}>Emerald</option>
-                        <option value="sunset" {"selected" if current_settings and current_settings.get('theme') == 'sunset' else ""}>Sunset</option>
-                        <option value="matrix" {"selected" if current_settings and current_settings.get('theme') == 'matrix' else ""}>Matrix</option>
-                        <option value="slate" {"selected" if current_settings and current_settings.get('theme') == 'slate' else ""}>Slate</option>
-                        <option value="cyberpunk" {"selected" if current_settings and current_settings.get('theme') == 'cyberpunk' else ""}>Cyberpunk</option>
-                        <option value="amoled" {"selected" if current_settings and current_settings.get('theme') == 'amoled' else ""}>Amoled</option>
-                    </select>
+            <!-- Top section: Title, version, stats, and theme selector -->
+            <div class="header-top">
+                <div class="header-title-area">
+                    <h1>
+                        <span>Tonys Onvif-RTSP Server</span>
+                        <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; margin-left: 10px; font-size: 18px; display: inline-flex; align-items: center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="View on GitHub">
+                            <i class="fa-brands fa-github"></i>
+                        </a>
+                        <span class="version-badge">v{CURRENT_VERSION}</span>
+                    </h1>
                 </div>
-            </div>
-            <h1>Tonys Onvif-RTSP Server v{CURRENT_VERSION}</h1>
-            <div class="actions">
-                <button class="btn btn-primary" onclick="openAddModal()">Add Camera</button>
-                <button class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" onclick="window.location.href='/gridfusion'">GridFusion</button>
-                <button class="btn" style="background: linear-gradient(135deg, #be5a83 0%, #9333ea 100%); color: white; font-weight: 600;" onclick="toggleMatrixView(true)">Matrix View</button>
-                <button class="btn" style="background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; font-weight: 600;" onclick="toggleONVIFView(true)">AI/ONVIF</button>
-                <button class="btn" style="background: linear-gradient(135deg, #38b2ac 0%, #319795 100%); color: white; font-weight: 600;" onclick="window.location.href='/ip-management'">IP Management</button>
-                <button class="btn" onclick="startAll()">Start All</button>
-                <button class="btn" onclick="stopAll()">Stop All</button>
-                <button class="btn" onclick="openSettingsModal()">Settings</button>
-                <button class="btn" style="background: rgba(102, 126, 234, 0.15); border: 1px solid rgba(102, 126, 234, 0.3);" onclick="window.location.href='/diagnostics'">Diagnostics</button>
-                <div class="dropdown">
-                    <button class="btn" style="background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%); color: white; border-color: #2d3748;">
-                        <i class="fas fa-server"></i> Server <i class="fas fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
-                    </button>
-                    <div class="dropdown-content">
-                        <div class="dropdown-content-inner">
-                            <button onclick="openLogsModal()">
-                                <i class="fas fa-list-alt"></i> System Logs
-                            </button>
-                            <button onclick="restartServer()" style="border-top: 1px solid var(--border-color);">
-                                <i class="fas fa-sync-alt"></i> Restart Server
-                            </button>
-                            <button onclick="stopServer()" style="color: #f56565; border-top: 1px solid var(--border-color);">
-                                <i class="fas fa-stop-circle"></i> Stop Server
-                            </button>
-                            <button onclick="rebootServer()" class="reboot-host" style="border-top: 1px solid var(--border-color);">
-                                <i class="fas fa-power-off"></i> Reboot Host
-                            </button>
-                        </div>
+                <div class="header-meta-area">
+                    <span id="server-stats" class="stats-badge">
+                        <i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ... &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ...
+                    </span>
+                    <div class="theme-select-container">
+                        <span>Theme</span>
+                        <select id="themeSwitcher" class="theme-select" onchange="changeTheme(this.value)">
+                            <option value="classic" {"selected" if current_settings and current_settings.get('theme') == 'classic' else ""}>Classic</option>
+                            <option value="dark" {"selected" if current_settings and current_settings.get('theme') == 'dark' else ""}>Modern Dark</option>
+                            <option value="nord" {"selected" if current_settings and current_settings.get('theme') == 'nord' else ""}>Nordic</option>
+                            <option value="dracula" {"selected" if not current_settings or current_settings.get('theme') == 'dracula' else ""}>Dracula (Pro Dark)</option>
+                            <option value="solar-light" {"selected" if current_settings and current_settings.get('theme') == 'solar-light' else ""}>Solarized</option>
+                            <option value="midnight" {"selected" if current_settings and current_settings.get('theme') == 'midnight' else ""}>Midnight</option>
+                            <option value="emerald" {"selected" if current_settings and current_settings.get('theme') == 'emerald' else ""}>Emerald</option>
+                            <option value="sunset" {"selected" if current_settings and current_settings.get('theme') == 'sunset' else ""}>Sunset</option>
+                            <option value="matrix" {"selected" if current_settings and current_settings.get('theme') == 'matrix' else ""}>Matrix</option>
+                            <option value="slate" {"selected" if current_settings and current_settings.get('theme') == 'slate' else ""}>Slate</option>
+                            <option value="cyberpunk" {"selected" if current_settings and current_settings.get('theme') == 'cyberpunk' else ""}>Cyberpunk</option>
+                            <option value="amoled" {"selected" if current_settings and current_settings.get('theme') == 'amoled' else ""}>Amoled</option>
+                        </select>
                     </div>
                 </div>
-                <button class="btn" onclick="openAboutModal()">About</button>
-                <div style="display: flex; align-items: center; margin-left: 15px; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
-                    <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Low Latency</span>
-                    <label class="toggle-switch" style="margin: 0; transform: scale(0.8);">
-                        <input type="checkbox" id="latencyToggle" onchange="toggleLatencyMode(this.checked)">
-                        <span class="toggle-slider"></span>
-                    </label>
+            </div>
+            
+            <!-- Bottom section: Navigation buttons, toggles, logout -->
+            <div class="header-bottom">
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="openAddModal()">
+                        <i class="fa-solid fa-plus"></i> Add Camera
+                    </button>
+                    <button class="btn" onclick="window.location.href='/gridfusion'">
+                        <i class="fa-solid fa-grip"></i> GridFusion
+                    </button>
+                    <button class="btn" onclick="toggleMatrixView(true)">
+                        <i class="fa-solid fa-table-cells"></i> Matrix View
+                    </button>
+                    <button class="btn" onclick="toggleONVIFView(true)">
+                        <i class="fa-solid fa-brain"></i> AI/ONVIF
+                    </button>
+                    <button class="btn" onclick="window.location.href='/ip-management'">
+                        <i class="fa-solid fa-network-wired"></i> IP Management
+                    </button>
+                    <button class="btn" onclick="startAll()">
+                        <i class="fa-solid fa-play"></i> Start All
+                    </button>
+                    <button class="btn" onclick="stopAll()">
+                        <i class="fa-solid fa-stop"></i> Stop All
+                    </button>
+                    <button class="btn" onclick="openSettingsModal()">
+                        <i class="fa-solid fa-gear"></i> Settings
+                    </button>
+                    <button class="btn" onclick="window.location.href='/diagnostics'">
+                        <i class="fa-solid fa-gauge"></i> Diagnostics
+                    </button>
+                    
+                    <div class="dropdown">
+                        <button class="btn">
+                            <i class="fa-solid fa-server"></i> Server <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
+                        </button>
+                        <div class="dropdown-content">
+                            <div class="dropdown-content-inner">
+                                <button onclick="openLogsModal()">
+                                    <i class="fa-solid fa-list-alt"></i> System Logs
+                                </button>
+                                <button onclick="restartServer()" style="border-top: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-sync"></i> Restart Server
+                                </button>
+                                <button onclick="stopServer()" style="color: #f56565; border-top: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-stop-circle"></i> Stop Server
+                                </button>
+                                <button onclick="rebootServer()" class="reboot-host" style="border-top: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-power-off"></i> Reboot Host
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" onclick="openAboutModal()">
+                        <i class="fa-solid fa-circle-info"></i> About
+                    </button>
                 </div>
-                <div style="display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-color);" title="Display real-time bitrate, stream status, and active viewer count on camera previews">
-                    <span style="font-size: 12px; font-weight: 600; margin-right: 8px; color: var(--text-title);">Bandwidth</span>
-                    <label class="toggle-switch" style="margin: 0; transform: scale(0.8);">
-                        <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
-                        <span class="toggle-slider"></span>
-                    </label>
+                
+                <div class="control-toggles">
+                    <div class="toggle-stack">
+                        <div class="toggle-group" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
+                            <span>Low Latency</span>
+                            <label class="toggle-switch" style="margin: 0; transform: scale(0.65); transform-origin: right center;">
+                                <input type="checkbox" id="latencyToggle" onchange="toggleLatencyMode(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-group" title="Display real-time bitrate, stream status, and active viewer count on camera previews">
+                            <span>Bandwidth</span>
+                            <label class="toggle-switch" style="margin: 0; transform: scale(0.65); transform-origin: right center;">
+                                <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </a>
                 </div>
-                <a href="/logout" id="logoutBtn" class="btn btn-danger" style="text-decoration: none; display: none;">Logout</a>
             </div>
         </div>
         
@@ -6761,7 +6957,7 @@ def get_web_ui_html(current_settings=None):
                     Object.values(analytics).forEach(a => totalBitrate += (a.bitrate || 0));
                     
                     document.getElementById('server-stats').innerHTML = 
-                        `CPU: ${{stats.cpu_percent}}% • MEM: ${{stats.memory_mb}}MB • NET: ${{totalBitrate.toFixed(1)}} kbps`;
+                        `<i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ${{stats.cpu_percent}}% &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ${{stats.memory_mb}}MB &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-network-wired" style="opacity: 0.75; color: var(--btn-primary);"></i> NET: ${{totalBitrate.toFixed(1)}} kbps`;
                 }}
                 
                 // Update per-camera metrics
