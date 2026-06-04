@@ -301,6 +301,53 @@ def get_web_ui_html(current_settings=None):
             --text-code: #ffffff;
         }}
 
+        body.theme-ui {{
+            --primary-bg: #f4f5f7;
+            --body-bg: #f4f5f7;
+            --card-bg: #ffffff;
+            --header-bg: #ffffff;
+            --text-title: #0f172a;
+            --text-body: #475569;
+            --text-muted: #94a3b8;
+            --btn-primary: #0055ff;
+            --btn-primary-hover: #0044cc;
+            --btn-success: #10b981;
+            --btn-success-hover: #059669;
+            --btn-danger: #ef4444;
+            --btn-danger-hover: #dc2626;
+            --border-color: #cbd5e1;
+            --card-border: #cbd5e1;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+            --input-bg: #ffffff;
+            --input-text: #0f172a;
+            --input-border: #cbd5e1;
+            --alert-info-bg: #eff6ff;
+            --alert-info-text: #0055ff;
+            --alert-warning-bg: #fffbeb;
+            --alert-warning-text: #d97706;
+            --toggle-bg: #cbd5e1;
+            --toggle-active: #0055ff;
+            --modal-bg: #ffffff;
+            --text-code: #0055ff;
+        }}
+
+        body.theme-ui .version-badge {{
+            background: rgba(0, 85, 255, 0.12);
+            color: #0055ff;
+            border-color: rgba(0, 85, 255, 0.25);
+        }}
+
+        body.theme-ui .diagnostics-table th {{
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-muted);
+        }}
+        body.theme-ui .diagnostics-table td {{
+            border-bottom: 1px solid var(--border-color);
+        }}
+        body.theme-ui .diagnostics-table tr:hover {{
+            background: rgba(0, 0, 0, 0.02);
+        }}
+
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -716,8 +763,8 @@ def get_web_ui_html(current_settings=None):
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #e2e8f0;
-            color: #718096;
+            background: var(--input-bg, #e2e8f0);
+            color: var(--text-body, #718096);
         }}
         .form-group {{ margin-bottom: 16px; }}
         .form-label {{
@@ -1119,7 +1166,7 @@ def get_web_ui_html(current_settings=None):
             position: fixed;
             top: 0; left: 0; 
             width: 100vw; height: 100vh;
-            background: #000;
+            background: var(--body-bg, #000);
             z-index: 3000;
             padding: 10px;
             overflow: hidden;
@@ -1136,8 +1183,8 @@ def get_web_ui_html(current_settings=None):
         
         .matrix-item {{
             position: relative;
-            background: #111;
-            border: 1px solid #333;
+            background: var(--card-bg, #111);
+            border: 1px solid var(--border-color, #333);
             border-radius: 4px;
             overflow: hidden;
             display: flex;
@@ -1178,26 +1225,39 @@ def get_web_ui_html(current_settings=None):
             align-items: center;
             gap: 16px;
             padding: 12px 20px;
-            background: #111827;
-            border-top: 1px solid #1f2937;
+            background: var(--card-bg, #111827);
+            border-top: 1px solid var(--border-color, #1f2937);
             margin-top: 8px;
             border-radius: 6px;
         }}
         
         .matrix-controls label {{
-            color: #f3f4f6 !important;
+            color: var(--text-title, #f3f4f6) !important;
             font-size: 13px;
             font-weight: 600;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }}
         
         .matrix-controls span {{
-            color: #d1d5db !important;
+            color: var(--text-body, #d1d5db) !important;
             font-weight: 500;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }}
         
-        .btn-matrix:hover {{ background: #2d3748; }}
+        .btn-matrix {{
+            background: var(--card-bg);
+            color: var(--text-title);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        .btn-matrix:hover {{ 
+            background: var(--btn-primary); 
+            color: white; 
+            border-color: var(--btn-primary);
+        }}
         
         /* Stretch Fill & Hide Names Styles */
         .matrix-overlay.stretch-fill {{
@@ -1808,6 +1868,7 @@ def get_web_ui_html(current_settings=None):
                             <option value="slate" {"selected" if current_settings and current_settings.get('theme') == 'slate' else ""}>Slate</option>
                             <option value="cyberpunk" {"selected" if current_settings and current_settings.get('theme') == 'cyberpunk' else ""}>Cyberpunk</option>
                             <option value="amoled" {"selected" if current_settings and current_settings.get('theme') == 'amoled' else ""}>Amoled</option>
+                            <option value="ui" {"selected" if current_settings and current_settings.get('theme') == 'ui' else ""}>UI</option>
                         </select>
                     </div>
                 </div>
@@ -1917,16 +1978,16 @@ def get_web_ui_html(current_settings=None):
             <span style="color: #718096; margin-right: auto; padding-left: 10px; font-size: 14px; align-self: center;">
                 F11 for Full Screen • ESC to Exit
             </span>
-            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Flash red border around camera feed on active AI detections">
+            <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Flash red border around camera feed on active AI detections">
                 <input type="checkbox" id="matrixAiFlashToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> AI Alerts
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Automatically unmute audio when hovering over a camera feed">
+            <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Automatically unmute audio when hovering over a camera feed">
                 <input type="checkbox" id="matrixAudioHoverToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> Audio Hover
             </label>
             <!-- Cams Per Page Dropdown -->
-            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px; border-left: 1px solid #2d3748; padding-left: 15px;">
-                <span style="color: #cbd5e1; font-size: 13px; font-weight: 600; user-select: none;">Cams Per Page:</span>
-                <select id="matrixCamsPerPageSelect" onchange="updateCamsPerPage()" style="background: #1a202c; color: #a0aec0; border: 1px solid #2d3748; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer;" title="Number of cameras to display per page">
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px; border-left: 1px solid var(--border-color); padding-left: 15px;">
+                <span style="color: var(--text-title); font-size: 13px; font-weight: 600; user-select: none;">Cams Per Page:</span>
+                <select id="matrixCamsPerPageSelect" onchange="updateCamsPerPage()" style="background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer;" title="Number of cameras to display per page">
                     <option value="All">All</option>
                     <option value="1">1 Cam</option>
                     <option value="2">2 Cams</option>
@@ -1939,18 +2000,18 @@ def get_web_ui_html(current_settings=None):
             </div>
             
             <!-- Manual Navigation Controls -->
-            <div id="matrixNavControls" style="display: none; align-items: center; gap: 8px; margin-right: 15px; border-left: 1px solid #2d3748; padding-left: 15px;">
+            <div id="matrixNavControls" style="display: none; align-items: center; gap: 8px; margin-right: 15px; border-left: 1px solid var(--border-color); padding-left: 15px;">
                 <button class="btn-matrix" onclick="changeMatrixPage(-1)" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">&lt; Prev</button>
-                <span id="matrixPageIndicator" style="color: #cbd5e1; font-size: 12px; font-weight: 600; user-select: none;">Page 1 of 1</span>
+                <span id="matrixPageIndicator" style="color: var(--text-title); font-size: 12px; font-weight: 600; user-select: none;">Page 1 of 1</span>
                 <button class="btn-matrix" onclick="changeMatrixPage(1)" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">Next &gt;</button>
             </div>
 
             <!-- Carousel Settings Group -->
-            <div id="matrixCarouselGroup" style="display: none; align-items: center; gap: 6px; margin-right: 15px; border-left: 1px solid #2d3748; padding-left: 15px;">
-                <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;">
+            <div id="matrixCarouselGroup" style="display: none; align-items: center; gap: 6px; margin-right: 15px; border-left: 1px solid var(--border-color); padding-left: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none;">
                     <input type="checkbox" id="matrixCarouselToggle" onchange="toggleCarouselMode()" style="width: 16px; height: 16px; cursor: pointer;"> Carousel
                 </label>
-                <select id="carouselIntervalSelect" onchange="updateCarouselSettings()" style="background: #1a202c; color: #a0aec0; border: 1px solid #2d3748; border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer;" title="Rotate interval duration">
+                <select id="carouselIntervalSelect" onchange="updateCarouselSettings()" style="background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); border-radius: 4px; padding: 2px 4px; font-size: 11px; cursor: pointer;" title="Rotate interval duration">
                     <option value="3000">3s</option>
                     <option value="5000">5s</option>
                     <option value="10000">10s</option>
@@ -1961,18 +2022,18 @@ def get_web_ui_html(current_settings=None):
                     <option value="300000">5m</option>
                 </select>
             </div>
-            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Force high-definition (Main) streams for all cameras in Matrix View">
+            <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Force high-definition (Main) streams for all cameras in Matrix View">
                 <input type="checkbox" id="matrixForceHighStreamToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> High Stream All
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;">
                 <input type="checkbox" id="matrixStretchToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> Stretch Fill
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; color: #a0aec0; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;">
                 <input type="checkbox" id="matrixHideNamesToggle" onchange="updateMatrixSettings()" style="width: 16px; height: 16px; cursor: pointer;"> Hide Names
             </label>
-            <button class="btn-matrix" onclick="resetMatrixOrder()" style="background: #4a5568;" title="Reset drag-and-drop order to default (creation order)">Reset Order</button>
+            <button class="btn-matrix" onclick="resetMatrixOrder()" style="background: var(--card-bg);" title="Reset drag-and-drop order to default (creation order)">Reset Order</button>
             <button class="btn-matrix" onclick="toggleFullScreen()">Full Screen</button>
-            <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: #f56565;">Close Matrix</button>
+            <button class="btn-matrix" onclick="toggleMatrixView(false)" style="background: var(--btn-danger); color: white; border-color: var(--btn-danger);">Close Matrix</button>
         </div>
         <div id="matrix-grid" class="matrix-grid"></div>
     </div>
@@ -1981,62 +2042,60 @@ def get_web_ui_html(current_settings=None):
     <div id="copy-ai-modal" class="modal" style="z-index: 1100;">
         <div class="modal-content" style="max-width: 480px;">
             <div class="modal-header">
-                <h3 id="copy-ai-title" style="margin: 0; color: #e2e8f0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-copy" style="color: #6366f1;"></i> Copy AI Settings
+                <h3 id="copy-ai-title" style="margin: 0; color: var(--text-title); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-copy" style="color: var(--btn-primary);"></i> Copy AI Settings
                 </h3>
                 <button class="close-btn" onclick="closeCopyAiModal()">&times;</button>
             </div>
             <div style="padding: 20px;">
-                <div style="background: rgba(99, 102, 241, 0.1); padding: 10px 14px; border-radius: 8px; border-left: 3px solid #6366f1; margin-bottom: 16px;">
-                    <div style="font-size: 11px; color: #a0aec0; line-height: 1.5;">
+                <div style="background: rgba(0, 85, 255, 0.1); padding: 10px 14px; border-radius: 8px; border-left: 3px solid var(--btn-primary); margin-bottom: 16px;">
+                    <div style="font-size: 11px; color: var(--text-body); line-height: 1.5;">
                         Copies: Event source, AI model, target classes, and sensitivity.<br>
-                        <strong style="color: #f6ad55;">Does NOT copy:</strong> Motion detection zones.
+                        <strong style="color: var(--alert-warning-text);">Does NOT copy:</strong> Motion detection zones.
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                    <div style="font-size: 13px; color: #a0aec0; font-weight: 600;">Select Target Cameras</div>
+                    <div style="font-size: 13px; color: var(--text-body); font-weight: 600;">Select Target Cameras</div>
                     <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
                         <input type="checkbox" id="copyAiSelectAll" onchange="toggleCopyAiSelectAll()" style="width: auto; cursor: pointer;">
-                        <span style="font-size: 11px; color: #cbd5e0;">Select All</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">Select All</span>
                     </label>
                 </div>
-                <div id="copyAiCameraList" style="max-height: 280px; overflow-y: auto; border: 1px solid #2d3748; border-radius: 8px; background: #1a202c;">
+                <div id="copyAiCameraList" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg);">
                     <!-- Populated dynamically -->
                 </div>
                 <div style="margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeCopyAiModal()" style="padding: 8px 18px; font-size: 12px; background: #2d3748; color: #a0aec0; border: 1px solid #4a5568; border-radius: 6px; cursor: pointer;">Cancel</button>
-                    <button type="button" id="btnApplyCopyAi" onclick="applyCopyAiSettings()" style="padding: 8px 18px; font-size: 12px; font-weight: 600; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" onclick="closeCopyAiModal()" style="padding: 8px 18px; font-size: 12px; background: var(--card-bg); color: var(--text-body); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">Cancel</button>
+                    <button type="button" id="btnApplyCopyAi" onclick="applyCopyAiSettings()" style="padding: 8px 18px; font-size: 12px; font-weight: 600; background: var(--btn-primary); color: white; border: 1px solid var(--btn-primary); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                         <i class="fas fa-check"></i> Apply to Selected
                     </button>
                 </div>
-                <div id="copyAiFeedback" style="font-size: 11px; margin-top: 8px; text-align: center; color: #a0aec0;"></div>
+                <div id="copyAiFeedback" style="font-size: 11px; margin-top: 8px; text-align: center; color: var(--text-muted);"></div>
             </div>
         </div>
     </div>
     
-    <!-- ONVIF Events Overlay -->
-    <div id="onvif-overlay" class="matrix-overlay">
-        <div class="matrix-controls" style="align-items: center; border-bottom: 1px solid #2d3748; padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
-            <div style="color: white; font-size: 18px; font-weight: 600; margin-right: auto; display: flex; align-items: center; gap: 10px; padding-left: 10px;">
+        <div class="matrix-controls" style="align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+            <div style="color: var(--text-title); font-size: 18px; font-weight: 600; margin-right: auto; display: flex; align-items: center; gap: 10px; padding-left: 10px;">
                 <span>AI & ONVIF Event Log Stream</span>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
-                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Filter by Camera:</label>
-                <select id="onvif-camera-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                <label class="form-label" style="margin: 0; color: var(--text-body); font-size: 14px;">Filter by Camera:</label>
+                <select id="onvif-camera-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: var(--input-bg); border-color: var(--input-border); color: var(--input-text);" onchange="renderONVIFEvents()">
                     <option value="all">All Cameras</option>
                 </select>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
-                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Event Type:</label>
-                <select id="onvif-type-filter" class="form-input" style="width: 140px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                <label class="form-label" style="margin: 0; color: var(--text-body); font-size: 14px;">Event Type:</label>
+                <select id="onvif-type-filter" class="form-input" style="width: 140px; padding: 6px 12px; margin: 0; background: var(--input-bg); border-color: var(--input-border); color: var(--input-text);" onchange="renderONVIFEvents()">
                     <option value="all">All Events</option>
                     <option value="onvif">ONVIF Events</option>
                     <option value="ai">AI Detections</option>
                 </select>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
-                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Target/State:</label>
-                <select id="onvif-target-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748;" onchange="renderONVIFEvents()">
+                <label class="form-label" style="margin: 0; color: var(--text-body); font-size: 14px;">Target/State:</label>
+                <select id="onvif-target-filter" class="form-input" style="width: 160px; padding: 6px 12px; margin: 0; background: var(--input-bg); border-color: var(--input-border); color: var(--input-text);" onchange="renderONVIFEvents()">
                     <option value="all">All Targets/States</option>
                     <option value="person">Person Detections</option>
                     <option value="vehicle">Vehicle Detections</option>
@@ -2047,25 +2106,25 @@ def get_web_ui_html(current_settings=None):
                 </select>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-right: 15px;">
-                <label class="form-label" style="margin: 0; color: #a0aec0; font-size: 14px;">Search:</label>
-                <input type="text" id="onvif-event-search" class="form-input" placeholder="Search events..." style="width: 180px; padding: 6px 12px; margin: 0; background: #1a202c; border-color: #2d3748; color: white;" oninput="renderONVIFEvents()">
+                <label class="form-label" style="margin: 0; color: var(--text-body); font-size: 14px;">Search:</label>
+                <input type="text" id="onvif-event-search" class="form-input" placeholder="Search events..." style="width: 180px; padding: 6px 12px; margin: 0; background: var(--input-bg); border-color: var(--input-border); color: var(--input-text);" oninput="renderONVIFEvents()">
             </div>
-            <button class="btn btn-primary" onclick="clearONVIFEvents()" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); margin-right: 10px;">Clear Events</button>
-            <button class="btn-matrix" onclick="toggleONVIFView(false)" style="background: #f56565; border-radius: 6px; padding: 6px 16px;">Close Log</button>
+            <button class="btn btn-primary" onclick="clearONVIFEvents()" style="background: var(--btn-danger); border-color: var(--btn-danger); color: white; margin-right: 10px;">Clear Events</button>
+            <button class="btn-matrix" onclick="toggleONVIFView(false)" style="background: var(--btn-primary); border-color: var(--btn-primary); color: white; border-radius: 6px; padding: 6px 16px;">Close Log</button>
         </div>
         
         <!-- AI Diagnostics Panel -->
-        <div id="ai-diagnostics-panel" style="margin-bottom: 20px; background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 15px; display: none;">
+        <div id="ai-diagnostics-panel" style="margin-bottom: 20px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div style="color: #ecc94b; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                <div style="color: var(--btn-primary); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                     Local AI Object Detection Threads Status
                 </div>
-                <div id="ai-diagnostics-summary" style="font-size: 12px; color: #94a3b8; font-weight: 500;"></div>
+                <div id="ai-diagnostics-summary" style="font-size: 12px; color: var(--text-muted); font-weight: 500;"></div>
             </div>
-            <div style="max-height: 180px; overflow-y: auto; border: 1px solid #1e293b; border-radius: 6px; background: #020617;">
+            <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: var(--body-bg);">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
                     <thead>
-                        <tr style="border-bottom: 1px solid #1e293b; color: #94a3b8; background: #0b0f19;">
+                        <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); background: var(--body-bg);">
                             <th style="padding: 8px 12px;">Camera</th>
                             <th style="padding: 8px 12px;">YOLO Model</th>
                             <th style="padding: 8px 12px; text-align: center;">FPS</th>
@@ -2075,17 +2134,17 @@ def get_web_ui_html(current_settings=None):
                             <th style="padding: 8px 12px; text-align: right;">Total Runs</th>
                         </tr>
                     </thead>
-                    <tbody id="ai-diagnostics-body" style="color: #cbd5e1; font-family: monospace;">
+                    <tbody id="ai-diagnostics-body" style="color: var(--text-body); font-family: monospace;">
                         <!-- Populated dynamically -->
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div style="flex: 1; overflow-y: auto; background: #0b0f19; border-radius: 8px; border: 1px solid #2d3748; padding: 15px;">
+        <div style="flex: 1; overflow-y: auto; background: var(--body-bg); border-radius: 8px; border: 1px solid var(--border-color); padding: 15px;">
             <table class="diagnostics-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead>
-                    <tr style="border-bottom: 2px solid #2d3748; color: #a0aec0; font-size: 14px;">
+                    <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-body); font-size: 14px;">
                         <th style="padding: 10px; width: 180px;">Timestamp</th>
                         <th style="padding: 10px; width: 180px;">Camera</th>
                         <th style="padding: 10px; width: 130px;">Source Type</th>
@@ -2093,7 +2152,7 @@ def get_web_ui_html(current_settings=None):
                         <th style="padding: 10px; width: 220px;">State / Detections</th>
                     </tr>
                 </thead>
-                <tbody id="onvif-events-body" style="color: #e2e8f0; font-size: 13px; font-family: monospace;">
+                <tbody id="onvif-events-body" style="color: var(--text-body); font-size: 13px; font-family: monospace;">
                     <!-- Dynamically populated -->
                 </tbody>
             </table>
@@ -2512,14 +2571,14 @@ def get_web_ui_html(current_settings=None):
                                 <span style="font-size: 10px; background-color: #d69e2e; color: #1a202c; padding: 1px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Beta</span>
                             </span>
                         </label>
-                        <div style="color: #718096; font-size: 11px; margin-left: 24px; margin-top: 4px;">
+                        <div style="color: var(--text-body); font-size: 11px; margin-left: 24px; margin-top: 4px;">
                             Forward original motion and inputs from physical camera's ONVIF to virtual server. (Beta - please report any issues)
                         </div>
                     </div>
                     
                     <div class="form-group" id="eventSourceGroup" style="display: none; margin-left: 24px; margin-top: 10px;">
                         <label class="form-label" style="font-size: 12px;">Event Source Mode</label>
-                        <select class="form-input" id="eventSource" onchange="toggleEventSourceFields()" style="background-color: #1a202c; color: #fff;">
+                        <select class="form-input" id="eventSource" onchange="toggleEventSourceFields()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                             <option value="onvif">Forward Physical Camera ONVIF Events</option>
                             <option value="ai">Local AI Object Detection (YOLOv8)</option>
                         </select>
@@ -2531,10 +2590,10 @@ def get_web_ui_html(current_settings=None):
                     </div>
 
                     <div id="onvifForwardingCredGroup" style="display: none; margin-left: 24px; margin-top: 10px;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">ONVIF Credentials</div>
+                        <div style="font-size: 12px; color: var(--text-body); font-weight: 600; margin-bottom: 8px;">ONVIF Credentials</div>
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 10px;">
                             <input type="checkbox" id="onvifUseAboveCredentials" style="width: auto; cursor: pointer;" checked onchange="toggleOnvifCredFields()">
-                            <span style="font-size: 12px; color: #cbd5e0;">Use above camera credentials</span>
+                            <span style="font-size: 12px; color: var(--text-title);">Use above camera credentials</span>
                         </label>
                         <div id="onvifCustomCredFields" style="display: none;">
                             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -2550,14 +2609,14 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
 
-                    <div id="aiHardwareInfoGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: #2d3748; color: #e2e8f0; border-left: 3px solid #10b981; line-height: 1.5;">
+                    <div id="aiHardwareInfoGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: var(--alert-info-bg); color: var(--alert-info-text); border-left: 3px solid #10b981; line-height: 1.5;">
                         <i class="fas fa-microchip"></i> <strong>AI HW Acceleration:</strong> Supported on NVIDIA (CUDA) and Apple Silicon (MPS/CoreML).<br>
-                        <i class="fas fa-desktop"></i> <strong>Active Host Hardware:</strong> <span id="settings-ai-device" style="color: #38bdf8; font-weight: bold;">Loading...</span>
+                        <i class="fas fa-desktop"></i> <strong>Active Host Hardware:</strong> <span id="settings-ai-device" style="color: var(--btn-primary); font-weight: bold;">Loading...</span>
                     </div>
 
                     <div id="aiModelGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 12px;">
                         <label class="form-label" style="font-size: 12px; margin-bottom: 4px; display: block;">AI Object Detection Model</label>
-                        <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: #1a202c; color: #fff; max-width: 100%;">
+                        <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); max-width: 100%;">
                             <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt) - Default</option>
                             <option value="yolo11n.pt">YOLO11 Nano (yolo11n.pt) - Newest & Recommended</option>
                             <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
@@ -2568,7 +2627,7 @@ def get_web_ui_html(current_settings=None):
                             <option value="yolov8l.pt">YOLOv8 Large (yolov8l.pt)</option>
                             <option value="yolov8x.pt">YOLOv8 Extra-Large (yolov8x.pt)</option>
                         </select>
-                        <div id="aiModelDescription" style="margin-top: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: #2d3748; line-height: 1.4; color: #e2e8f0; border-left: 3px solid #3182ce;">
+                        <div id="aiModelDescription" style="margin-top: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: var(--alert-info-bg); line-height: 1.4; color: var(--alert-info-text); border-left: 3px solid var(--btn-primary);">
                             <!-- Dynamically populated description -->
                         </div>
                     </div>
@@ -2911,6 +2970,7 @@ def get_web_ui_html(current_settings=None):
                             <option value="slate">Slate Professional (Neutral Grey)</option>
                             <option value="cyberpunk">Cyberpunk 2077 (Neon Yellow)</option>
                             <option value="amoled">Amoled Black (Pure OLED)</option>
+                            <option value="ui">UI</option>
                         </select>
                     </div>
                     
@@ -3037,78 +3097,78 @@ def get_web_ui_html(current_settings=None):
 
                     <div class="form-group" style="margin-top: 15px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleAdvancedSettings()">
-                            <span class="form-label" style="margin: 0; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                            <span class="form-label" style="margin: 0; color: var(--text-title); font-weight: 700; display: flex; align-items: center; gap: 5px;">
                                 <i class="fas fa-tools"></i> Advanced Settings (MediaMTX & FFmpeg)
                                 <i id="advancedChevron" class="fas fa-chevron-down" style="font-size: 12px; transition: transform 0.3s; margin-left: auto;"></i>
                             </span>
                         </label>
                     </div>
 
-                    <div id="advancedSettingsSection" style="display: none; padding: 20px; background: rgba(0,0,0,0.35); border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 25px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                    <div id="advancedSettingsSection" style="display: none; padding: 20px; background: var(--body-bg); border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div>
-                                <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-server" style="font-size: 12px; color: var(--primary-color);"></i> MediaMTX Core
+                                <h3 style="font-size: 14px; margin: 0 0 12px 0; color: var(--text-title); border-bottom: 2px solid var(--btn-primary); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-server" style="font-size: 12px; color: var(--btn-primary);"></i> MediaMTX Core
                                 </h3>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Queue Size</label>
-                                    <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Write Queue Size</label>
+                                    <input type="number" class="form-input" id="mediamtx_writeQueueSize" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Read Timeout (duration)</label>
-                                    <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Read Timeout (duration)</label>
+                                    <input type="text" class="form-input" id="mediamtx_readTimeout" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Write Timeout (duration)</label>
-                                    <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Write Timeout (duration)</label>
+                                    <input type="text" class="form-input" id="mediamtx_writeTimeout" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">UDP Max Payload</label>
-                                    <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">UDP Max Payload</label>
+                                    <input type="number" class="form-input" id="mediamtx_udpMaxPayloadSize" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                             </div>
                             <div>
-                                <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-stream" style="font-size: 12px; color: var(--primary-color);"></i> HLS Optimized
+                                <h3 style="font-size: 14px; margin: 0 0 12px 0; color: var(--text-title); border-bottom: 2px solid var(--btn-primary); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-stream" style="font-size: 12px; color: var(--btn-primary);"></i> HLS Optimized
                                 </h3>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Count</label>
-                                    <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Segment Count</label>
+                                    <input type="number" class="form-input" id="mediamtx_hlsSegmentCount" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Segment Duration</label>
-                                    <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Segment Duration</label>
+                                    <input type="text" class="form-input" id="mediamtx_hlsSegmentDuration" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                                 <div class="form-group" style="margin-bottom: 12px;">
-                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Part Duration</label>
-                                    <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 13px; padding: 8px 10px; background: rgba(255,255,255,0.05); color: #ffffff;">
+                                    <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Part Duration</label>
+                                    <input type="text" class="form-input" id="mediamtx_hlsPartDuration" style="font-size: 13px; padding: 8px 10px; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                                 </div>
                             </div>
                         </div>
 
-                        <h3 style="font-size: 14px; margin: 20px 0 12px 0; color: #ffffff; border-bottom: 2px solid var(--primary-color); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-video" style="font-size: 12px; color: var(--primary-color);"></i> FFmpeg Transcoding Global
+                        <h3 style="font-size: 14px; margin: 20px 0 12px 0; color: var(--text-title); border-bottom: 2px solid var(--btn-primary); padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-video" style="font-size: 12px; color: var(--btn-primary);"></i> FFmpeg Transcoding Global
                         </h3>
                         <div class="form-group" style="margin-bottom: 12px;">
-                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Global Arguments (Flags)</label>
-                            <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Global Arguments (Flags)</label>
+                            <input type="text" class="form-input" id="ffmpeg_globalArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                         </div>
                         <div class="form-group" style="margin-bottom: 12px;">
-                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Input Arguments (Before -i)</label>
-                            <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Input Arguments (Before -i)</label>
+                            <input type="text" class="form-input" id="ffmpeg_inputArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                         </div>
                         <div class="form-group" style="margin-bottom: 12px;">
-                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: #ffffff;">Process & Codec Arguments</label>
-                            <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: #1a202c; color: #ffffff;">
+                            <label class="form-label" style="font-size: 12px; margin-bottom: 4px; color: var(--text-title);">Process & Codec Arguments</label>
+                            <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                         </div>
 
-                        <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 10px; margin-top: 15px; border-radius: 4px;">
-                            <small style="color: #f6ad55; font-size: 11px; font-weight: 600; display: block;">
+                        <div style="background: var(--alert-warning-bg); border-left: 3px solid var(--alert-warning-text); padding: 10px; margin-top: 15px; border-radius: 4px;">
+                            <small style="color: var(--alert-warning-text); font-size: 11px; font-weight: 600; display: block;">
                                 <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
                             </small>
                         </div>
                         <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                            <button type="button" class="btn btn-primary" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); font-size: 11px; padding: 6px 14px; color: #ffffff;" onclick="resetAdvancedSettings()">
+                            <button type="button" class="btn btn-primary" style="background: var(--card-bg); border: 1px solid var(--border-color); font-size: 11px; padding: 6px 14px; color: var(--text-title);" onclick="resetAdvancedSettings()">
                                 <i class="fas fa-undo"></i> Reset to Defaults
                             </button>
                         </div>
@@ -5984,11 +6044,11 @@ def get_web_ui_html(current_settings=None):
                 }}
 
                 tbody.innerHTML += `
-                    <tr style="border-bottom: 1px solid #1a202c;">
-                        <td style="padding: 10px; color: #a0aec0;">${{localTime}}</td>
-                        <td style="padding: 10px; font-weight: 600; color: #3b82f6;">${{evt.camera_name}}</td>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 10px; color: var(--text-muted);">${{localTime}}</td>
+                        <td style="padding: 10px; font-weight: 600; color: var(--btn-primary);">${{evt.camera_name}}</td>
                         <td style="padding: 10px;">${{typeBadge}}</td>
-                        <td style="padding: 10px; color: #cbd5e0;">${{evt.topic}}</td>
+                        <td style="padding: 10px; color: var(--text-body);">${{evt.topic}}</td>
                         <td style="padding: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">${{stateBadge}}${{tagsHtml}}</td>
                     </tr>
                 `;
@@ -7036,7 +7096,7 @@ def get_web_ui_html(current_settings=None):
         
         function applyTheme(theme) {{
             // Remove all possible theme classes
-            const themes = ['dark', 'nord', 'dracula', 'solar-light', 'midnight', 'emerald', 'sunset', 'matrix', 'slate', 'cyberpunk', 'amoled'];
+            const themes = ['dark', 'nord', 'dracula', 'solar-light', 'midnight', 'emerald', 'sunset', 'matrix', 'slate', 'cyberpunk', 'amoled', 'ui'];
             themes.forEach(t => document.body.classList.remove(`theme-${{t}}`));
             
             // Add the selected one
