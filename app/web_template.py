@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import platform
 from .version import CURRENT_VERSION
@@ -445,6 +445,118 @@ def get_web_ui_html(current_settings=None):
             display: flex;
             align-items: center;
             gap: 8px;
+            cursor: default;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }}
+        .stats-container:hover .stats-badge {{
+            border-color: var(--btn-primary);
+            box-shadow: 0 0 0 2px rgba(102,126,234,0.15);
+        }}
+        
+        /* Stats Popover styling */
+        .stats-container {{
+            position: relative;
+            display: inline-block;
+        }}
+        .stats-popover {{
+            opacity: 0;
+            visibility: hidden;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 10px;
+            background: rgba(22, 27, 34, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            width: 320px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            transform: translateY(10px);
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
+            pointer-events: none;
+        }}
+        
+        /* Show popover on hover with a smooth transition */
+        .stats-container:hover .stats-popover {{
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+        }}
+        
+        /* Hover Bridge to prevent popover from closing when moving mouse */
+        .stats-popover::before {{
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background: transparent;
+        }}
+        
+        /* Light theme adjustments */
+        body:not(.theme-dark):not(.theme-dracula):not(.theme-nord):not(.theme-slate):not(.theme-midnight):not(.theme-emerald):not(.theme-sunset):not(.theme-matrix):not(.theme-cyberpunk):not(.theme-amoled) .stats-popover {{
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }}
+        
+        .stats-popover-title {{
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-title);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
+        
+        .popover-chart-container {{
+            margin-bottom: 12px;
+        }
+        .popover-chart-container:last-child {{
+            margin-bottom: 0;
+        }}
+        
+        .popover-chart-header {{
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-body);
+            margin-bottom: 6px;
+        }}
+        .popover-chart-header span i {{
+            margin-right: 6px;
+            color: var(--btn-primary);
+        }}
+        
+        .popover-canvas-wrapper {{
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 4px;
+            position: relative;
+            height: 60px;
+        }}
+        
+        body:not(.theme-dark):not(.theme-dracula):not(.theme-nord):not(.theme-slate):not(.theme-midnight):not(.theme-emerald):not(.theme-sunset):not(.theme-matrix):not(.theme-cyberpunk):not(.theme-amoled) .popover-canvas-wrapper {{
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }}
+        
+        .popover-canvas-wrapper canvas {{
+            display: block;
+            width: 100%;
+            height: 100%;
         }}
         
         .theme-select-container {{
@@ -1885,9 +1997,44 @@ def get_web_ui_html(current_settings=None):
                     </h1>
                 </div>
                 <div class="header-meta-area">
-                    <span id="server-stats" class="stats-badge">
-                        <i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ... &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ...
-                    </span>
+                    <div class="stats-container">
+                        <span id="server-stats" class="stats-badge">
+                            <i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ... &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ...
+                        </span>
+                        <div class="stats-popover">
+                            <div class="stats-popover-title">
+                                <span>System Metrics History</span>
+                                <span style="font-size: 10px; color: var(--text-muted); font-family: monospace;">Last 90s</span>
+                            </div>
+                            <div class="popover-chart-container">
+                                <div class="popover-chart-header">
+                                    <span><i class="fa-solid fa-microchip"></i> CPU</span>
+                                    <span id="popover-cpu-val">...%</span>
+                                </div>
+                                <div class="popover-canvas-wrapper">
+                                    <canvas id="cpu-chart" width="288" height="52"></canvas>
+                                </div>
+                            </div>
+                            <div class="popover-chart-container">
+                                <div class="popover-chart-header">
+                                    <span><i class="fa-solid fa-memory"></i> Memory</span>
+                                    <span id="popover-mem-val">... MB</span>
+                                </div>
+                                <div class="popover-canvas-wrapper">
+                                    <canvas id="mem-chart" width="288" height="52"></canvas>
+                                </div>
+                            </div>
+                            <div class="popover-chart-container">
+                                <div class="popover-chart-header">
+                                    <span><i class="fa-solid fa-network-wired"></i> Network</span>
+                                    <span id="popover-net-val">... Mbps</span>
+                                </div>
+                                <div class="popover-canvas-wrapper">
+                                    <canvas id="net-chart" width="288" height="52"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="theme-select-container">
                         <span>Theme</span>
                         <select id="themeSwitcher" class="theme-select" onchange="changeTheme(this.value)">
@@ -7037,6 +7184,108 @@ def get_web_ui_html(current_settings=None):
             showUpdateState('checking');
         }}
         
+        // ── Stats history ring-buffers (30 points @ 3-second intervals = 90 s)
+        const STATS_MAX_POINTS = 30;
+        let cpuHistory = [];
+        let memHistory = [];
+        let netHistory = [];
+        
+        function drawStatsChart(canvasId, history, strokeColor, fillColor) {{
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const wrapper = canvas.parentElement;
+            const W = wrapper.clientWidth  || 288;
+            const H = wrapper.clientHeight || 52;
+            
+            // Hi-DPI support
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width  = W * dpr;
+            canvas.height = H * dpr;
+            canvas.style.width  = W + 'px';
+            canvas.style.height = H + 'px';
+            
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, W, H);
+            
+            if (history.length < 2) return;
+            
+            const isDark = document.body.classList.contains('theme-dark') ||
+                           document.body.classList.contains('theme-dracula') ||
+                           document.body.classList.contains('theme-nord') ||
+                           document.body.classList.contains('theme-slate') ||
+                           document.body.classList.contains('theme-midnight') ||
+                           document.body.classList.contains('theme-emerald') ||
+                           document.body.classList.contains('theme-sunset') ||
+                           document.body.classList.contains('theme-matrix') ||
+                           document.body.classList.contains('theme-cyberpunk') ||
+                           document.body.classList.contains('theme-amoled');
+            
+            const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+            
+            // Gridlines
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+            [0.25, 0.5, 0.75].forEach(fraction => {{
+                const y = Math.round(H * fraction) + 0.5;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }});
+            
+            const maxVal = Math.max(...history, 1);
+            const padY = 4;
+            const usableH = H - padY * 2;
+            
+            const xStep = W / (STATS_MAX_POINTS - 1);
+            const getX = i => i * xStep;
+            const getY = v => padY + usableH - (v / maxVal) * usableH;
+            
+            // Fill gradient
+            const grad = ctx.createLinearGradient(0, padY, 0, H);
+            grad.addColorStop(0, fillColor);
+            grad.addColorStop(1, 'transparent');
+            
+            // Draw filled area
+            ctx.beginPath();
+            history.forEach((v, i) => {{
+                const x = getX(i);
+                const y = getY(v);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }});
+            ctx.lineTo(getX(history.length - 1), H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fillStyle = grad;
+            ctx.fill();
+            
+            // Draw stroke line
+            ctx.beginPath();
+            history.forEach((v, i) => {{
+                const x = getX(i);
+                const y = getY(v);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }});
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+            
+            // Pulse dot at latest value
+            const lastX = getX(history.length - 1);
+            const lastY = getY(history[history.length - 1]);
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = strokeColor;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+            ctx.strokeStyle = isDark ? 'rgba(22,27,34,0.95)' : 'rgba(255,255,255,0.98)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }}
+        
         async function updateStats() {{
             try {{
                 // Parallel fetch for speed
@@ -7057,9 +7306,31 @@ def get_web_ui_html(current_settings=None):
                 if (stats.cpu_percent !== undefined) {{
                     let totalBitrate = 0;
                     Object.values(analytics).forEach(a => totalBitrate += (a.bitrate || 0));
+                    const netMbps = parseFloat((totalBitrate / 1000).toFixed(1));
                     
                     document.getElementById('server-stats').innerHTML = 
-                        `<i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ${{stats.cpu_percent}}% &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ${{stats.memory_mb}}MB &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-network-wired" style="opacity: 0.75; color: var(--btn-primary);"></i> NET: ${{ (totalBitrate / 1000).toFixed(1) }} Mbps`;
+                        `<i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ${{stats.cpu_percent}}% &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ${{stats.memory_mb}}MB &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-network-wired" style="opacity: 0.75; color: var(--btn-primary);"></i> NET: ${{netMbps}} Mbps`;
+                    
+                    // Push into history ring-buffers
+                    cpuHistory.push(stats.cpu_percent);
+                    memHistory.push(stats.memory_mb);
+                    netHistory.push(netMbps);
+                    if (cpuHistory.length > STATS_MAX_POINTS) cpuHistory.shift();
+                    if (memHistory.length > STATS_MAX_POINTS) memHistory.shift();
+                    if (netHistory.length > STATS_MAX_POINTS) netHistory.shift();
+                    
+                    // Update popover value labels
+                    const cpuLabel = document.getElementById('popover-cpu-val');
+                    const memLabel = document.getElementById('popover-mem-val');
+                    const netLabel = document.getElementById('popover-net-val');
+                    if (cpuLabel) cpuLabel.textContent = stats.cpu_percent + '%';
+                    if (memLabel) memLabel.textContent = stats.memory_mb + ' MB';
+                    if (netLabel) netLabel.textContent = netMbps + ' Mbps';
+                    
+                    // Redraw popover charts
+                    drawStatsChart('cpu-chart', cpuHistory, '#818cf8', 'rgba(129,140,248,0.25)');
+                    drawStatsChart('mem-chart', memHistory, '#a78bfa', 'rgba(167,139,250,0.25)');
+                    drawStatsChart('net-chart', netHistory, '#22d3ee', 'rgba(34,211,238,0.25)');
                 }}
                 
                 // Update per-camera metrics
@@ -7209,6 +7480,16 @@ def get_web_ui_html(current_settings=None):
             // Auto-refresh data and stats
             setInterval(loadData, 5000);
             setInterval(updateStats, 3000);
+            
+            // Redraw charts when popover opens (ensures correct canvas sizing)
+            const statsContainer = document.querySelector('.stats-container');
+            if (statsContainer) {{
+                statsContainer.addEventListener('mouseenter', () => {{
+                    drawStatsChart('cpu-chart', cpuHistory, '#818cf8', 'rgba(129,140,248,0.25)');
+                    drawStatsChart('mem-chart', memHistory, '#a78bfa', 'rgba(167,139,250,0.25)');
+                    drawStatsChart('net-chart', netHistory, '#22d3ee', 'rgba(34,211,238,0.25)');
+                }});
+            }}
         }}
         
         init();
