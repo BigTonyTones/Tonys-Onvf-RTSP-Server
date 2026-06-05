@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import platform
 from .version import CURRENT_VERSION
@@ -521,7 +521,7 @@ def get_web_ui_html(current_settings=None):
         
         .popover-chart-container {{
             margin-bottom: 12px;
-        }
+        }}
         .popover-chart-container:last-child {{
             margin-bottom: 0;
         }}
