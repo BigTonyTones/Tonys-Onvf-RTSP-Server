@@ -397,7 +397,8 @@ class VirtualONVIFCamera:
         
     @property
     def sub_width(self):
-        if getattr(self, 'use_main_as_substream', False):
+        # Override with main stream values only if "Use main as substream" is checked AND we are not transcoding the substream
+        if getattr(self, 'use_main_as_substream', False) and not getattr(self, 'transcode_sub', False):
             return self.main_width
         return self._sub_width
 
@@ -407,7 +408,7 @@ class VirtualONVIFCamera:
 
     @property
     def sub_height(self):
-        if getattr(self, 'use_main_as_substream', False):
+        if getattr(self, 'use_main_as_substream', False) and not getattr(self, 'transcode_sub', False):
             return self.main_height
         return self._sub_height
 
@@ -417,7 +418,7 @@ class VirtualONVIFCamera:
 
     @property
     def sub_framerate(self):
-        if getattr(self, 'use_main_as_substream', False):
+        if getattr(self, 'use_main_as_substream', False) and not getattr(self, 'transcode_sub', False):
             return self.main_framerate
         return self._sub_framerate
 
@@ -443,10 +444,10 @@ class VirtualONVIFCamera:
             'status': self.status,
             'mainWidth': self.main_width,
             'mainHeight': self.main_height,
-            'subWidth': self.sub_width,
-            'subHeight': self.sub_height,
+            'subWidth': self._sub_width,
+            'subHeight': self._sub_height,
             'mainFramerate': self.main_framerate,
-            'subFramerate': self.sub_framerate,
+            'subFramerate': self._sub_framerate,
             'onvifUsername': self.onvif_username,
             'onvifPassword': self.onvif_password,
             'transcodeSub': self.transcode_sub,
@@ -516,10 +517,10 @@ class VirtualONVIFCamera:
             # This ensures autoStart setting is respected on server restart
             'mainWidth': self.main_width,
             'mainHeight': self.main_height,
-            'subWidth': self.sub_width,
-            'subHeight': self.sub_height,
+            'subWidth': self._sub_width,
+            'subHeight': self._sub_height,
             'mainFramerate': self.main_framerate,
-            'subFramerate': self.sub_framerate,
+            'subFramerate': self._sub_framerate,
             'onvifUsername': self.onvif_username,
             'onvifPassword': self.onvif_password,
             'transcodeSub': self.transcode_sub,

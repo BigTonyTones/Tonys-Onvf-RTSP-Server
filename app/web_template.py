@@ -585,6 +585,19 @@ def get_web_ui_html(current_settings=None):
             color: #f87171;
             border-color: #991b1b;
         }}
+        /* Action Button Colors modifier classes - Softer styling: only icons are colored on hover */
+        .btn i {{
+            transition: color 0.2s ease;
+        }}
+        .btn-indigo:hover i {{ color: #818cf8; }}
+        .btn-teal:hover i {{ color: #2dd4bf; }}
+        .btn-pink:hover i {{ color: #fb7185; }}
+        .btn-cyan:hover i {{ color: #22d3ee; }}
+        .btn-amber:hover i {{ color: #fbbf24; }}
+        .btn-grey:hover i {{ color: #9ca3af; }}
+        .btn-violet:hover i {{ color: #a78bfa; }}
+        .btn-slate:hover i {{ color: #94a3b8; }}
+
         .camera-grid {{ 
             display: grid; 
             gap: 20px; 
@@ -1880,27 +1893,27 @@ def get_web_ui_html(current_settings=None):
                     <button class="btn btn-primary" onclick="openAddModal()">
                         <i class="fa-solid fa-plus"></i> Add Camera
                     </button>
-                    <button class="btn" onclick="window.location.href='/gridfusion'">
+                    <button class="btn btn-indigo" onclick="window.location.href='/gridfusion'">
                         <i class="fa-solid fa-grip"></i> GridFusion
                     </button>
-                    <button class="btn" onclick="toggleMatrixView(true)">
+                    <button class="btn btn-teal" onclick="toggleMatrixView(true)">
                         <i class="fa-solid fa-table-cells"></i> Matrix View
                     </button>
-                    <button class="btn" onclick="toggleONVIFView(true)">
+                    <button class="btn btn-pink" onclick="toggleONVIFView(true)">
                         <i class="fa-solid fa-brain"></i> AI/ONVIF
                     </button>
-                    <button class="btn" onclick="window.location.href='/ip-management'">
+                    <button class="btn btn-cyan" onclick="window.location.href='/ip-management'">
                         <i class="fa-solid fa-network-wired"></i> IP Management
                     </button>
-                    <button class="btn" onclick="window.location.href='/diagnostics'">
+                    <button class="btn btn-amber" onclick="window.location.href='/diagnostics'">
                         <i class="fa-solid fa-gauge"></i> Diagnostics
                     </button>
-                    <button class="btn" onclick="openSettingsModal()">
+                    <button class="btn btn-grey" onclick="openSettingsModal()">
                         <i class="fa-solid fa-gear"></i> Settings
                     </button>
                     
                     <div class="dropdown">
-                        <button class="btn">
+                        <button class="btn btn-violet">
                             <i class="fa-solid fa-server"></i> Server <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
                         </button>
                         <div class="dropdown-content">
@@ -1927,7 +1940,7 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                     
-                    <button class="btn" onclick="openAboutModal()">
+                    <button class="btn btn-slate" onclick="openAboutModal()">
                         <i class="fa-solid fa-circle-info"></i> About
                     </button>
                 </div>
@@ -2166,6 +2179,10 @@ def get_web_ui_html(current_settings=None):
             <div class="modal-header">
                 <div class="modal-title">Terminal Logs</div>
                 <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 12px; color: var(--text-muted); margin-right: 10px;">
+                        <input type="checkbox" id="autoScrollLogs" style="width: auto; cursor: pointer; transform: scale(1.05);">
+                        <span>Auto-scroll to bottom</span>
+                    </label>
                     <div style="display: flex; align-items: center; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-right: 10px;">
                         <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-right: 8px;">Font Size</span>
                         <button class="btn" style="padding: 2px 8px; font-size: 12px; min-width: 30px;" onclick="adjustLogFontSize(-1)">−</button>
@@ -2181,10 +2198,6 @@ def get_web_ui_html(current_settings=None):
             </div>
             <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
                 <span>Total 2,000 lines captured in memory</span>
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500;">
-                    <input type="checkbox" id="autoScrollLogs" style="width: auto; cursor: pointer; transform: scale(1.1);">
-                    <span>Auto-scroll to bottom</span>
-                </label>
             </div>
         </div>
     </div>
