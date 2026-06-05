@@ -848,6 +848,28 @@ def get_web_ui_html(current_settings=None):
             overflow: hidden;
             border-radius: 8px;
         }}
+        .dropdown-group-header {{
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 8px 16px 4px 16px;
+            background: rgba(0, 0, 0, 0.05);
+            border-top: 1px solid var(--border-color);
+            pointer-events: none;
+            user-select: none;
+        }}
+        body.theme-dark .dropdown-group-header,
+        body.theme-dracula .dropdown-group-header,
+        body.theme-nord .dropdown-group-header,
+        body.theme-slate .dropdown-group-header,
+        body.theme-midnight .dropdown-group-header {{
+            background: rgba(255, 255, 255, 0.03);
+        }}
+        .dropdown-group-header:first-child {{
+            border-top: none;
+        }}
         .dropdown-content button {{
             color: var(--text-title);
             padding: 12px 16px;
@@ -1918,22 +1940,27 @@ def get_web_ui_html(current_settings=None):
                         </button>
                         <div class="dropdown-content">
                             <div class="dropdown-content-inner">
+                                <div class="dropdown-group-header">Cameras</div>
                                 <button onclick="startAll()" style="color: #81c784;">
                                     <i class="fa-solid fa-play"></i> Start All Cameras
                                 </button>
-                                <button onclick="stopAll()" style="color: #e57373; border-top: 1px solid var(--border-color);">
+                                <button onclick="stopAll()" style="color: #e57373;">
                                     <i class="fa-solid fa-stop"></i> Stop All Cameras
                                 </button>
-                                <button onclick="openLogsModal()" style="color: #64b5f6; border-top: 1px solid var(--border-color);">
-                                    <i class="fa-solid fa-list-alt"></i> System Logs
-                                </button>
-                                <button onclick="restartServer()" style="color: #ffb74d; border-top: 1px solid var(--border-color);">
+                                
+                                <div class="dropdown-group-header">Server</div>
+                                <button onclick="restartServer()" style="color: #ffb74d;">
                                     <i class="fa-solid fa-sync"></i> Restart Server
                                 </button>
-                                <button onclick="stopServer()" style="color: #ef9a9a; border-top: 1px solid var(--border-color);">
+                                <button onclick="stopServer()" style="color: #ef9a9a;">
                                     <i class="fa-solid fa-stop-circle"></i> Stop Server
                                 </button>
-                                <button onclick="rebootServer()" class="reboot-host" style="color: #b39ddb; border-top: 1px solid var(--border-color);">
+                                
+                                <div class="dropdown-group-header">System</div>
+                                <button onclick="openLogsModal()" style="color: #64b5f6;">
+                                    <i class="fa-solid fa-list-alt"></i> System Logs
+                                </button>
+                                <button onclick="rebootServer()" class="reboot-host" style="color: #b39ddb;">
                                     <i class="fa-solid fa-power-off"></i> Reboot Host
                                 </button>
                             </div>
