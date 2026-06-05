@@ -440,7 +440,7 @@ def get_web_ui_html(current_settings=None):
             font-weight: 600;
             color: var(--text-body);
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 11px;
+            font-size: 13px;
             white-space: nowrap;
             display: flex;
             align-items: center;
@@ -1892,17 +1892,11 @@ def get_web_ui_html(current_settings=None):
                     <button class="btn" onclick="window.location.href='/ip-management'">
                         <i class="fa-solid fa-network-wired"></i> IP Management
                     </button>
-                    <button class="btn" onclick="startAll()">
-                        <i class="fa-solid fa-play"></i> Start All
-                    </button>
-                    <button class="btn" onclick="stopAll()">
-                        <i class="fa-solid fa-stop"></i> Stop All
+                    <button class="btn" onclick="window.location.href='/diagnostics'">
+                        <i class="fa-solid fa-gauge"></i> Diagnostics
                     </button>
                     <button class="btn" onclick="openSettingsModal()">
                         <i class="fa-solid fa-gear"></i> Settings
-                    </button>
-                    <button class="btn" onclick="window.location.href='/diagnostics'">
-                        <i class="fa-solid fa-gauge"></i> Diagnostics
                     </button>
                     
                     <div class="dropdown">
@@ -1911,16 +1905,22 @@ def get_web_ui_html(current_settings=None):
                         </button>
                         <div class="dropdown-content">
                             <div class="dropdown-content-inner">
-                                <button onclick="openLogsModal()">
+                                <button onclick="startAll()" style="color: #81c784;">
+                                    <i class="fa-solid fa-play"></i> Start All Cameras
+                                </button>
+                                <button onclick="stopAll()" style="color: #e57373; border-top: 1px solid var(--border-color);">
+                                    <i class="fa-solid fa-stop"></i> Stop All Cameras
+                                </button>
+                                <button onclick="openLogsModal()" style="color: #64b5f6; border-top: 1px solid var(--border-color);">
                                     <i class="fa-solid fa-list-alt"></i> System Logs
                                 </button>
-                                <button onclick="restartServer()" style="border-top: 1px solid var(--border-color);">
+                                <button onclick="restartServer()" style="color: #ffb74d; border-top: 1px solid var(--border-color);">
                                     <i class="fa-solid fa-sync"></i> Restart Server
                                 </button>
-                                <button onclick="stopServer()" style="color: #f56565; border-top: 1px solid var(--border-color);">
+                                <button onclick="stopServer()" style="color: #ef9a9a; border-top: 1px solid var(--border-color);">
                                     <i class="fa-solid fa-stop-circle"></i> Stop Server
                                 </button>
-                                <button onclick="rebootServer()" class="reboot-host" style="border-top: 1px solid var(--border-color);">
+                                <button onclick="rebootServer()" class="reboot-host" style="color: #b39ddb; border-top: 1px solid var(--border-color);">
                                     <i class="fa-solid fa-power-off"></i> Reboot Host
                                 </button>
                             </div>
@@ -3236,8 +3236,8 @@ def get_web_ui_html(current_settings=None):
             </div>
             <div style="line-height: 1.6; color: var(--text-body); font-size: 15px;">
                 <p style="margin-bottom: 15px;">Hello, my name is <strong style="color: var(--text-title);">Tony</strong>. This program was developed to address two primary needs:</p>
-                <div style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 8px; border-left: 4px solid var(--btn-primary); margin-bottom: 20px;">
-                    <p style="margin-bottom: 15px;"><strong style="color: var(--text-title);">1. Ubiquiti Protect NVR Compatibility:</strong><br>
+                <div style="background: rgba(102, 126, 234, 0.08); padding: 20px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3); margin-bottom: 20px;">
+                    <p style="margin-bottom: 15px;"><strong style="color: var(--text-title);">Ubiquiti Protect NVR Compatibility:</strong><br>
                     The Ubiquiti Protect NVR platform has limited compatibility with many generic ONVIF cameras. This tool bridges that gap by allowing incompatible RTSP streams to be imported and presented as fully compliant virtual ONVIF cameras, ensuring seamless integration and reliable operation within the Protect ecosystem.</p>
 
                     <p style="margin-bottom: 10px;">Additionally, Ubiquiti Protect requires a <strong>unique MAC address</strong> for each camera. This can be achieved in several ways:</p>
@@ -3247,7 +3247,7 @@ def get_web_ui_html(current_settings=None):
                         <li>Using Linux macvlan networking. The program fully supports macvlan and has been tested on Ubuntu 25 for compatibility and stable operation.</li>
                     </ul>
                     
-                    <p><strong style="color: var(--text-title);">2. Stream Rebroadcasting and Performance Optimization:</strong><br>
+                    <p><strong style="color: var(--text-title);">Stream Rebroadcasting and Performance Optimization:</strong><br>
                     The application also enables reliable rebroadcasting of a single RTSP stream. Many physical cameras struggle to handle multiple concurrent connections, often resulting in lag or instability. This server functions as a high-performance proxy, efficiently managing multiple viewers while minimizing load on the original camera hardware.</p>
                 </div>
                 
@@ -4235,7 +4235,7 @@ def get_web_ui_html(current_settings=None):
                         const bitrateEl = el.querySelector('.bitrate-badge');
                         
                         if (stats) {{
-                            if (bitrateEl) bitrateEl.textContent = stats.bitrate ? stats.bitrate.toFixed(0) + ' kbps' : '0 kbps';
+                            if (bitrateEl) bitrateEl.textContent = stats.bitrate ? (stats.bitrate / 1000).toFixed(1) + ' Mbps' : '0.0 Mbps';
                             if (codecEl && stats.tracks && stats.tracks.length > 0) {{
                                 // Find video track codec name
                                 let codec = 'H264';
@@ -7019,7 +7019,7 @@ def get_web_ui_html(current_settings=None):
                     Object.values(analytics).forEach(a => totalBitrate += (a.bitrate || 0));
                     
                     document.getElementById('server-stats').innerHTML = 
-                        `<i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ${{stats.cpu_percent}}% &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ${{stats.memory_mb}}MB &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-network-wired" style="opacity: 0.75; color: var(--btn-primary);"></i> NET: ${{totalBitrate.toFixed(1)}} kbps`;
+                        `<i class="fa-solid fa-microchip" style="opacity: 0.75; color: var(--btn-primary);"></i> CPU: ${{stats.cpu_percent}}% &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-memory" style="opacity: 0.75; color: var(--btn-primary);"></i> MEM: ${{stats.memory_mb}}MB &nbsp;&nbsp;•&nbsp;&nbsp; <i class="fa-solid fa-network-wired" style="opacity: 0.75; color: var(--btn-primary);"></i> NET: ${{ (totalBitrate / 1000).toFixed(1) }} Mbps`;
                 }}
                 
                 // Update per-camera metrics
@@ -7043,8 +7043,8 @@ def get_web_ui_html(current_settings=None):
                         const stats = mainStats;
                         const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
                         html += `
-                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Main Stream Status'}}" style="min-width: 95px; justify-content: center;">
-                                MAIN: ${{stats.bitrate.toFixed(0)}}
+                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Main Stream Status'}}" style="min-width: 115px; justify-content: center;">
+                                MAIN: ${{ (stats.bitrate / 1000).toFixed(1) }} Mbps
                             </div>
                         `;
                     }}
@@ -7054,8 +7054,8 @@ def get_web_ui_html(current_settings=None):
                         const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
                         const viewers = stats.readers || 0;
                         html += `
-                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}" style="min-width: 85px; justify-content: center;">
-                                SUB: ${{stats.bitrate.toFixed(0)}}
+                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}" style="min-width: 105px; justify-content: center;">
+                                SUB: ${{ (stats.bitrate / 1000).toFixed(1) }} Mbps
                             </div>
                             <div class="metric-badge ${{viewers > 0 ? 'live' : ''}}" title="Active Viewers" style="min-width: 40px; justify-content: center;">
                                 <i class="fas fa-users"></i> ${{viewers}}

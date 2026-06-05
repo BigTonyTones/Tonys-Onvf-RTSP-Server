@@ -766,7 +766,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             </a>
         </div>
         <div class="nav-actions">
-            <div id="server-stats" style="margin-right: 20px; font-size: 11px; font-weight: 700; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-family: 'Courier New', monospace;">
+            <div id="server-stats" style="margin-right: 20px; font-size: 13px; font-weight: 700; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-family: 'Courier New', monospace;">
                 <i class="fas fa-server" style="color: var(--accent-color);"></i> Loading...
             </div>
             <div id="save-status" style="display: flex; align-items: center; gap: 10px; margin-right: 20px; font-size: 13px; opacity: 0;">
@@ -1354,7 +1354,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                     Object.values(analytics).forEach(a => totalBitrate += (a.bitrate || 0));
                     
                     document.getElementById('server-stats').innerHTML = 
-                        `<i class="fas fa-server" style="color: var(--accent-color);"></i> CPU: ${{stats.cpu_percent}}% • MEM: ${{stats.memory_mb}}MB • NET: ${{totalBitrate.toFixed(0)}} kbps`;
+                        `<i class="fas fa-server" style="color: var(--accent-color);"></i> CPU: ${{stats.cpu_percent}}% • MEM: ${{stats.memory_mb}}MB • NET: ${{ (totalBitrate / 1000).toFixed(1) }} Mbps`;
                 }}
             }} catch (e) {{
                 console.error("Stats fetch failed:", e);
