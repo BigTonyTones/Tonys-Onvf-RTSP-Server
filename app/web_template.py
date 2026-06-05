@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import platform
 from .version import CURRENT_VERSION
@@ -517,6 +517,34 @@ def get_web_ui_html(current_settings=None):
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }}
+        
+        .stats-range-pills {{
+            display: flex;
+            gap: 4px;
+        }}
+        .stats-range-pill {{
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'Consolas', 'Monaco', monospace;
+            padding: 2px 7px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            letter-spacing: 0.3px;
+            text-transform: none;
+        }}
+        .stats-range-pill:hover {{
+            border-color: var(--btn-primary);
+            color: var(--btn-primary);
+        }}
+        .stats-range-pill.active {{
+            background: var(--btn-primary);
+            border-color: var(--btn-primary);
+            color: #ffffff;
         }}
         
         .popover-chart-container {{
@@ -2004,7 +2032,12 @@ def get_web_ui_html(current_settings=None):
                         <div class="stats-popover">
                             <div class="stats-popover-title">
                                 <span>System Metrics History</span>
-                                <span style="font-size: 10px; color: var(--text-muted); font-family: monospace;">Last 90s</span>
+                                <div class="stats-range-pills" id="stats-range-pills">
+                                    <button class="stats-range-pill active" onclick="setStatsRange(30, this)" title="Last 90 seconds">90s</button>
+                                    <button class="stats-range-pill" onclick="setStatsRange(100, this)" title="Last 5 minutes">5m</button>
+                                    <button class="stats-range-pill" onclick="setStatsRange(300, this)" title="Last 15 minutes">15m</button>
+                                    <button class="stats-range-pill" onclick="setStatsRange(1200, this)" title="Last 1 hour">1h</button>
+                                </div>
                             </div>
                             <div class="popover-chart-container">
                                 <div class="popover-chart-header">
@@ -7185,7 +7218,8 @@ def get_web_ui_html(current_settings=None):
         }}
         
         // ── Stats history ring-buffers (30 points @ 3-second intervals = 90 s)
-        const STATS_MAX_POINTS = 30;
+        const STATS_MAX_POINTS = 1200;   // 1 hour max storage (1200 pts @ 3s)
+        let statsTimeRange = 30;         // currently visible points (default 90s)
         let cpuHistory = [];
         let memHistory = [];
         let netHistory = [];
@@ -7193,6 +7227,8 @@ def get_web_ui_html(current_settings=None):
         function drawStatsChart(canvasId, history, strokeColor, fillColor) {{
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
+            // Slice to currently selected time range
+            const visibleData = history.slice(-statsTimeRange);
             const wrapper = canvas.parentElement;
             const W = wrapper.clientWidth  || 288;
             const H = wrapper.clientHeight || 52;
@@ -7208,7 +7244,7 @@ def get_web_ui_html(current_settings=None):
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, W, H);
             
-            if (history.length < 2) return;
+            if (visibleData.length < 2) return;
             
             const isDark = document.body.classList.contains('theme-dark') ||
                            document.body.classList.contains('theme-dracula') ||
@@ -7234,11 +7270,11 @@ def get_web_ui_html(current_settings=None):
                 ctx.stroke();
             }});
             
-            const maxVal = Math.max(...history, 1);
+            const maxVal = Math.max(...visibleData, 1);
             const padY = 4;
             const usableH = H - padY * 2;
             
-            const xStep = W / (STATS_MAX_POINTS - 1);
+            const xStep = W / Math.max(visibleData.length - 1, 1);
             const getX = i => i * xStep;
             const getY = v => padY + usableH - (v / maxVal) * usableH;
             
@@ -7249,12 +7285,12 @@ def get_web_ui_html(current_settings=None):
             
             // Draw filled area
             ctx.beginPath();
-            history.forEach((v, i) => {{
+            visibleData.forEach((v, i) => {{
                 const x = getX(i);
                 const y = getY(v);
                 i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
             }});
-            ctx.lineTo(getX(history.length - 1), H);
+            ctx.lineTo(getX(visibleData.length - 1), H);
             ctx.lineTo(0, H);
             ctx.closePath();
             ctx.fillStyle = grad;
@@ -7262,7 +7298,7 @@ def get_web_ui_html(current_settings=None):
             
             // Draw stroke line
             ctx.beginPath();
-            history.forEach((v, i) => {{
+            visibleData.forEach((v, i) => {{
                 const x = getX(i);
                 const y = getY(v);
                 i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -7273,8 +7309,8 @@ def get_web_ui_html(current_settings=None):
             ctx.stroke();
             
             // Pulse dot at latest value
-            const lastX = getX(history.length - 1);
-            const lastY = getY(history[history.length - 1]);
+            const lastX = getX(visibleData.length - 1);
+            const lastY = getY(visibleData[visibleData.length - 1]);
             ctx.beginPath();
             ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
             ctx.fillStyle = strokeColor;
@@ -7284,6 +7320,17 @@ def get_web_ui_html(current_settings=None):
             ctx.strokeStyle = isDark ? 'rgba(22,27,34,0.95)' : 'rgba(255,255,255,0.98)';
             ctx.lineWidth = 1.5;
             ctx.stroke();
+        }}
+        
+        function setStatsRange(points, btn) {{
+            statsTimeRange = points;
+            // Update active pill styling
+            document.querySelectorAll('.stats-range-pill').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            // Immediately redraw charts with new range
+            drawStatsChart('cpu-chart', cpuHistory, '#818cf8', 'rgba(129,140,248,0.25)');
+            drawStatsChart('mem-chart', memHistory, '#a78bfa', 'rgba(167,139,250,0.25)');
+            drawStatsChart('net-chart', netHistory, '#22d3ee', 'rgba(34,211,238,0.25)');
         }}
         
         async function updateStats() {{
@@ -7315,6 +7362,7 @@ def get_web_ui_html(current_settings=None):
                     cpuHistory.push(stats.cpu_percent);
                     memHistory.push(stats.memory_mb);
                     netHistory.push(netMbps);
+                    // Keep max 1 hour of history
                     if (cpuHistory.length > STATS_MAX_POINTS) cpuHistory.shift();
                     if (memHistory.length > STATS_MAX_POINTS) memHistory.shift();
                     if (netHistory.length > STATS_MAX_POINTS) netHistory.shift();
