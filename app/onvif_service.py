@@ -546,7 +546,7 @@ class ONVIFService:
                 <tt:Extension>
                     <tt:DeviceIO>
                         <tt:XAddr>http://{local_ip}:{self.camera.onvif_port}/onvif/deviceio_service</tt:XAddr>
-                        <tt:VideoSources>{1 if getattr(self.camera, 'disable_substream', False) else 2}</tt:VideoSources>
+                        <tt:VideoSources>1</tt:VideoSources>
                         <tt:VideoOutputs>0</tt:VideoOutputs>
                         <tt:AudioSources>{1 if getattr(self.camera, 'enable_audio', False) else 0}</tt:AudioSources>
                         <tt:AudioOutputs>0</tt:AudioOutputs>
@@ -683,6 +683,7 @@ class ONVIFService:
     def _handle_get_profiles(self):
         """Handle GetProfiles request with unique tokens"""
         cam_id = self.camera.id
+        use_count = 2 if not getattr(self.camera, 'disable_substream', False) else 1
         
         # Determine actual audio encoding for ONVIF reporting
         audio_enc = "PCMU" # Default
@@ -743,10 +744,10 @@ class ONVIFService:
         <trt:GetProfilesResponse>
             <trt:Profiles token="mainStream_{cam_id}" fixed="true">
                 <tt:Name>mainStream</tt:Name>
-                <tt:VideoSourceConfiguration token="VideoSourceMain_{cam_id}">
+                <tt:VideoSourceConfiguration token="VideoSource_{cam_id}">
                     <tt:Name>Main Video Source</tt:Name>
-                    <tt:UseCount>1</tt:UseCount>
-                    <tt:SourceToken>VideoSourceMain_{cam_id}</tt:SourceToken>
+                    <tt:UseCount>{use_count}</tt:UseCount>
+                    <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
                     <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
                 </tt:VideoSourceConfiguration>
                 <tt:VideoEncoderConfiguration token="VideoEncoderMain_{cam_id}">
@@ -776,11 +777,11 @@ class ONVIFService:
             soap_response += f"""
             <trt:Profiles token="subStream_{cam_id}" fixed="true">
                 <tt:Name>subStream</tt:Name>
-                <tt:VideoSourceConfiguration token="VideoSourceSub_{cam_id}">
+                <tt:VideoSourceConfiguration token="VideoSource_{cam_id}">
                     <tt:Name>Sub Video Source</tt:Name>
-                    <tt:UseCount>1</tt:UseCount>
-                    <tt:SourceToken>VideoSourceSub_{cam_id}</tt:SourceToken>
-                    <tt:Bounds x="0" y="0" width="{self.camera.sub_width}" height="{self.camera.sub_height}"/>
+                    <tt:UseCount>{use_count}</tt:UseCount>
+                    <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
+                    <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
                 </tt:VideoSourceConfiguration>
                 <tt:VideoEncoderConfiguration token="VideoEncoderSub_{cam_id}">
                     <tt:Name>Sub Video Encoder</tt:Name>
@@ -903,27 +904,13 @@ class ONVIFService:
                    xmlns:tt="http://www.onvif.org/ver10/schema">
     <SOAP-ENV:Body>
         <trt:GetVideoSourcesResponse>
-            <trt:VideoSources token="VideoSourceMain_{cam_id}">
+            <trt:VideoSources token="VideoSource_{cam_id}">
                 <tt:Framerate>{self.camera.main_framerate}</tt:Framerate>
                 <tt:Resolution>
                     <tt:Width>{self.camera.main_width}</tt:Width>
                     <tt:Height>{self.camera.main_height}</tt:Height>
                 </tt:Resolution>
             </trt:VideoSources>
-            """
-        
-        if not getattr(self.camera, 'disable_substream', False):
-            soap_response += f"""
-                <trt:VideoSources token="VideoSourceSub_{cam_id}">
-                    <tt:Framerate>{self.camera.sub_framerate}</tt:Framerate>
-                    <tt:Resolution>
-                        <tt:Width>{self.camera.sub_width}</tt:Width>
-                        <tt:Height>{self.camera.sub_height}</tt:Height>
-                    </tt:Resolution>
-                </trt:VideoSources>
-            """
-        
-        soap_response += """
         </trt:GetVideoSourcesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
@@ -1075,23 +1062,18 @@ class ONVIFService:
     def _handle_get_video_source_configs(self):
         """Handle GetVideoSourceConfigurations request"""
         cam_id = self.camera.id
+        use_count = 2 if not getattr(self.camera, 'disable_substream', False) else 1
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
                    xmlns:tt="http://www.onvif.org/ver10/schema">
     <SOAP-ENV:Body>
         <trt:GetVideoSourceConfigurationsResponse>
-            <trt:Configurations token="VideoSourceMain_{cam_id}">
-                <tt:Name>Main Video Source</tt:Name>
-                <tt:UseCount>1</tt:UseCount>
-                <tt:SourceToken>VideoSourceMain_{cam_id}</tt:SourceToken>
+            <trt:Configurations token="VideoSource_{cam_id}">
+                <tt:Name>Video Source</tt:Name>
+                <tt:UseCount>{use_count}</tt:UseCount>
+                <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
                 <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
-            </trt:Configurations>
-            <trt:Configurations token="VideoSourceSub_{cam_id}">
-                <tt:Name>Sub Video Source</tt:Name>
-                <tt:UseCount>1</tt:UseCount>
-                <tt:SourceToken>VideoSourceSub_{cam_id}</tt:SourceToken>
-                <tt:Bounds x="0" y="0" width="{self.camera.sub_width}" height="{self.camera.sub_height}"/>
             </trt:Configurations>
         </trt:GetVideoSourceConfigurationsResponse>
     </SOAP-ENV:Body>
@@ -1204,7 +1186,7 @@ class ONVIFService:
             
         messages_xml = ""
         cam_id = self.camera.id
-        source_token = f"VideoSourceMain_{cam_id}"
+        source_token = f"VideoSource_{cam_id}"
         
         for evt in events:
             from xml.sax.saxutils import escape
