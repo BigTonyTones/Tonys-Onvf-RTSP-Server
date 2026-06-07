@@ -418,13 +418,23 @@ class FFmpegManager:
         if os.path.exists(local_path):
             return os.path.abspath(local_path)
             
-        # 3. Linux only: check common standard paths
+        # 3. Linux/macOS: check common standard paths
         if system == "linux":
             common_paths = [
                 "/usr/bin/ffmpeg",
                 "/usr/local/bin/ffmpeg",
                 "/bin/ffmpeg",
                 "/usr/sbin/ffmpeg"
+            ]
+            for p in common_paths:
+                if os.path.exists(p):
+                    return p
+        elif system == "darwin":
+            common_paths = [
+                "/opt/homebrew/bin/ffmpeg",
+                "/usr/local/bin/ffmpeg",
+                "/usr/bin/ffmpeg",
+                "/bin/ffmpeg"
             ]
             for p in common_paths:
                 if os.path.exists(p):
@@ -491,13 +501,23 @@ class FFmpegManager:
         if os.path.exists(local_path):
             return os.path.abspath(local_path)
             
-        # 3. Linux only: check common standard paths
+        # 3. Linux/macOS: check common standard paths
         if system == "linux":
             common_paths = [
                 "/usr/bin/ffprobe",
                 "/usr/local/bin/ffprobe",
                 "/bin/ffprobe",
                 "/usr/sbin/ffprobe"
+            ]
+            for p in common_paths:
+                if os.path.exists(p):
+                    return p
+        elif system == "darwin":
+            common_paths = [
+                "/opt/homebrew/bin/ffprobe",
+                "/usr/local/bin/ffprobe",
+                "/usr/bin/ffprobe",
+                "/bin/ffprobe"
             ]
             for p in common_paths:
                 if os.path.exists(p):

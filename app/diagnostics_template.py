@@ -224,6 +224,11 @@ def get_diagnostics_html():
             transition: all 0.2s;
         }
         
+        .input-group select option {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+        }
+        
         .input-group input:focus,
         .input-group select:focus {
             outline: none;
@@ -771,6 +776,7 @@ def get_diagnostics_html():
                         <label>Encoder Driver</label>
                         <select id="transcode-encoder">
                             <option value="libx264">Software CPU (libx264)</option>
+                            <option value="h264_videotoolbox">macOS Hardware VideoToolbox (h264_videotoolbox)</option>
                             <option value="h264_nvenc">Nvidia GPU NVENC (h264_nvenc)</option>
                             <option value="h264_vaapi">Linux Hardware VAAPI (h264_vaapi)</option>
                             <option value="h264_qsv">Intel QuickSync QSV (h264_qsv)</option>

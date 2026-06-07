@@ -602,7 +602,7 @@ create_system_service() {
     if [ "$OS" == "macos" ]; then
         print_step "Creating launchd service..."
         
-        cat > /Library/LaunchDaemons/com.tonys.onvif-server.plist << 'EOF'
+        cat > /Library/LaunchDaemons/com.tonys.onvif-server.plist << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -611,26 +611,31 @@ create_system_service() {
     <string>com.tonys.onvif-server</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/tonys-onvif-server/venv/bin/python</string>
-        <string>/opt/tonys-onvif-server/run.py</string>
+        <string>$INSTALL_DIR/venv/bin/python</string>
+        <string>$INSTALL_DIR/run.py</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/opt/tonys-onvif-server</string>
+    <string>$INSTALL_DIR</string>
     <key>RunAtLoad</key>
-    <false/>
+    <true/>
     <key>KeepAlive</key>
     <dict>
         <key>SuccessfulExit</key>
         <false/>
     </dict>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string>
+    </dict>
     <key>StandardOutPath</key>
-    <string>/opt/tonys-onvif-server/logs/stdout.log</string>
+    <string>$INSTALL_DIR/logs/stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/opt/tonys-onvif-server/logs/stderr.log</string>
+    <string>$INSTALL_DIR/logs/stderr.log</string>
 </dict>
 </plist>
 EOF
-        mkdir -p /opt/tonys-onvif-server/logs 2>/dev/null || true
+        mkdir -p "$INSTALL_DIR/logs" 2>/dev/null || true
         print_success "Launchd service created (com.tonys.onvif-server)"
     else
         print_step "Creating systemd service..."

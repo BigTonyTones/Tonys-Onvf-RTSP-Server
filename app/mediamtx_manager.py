@@ -647,9 +647,10 @@ class MediaMTXManager:
                         # Determine encoder arguments
                         if use_hw_accel and hw_accel_info:
                              encoder_args = f'-c:v {hw_accel_info["encoder"]} {hw_accel_info["params"]}'
-                        # Software encoding with optimized preset
-                        # 'ultrafast' is used to minimize latency at the cost of bitrate efficiency
-                        encoder_args = '-c:v libx264 -preset ultrafast -tune zerolatency'
+                        else:
+                             # Software encoding with optimized preset
+                             # 'ultrafast' is used to minimize latency at the cost of bitrate efficiency
+                             encoder_args = '-c:v libx264 -preset ultrafast -tune zerolatency'
 
                         # Final command - optimized for multi-core CPU utilization and stability
                         # -threads 0: Auto-detect and use all available CPU cores
@@ -695,6 +696,15 @@ class MediaMTXManager:
             )
             stdout, _ = process.communicate()
             
+            # Check for Apple Silicon VideoToolbox (macOS)
+            if "h264_videotoolbox" in stdout:
+                return {
+                    "name": "Apple VideoToolbox",
+                    "type": "videotoolbox",
+                    "encoder": "h264_videotoolbox",
+                    "params": "-realtime 1"
+                }
+                
             # Check for NVIDIA NVENC
             if "h264_nvenc" in stdout:
                 return {
