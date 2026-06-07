@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import platform
 from .version import CURRENT_VERSION
@@ -617,6 +617,11 @@ def get_web_ui_html(current_settings=None):
             transition: all 0.2s;
         }}
         
+        .theme-select option {{
+            background-color: var(--card-bg);
+            color: var(--text-title);
+        }}
+        
         .theme-select:focus {{
             border-color: var(--btn-primary);
         }}
@@ -937,6 +942,10 @@ def get_web_ui_html(current_settings=None):
             color: var(--input-text);
             transition: border-color 0.2s;
         }}
+        .form-input option {{
+            background-color: var(--card-bg);
+            color: var(--text-title);
+        }}
         .form-input:focus {{
             outline: none;
             border-color: var(--btn-primary);
@@ -967,12 +976,101 @@ def get_web_ui_html(current_settings=None):
             right: 0;
             background: var(--card-bg);
             min-width: 180px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            box-shadow: 0px 8px 24px 0px rgba(0,0,0,0.3);
             z-index: 100;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
             margin-top: 5px;
-            overflow: visible; /* Changed to visible to allow pseudo-element bridge */
+            overflow: visible; /* Kept visible to allow pseudo-element bridge */
+            flex-direction: row;
+        }}
+        .dropdown-content-inner {{
+            flex: 1;
+            min-width: 180px;
+        }}
+        .dropdown-sysinfo {{
+            width: 250px;
+            background: rgba(0, 0, 0, 0.02);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }}
+        body.theme-dark .dropdown-sysinfo,
+        body.theme-dracula .dropdown-sysinfo,
+        body.theme-midnight .dropdown-sysinfo,
+        body.theme-slate .dropdown-sysinfo,
+        body.theme-matrix .dropdown-sysinfo,
+        body.theme-amoled .dropdown-sysinfo {{
+            background: rgba(255, 255, 255, 0.02);
+        }}
+        .sysinfo-content {{
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 11px;
+        }}
+        .sysinfo-row {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }}
+        .sysinfo-label {{
+            color: var(--text-muted);
+            font-weight: 500;
+        }}
+        .sysinfo-value {{
+            color: var(--text-title);
+            font-weight: 600;
+            text-align: right;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+        }}
+        .sysinfo-divider {{
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 4px 0;
+            opacity: 0.5;
+        }}
+        .sysinfo-metric {{
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }}
+        .metric-info {{
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            color: var(--text-title);
+        }}
+        .metric-val {{
+            font-family: monospace;
+            font-size: 10px;
+        }}
+        .metric-progress-bg {{
+            height: 6px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            width: 100%;
+        }}
+        body.theme-dark .metric-progress-bg,
+        body.theme-dracula .metric-progress-bg,
+        body.theme-midnight .metric-progress-bg,
+        body.theme-slate .metric-progress-bg,
+        body.theme-matrix .metric-progress-bg,
+        body.theme-amoled .metric-progress-bg {{
+            background: rgba(255, 255, 255, 0.1);
+        }}
+        .metric-progress-bar {{
+            height: 100%;
+            background: var(--btn-primary);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s;
         }}
         /* Hover Bridge to prevent dropdown from closing when moving mouse from button to menu */
         .dropdown-content::before {{
@@ -1037,7 +1135,7 @@ def get_web_ui_html(current_settings=None):
             color: #f56565 !important;
         }}
         .dropdown:hover .dropdown-content {{
-            display: block;
+            display: flex;
         }}
         /* Toast Notifications */
         .toast {{
@@ -2115,34 +2213,83 @@ def get_web_ui_html(current_settings=None):
                     </button>
                     
                     <div class="dropdown">
-                        <button class="btn btn-violet">
-                            <i class="fa-solid fa-server"></i> Server <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
+                        <button class="btn btn-violet" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-server"></i> <span>Server</span> <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
                         </button>
                         <div class="dropdown-content">
-                            <div class="dropdown-content-inner">
+                            <!-- Left Column: Actions -->
+                            <div class="dropdown-content-inner" style="min-width: 180px;">
                                 <div class="dropdown-group-header">Cameras</div>
-                                <button onclick="startAll()" style="color: #81c784;">
-                                    <i class="fa-solid fa-play"></i> Start All Cameras
+                                <button onclick="startAll()">
+                                    <i class="fa-solid fa-play" style="color: #81c784;"></i> Start All Cameras
                                 </button>
-                                <button onclick="stopAll()" style="color: #e57373;">
-                                    <i class="fa-solid fa-stop"></i> Stop All Cameras
+                                <button onclick="stopAll()">
+                                    <i class="fa-solid fa-stop" style="color: #e57373;"></i> Stop All Cameras
                                 </button>
                                 
                                 <div class="dropdown-group-header">Server</div>
-                                <button onclick="restartServer()" style="color: #ffb74d;">
-                                    <i class="fa-solid fa-sync"></i> Restart Server
+                                <button onclick="restartServer()">
+                                    <i class="fa-solid fa-sync" style="color: #ffb74d;"></i> Restart Server
                                 </button>
-                                <button onclick="stopServer()" style="color: #ef9a9a;">
-                                    <i class="fa-solid fa-stop-circle"></i> Stop Server
+                                <button onclick="stopServer()">
+                                    <i class="fa-solid fa-stop-circle" style="color: #ef9a9a;"></i> Stop Server
                                 </button>
                                 
                                 <div class="dropdown-group-header">System</div>
-                                <button onclick="openLogsModal()" style="color: #64b5f6;">
-                                    <i class="fa-solid fa-list-alt"></i> System Logs
+                                <button onclick="openLogsModal()">
+                                    <i class="fa-solid fa-list-alt" style="color: #64b5f6;"></i> System Logs
                                 </button>
-                                <button onclick="rebootServer()" class="reboot-host" style="color: #b39ddb;">
-                                    <i class="fa-solid fa-power-off"></i> Reboot Host
+                                <button onclick="rebootServer()" class="reboot-host btn-reboot">
+                                    <i class="fa-solid fa-power-off" style="color: #b39ddb;"></i> Reboot Host
                                 </button>
+                            </div>
+                            
+                            <!-- Right Column: System Status & Metrics -->
+                            <div class="dropdown-sysinfo">
+                                <div class="dropdown-group-header" style="border-top: none;">Server Status</div>
+                                <div class="sysinfo-content">
+                                    <div class="sysinfo-row">
+                                        <span class="sysinfo-label">OS:</span>
+                                        <span class="sysinfo-value" id="sys-os">-</span>
+                                    </div>
+                                    <div class="sysinfo-row">
+                                        <span class="sysinfo-label">CPU:</span>
+                                        <span class="sysinfo-value" id="sys-cpu-model" title="-">-</span>
+                                    </div>
+                                    <div class="sysinfo-row">
+                                        <span class="sysinfo-label">Uptime:</span>
+                                        <span class="sysinfo-value" id="sys-uptime">-</span>
+                                    </div>
+                                    
+                                    <hr class="sysinfo-divider">
+                                    
+                                    <div class="sysinfo-metric">
+                                        <div class="metric-info">
+                                            <span><i class="fa-solid fa-microchip" style="color: var(--btn-primary); opacity: 0.8; font-size: 10px;"></i> CPU Load</span>
+                                            <span id="sys-cpu-usage" class="metric-val">-</span>
+                                        </div>
+                                        <div class="metric-progress-bg">
+                                            <div id="sys-cpu-bar" class="metric-progress-bar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="sysinfo-metric">
+                                        <div class="metric-info">
+                                            <span><i class="fa-solid fa-memory" style="color: var(--btn-primary); opacity: 0.8; font-size: 10px;"></i> Memory</span>
+                                            <span id="sys-mem-usage" class="metric-val">-</span>
+                                        </div>
+                                        <div class="metric-progress-bg">
+                                            <div id="sys-mem-bar" class="metric-progress-bar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="sysinfo-metric">
+                                        <div class="metric-info">
+                                            <span><i class="fa-solid fa-network-wired" style="color: var(--btn-primary); opacity: 0.8; font-size: 10px;"></i> Stream Rate</span>
+                                            <span id="sys-net-usage" class="metric-val">-</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -7333,6 +7480,18 @@ def get_web_ui_html(current_settings=None):
             drawStatsChart('net-chart', netHistory, '#22d3ee', 'rgba(34,211,238,0.25)');
         }}
         
+        function formatUptime(seconds) {{
+            if (!seconds || isNaN(seconds)) return '0s';
+            const d = Math.floor(seconds / (3600*24));
+            const h = Math.floor((seconds % (3600*24)) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (d > 0) return `${{d}}d ${{h}}h`;
+            if (h > 0) return `${{h}}h ${{m}}m`;
+            if (m > 0) return `${{m}}m`;
+            return `${{s}}s`;
+        }}
+        
         async function updateStats() {{
             try {{
                 // Parallel fetch for speed
@@ -7379,6 +7538,54 @@ def get_web_ui_html(current_settings=None):
                     drawStatsChart('cpu-chart', cpuHistory, '#818cf8', 'rgba(129,140,248,0.25)');
                     drawStatsChart('mem-chart', memHistory, '#a78bfa', 'rgba(167,139,250,0.25)');
                     drawStatsChart('net-chart', netHistory, '#22d3ee', 'rgba(34,211,238,0.25)');
+                    
+                    // Update dropdown server info and live metrics
+                    const staticInfo = stats.static_info || {{}};
+                    
+                    const osEl = document.getElementById('sys-os');
+                    if (osEl) osEl.textContent = `${{staticInfo.os_type || 'Unknown'}} ${{staticInfo.os_release || ''}}`;
+                    
+                    const cpuModelEl = document.getElementById('sys-cpu-model');
+                    if (cpuModelEl && staticInfo.cpu_model) {{
+                        cpuModelEl.textContent = `${{staticInfo.cpu_count || 1}} Cores (${{staticInfo.cpu_model}})`;
+                        cpuModelEl.title = staticInfo.cpu_model;
+                    }}
+                    
+                    const uptimeEl = document.getElementById('sys-uptime');
+                    if (uptimeEl) uptimeEl.textContent = formatUptime(stats.system_uptime);
+                    
+                    const cpuUsageEl = document.getElementById('sys-cpu-usage');
+                    if (cpuUsageEl) cpuUsageEl.textContent = (stats.system_cpu !== undefined ? stats.system_cpu : stats.cpu_percent) + '%';
+                    
+                    const cpuBarEl = document.getElementById('sys-cpu-bar');
+                    if (cpuBarEl) {{
+                        const val = (stats.system_cpu !== undefined ? stats.system_cpu : stats.cpu_percent);
+                        cpuBarEl.style.width = val + '%';
+                        if (val > 85) cpuBarEl.style.backgroundColor = '#ef4444';
+                        else if (val > 60) cpuBarEl.style.backgroundColor = '#f59e0b';
+                        else cpuBarEl.style.backgroundColor = 'var(--btn-primary)';
+                    }}
+                    
+                    const memUsageEl = document.getElementById('sys-mem-usage');
+                    if (memUsageEl) {{
+                        if (stats.system_memory_percent !== undefined) {{
+                            memUsageEl.textContent = `${{stats.system_memory_percent}}% (${{stats.system_memory_used_gb || 0}} / ${{staticInfo.total_memory_gb || 0}} GB)`;
+                        }} else {{
+                            memUsageEl.textContent = `${{stats.memory_mb}} MB`;
+                        }}
+                    }}
+                    
+                    const memBarEl = document.getElementById('sys-mem-bar');
+                    if (memBarEl) {{
+                        const val = (stats.system_memory_percent !== undefined ? stats.system_memory_percent : 0);
+                        memBarEl.style.width = val + '%';
+                        if (val > 85) memBarEl.style.backgroundColor = '#ef4444';
+                        else if (val > 70) memBarEl.style.backgroundColor = '#f59e0b';
+                        else memBarEl.style.backgroundColor = 'var(--btn-primary)';
+                    }}
+                    
+                    const netUsageEl = document.getElementById('sys-net-usage');
+                    if (netUsageEl) netUsageEl.textContent = netMbps + ' Mbps';
                 }}
                 
                 // Update per-camera metrics
