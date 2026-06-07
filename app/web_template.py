@@ -991,7 +991,7 @@ def get_web_ui_html(current_settings=None):
         .dropdown-sysinfo {{
             width: 250px;
             background: rgba(0, 0, 0, 0.02);
-            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
         }}
@@ -1008,7 +1008,7 @@ def get_web_ui_html(current_settings=None):
             display: flex;
             flex-direction: column;
             gap: 10px;
-            font-size: 11px;
+            font-size: 13px;
         }}
         .sysinfo-row {{
             display: flex;
@@ -1024,10 +1024,7 @@ def get_web_ui_html(current_settings=None):
             color: var(--text-title);
             font-weight: 600;
             text-align: right;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 160px;
+            word-break: break-word;
         }}
         .sysinfo-divider {{
             border: 0;
@@ -1048,7 +1045,7 @@ def get_web_ui_html(current_settings=None):
         }}
         .metric-val {{
             font-family: monospace;
-            font-size: 10px;
+            font-size: 12px;
         }}
         .metric-progress-bg {{
             height: 6px;
@@ -1087,7 +1084,7 @@ def get_web_ui_html(current_settings=None):
             border-radius: 8px;
         }}
         .dropdown-group-header {{
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 800;
             color: var(--text-muted);
             text-transform: uppercase;
@@ -2217,34 +2214,7 @@ def get_web_ui_html(current_settings=None):
                             <i class="fa-solid fa-server"></i> <span>Server</span> <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
                         </button>
                         <div class="dropdown-content">
-                            <!-- Left Column: Actions -->
-                            <div class="dropdown-content-inner" style="min-width: 180px;">
-                                <div class="dropdown-group-header">Cameras</div>
-                                <button onclick="startAll()">
-                                    <i class="fa-solid fa-play" style="color: #81c784;"></i> Start All Cameras
-                                </button>
-                                <button onclick="stopAll()">
-                                    <i class="fa-solid fa-stop" style="color: #e57373;"></i> Stop All Cameras
-                                </button>
-                                
-                                <div class="dropdown-group-header">Server</div>
-                                <button onclick="restartServer()">
-                                    <i class="fa-solid fa-sync" style="color: #ffb74d;"></i> Restart Server
-                                </button>
-                                <button onclick="stopServer()">
-                                    <i class="fa-solid fa-stop-circle" style="color: #ef9a9a;"></i> Stop Server
-                                </button>
-                                
-                                <div class="dropdown-group-header">System</div>
-                                <button onclick="openLogsModal()">
-                                    <i class="fa-solid fa-list-alt" style="color: #64b5f6;"></i> System Logs
-                                </button>
-                                <button onclick="rebootServer()" class="reboot-host btn-reboot">
-                                    <i class="fa-solid fa-power-off" style="color: #b39ddb;"></i> Reboot Host
-                                </button>
-                            </div>
-                            
-                            <!-- Right Column: System Status & Metrics -->
+                            <!-- Left Column: System Status & Metrics -->
                             <div class="dropdown-sysinfo">
                                 <div class="dropdown-group-header" style="border-top: none;">Server Status</div>
                                 <div class="sysinfo-content">
@@ -2289,7 +2259,45 @@ def get_web_ui_html(current_settings=None):
                                             <span id="sys-net-usage" class="metric-val">-</span>
                                         </div>
                                     </div>
+                                    
+                                    <hr class="sysinfo-divider">
+                                    
+                                    <div class="sysinfo-metric">
+                                        <div class="metric-info">
+                                            <span><i class="fa-solid fa-brain" style="color: var(--btn-primary); opacity: 0.8; font-size: 10px;"></i> AI Detections</span>
+                                        </div>
+                                        <div id="sys-ai-stats" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                            <div style="font-size: 11px; color: var(--text-muted); font-style: italic;">No active AI cameras</div>
+                                        </div>
+                                    </div>
                                 </div>
+                            </div>
+                            
+                            <!-- Right Column: Actions -->
+                            <div class="dropdown-content-inner" style="min-width: 180px;">
+                                <div class="dropdown-group-header" style="border-top: none;">Cameras</div>
+                                <button onclick="startAll()">
+                                    <i class="fa-solid fa-play" style="color: #81c784;"></i> Start All Cameras
+                                </button>
+                                <button onclick="stopAll()">
+                                    <i class="fa-solid fa-stop" style="color: #e57373;"></i> Stop All Cameras
+                                </button>
+                                
+                                <div class="dropdown-group-header">Server</div>
+                                <button onclick="restartServer()">
+                                    <i class="fa-solid fa-sync" style="color: #ffb74d;"></i> Restart Server
+                                </button>
+                                <button onclick="stopServer()">
+                                    <i class="fa-solid fa-stop-circle" style="color: #ef9a9a;"></i> Stop Server
+                                </button>
+                                
+                                <div class="dropdown-group-header">System</div>
+                                <button onclick="openLogsModal()">
+                                    <i class="fa-solid fa-list-alt" style="color: #64b5f6;"></i> System Logs
+                                </button>
+                                <button onclick="rebootServer()" class="reboot-host btn-reboot">
+                                    <i class="fa-solid fa-power-off" style="color: #b39ddb;"></i> Reboot Host
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -2501,6 +2509,7 @@ def get_web_ui_html(current_settings=None):
                             <th style="padding: 8px 12px; text-align: center;">Queue Wait</th>
                             <th style="padding: 8px 12px;">Current Detection</th>
                             <th style="padding: 8px 12px; text-align: right;">Total Runs</th>
+                            <th style="padding: 8px 12px; text-align: right;">Detections</th>
                         </tr>
                     </thead>
                     <tbody id="ai-diagnostics-body" style="color: var(--text-body); font-family: monospace;">
@@ -6290,6 +6299,7 @@ def get_web_ui_html(current_settings=None):
                 const latency = isRunning ? `${{Math.round(cam.aiAvgInferenceLatency * 1000)}}ms` : '-';
                 const queue = isRunning ? `${{Math.round(cam.aiQueueTime * 1000)}}ms` : '-';
                 const count = cam.aiInferenceCount || 0;
+                const detectCount = cam.aiDetectionCount || 0;
                 
                 let detectionStr = 'None';
                 if (isRunning && cam.aiLastDetection && cam.aiLastDetection.length > 0) {{
@@ -6312,6 +6322,7 @@ def get_web_ui_html(current_settings=None):
                         <td style="padding: 8px 12px; text-align: center; color: #a855f7;">${{queue}}</td>
                         <td style="padding: 8px 12px;">${{detectionStr}}</td>
                         <td style="padding: 8px 12px; text-align: right; color: #64748b;">${{count.toLocaleString()}}</td>
+                        <td style="padding: 8px 12px; text-align: right; color: #ecc94b; font-weight: bold;">${{detectCount.toLocaleString()}}</td>
                     </tr>
                 `;
             }});
@@ -7586,6 +7597,29 @@ def get_web_ui_html(current_settings=None):
                     
                     const netUsageEl = document.getElementById('sys-net-usage');
                     if (netUsageEl) netUsageEl.textContent = netMbps + ' Mbps';
+                    
+                    // Update AI Stats in dropdown
+                    const aiStatsEl = document.getElementById('sys-ai-stats');
+                    if (aiStatsEl && typeof cameras !== 'undefined') {{
+                        let aiHtml = '';
+                        let hasAi = false;
+                        cameras.forEach(c => {{
+                            if (c.eventSource === 'ai' && c.enableEventForwarding) {{
+                                hasAi = true;
+                                const detections = c.aiDetectionCount || 0;
+                                const runs = c.aiInferenceCount || 0;
+                                aiHtml += `<div style="display: flex; justify-content: space-between;">
+                                    <span style="font-weight: 600; color: var(--text-title);">${{c.name}}</span>
+                                    <span style="font-family: monospace; color: #ecc94b; font-size: 10px;">${{runs}} runs / ${{detections}} detections</span>
+                                </div>`;
+                            }}
+                        }});
+                        if (hasAi) {{
+                            aiStatsEl.innerHTML = aiHtml;
+                        }} else {{
+                            aiStatsEl.innerHTML = '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">No active AI cameras</div>';
+                        }}
+                    }}
                 }}
                 
                 // Update per-camera metrics

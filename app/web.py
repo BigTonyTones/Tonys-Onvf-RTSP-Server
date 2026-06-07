@@ -28,6 +28,69 @@ import tempfile
 import shutil
 
 
+_cached_sys_info = None
+
+def get_static_sys_info():
+    global _cached_sys_info
+    if _cached_sys_info is not None:
+        return _cached_sys_info
+    
+    import platform
+    os_type = platform.system()
+    os_release = platform.release()
+    cpu_count = 0
+    total_mem_gb = 0.0
+    cpu_model = "Unknown CPU"
+    
+    if os_type == "Linux":
+        try:
+            with open("/etc/os-release") as f:
+                for line in f:
+                    if line.startswith("PRETTY_NAME="):
+                        os_type = line.split("=")[1].strip().strip('"')
+                        os_release = ""
+                        break
+        except Exception:
+            pass
+    
+    if psutil:
+        try:
+            cpu_count = psutil.cpu_count() or 0
+            mem = psutil.virtual_memory()
+            total_mem_gb = round(mem.total / (1024**3), 1)
+        except Exception:
+            pass
+            
+    # Resolve CPU model
+    try:
+        if os_type == "Windows":
+            cpu_model = os.environ.get("PROCESSOR_IDENTIFIER", platform.processor() or "Intel/AMD CPU")
+        elif os_type == "Darwin":
+            import subprocess
+            cpu_model = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"]).strip().decode()
+        elif platform.system() == "Linux":
+            with open("/proc/cpuinfo", "r") as f:
+                for line in f:
+                    line_lower = line.lower()
+                    if line_lower.startswith("model name"):
+                        cpu_model = line.split(":", 1)[1].strip()
+                        break
+                    elif line_lower.startswith("hardware") or line_lower.startswith("model"):
+                        cpu_model = line.split(":", 1)[1].strip()
+            if cpu_model == "Unknown CPU":
+                cpu_model = platform.processor() or "Linux CPU"
+    except Exception:
+        cpu_model = platform.processor() or "Unknown CPU"
+        
+    _cached_sys_info = {
+        'os_type': os_type,
+        'os_release': os_release,
+        'cpu_count': cpu_count,
+        'cpu_model': cpu_model,
+        'total_memory_gb': total_mem_gb
+    }
+    return _cached_sys_info
+
 def create_web_app(manager):
     """Create Flask web application"""
     app = Flask(__name__)
@@ -243,15 +306,30 @@ def create_web_app(manager):
             # Normalization
             cpu_count = psutil.cpu_count() or 1
             if delta_time > 0:
-                # percentage = (seconds_of_cpu / seconds_of_wallclock) * 100
-                # Divided by cores to get 0-100% total system view
                 cpu_percent = (delta_cpu / delta_time) * 100 / cpu_count
             else:
                 cpu_percent = 0.0
             
+            # System-wide metrics
+            system_cpu = psutil.cpu_percent()
+            virtual_mem = psutil.virtual_memory()
+            system_mem_percent = virtual_mem.percent
+            system_mem_used_gb = round(virtual_mem.used / (1024**3), 1)
+            
+            static_info = get_static_sys_info()
+            
+            server_uptime = round(current_time - parent.create_time())
+            system_uptime = round(current_time - psutil.boot_time())
+            
             return jsonify({
                 'cpu_percent': min(100.0, round(max(0.0, cpu_percent), 1)),
-                'memory_mb': round(memory_info / (1024 * 1024), 1)
+                'memory_mb': round(memory_info / (1024 * 1024), 1),
+                'system_cpu': system_cpu,
+                'system_memory_percent': system_mem_percent,
+                'system_memory_used_gb': system_mem_used_gb,
+                'server_uptime': server_uptime,
+                'system_uptime': system_uptime,
+                'static_info': static_info
             })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
@@ -1768,11 +1846,14 @@ def create_web_app(manager):
                 '-rtsp_transport', 'tcp',
                 '-i', url,
                 '-t', '4',
-                '-c:v', encoder,
-                '-preset', 'veryfast' if encoder == 'libx264' else 'fast',
-                '-f', 'null',
-                '-'
+                '-c:v', encoder
             ]
+            
+            # h264_videotoolbox and h264_vaapi do not support the generic -preset argument in FFmpeg
+            if encoder not in ('h264_videotoolbox', 'h264_vaapi'):
+                cmd.extend(['-preset', 'veryfast' if encoder == 'libx264' else 'fast'])
+                
+            cmd.extend(['-f', 'null', '-'])
             
             start_time = time.time()
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
