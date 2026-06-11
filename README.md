@@ -21,6 +21,8 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 ## ONVIF Event Forwarding & Local AI Object Detection (YOLO)
 
 Turn standard RTSP feeds into intelligent, AI-capable cameras inside your NVR:
+
+![AI Detection Alerts](assets/AI_Detections.jpg)
 - **ONVIF Event Forwarding:** Automatically relays real-time camera motion events to UniFi Protect as native motion alarms.
 - **Local YOLOv8/11 Integration:** Run local AI inference to detect **People, Vehicles, and Animals**, and create native Smart Detection events in Protect.
 - **Ultra-Efficient Two-Stage Pipeline:** Keeps system CPU usage low. A lightweight OpenCV pixel-difference detector monitors the video stream and only fires the YOLO model when actual motion is detected.
