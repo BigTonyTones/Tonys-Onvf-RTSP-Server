@@ -235,12 +235,68 @@ def create_web_app(manager):
                 manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
                 print("Server restarted successfully!\n")
             
+            # Fire restart notification
+            try:
+                manager.notifier.send('server_restarted', '🔄 Server Restarted',
+                                      'Tony\'s ONVIF Server has been restarted.')
+            except Exception:
+                pass
+            
         # Run restart in background thread
         import threading
         restart_thread = threading.Thread(target=do_restart, daemon=True)
         restart_thread.start()
         
         return jsonify({'message': 'Server restart initiated'})
+
+    @app.route('/api/server/stop', methods=['POST'])
+    @login_required
+    def stop_server():
+        """Stop the entire server"""
+        # Fire notification before stopping
+        try:
+            manager.notifier.send('server_stopping', '\U0001f534 Server Stopping',
+                                  'Tony\'s ONVIF Server is shutting down.')
+        except Exception:
+            pass
+
+        def do_stop():
+            import time
+            import os
+            import signal
+            import subprocess
+            time.sleep(2)  # Give time for response to be sent
+            print("\n\nServer stop requested from web UI...")
+            print("Stopping MediaMTX...")
+            manager.mediamtx.stop()
+            print("Stopping all cameras...")
+            for camera in manager.cameras:
+                camera.stop()
+            print("Server stopped successfully!")
+            print("\nTo restart, run the script again.\n")
+            
+            # Check if running as systemd service
+            try:
+                if sys.platform.startswith('linux'):
+                    result = subprocess.run(['systemctl', 'is-active', 'tonys-onvif'], 
+                                          capture_output=True, text=True, timeout=2)
+                    if result.returncode == 0 and result.stdout.strip() == 'active':
+                        print("Detected systemd service. Stopping service...")
+                        subprocess.run(['systemctl', 'stop', 'tonys-onvif'], timeout=5)
+                        return
+                    else:
+                        os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
+                else:
+                    os._exit(0)
+            except:
+                os._exit(0)
+        
+        # Run stop in background thread
+        import threading
+        stop_thread = threading.Thread(target=do_stop, daemon=True)
+        stop_thread.start()
+        
+        return jsonify({'message': 'Server stop initiated'})
 
     @app.route('/api/server/reboot', methods=['POST'])
     @login_required
@@ -249,6 +305,13 @@ def create_web_app(manager):
         # Only allow on Linux
         if not sys.platform.startswith('linux'):
             return jsonify({'error': 'Reboot is only supported on Linux'}), 400
+        
+        # Fire notification before reboot
+        try:
+            manager.notifier.send('server_rebooting', '🔴 Server Rebooting',
+                                  'Tony\'s ONVIF Server is rebooting.')
+        except Exception:
+            pass
         
         def do_reboot():
             import time
@@ -343,8 +406,13 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     @app.route('/')
+    @app.route('/matrix')
+    @app.route('/onvif')
+    @app.route('/ai')
     @login_required
     def index():
+        # /matrix and /onvif (alias /ai) serve the same dashboard; the front-end
+        # reads the path on load and opens the matching full-screen overlay.
         settings = manager.load_settings()
         response = app.make_response(get_web_ui_html(settings))
         # Add headers to prevent caching
@@ -436,7 +504,20 @@ def create_web_app(manager):
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
                 camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
                 camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
-                camera.ai_zone = data.get('aiZone', [])
+                camera.ai_zone = data.get("aiZone", [])
+                camera.ai_zone_profiles = data.get("aiZoneProfiles", {})
+                camera.ai_active_zone_profile = data.get("aiActiveZoneProfile", "")
+                camera.send_smart_onvif_topics = data.get('sendSmartOnvifTopics', True)
+                camera.notify_ai_enabled = data.get("notifyAiEnabled", False)
+                camera.notify_ai_zone_filter = data.get("notifyAiZoneFilter", "")
+                camera.notify_ai_schedules = data.get("notifyAiSchedules", [])
+                camera.notify_schedule_enabled = bool(camera.notify_ai_schedules)
+                camera.notify_ai_cooldown = data.get('notifyAiCooldown', 60)
+                camera.notify_ai_targets = data.get('notifyAiTargets', ['person'])
+                camera.notify_ai_attach_image = data.get('notifyAiAttachImage', False)
+                camera.notify_schedule_days = data.get('notifyScheduleDays', [0, 1, 2, 3, 4, 5, 6])
+                camera.notify_schedule_start = data.get('notifyScheduleStart', '00:00')
+                camera.notify_schedule_end = data.get('notifyScheduleEnd', '23:59')
                 manager.save_config()
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
@@ -495,8 +576,20 @@ def create_web_app(manager):
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
                 camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
                 camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
-                camera.ai_zone = data.get('aiZone', [])
+                camera.ai_zone = data.get("aiZone", [])
+                camera.ai_zone_profiles = data.get("aiZoneProfiles", {})
+                camera.ai_active_zone_profile = data.get("aiActiveZoneProfile", "")
                 camera.send_smart_onvif_topics = data.get('sendSmartOnvifTopics', True)
+                camera.notify_ai_enabled = data.get("notifyAiEnabled", False)
+                camera.notify_ai_zone_filter = data.get("notifyAiZoneFilter", "")
+                camera.notify_ai_schedules = data.get("notifyAiSchedules", [])
+                camera.notify_schedule_enabled = bool(camera.notify_ai_schedules)
+                camera.notify_ai_cooldown = data.get('notifyAiCooldown', 60)
+                camera.notify_ai_targets = data.get('notifyAiTargets', ['person'])
+                camera.notify_ai_attach_image = data.get('notifyAiAttachImage', False)
+                camera.notify_schedule_days = data.get('notifyScheduleDays', [0, 1, 2, 3, 4, 5, 6])
+                camera.notify_schedule_start = data.get('notifyScheduleStart', '00:00')
+                camera.notify_schedule_end = data.get('notifyScheduleEnd', '23:59')
                 manager.save_config()
                 return jsonify(camera.to_dict())
             return jsonify({'error': 'Camera not found'}), 404
@@ -564,6 +657,38 @@ def create_web_app(manager):
             camera.trigger_test_event(tag=tag)
             return jsonify({'status': 'success', 'message': f'Test event for {tag or "generic"} triggered successfully'})
         return jsonify({'error': 'Camera not found'}), 404
+
+    @app.route('/api/cameras/<int:camera_id>/test-image-notification', methods=['POST'])
+    @login_required
+    def test_camera_image_notification(camera_id):
+        camera = manager.get_camera(camera_id)
+        if not camera:
+            return jsonify({'error': 'Camera not found'}), 404
+        test_img_b64 = "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"
+        
+        # We need a notify config dict. Let's build a mock one using camera's config,
+        # but force notifyAiEnabled to True.
+        cam_notify_cfg = {
+            'notifyAiEnabled': True,
+            'notifyAiCooldown': 0, # Bypass cooldown
+            'notifyAiTargets': ['person'],
+            'notifyScheduleEnabled': False
+        }
+        
+        try:
+            import base64
+            img_bytes = base64.b64decode(test_img_b64)
+            manager.notifier.send_ai_detection(
+                camera_id=camera.id,
+                camera_name=camera.name,
+                detected_labels=['person'],
+                camera_notify_cfg=cam_notify_cfg,
+                image_bytes=img_bytes,
+                is_test=True
+            )
+            return jsonify({'status': 'success', 'message': 'Test image notification sent successfully'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
     @app.route('/api/cameras/<int:camera_id>/copy-ai-settings', methods=['POST'])
     @login_required
@@ -635,6 +760,94 @@ def create_web_app(manager):
                     os.remove(path)
                 except:
                     pass
+
+    @app.route('/api/ai-alerts', methods=['GET'])
+    @login_required
+    def list_ai_alerts():
+        """List stored AI detection alert images (newest first)"""
+        from .ai_alerts import alert_store
+        camera_id = request.args.get('camera_id', type=int)
+        return jsonify({'alerts': alert_store.list_alerts(camera_id),
+                        'max_alerts': alert_store.max_alerts})
+
+    @app.route('/api/ai-alerts/image/<filename>', methods=['GET'])
+    @login_required
+    def get_ai_alert_image(filename):
+        """Serve a stored AI detection alert image"""
+        from .ai_alerts import alert_store
+        path = alert_store.get_image_path(filename)
+        if not path:
+            return jsonify({'error': 'Image not found'}), 404
+        response = make_response(send_file(path, mimetype='image/jpeg'))
+        # Stored images never change, so let the browser cache them
+        response.headers['Cache-Control'] = 'private, max-age=86400'
+        return response
+
+    @app.route('/api/ai-alerts', methods=['DELETE'])
+    @login_required
+    def clear_ai_alerts():
+        """Clear AI detection alert history (optionally for one camera)"""
+        from .ai_alerts import alert_store
+        camera_id = request.args.get('camera_id', type=int)
+        removed = alert_store.clear(camera_id)
+        return jsonify({'status': 'success', 'removed': removed})
+
+    @app.route('/api/ai-alerts/settings', methods=['POST'])
+    @login_required
+    def set_ai_alerts_settings():
+        """Update the stored-image cap for AI detection alerts"""
+        from .ai_alerts import alert_store
+        data = request.get_json(silent=True) or {}
+        if 'max_alerts' not in data:
+            return jsonify({'error': 'max_alerts required'}), 400
+        applied = alert_store.set_max_alerts(data['max_alerts'])
+        return jsonify({'status': 'success', 'max_alerts': applied})
+
+    @app.route('/api/ai-alerts/delete', methods=['POST'])
+    @login_required
+    def delete_ai_alerts():
+        """Delete specific alert images by filename"""
+        from .ai_alerts import alert_store
+        data = request.get_json(silent=True) or {}
+        removed = alert_store.delete_files(data.get('files', []))
+        return jsonify({'status': 'success', 'removed': removed})
+
+    @app.route('/api/ai-alerts/download', methods=['POST'])
+    @login_required
+    def download_ai_alerts():
+        """Download selected alert images as a ZIP archive"""
+        import io
+        import json as _json
+        import zipfile
+        from .ai_alerts import alert_store
+        data = request.get_json(silent=True)
+        if data is None:
+            # Form submission from the alerts page (browser-native download)
+            try:
+                data = {'files': _json.loads(request.form.get('files', '[]'))}
+            except Exception:
+                data = {'files': []}
+        buf = io.BytesIO()
+        count = 0
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED) as zf:
+            for f in data.get('files', []):
+                path = alert_store.get_image_path(f)
+                if path:
+                    zf.write(path, f)
+                    count += 1
+        if count == 0:
+            return jsonify({'error': 'No valid files'}), 400
+        buf.seek(0)
+        ts = time.strftime('%Y%m%d-%H%M%S')
+        return send_file(buf, mimetype='application/zip', as_attachment=True,
+                         download_name=f'ai-alerts-{ts}.zip')
+
+    @app.route('/alerts')
+    @login_required
+    def alerts_page():
+        """Standalone AI detection alerts gallery page"""
+        from .alerts_template import get_alerts_html
+        return get_alerts_html()
 
     @app.route('/api/cameras/start-all', methods=['POST'])
     @login_required
@@ -769,7 +982,51 @@ def create_web_app(manager):
             return jsonify({'error': 'Stream probe timeout. Check if the camera is accessible.'}), 400
         except Exception as e:
             return jsonify({'error': f'Failed to fetch stream info: {str(e)}'}), 500
-    
+
+    @app.route('/api/cameras/<int:camera_id>/sync-stream-info', methods=['POST'])
+    @login_required
+    def sync_stream_info(camera_id):
+        """Apply the probed source stream resolution/framerate to the camera config.
+
+        Resolves the mismatch warning raised by the startup stream probe
+        (resolution flapping, issue #42)."""
+        camera = manager.get_camera(camera_id)
+        if not camera:
+            return jsonify({'error': 'Camera not found'}), 404
+
+        probe = getattr(camera, 'stream_probe', {}) or {}
+        applied = {}
+
+        main = probe.get('main')
+        if isinstance(main, dict) and main.get('width'):
+            camera.main_width = main['width']
+            camera.main_height = main['height']
+            if main.get('framerate'):
+                camera.main_framerate = main['framerate']
+            main['configuredWidth'] = main['width']
+            main['configuredHeight'] = main['height']
+            main['mismatch'] = main.get('codec') not in ('h264', '')
+            applied['main'] = f"{main['width']}x{main['height']}"
+
+        sub = probe.get('sub')
+        if isinstance(sub, dict) and sub.get('width'):
+            camera.sub_width = sub['width']
+            camera.sub_height = sub['height']
+            if sub.get('framerate'):
+                camera.sub_framerate = sub['framerate']
+            sub['configuredWidth'] = sub['width']
+            sub['configuredHeight'] = sub['height']
+            sub['mismatch'] = sub.get('codec') not in ('h264', '')
+            applied['sub'] = f"{sub['width']}x{sub['height']}"
+
+        if not applied:
+            return jsonify({'error': 'No probe data available for this camera yet'}), 400
+
+        probe['mismatch'] = any(e.get('mismatch') for e in probe.values() if isinstance(e, dict))
+        camera.stream_probe = probe
+        manager.save_config()
+        return jsonify({'status': 'success', 'applied': applied, 'camera': camera.to_dict()})
+
     @app.route('/api/cameras/<int:camera_id>/auto-start', methods=['POST'])
     @login_required
     def toggle_auto_start(camera_id):
@@ -794,54 +1051,7 @@ def create_web_app(manager):
             return jsonify({'error': str(e)}), 500
     
 
-    
-    @app.route('/api/server/stop', methods=['POST'])
-    @login_required
-    def stop_server():
-        """Stop the entire server"""
-        def do_stop():
-            import time
-            import os
-            import signal
-            import subprocess
-            time.sleep(2)  # Give time for response to be sent
-            print("\n\nServer stop requested from web UI...")
-            print("Stopping MediaMTX...")
-            manager.mediamtx.stop()
-            print("Stopping all cameras...")
-            for camera in manager.cameras:
-                camera.stop()
-            print("Server stopped successfully!")
-            print("\nTo restart, run the script again.\n")
-            
-            # Check if running as systemd service
-            try:
-                if sys.platform.startswith('linux'):
-                    # Check if we're running under systemd
-                    result = subprocess.run(['systemctl', 'is-active', 'tonys-onvif'], 
-                                          capture_output=True, text=True, timeout=2)
-                    if result.returncode == 0 and result.stdout.strip() == 'active':
-                        print("Detected systemd service. Stopping service...")
-                        # Stop the systemd service properly
-                        subprocess.run(['systemctl', 'stop', 'tonys-onvif'], timeout=5)
-                        return
-                    else:
-                        # Not running as service, kill process group
-                        os.killpg(os.getpgid(os.getpid()), signal.SIGTERM)
-                else:
-                    # On Windows, just exit normally
-                    os._exit(0)
-            except:
-                # Fallback to regular exit
-                os._exit(0)
-        
-        # Run stop in background thread
-        import threading
-        stop_thread = threading.Thread(target=do_stop, daemon=True)
-        stop_thread.start()
-        
-        return jsonify({'message': 'Server stop initiated'})
-    
+
     @app.route('/api/settings', methods=['GET'])
     @login_required
     def get_settings():
@@ -856,6 +1066,49 @@ def create_web_app(manager):
             return jsonify(settings)
         except Exception as e:
             return jsonify({'error': str(e)}), 400
+
+    # --- Notification API Routes ---
+
+    @app.route('/api/notifications/config', methods=['GET'])
+    @login_required
+    def get_notification_config():
+        """Return full notification configuration"""
+        from .notifier import NOTIFICATION_EVENTS, DEFAULT_ENABLED_EVENTS
+        cfg = manager.get_notification_config()
+        # Ensure defaults are present
+        if 'enabled_events' not in cfg:
+            cfg['enabled_events'] = DEFAULT_ENABLED_EVENTS
+        if 'providers' not in cfg:
+            cfg['providers'] = {}
+        return jsonify({
+            'config': cfg,
+            'event_labels': NOTIFICATION_EVENTS
+        })
+
+    @app.route('/api/notifications/config', methods=['POST'])
+    @login_required
+    def save_notification_config():
+        """Save notification configuration"""
+        data = request.json
+        try:
+            result = manager.save_notification_config(data)
+            return jsonify({'status': 'ok', 'config': result})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/notifications/test', methods=['POST'])
+    @login_required
+    def test_notification():
+        """Send a test notification to one or all enabled providers"""
+        data = request.json or {}
+        provider = data.get('provider')  # optional — if None, test all
+        try:
+            results = manager.notifier.test(provider=provider)
+            all_ok = all(v == 'ok' for v in results.values())
+            return jsonify({'status': 'ok' if all_ok else 'partial', 'results': results})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     
     @app.route('/api/system/versions', methods=['GET'])
     @login_required
@@ -1175,7 +1428,8 @@ def create_web_app(manager):
     @login_required
     def diagnostics():
         """Serve the diagnostic tools page"""
-        return get_diagnostics_html()
+        theme = (manager.load_settings() or {}).get('theme', '')
+        return get_diagnostics_html(theme)
         
     @app.route('/api/diagnostics/ping', methods=['POST'])
     @login_required
@@ -2024,7 +2278,8 @@ def create_web_app(manager):
     @login_required
     def ip_management():
         whitelist = manager.get_ip_whitelist()
-        return get_ip_management_html(whitelist)
+        theme = (manager.load_settings() or {}).get('theme', '')
+        return get_ip_management_html(whitelist, theme)
 
     @app.route('/api/sessions', methods=['GET'])
     @login_required
@@ -2350,6 +2605,82 @@ def create_web_app(manager):
             return jsonify({
                 'status': ai_installer.status,
                 'log': ai_installer.log
+            })
+
+    # --- Apprise Installer ---
+    class AppriseInstaller:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.status = "idle"
+            self.log = []
+            self._thread = None
+            
+        def start_install(self):
+            with self.lock:
+                if self.status == "installing":
+                    return False
+                self.status = "installing"
+                self.log = ["Starting Apprise installation..."]
+            self._thread = threading.Thread(target=self._run_install, daemon=True)
+            self._thread.start()
+            return True
+            
+        def _run_install(self):
+            import subprocess
+            import sys
+            try:
+                cmd = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "apprise"]
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True
+                )
+                for line in iter(process.stdout.readline, ""):
+                    if line:
+                        with self.lock:
+                            self.log.append(line.rstrip('\n'))
+                process.wait()
+                with self.lock:
+                    if process.returncode == 0:
+                        self.status = "success"
+                        self.log.append("Apprise installed successfully!")
+                    else:
+                        self.status = "failed"
+                        self.log.append(f"Installation failed with exit code {process.returncode}")
+            except Exception as e:
+                with self.lock:
+                    self.status = "failed"
+                    self.log.append(f"Error: {str(e)}")
+
+    apprise_installer = AppriseInstaller()
+
+    @app.route('/api/apprise/status', methods=['GET'])
+    @login_required
+    def get_apprise_status():
+        try:
+            import importlib
+            importlib.invalidate_caches()
+            import apprise as _apprise_mod
+            return jsonify({'installed': True, 'version': getattr(_apprise_mod, '__version__', 'unknown')})
+        except ImportError:
+            return jsonify({'installed': False})
+
+    @app.route('/api/apprise/install', methods=['POST'])
+    @login_required
+    def start_apprise_install():
+        success = apprise_installer.start_install()
+        return jsonify({'success': success, 'status': apprise_installer.status})
+
+    @app.route('/api/apprise/install/progress', methods=['GET'])
+    @login_required
+    def get_apprise_install_progress():
+        with apprise_installer.lock:
+            return jsonify({
+                'status': apprise_installer.status,
+                'log': apprise_installer.log
             })
 
     return app

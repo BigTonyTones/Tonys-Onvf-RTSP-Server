@@ -608,3 +608,55 @@ class FFmpegManager:
         except Exception as e:
             return False, str(e)
 
+    def probe_stream(self, stream_url, timeout=20):
+        """
+        Probe an RTSP stream with FFprobe and return its actual video attributes.
+
+        Returns:
+            dict with 'width', 'height', 'framerate', 'codec' on success,
+            or None if the stream could not be probed.
+        """
+        ffprobe_exe = self.get_ffprobe_path()
+        if not ffprobe_exe:
+            return None
+
+        try:
+            cmd = [
+                ffprobe_exe,
+                '-v', 'error',
+                '-rtsp_transport', 'tcp',
+                '-select_streams', 'v:0',
+                '-show_entries', 'stream=width,height,r_frame_rate,codec_name',
+                '-of', 'json',
+                stream_url
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if result.returncode != 0:
+                return None
+
+            import json
+            data = json.loads(result.stdout)
+            streams = data.get('streams') or []
+            if not streams:
+                return None
+            info = streams[0]
+
+            framerate = None
+            r_frame_rate = info.get('r_frame_rate', '')
+            if '/' in r_frame_rate:
+                try:
+                    num, den = r_frame_rate.split('/')
+                    if int(den) != 0:
+                        framerate = round(int(num) / int(den))
+                except (ValueError, ZeroDivisionError):
+                    pass
+
+            return {
+                'width': info.get('width'),
+                'height': info.get('height'),
+                'framerate': framerate,
+                'codec': (info.get('codec_name') or '').lower(),
+            }
+        except Exception:
+            return None
+

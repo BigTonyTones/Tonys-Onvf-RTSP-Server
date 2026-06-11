@@ -16,6 +16,7 @@ from .onvif_service import ONVIFService
 from .mediamtx_manager import MediaMTXManager
 from .linux_service import LinuxServiceManager
 from .analytics import AnalyticsManager
+from .notifier import NotificationManager, NOTIFICATION_EVENTS, DEFAULT_ENABLED_EVENTS
 import requests
 
 class CameraManager:
@@ -49,6 +50,10 @@ class CameraManager:
         self._watchdog_running = False
         self._watchdog_thread = None
         self.watchdog_enabled = False  # Disabled by default (experimental)
+
+        # Notification engine
+        self.notification_config = {}
+        self.notifier = NotificationManager({})
 
         
         # Auth settings
@@ -128,6 +133,7 @@ class CameraManager:
             self.carousel_interval = int(config.get('settings', {}).get('carouselInterval', 10000))
             self.matrix_force_high_stream = config.get('settings', {}).get('matrixForceHighStream', False)
             self.matrix_cams_per_page = config.get('settings', {}).get('matrixCamsPerPage', 'All')
+            self.alerts_thumb_size = int(config.get('settings', {}).get('alertsThumbSize', 220))
             self.ip_whitelist = config.get('settings', {}).get('ipWhitelist', [])
             
             # Load GridFusion settings (Support multiple layouts)
@@ -176,6 +182,13 @@ class CameraManager:
             self.auth_enabled = auth.get('enabled', False)
             self.username = auth.get('username')
             self.password_hash = auth.get('password_hash')
+            
+            # Load notification config
+            self.notification_config = config.get('notifications', {
+                'enabled_events': DEFAULT_ENABLED_EVENTS,
+                'providers': {}
+            })
+            self.notifier.update_config(self.notification_config)
         else:
             self.server_ip = 'localhost'
             self.open_browser = False
@@ -196,6 +209,7 @@ class CameraManager:
             self.carousel_interval = 10000
             self.matrix_force_high_stream = False
             self.ip_whitelist = []
+            self.alerts_thumb_size = 220
             # Default layouts if config missing
             self.grid_fusion_layouts = [{
                 'id': 'matrix',
@@ -284,6 +298,7 @@ class CameraManager:
                 'carouselInterval': getattr(self, 'carousel_interval', 10000),
                 'matrixForceHighStream': getattr(self, 'matrix_force_high_stream', False),
                 'matrixCamsPerPage': getattr(self, 'matrix_cams_per_page', 'All'),
+                'alertsThumbSize': getattr(self, 'alerts_thumb_size', 220),
                 'ipWhitelist': getattr(self, 'ip_whitelist', []),
                 'debugMode': self.debug_mode
             },
@@ -296,7 +311,11 @@ class CameraManager:
                 'enabled': self.auth_enabled,
                 'username': self.username,
                 'password_hash': self.password_hash
-            }
+            },
+            'notifications': getattr(self, 'notification_config', {
+                'enabled_events': DEFAULT_ENABLED_EVENTS,
+                'providers': {}
+            })
         }
         
         try:
@@ -359,6 +378,8 @@ class CameraManager:
                 self.carousel_interval = int(settings.get('carouselInterval', 10000))
                 self.matrix_force_high_stream = settings.get('matrixForceHighStream', False)
                 self.matrix_cams_per_page = settings.get('matrixCamsPerPage', 'All')
+                self.alerts_thumb_size = int(settings.get('alertsThumbSize', 220))
+                settings['alertsThumbSize'] = self.alerts_thumb_size
                 
                 # Ensure whitelist exists
                 self.ip_whitelist = settings.get('ipWhitelist', [])
@@ -372,7 +393,12 @@ class CameraManager:
                 settings['carouselInterval'] = self.carousel_interval
                 settings['matrixForceHighStream'] = self.matrix_force_high_stream
                 settings['matrixCamsPerPage'] = self.matrix_cams_per_page
-                
+
+                # 'authEnabled' is persisted in the separate 'auth' section, not
+                # under 'settings'. Surface it here so the web UI checkbox
+                # reflects the real login state instead of always showing unchecked.
+                settings['authEnabled'] = config.get('auth', {}).get('enabled', False)
+
                 return settings
         except Exception as e:
             print(f"Error loading settings: {e}")
@@ -414,6 +440,7 @@ class CameraManager:
         self.matrix_force_high_stream = settings.get('matrixForceHighStream', self.matrix_force_high_stream)
         self.matrix_cams_per_page = settings.get('matrixCamsPerPage', self.matrix_cams_per_page)
         self.ip_whitelist = settings.get('ipWhitelist', self.ip_whitelist)
+        self.alerts_thumb_size = int(settings.get('alertsThumbSize', self.alerts_thumb_size))
 
         # Handle watchdog enable/disable dynamically
         new_watchdog_enabled = settings.get('watchdogEnabled', self.watchdog_enabled)
@@ -939,6 +966,12 @@ class CameraManager:
                 for t in threads:
                     t.join()
                 self.restart_mediamtx()
+                # Fire notification
+                try:
+                    self.notifier.send('cameras_all_started', '📷 All Cameras Started',
+                                      f'All {len(self.cameras)} cameras have been started.')
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"Error in start_all: {e}")
                 
@@ -946,6 +979,11 @@ class CameraManager:
     
     def stop_all(self):
         """Stop all cameras"""
+        try:
+            self.notifier.send('cameras_all_stopped', '📷 All Cameras Stopped',
+                              f'All cameras have been stopped.')
+        except Exception:
+            pass
         for camera in self.cameras:
             camera.stop()
 
@@ -967,11 +1005,29 @@ class CameraManager:
                     advanced_settings=self.advanced_settings
                 )
                 print("  [Manager] Background MediaMTX restart complete.")
+                try:
+                    self.notifier.send('mediamtx_restarted', '🔄 MediaMTX Restarted',
+                                      'The MediaMTX stream server has been restarted.')
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"  [ERROR] Background MediaMTX restart failed: {e}")
                 
         # Run restart in a separate thread to prevent blocking the Web UI/API
         threading.Thread(target=_do_restart, daemon=True).start()
+
+    # --- Notification Config Methods ---
+
+    def get_notification_config(self):
+        """Return the current notification configuration."""
+        return dict(self.notification_config)
+
+    def save_notification_config(self, data: dict):
+        """Persist and hot-reload notification configuration."""
+        self.notification_config = data
+        self.notifier.update_config(data)
+        self.save_config()
+        return self.notification_config
 
     # --- Authentication Methods ---
     

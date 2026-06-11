@@ -2,7 +2,10 @@
 IP Management and Whitelisting template
 """
 
-def get_ip_management_html(whitelist):
+from .theme_css import APP_THEME_CSS, body_theme_class
+
+def get_ip_management_html(whitelist, theme=''):
+    theme_class = body_theme_class(theme)
     return f'''
 <!DOCTYPE html>
 <html lang="en">
@@ -28,6 +31,25 @@ def get_ip_management_html(whitelist):
             --border-color: #44475a;
             --input-bg: #282a36;
             --table-header: #44475a;
+        }}
+
+        /* Dashboard theme palette (only active when body has a theme class) */
+{APP_THEME_CSS}
+        body {{
+            --bg-color: var(--app-bg, #282a36);
+            --sidebar-bg: var(--app-header, #1e1f29);
+            --card-bg: var(--app-card, #343746);
+            --header-bg: var(--app-header, #1e1f29);
+            --text-main: var(--app-title, #f8f8f2);
+            --text-muted: var(--app-muted, #6272a4);
+            --accent-purple: var(--app-accent, #bd93f9);
+            --accent-pink: var(--app-accent2, #ff79c6);
+            --accent-cyan: var(--app-accent, #8be9fd);
+            --accent-green: var(--app-success, #50fa7b);
+            --accent-red: var(--app-danger, #ff5555);
+            --border-color: var(--app-border, #44475a);
+            --input-bg: var(--app-input, #282a36);
+            --table-header: var(--app-border, #44475a);
         }}
 
         * {{
@@ -72,15 +94,15 @@ def get_ip_management_html(whitelist):
         }}
 
         .back-btn {{
-            background: var(--accent-purple);
-            color: #282a36;
-            border: none;
+            background: transparent;
+            color: var(--accent-purple);
+            border: 1.5px solid var(--accent-purple);
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 13px;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.2s;
             text-decoration: none;
             display: flex;
             align-items: center;
@@ -88,7 +110,7 @@ def get_ip_management_html(whitelist):
         }}
         
         .back-btn:hover {{
-            background: var(--accent-pink);
+            background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
             transform: translateY(-1px);
         }}
 
@@ -166,9 +188,9 @@ def get_ip_management_html(whitelist):
         }}
         
         .btn {{
-            background: var(--accent-purple);
-            color: #282a36;
-            border: none;
+            background: transparent;
+            color: var(--accent-purple);
+            border: 1.5px solid var(--accent-purple);
             padding: 10px 20px;
             border-radius: 6px;
             cursor: pointer;
@@ -181,14 +203,25 @@ def get_ip_management_html(whitelist):
             justify-content: center;
             gap: 8px;
         }}
-        
+
         .btn:hover {{
-            filter: brightness(1.1);
+            background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
             transform: translateY(-1px);
         }}
 
-        .btn-success {{ background: var(--accent-green); }}
-        .btn-danger {{ background: var(--accent-red); color: white; }}
+        .btn-success {{
+            background: transparent;
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }}
+        .btn-success:hover {{ background: color-mix(in srgb, var(--accent-green) 14%, transparent); }}
+
+        .btn-danger {{
+            background: transparent;
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+        }}
+        .btn-danger:hover {{ background: color-mix(in srgb, var(--accent-red) 14%, transparent); }}
 
         /* Sessions List */
         .session-item {{
@@ -222,14 +255,17 @@ def get_ip_management_html(whitelist):
             font-size: 10px;
             padding: 2px 6px;
             border-radius: 4px;
-            background: var(--accent-purple);
-            color: #282a36;
+            background: transparent;
+            color: var(--accent-purple);
+            border: 1px solid var(--accent-purple);
             font-weight: 700;
             text-transform: uppercase;
         }}
 
         .session-badge.whitelisted {{
-            background: var(--accent-green);
+            background: transparent;
+            color: var(--accent-green);
+            border-color: var(--accent-green);
         }}
 
         .session-info {{
@@ -345,9 +381,23 @@ def get_ip_management_html(whitelist):
             0% {{ transform: rotate(0deg); }}
             100% {{ transform: rotate(360deg); }}
         }}
+
+        /* Horizontal active-sessions layout */
+        .sessions-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+        }}
+        .sessions-grid .session-item {{ margin-bottom: 0; }}
+        .sessions-msg {{
+            grid-column: 1 / -1;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 30px;
+        }}
     </style>
 </head>
-<body>
+<body class="{theme_class}">
     <div class="header">
         <h1><i class="fas fa-shield-network"></i> IP Management & Whitelisting</h1>
         <div class="header-actions">
@@ -371,19 +421,6 @@ def get_ip_management_html(whitelist):
                     <button class="btn btn-success" onclick="addToWhitelist()">
                         <i class="fas fa-plus"></i> Add Entry
                     </button>
-                </div>
-            </div>
-
-            <!-- Active Sessions -->
-            <div class="tool-section" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                <div class="section-title" style="display: flex; justify-content: space-between;">
-                    <span><i class="fas fa-satellite-dish"></i> Active Sessions</span>
-                    <i class="fas fa-sync-alt" style="cursor: pointer; font-size: 12px;" onclick="refreshSessions()"></i>
-                </div>
-                <div id="sessions-list" style="overflow-y: auto; flex: 1; padding-right: 5px;">
-                    <div style="text-align: center; color: var(--text-muted); padding: 20px;">
-                        <i class="fas fa-circle-notch fa-spin"></i> Loading...
-                    </div>
                 </div>
             </div>
         </div>
@@ -423,12 +460,21 @@ def get_ip_management_html(whitelist):
                     <div>
                         <strong>What is Whitelisting?</strong>
                         <p style="margin-top: 5px; color: var(--text-main); font-size: 13px; opacity: 0.8;">
-                            Whitelisting allows specified devices to connect to your virtual cameras without entering a username or password. 
-                            This is useful for local NVRs, automation systems, or trusted wall tablets that don't support robust authentication or where 
+                            Whitelisting allows specified devices to connect to your virtual cameras without entering a username or password.
+                            This is useful for local NVRs, automation systems, or trusted wall tablets that don't support robust authentication or where
                             ease of access is prioritized over security.
                         </p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Active Sessions (horizontal) -->
+            <div class="section-title" style="margin-top: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-satellite-dish"></i> Active Sessions</span>
+                <i class="fas fa-sync-alt" style="cursor: pointer; font-size: 13px;" onclick="refreshSessions()" title="Refresh"></i>
+            </div>
+            <div id="sessions-list" class="sessions-grid">
+                <div class="sessions-msg"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
             </div>
         </div>
     </div>
@@ -534,7 +580,7 @@ def get_ip_management_html(whitelist):
                 const sessions = await response.json();
                 
                 if (sessions.length === 0) {{
-                    list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">No active connections.</div>';
+                    list.innerHTML = '<div class="sessions-msg">No active connections.</div>';
                     return;
                 }}
 
@@ -562,7 +608,7 @@ def get_ip_management_html(whitelist):
                     list.appendChild(item);
                 }});
             }} catch (err) {{
-                list.innerHTML = '<div style="color: var(--accent-red); padding: 20px;">Failed to load sessions.</div>';
+                list.innerHTML = '<div class="sessions-msg" style="color: var(--accent-red);">Failed to load sessions.</div>';
             }}
         }}
 

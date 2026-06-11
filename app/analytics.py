@@ -53,6 +53,30 @@ class AnalyticsManager:
         json_data = response.json()
         current_time = time.time()
         
+        # Fetch active RTSP and WebRTC sessions to map ID -> IP address
+        session_ips = {}
+        try:
+            rtsp_resp = requests.get(f"http://127.0.0.1:{MEDIAMTX_API_PORT}/v3/rtspsessions/list", timeout=2)
+            if rtsp_resp.status_code == 200:
+                for item in rtsp_resp.json().get('items', []):
+                    s_id = item.get('id')
+                    r_addr = item.get('remoteAddr')
+                    if s_id and r_addr:
+                        session_ips[s_id] = r_addr
+        except Exception:
+            pass
+
+        try:
+            webrtc_resp = requests.get(f"http://127.0.0.1:{MEDIAMTX_API_PORT}/v3/webrtcsessions/list", timeout=2)
+            if webrtc_resp.status_code == 200:
+                for item in webrtc_resp.json().get('items', []):
+                    s_id = item.get('id')
+                    r_addr = item.get('remoteAddr')
+                    if s_id and r_addr:
+                        session_ips[s_id] = r_addr
+        except Exception:
+            pass
+        
         new_analytics = {}
         items = json_data.get('items', [])
         
@@ -64,12 +88,30 @@ class AnalyticsManager:
             # Basic info — v1.17+ uses 'online' (replaces deprecated 'ready')
             # Keep 'ready' fallback for any older binary still present during upgrade
             is_online = item.get('online', item.get('ready', False))
+            # v1.17 - readers renamed to outboundSessions
+            sessions = item.get('outboundSessions') or item.get('readers') or []
+            reader_ips = []
+            for s in sessions:
+                if isinstance(s, dict):
+                    s_id = s.get('id')
+                    remote_addr = s.get('remoteAddr') or s.get('remoteAddress')
+                    if not remote_addr and s_id:
+                        remote_addr = session_ips.get(s_id)
+                        
+                    if remote_addr:
+                        # strip the port (e.g. "192.168.1.10:54321" -> "192.168.1.10")
+                        if ']' in remote_addr:
+                            ip = remote_addr.split(']')[0].replace('[', '')
+                        else:
+                            ip = remote_addr.split(':')[0]
+                        reader_ips.append(ip)
+
             analytics = {
                 'online': is_online,
                 'ready': is_online,  # Backwards-compat alias
                 'tracks': item.get('tracks', []),
-                # v1.17 - readers renamed to outboundSessions
-                'readers': len(item.get('outboundSessions') or item.get('readers') or []),
+                'readers': len(sessions),
+                'reader_ips': reader_ips,
                 'source': item.get('source', {}).get('type', 'unknown') if isinstance(item.get('source'), dict) else 'unknown',
                 # v1.17 moved bytesReceived/Sent into source object
                 'bytesReceived': item.get('bytesReceived') or item.get('source', {}).get('bytesReceived', 0) if isinstance(item.get('source'), dict) else item.get('bytesReceived', 0),
@@ -124,5 +166,6 @@ class AnalyticsManager:
                 'ready': False,  # Backwards-compat alias
                 'bitrate': 0,
                 'readers': 0,
+                'reader_ips': [],
                 'tracks': []
             })

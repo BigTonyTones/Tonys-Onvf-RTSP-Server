@@ -39,12 +39,17 @@ def get_web_ui_html(current_settings=None):
             --input-border: #e2e8f0;
             --alert-info-bg: #edf2f7;
             --alert-info-text: #4a5568;
-            --alert-warning-bg: #fef5e7;
-            --alert-warning-text: #7a5c0f;
+            --alert-warning-bg: #fffbeb;
+            --alert-warning-text: #b45309;
+            --alert-warning-border: #fcd34d;
+            --yellow-text: #b45309;
             --toggle-bg: #cbd5e0;
             --toggle-active: #48bb78;
             --modal-bg: #ffffff;
             --text-code: #2d3748;
+            --zone-title-color: #4f46e5;
+            --rules-title-color: #15803d;
+            --accent-green: #15803d;
         }}
 
         body.theme-dark {{
@@ -155,6 +160,9 @@ def get_web_ui_html(current_settings=None):
             --toggle-active: #859900;
             --modal-bg: #eee8d5;
             --text-code: #b58900;
+            --zone-title-color: #268bd2;
+            --rules-title-color: #859900;
+            --accent-green: #859900;
         }}
 
         body.theme-midnight {{
@@ -211,6 +219,9 @@ def get_web_ui_html(current_settings=None):
             --btn-danger: #e03131;
             --modal-bg: #ffffff;
             --text-code: #d03131;
+            --zone-title-color: #e03131;
+            --rules-title-color: #fa5252;
+            --accent-green: #fa5252;
         }}
 
         body.theme-matrix {{
@@ -301,6 +312,16 @@ def get_web_ui_html(current_settings=None):
             --text-code: #ffffff;
         }}
 
+body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.theme-emerald, body.theme-matrix, body.theme-slate, body.theme-cyberpunk, body.theme-amoled {{
+            --alert-warning-bg: rgba(245, 158, 11, 0.1);
+            --alert-warning-border: rgba(245, 158, 11, 0.3);
+            --alert-warning-text: #f6ad55;
+            --yellow-text: #ecc94b;
+            --zone-title-color: #a5b4fc;
+            --rules-title-color: #9ae6b4;
+            --accent-green: #34d399;
+        }}
+
         body.theme-ui {{
             --primary-bg: #f4f5f7;
             --body-bg: #f4f5f7;
@@ -308,7 +329,7 @@ def get_web_ui_html(current_settings=None):
             --header-bg: #ffffff;
             --text-title: #0f172a;
             --text-body: #475569;
-            --text-muted: #94a3b8;
+            --text-muted: #5e6e82;
             --btn-primary: #0055ff;
             --btn-primary-hover: #0044cc;
             --btn-success: #10b981;
@@ -324,11 +345,16 @@ def get_web_ui_html(current_settings=None):
             --alert-info-bg: #eff6ff;
             --alert-info-text: #0055ff;
             --alert-warning-bg: #fffbeb;
-            --alert-warning-text: #d97706;
+            --alert-warning-text: #b45309;
+            --alert-warning-border: #fcd34d;
+            --yellow-text: #b45309;
             --toggle-bg: #cbd5e1;
             --toggle-active: #0055ff;
             --modal-bg: #ffffff;
             --text-code: #0055ff;
+            --zone-title-color: #0055ff;
+            --rules-title-color: #10b981;
+            --accent-green: #10b981;
         }}
 
         body.theme-ui .version-badge {{
@@ -664,7 +690,7 @@ def get_web_ui_html(current_settings=None):
             border-radius: 6px;
             border: 1px solid var(--border-color);
             height: 22px;
-            min-width: 140px;
+            min-width: 155px;
             gap: 8px;
         }}
         
@@ -751,7 +777,7 @@ def get_web_ui_html(current_settings=None):
         .camera-card {{
             background: var(--card-bg);
             border-radius: 12px;
-            padding: 24px;
+            padding: 24px 24px 18px;
             box-shadow: var(--shadow);
             border: 1px solid var(--card-border);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -773,6 +799,133 @@ def get_web_ui_html(current_settings=None):
         .status-badge.running {{
             background: var(--btn-success);
             box-shadow: 0 0 0 4px rgba(35, 134, 54, 0.2);
+        }}
+        .info-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+            background: rgba(74, 85, 104, 0.08);
+            border: 1px solid rgba(74, 85, 104, 0.15);
+            color: var(--text-body);
+            transition: all 0.2s ease;
+        }}
+        body.theme-dark .info-badge,
+        body.theme-dracula .info-badge,
+        body.theme-nord .info-badge,
+        body.theme-slate .info-badge,
+        body.theme-midnight .info-badge,
+        body.theme-emerald .info-badge,
+        body.theme-sunset .info-badge,
+        body.theme-matrix .info-badge,
+        body.theme-cyberpunk .info-badge,
+        body.theme-amoled .info-badge {{
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+        }}
+
+        .info-badge-green {{
+            background: rgba(72, 187, 120, 0.08);
+            border-color: rgba(72, 187, 120, 0.2);
+            color: #2f855a;
+        }}
+        body.theme-dark .info-badge-green,
+        body.theme-dracula .info-badge-green,
+        body.theme-nord .info-badge-green,
+        body.theme-slate .info-badge-green,
+        body.theme-midnight .info-badge-green,
+        body.theme-emerald .info-badge-green,
+        body.theme-sunset .info-badge-green,
+        body.theme-matrix .info-badge-green,
+        body.theme-cyberpunk .info-badge-green,
+        body.theme-amoled .info-badge-green {{
+            background: rgba(72, 187, 120, 0.1);
+            border-color: rgba(72, 187, 120, 0.25);
+            color: #48bb78;
+        }}
+
+        .info-badge-red {{
+            background: rgba(229, 62, 62, 0.08);
+            border-color: rgba(229, 62, 62, 0.2);
+            color: #c53030;
+        }}
+        body.theme-dark .info-badge-red,
+        body.theme-dracula .info-badge-red,
+        body.theme-nord .info-badge-red,
+        body.theme-slate .info-badge-red,
+        body.theme-midnight .info-badge-red,
+        body.theme-emerald .info-badge-red,
+        body.theme-sunset .info-badge-red,
+        body.theme-matrix .info-badge-red,
+        body.theme-cyberpunk .info-badge-red,
+        body.theme-amoled .info-badge-red {{
+            background: rgba(229, 62, 62, 0.1);
+            border-color: rgba(229, 62, 62, 0.25);
+            color: #f56565;
+        }}
+
+        .info-badge-purple {{
+            background: rgba(128, 90, 213, 0.08);
+            border-color: rgba(128, 90, 213, 0.2);
+            color: #6b46c1;
+        }}
+        body.theme-dark .info-badge-purple,
+        body.theme-dracula .info-badge-purple,
+        body.theme-nord .info-badge-purple,
+        body.theme-slate .info-badge-purple,
+        body.theme-midnight .info-badge-purple,
+        body.theme-emerald .info-badge-purple,
+        body.theme-sunset .info-badge-purple,
+        body.theme-matrix .info-badge-purple,
+        body.theme-cyberpunk .info-badge-purple,
+        body.theme-amoled .info-badge-purple {{
+            background: rgba(128, 90, 213, 0.1);
+            border-color: rgba(128, 90, 213, 0.25);
+            color: #a78bfa;
+        }}
+
+        .info-badge-blue {{
+            background: rgba(66, 153, 225, 0.08);
+            border-color: rgba(66, 153, 225, 0.2);
+            color: #2b6cb0;
+        }}
+        body.theme-dark .info-badge-blue,
+        body.theme-dracula .info-badge-blue,
+        body.theme-nord .info-badge-blue,
+        body.theme-slate .info-badge-blue,
+        body.theme-midnight .info-badge-blue,
+        body.theme-emerald .info-badge-blue,
+        body.theme-sunset .info-badge-blue,
+        body.theme-matrix .info-badge-blue,
+        body.theme-cyberpunk .info-badge-blue,
+        body.theme-amoled .info-badge-blue {{
+            background: rgba(66, 153, 225, 0.1);
+            border-color: rgba(66, 153, 225, 0.25);
+            color: #63b3ed;
+        }}
+
+        .info-badge-yellow {{
+            background: rgba(217, 119, 6, 0.08);
+            border-color: rgba(217, 119, 6, 0.2);
+            color: #b45309;
+        }}
+        body.theme-dark .info-badge-yellow,
+        body.theme-dracula .info-badge-yellow,
+        body.theme-nord .info-badge-yellow,
+        body.theme-slate .info-badge-yellow,
+        body.theme-midnight .info-badge-yellow,
+        body.theme-emerald .info-badge-yellow,
+        body.theme-sunset .info-badge-yellow,
+        body.theme-matrix .info-badge-yellow,
+        body.theme-cyberpunk .info-badge-yellow,
+        body.theme-amoled .info-badge-yellow {{
+            background: rgba(236, 201, 75, 0.1);
+            border-color: rgba(236, 201, 75, 0.25);
+            color: #ecc94b;
         }}
         .camera-name {{
             font-size: 20px;
@@ -798,32 +951,33 @@ def get_web_ui_html(current_settings=None):
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 8px;
+            padding: 3px 8px;
             border-radius: 4px;
             font-size: 10px;
             font-weight: 800;
-            background: rgba(0,0,0,0.6);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.1);
+            background: #0f172a; /* Solid dark background for readability */
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.15);
             transition: all 0.2s;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            pointer-events: auto;
         }}
         .metric-badge.live {{
-            background: rgba(46, 204, 113, 0.4);
-            color: #2ecc71;
-            border-color: rgba(46, 204, 113, 0.4);
+            background: rgba(75, 85, 99, 0.85);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.15);
         }}
         .metric-badge.warn {{
-            background: rgba(243, 156, 18, 0.4);
-            color: #f39c12;
-            border-color: rgba(243, 156, 18, 0.4);
+            background: #0d0c08;
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.4);
         }}
         .metric-badge.error {{
-            background: rgba(231, 76, 60, 0.4);
-            color: #e74c3c;
-            border-color: rgba(231, 76, 60, 0.4);
+            background: #110909;
+            color: #f87171;
+            border-color: rgba(248, 113, 113, 0.4);
         }}
         .metrics-overlay {{
             position: absolute;
@@ -862,6 +1016,9 @@ def get_web_ui_html(current_settings=None):
             background: #e74c3c;
             color: white;
             border-color: #c0392b;
+        }}
+        .icon-btn-autostart:hover i {{
+            color: var(--btn-primary);
         }}
         
         body.theme-light .icon-btn {{
@@ -952,11 +1109,13 @@ def get_web_ui_html(current_settings=None):
         }}
         .form-row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
         .info-section {{
-            padding: 16px;
+            padding: 14px 16px;
             background: var(--body-bg);
             border-radius: 8px;
             margin-top: 16px;
         }}
+        /* Trim the dead space below the last row inside the info panel */
+        .info-section .info-value:last-child {{ margin-bottom: 0; }}
         .info-label {{
             font-size: 11px;
             color: var(--text-muted);
@@ -1180,14 +1339,31 @@ def get_web_ui_html(current_settings=None):
         .copy-btn {{
             font-size: 11px;
             padding: 4px 8px;
-            background: var(--btn-primary);
-            color: white;
-            border: none;
+            background: rgba(0, 0, 0, 0.03);
+            color: var(--text-body);
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             cursor: pointer;
             margin-left: 8px;
+            transition: all 0.2s ease;
         }}
-        .copy-btn:hover {{ background: var(--btn-primary-hover); }}
+        body.theme-dark .copy-btn,
+        body.theme-dracula .copy-btn,
+        body.theme-nord .copy-btn,
+        body.theme-slate .copy-btn,
+        body.theme-midnight .copy-btn,
+        body.theme-emerald .copy-btn,
+        body.theme-sunset .copy-btn,
+        body.theme-matrix .copy-btn,
+        body.theme-cyberpunk .copy-btn,
+        body.theme-amoled .copy-btn {{
+            background: rgba(255, 255, 255, 0.05);
+        }}
+        .copy-btn:hover {{
+            background: var(--body-bg);
+            color: var(--btn-primary);
+            border-color: var(--btn-primary);
+        }}
         .modal {{
             display: none;
             position: fixed;
@@ -1204,10 +1380,10 @@ def get_web_ui_html(current_settings=None):
         .modal-content {{
             background: var(--modal-bg);
             border-radius: 12px;
-            padding: 30px;
+            padding: 24px;
             max-width: 900px;
             width: 90%;
-            max-height: 90vh;
+            max-height: 75vh;
             overflow-y: auto;
             color: var(--text-main);
         }}
@@ -1267,17 +1443,21 @@ def get_web_ui_html(current_settings=None):
         
         /* General Tab (Blue) */
         #settings-tab-general {{
-            color: rgba(99, 179, 237, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #settings-tab-general i {{
-            color: #63b3ed;
+            color: var(--btn-primary);
+            opacity: 1;
         }}
         #settings-tab-general:hover {{
-            color: #63b3ed;
+            color: var(--text-title);
+            opacity: 1;
             background: rgba(49, 130, 206, 0.05);
         }}
         #settings-tab-general.active {{
-            color: #3182ce !important;
+            color: var(--text-title) !important;
+            opacity: 1;
             background: rgba(49, 130, 206, 0.08) !important;
             border-bottom: 2px solid #3182ce !important;
         }}
@@ -1288,17 +1468,21 @@ def get_web_ui_html(current_settings=None):
         
         /* Security Tab (Orange) */
         #settings-tab-security {{
-            color: rgba(246, 173, 85, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #settings-tab-security i {{
             color: #f6ad55;
+            opacity: 1;
         }}
         #settings-tab-security:hover {{
-            color: #f6ad55;
+            color: var(--text-title);
+            opacity: 1;
             background: rgba(221, 107, 32, 0.05);
         }}
         #settings-tab-security.active {{
-            color: #dd6b20 !important;
+            color: var(--text-title) !important;
+            opacity: 1;
             background: rgba(221, 107, 32, 0.08) !important;
             border-bottom: 2px solid #dd6b20 !important;
         }}
@@ -1309,17 +1493,21 @@ def get_web_ui_html(current_settings=None):
         
         /* Engine Tab (Purple) */
         #settings-tab-engine {{
-            color: rgba(214, 188, 250, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #settings-tab-engine i {{
-            color: #d6bcfa;
+            color: #9f7aea;
+            opacity: 1;
         }}
         #settings-tab-engine:hover {{
-            color: #d6bcfa;
+            color: var(--text-title);
+            opacity: 1;
             background: rgba(159, 122, 234, 0.05);
         }}
         #settings-tab-engine.active {{
-            color: #9f7aea !important;
+            color: var(--text-title) !important;
+            opacity: 1;
             background: rgba(159, 122, 234, 0.08) !important;
             border-bottom: 2px solid #9f7aea !important;
         }}
@@ -1330,22 +1518,51 @@ def get_web_ui_html(current_settings=None):
         
         /* Maintenance Tab (Teal) */
         #settings-tab-maintenance {{
-            color: rgba(79, 209, 197, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #settings-tab-maintenance i {{
             color: #4fd1c5;
+            opacity: 1;
         }}
         #settings-tab-maintenance:hover {{
-            color: #4fd1c5;
+            color: var(--text-title);
+            opacity: 1;
             background: rgba(56, 178, 172, 0.05);
         }}
         #settings-tab-maintenance.active {{
-            color: #38b2ac !important;
+            color: var(--text-title) !important;
+            opacity: 1;
             background: rgba(56, 178, 172, 0.08) !important;
             border-bottom: 2px solid #38b2ac !important;
         }}
         #settings-tab-maintenance.active i {{
             color: #38b2ac;
+            opacity: 1;
+        }}
+        
+        /* Notifications Tab (Green) */
+        #settings-tab-notifications {{
+            color: var(--text-title);
+            opacity: 0.75;
+        }}
+        #settings-tab-notifications i {{
+            color: #48bb78;
+            opacity: 1;
+        }}
+        #settings-tab-notifications:hover {{
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(72, 187, 120, 0.05);
+        }}
+        #settings-tab-notifications.active {{
+            color: var(--text-title) !important;
+            opacity: 1;
+            background: rgba(72, 187, 120, 0.08) !important;
+            border-bottom: 2px solid #38a169 !important;
+        }}
+        #settings-tab-notifications.active i {{
+            color: #38a169;
             opacity: 1;
         }}
         .settings-tab-content {{
@@ -1622,7 +1839,7 @@ def get_web_ui_html(current_settings=None):
         }}
         .matrix-item-btn {{
             background: rgba(0, 0, 0, 0.75);
-            color: #cbd5e0;
+            color: var(--text-body);
             border: 1px solid rgba(255, 255, 255, 0.15);
             padding: 3px 8px;
             font-size: 11px;
@@ -1652,7 +1869,7 @@ def get_web_ui_html(current_settings=None):
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.05em;
-            color: #718096;
+            color: var(--text-muted);
             border-bottom: 2px solid #2d3748;
         }}
         .diagnostics-table td {{
@@ -1681,9 +1898,9 @@ def get_web_ui_html(current_settings=None):
             display: inline-block;
         }}
         @keyframes badge-flash {{
-            0% {{ background-color: #ecc94b; transform: scale(1); }}
+            0% {{ background-color: var(--yellow-text); transform: scale(1); }}
             50% {{ background-color: #ffffff; transform: scale(1.2); box-shadow: 0 0 12px #ecc94b; }}
-            100% {{ background-color: #ecc94b; transform: scale(1); }}
+            100% {{ background-color: var(--yellow-text); transform: scale(1); }}
         }}
         .ai-badge-flash {{
             animation: badge-flash 0.5s ease-in-out 3;
@@ -1705,7 +1922,7 @@ def get_web_ui_html(current_settings=None):
             padding: 10px 20px;
             cursor: pointer;
             font-weight: 600;
-            color: #718096;
+            color: var(--text-muted);
             margin-bottom: -2px;
             border-bottom: 2px solid transparent;
         }}
@@ -1749,17 +1966,21 @@ def get_web_ui_html(current_settings=None):
         
         /* Camera Tab (Blue) */
         #form-tab-camera {{
-            color: rgba(99, 179, 237, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #form-tab-camera i {{
-            color: #63b3ed;
+            color: #3182ce;
+            opacity: 1;
         }}
         #form-tab-camera:hover {{
-            color: #63b3ed;
-            background: rgba(49, 130, 206, 0.05);
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(49, 130, 206, 0.07);
         }}
         #form-tab-camera.active {{
-            color: #3182ce;
+            color: var(--text-title);
+            opacity: 1;
             border-bottom: 2px solid #3182ce;
             background: rgba(49, 130, 206, 0.08);
         }}
@@ -1767,64 +1988,76 @@ def get_web_ui_html(current_settings=None):
             color: #3182ce;
             opacity: 1;
         }}
-        
+
         /* Audio Tab (Orange) */
         #form-tab-audio {{
-            color: rgba(246, 173, 85, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #form-tab-audio i {{
-            color: #f6ad55;
+            color: #c05621;
+            opacity: 1;
         }}
         #form-tab-audio:hover {{
-            color: #f6ad55;
-            background: rgba(221, 107, 32, 0.05);
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(192, 86, 33, 0.07);
         }}
         #form-tab-audio.active {{
-            color: #dd6b20;
-            border-bottom: 2px solid #dd6b20;
-            background: rgba(221, 107, 32, 0.08);
+            color: var(--text-title);
+            opacity: 1;
+            border-bottom: 2px solid #c05621;
+            background: rgba(192, 86, 33, 0.08);
         }}
         #form-tab-audio.active i {{
-            color: #dd6b20;
+            color: #c05621;
             opacity: 1;
         }}
-        
+
         /* AI Settings Tab (Purple) */
         #form-tab-ai {{
-            color: rgba(214, 188, 250, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #form-tab-ai i {{
-            color: #d6bcfa;
-        }}
-        #form-tab-ai:hover {{
-            color: #d6bcfa;
-            background: rgba(159, 122, 234, 0.05);
-        }}
-        #form-tab-ai.active {{
-            color: #9f7aea;
-            border-bottom: 2px solid #9f7aea;
-            background: rgba(159, 122, 234, 0.08);
-        }}
-        #form-tab-ai.active i {{
-            color: #9f7aea;
+            color: #7c3aed;
             opacity: 1;
         }}
-        
+        #form-tab-ai:hover {{
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(124, 58, 237, 0.07);
+        }}
+        #form-tab-ai.active {{
+            color: var(--text-title);
+            opacity: 1;
+            border-bottom: 2px solid #7c3aed;
+            background: rgba(124, 58, 237, 0.08);
+        }}
+        #form-tab-ai.active i {{
+            color: #7c3aed;
+            opacity: 1;
+        }}
+
         /* Networking Tab (Teal) */
         #form-tab-networking {{
-            color: rgba(79, 209, 197, 0.65);
+            color: var(--text-title);
+            opacity: 0.75;
         }}
         #form-tab-networking i {{
-            color: #4fd1c5;
+            color: #2c7a7b;
+            opacity: 1;
         }}
         #form-tab-networking:hover {{
-            color: #4fd1c5;
-            background: rgba(56, 178, 172, 0.05);
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(44, 122, 123, 0.07);
         }}
         #form-tab-networking.active {{
-            color: #38b2ac;
-            border-bottom: 2px solid #38b2ac;
-            background: rgba(56, 178, 172, 0.08);
+            color: var(--text-title);
+            opacity: 1;
+            border-bottom: 2px solid #2c7a7b;
+            background: rgba(44, 122, 123, 0.08);
         }}
         #form-tab-networking.active i {{
             color: #38b2ac;
@@ -1837,21 +2070,35 @@ def get_web_ui_html(current_settings=None):
             display: block;
         }}
         
-        /* Make AI settings section text slightly larger and easier to read */
-        #form-sec-ai, #form-sec-ai div, #form-sec-ai label, #form-sec-ai span, #form-sec-ai small, #form-sec-ai input, #form-sec-ai select {{
-            font-size: 13.5px !important;
+        /* AI Settings section: consistent card-based layout */
+        #form-sec-ai {{
+            font-size: 13px;
         }}
-        #form-sec-ai [style*="font-size: 12px"], #form-sec-ai [style*="font-size:12px"] {{
-            font-size: 14.5px !important;
+        .ai-card {{
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 18px;
+            background: rgba(255, 255, 255, 0.02);
         }}
-        #form-sec-ai [style*="font-size: 11px"], #form-sec-ai [style*="font-size:11px"] {{
-            font-size: 13.5px !important;
+        .ai-card-title {{
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
         }}
-        #form-sec-ai [style*="font-size: 10px"], #form-sec-ai [style*="font-size:10px"] {{
-            font-size: 12.5px !important;
+        .ai-field-label {{
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-body);
+            margin-bottom: 6px;
+            display: block;
         }}
-        #form-sec-ai [style*="font-size: 8px"], #form-sec-ai [style*="font-size:8px"] {{
-            font-size: 10.5px !important;
+        .ai-hint {{
+            font-size: 11.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
         }}
         
         .result-item {{
@@ -1865,7 +2112,7 @@ def get_web_ui_html(current_settings=None):
         }}
         .result-item:hover {{
             background: #eef2f7;
-            border-color: #cbd5e0;
+            border-color: var(--text-body);
         }}
         .footer {{
             margin-top: 40px;
@@ -2097,15 +2344,32 @@ def get_web_ui_html(current_settings=None):
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.15s ease-in-out;
-            white-space: normal;
+            white-space: pre-line;
             word-wrap: break-word;
         }}
         .custom-tooltip.visible {{
             opacity: 1;
         }}
+        .btn-add-schedule {{
+            padding: 4px 12px;
+            background: transparent;
+            color: var(--btn-success);
+            border: 1.5px solid var(--btn-success);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }}
+        .btn-add-schedule:hover {{
+            background: color-mix(in srgb, var(--btn-success) 12%, transparent);
+            transform: translateY(-1px);
+        }}
     </style>
 </head>
-<body class="theme-{current_settings.get('theme', 'classic') if current_settings else 'classic'}">
+<body class="theme-{'dracula' if (current_settings and current_settings.get('theme') == 'dark') else 'ui' if (current_settings and current_settings.get('theme') == 'light') else current_settings.get('theme', 'dracula') if current_settings else 'dracula'}">
     <div class="container">
         <div class="header">
             <!-- Top section: Title, version, stats, and theme selector -->
@@ -2164,22 +2428,9 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                     <div class="theme-select-container">
-                        <span>Theme</span>
-                        <select id="themeSwitcher" class="theme-select" onchange="changeTheme(this.value)">
-                            <option value="classic" {"selected" if current_settings and current_settings.get('theme') == 'classic' else ""}>Classic</option>
-                            <option value="dark" {"selected" if current_settings and current_settings.get('theme') == 'dark' else ""}>Modern Dark</option>
-                            <option value="nord" {"selected" if current_settings and current_settings.get('theme') == 'nord' else ""}>Nordic</option>
-                            <option value="dracula" {"selected" if not current_settings or current_settings.get('theme') == 'dracula' else ""}>Dracula (Pro Dark)</option>
-                            <option value="solar-light" {"selected" if current_settings and current_settings.get('theme') == 'solar-light' else ""}>Solarized</option>
-                            <option value="midnight" {"selected" if current_settings and current_settings.get('theme') == 'midnight' else ""}>Midnight</option>
-                            <option value="emerald" {"selected" if current_settings and current_settings.get('theme') == 'emerald' else ""}>Emerald</option>
-                            <option value="sunset" {"selected" if current_settings and current_settings.get('theme') == 'sunset' else ""}>Sunset</option>
-                            <option value="matrix" {"selected" if current_settings and current_settings.get('theme') == 'matrix' else ""}>Matrix</option>
-                            <option value="slate" {"selected" if current_settings and current_settings.get('theme') == 'slate' else ""}>Slate</option>
-                            <option value="cyberpunk" {"selected" if current_settings and current_settings.get('theme') == 'cyberpunk' else ""}>Cyberpunk</option>
-                            <option value="amoled" {"selected" if current_settings and current_settings.get('theme') == 'amoled' else ""}>Amoled</option>
-                            <option value="ui" {"selected" if current_settings and current_settings.get('theme') == 'ui' else ""}>UI</option>
-                        </select>
+                        <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: var(--body-bg); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s;" onclick="toggleSimpleTheme()" onmouseover="this.style.borderColor='var(--btn-primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                            <i id="themeToggleIcon" class="fas fa-moon" style="color: var(--text-body); font-size: 16px;"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2198,6 +2449,9 @@ def get_web_ui_html(current_settings=None):
                     </button>
                     <button class="btn btn-pink" onclick="toggleONVIFView(true)">
                         <i class="fa-solid fa-brain"></i> AI/ONVIF
+                    </button>
+                    <button class="btn btn-violet" onclick="window.location.href='/alerts'">
+                        <i class="fas fa-images"></i> AI Alerts
                     </button>
                     <button class="btn btn-cyan" onclick="window.location.href='/ip-management'">
                         <i class="fa-solid fa-network-wired"></i> IP Management
@@ -2311,14 +2565,14 @@ def get_web_ui_html(current_settings=None):
                     <div class="toggle-stack">
                         <div class="toggle-group" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
                             <span>Low Latency</span>
-                            <label class="toggle-switch" style="margin: 0; transform: scale(0.65); transform-origin: right center;">
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="latencyToggle" onchange="toggleLatencyMode(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
                         <div class="toggle-group" title="Display real-time bitrate, stream status, and active viewer count on camera previews">
                             <span>Bandwidth</span>
-                            <label class="toggle-switch" style="margin: 0; transform: scale(0.65); transform-origin: right center;">
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
@@ -2350,7 +2604,7 @@ def get_web_ui_html(current_settings=None):
     <!-- Matrix View Overlay -->
     <div id="matrix-overlay" class="matrix-overlay">
         <div class="matrix-controls">
-            <span style="color: #718096; margin-right: auto; padding-left: 10px; font-size: 14px; align-self: center;">
+            <span style="color: var(--text-muted); margin-right: auto; padding-left: 10px; font-size: 14px; align-self: center;">
                 F11 for Full Screen • ESC to Exit
             </span>
             <label style="display: flex; align-items: center; gap: 8px; color: var(--text-body); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; margin-right: 15px;" title="Flash red border around camera feed on active AI detections">
@@ -2423,7 +2677,7 @@ def get_web_ui_html(current_settings=None):
                 <button class="close-btn" onclick="closeCopyAiModal()">&times;</button>
             </div>
             <div style="padding: 20px;">
-                <div style="background: rgba(0, 85, 255, 0.1); padding: 10px 14px; border-radius: 8px; border-left: 3px solid var(--btn-primary); margin-bottom: 16px;">
+                <div style="background: rgba(0, 85, 255, 0.1); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
                     <div style="font-size: 11px; color: var(--text-body); line-height: 1.5;">
                         Copies: Event source, AI model, target classes, and sensitivity.<br>
                         <strong style="color: var(--alert-warning-text);">Does NOT copy:</strong> Motion detection zones.
@@ -2535,8 +2789,14 @@ def get_web_ui_html(current_settings=None):
                 </tbody>
             </table>
         </div>
+
+        <!-- Hover preview of the detection snapshot for a logged AI event -->
+        <div id="onvif-alert-preview" style="position: fixed; z-index: 1300; display: none; flex-direction: column; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 6px; box-shadow: 0 14px 40px rgba(0,0,0,0.6); pointer-events: none;">
+            <img id="onvif-alert-preview-img" src="" alt="" style="width: 420px; max-width: 44vw; border-radius: 6px; display: block;">
+            <div id="onvif-alert-preview-cap" style="display: flex; justify-content: space-between; gap: 12px; padding: 7px 4px 2px 4px; font-size: 11.5px;"></div>
+        </div>
     </div>
-    
+
     <div id="logs-modal" class="modal">
         <div class="modal-content" style="max-width: 1200px; width: 95%;">
             <div class="modal-header">
@@ -2565,8 +2825,201 @@ def get_web_ui_html(current_settings=None):
         </div>
     </div>
     
+    <!-- Notification Rules Editor Modal -->
+    <div id="notify-editor-modal" class="modal" style="z-index: 1200;">
+        <div class="modal-content" style="max-width: 820px; width: 96%;">
+            <div class="modal-header">
+                <div class="modal-title">AI Detection Notification Rules</div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success" onclick="saveNotifyModal()" style="padding: 5px 16px; font-size: 12px; font-weight: 600;"><i class="fas fa-save"></i> Save &amp; Close</button>
+                    <button class="close-btn" onclick="closeNotifyModal()">×</button>
+                </div>
+            </div>
+
+            <!-- Enable toggle -->
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0 12px 0; border-bottom: 1px solid var(--border-color);">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="nm-enabled" style="width: auto; cursor: pointer; transform: scale(1.2);" onchange="toggleNmFields()">
+                    <span style="font-size: 13px; font-weight: 600; color: var(--text-title);">Enable AI Detection Notifications</span>
+                </label>
+                <span style="font-size: 11px; color: var(--text-muted);">Requires a notification provider configured in Settings</span>
+            </div>
+
+            <div id="nm-body" style="display: none; margin-top: 14px;">
+                <!-- Row 1: Cooldown + Targets + Zone -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Cooldown</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="nm-cooldown" min="0" value="60" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 12px; width: 80px;">
+                            <span style="font-size: 11px; color: var(--text-muted);">seconds between alerts</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Alert on</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-person" style="width:auto;cursor:pointer;" checked> Person</label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-vehicle" style="width:auto;cursor:pointer;" checked> Vehicle</label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-animal" style="width:auto;cursor:pointer;"> Animal</label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-package" style="width:auto;cursor:pointer;"> Package</label>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Zone Filter</div>
+                        <select id="nm-zone-filter" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 12px; width: 100%;">
+                            <option value="">Any zone / full frame</option>
+                        </select>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">Only notify when detection occurs inside this zone</div>
+                    </div>
+                </div>
+
+                <!-- Attach screenshot -->
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 16px; gap: 12px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;">
+                        <input type="checkbox" id="nm-attach-image" style="width:auto;cursor:pointer;" onchange="toggleNmTestImageBtn()">
+                        <div>
+                            <span style="font-size: 12px; font-weight: 600; color: var(--text-title);">Attach Detection Screenshot</span>
+                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Include annotated JPEG with bounding boxes (Pushover, ntfy, SMTP, Apprise)</div>
+                        </div>
+                    </label>
+                    <button type="button" id="nm-test-image-btn" onclick="sendTestImageNotification()" style="display:none; background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
+                        <i class="fas fa-image"></i> Send Test Image
+                    </button>
+                </div>
+
+                <!-- Schedules -->
+                <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <span style="font-size: 12px; font-weight: 700; color: var(--text-title);">Schedule Windows</span>
+                        <span style="font-size: 10px; color: var(--text-muted); margin-left: 8px;">Notifications only fire when at least one enabled schedule matches the current time. Leave empty to always notify.</span>
+                    </div>
+                    <button type="button" class="btn-add-schedule" onclick="nmAddSchedule()">
+                        <i class="fas fa-plus"></i> Add Schedule
+                    </button>
+                </div>
+                <div id="nm-schedules-list" style="display: flex; flex-direction: column; gap: 10px; min-height: 40px;"></div>
+                <div id="nm-schedules-empty" style="font-size: 11px; color: var(--text-muted); padding: 10px 0; display: none;">No schedules — notifications fire at any time.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detection Zone Editor Modal -->
+    <div id="zone-editor-modal" class="modal" style="z-index: 1200;">
+        <div class="modal-content" style="max-width: 1100px; width: 96%; max-height: 92vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
+                <div class="modal-title">Detection Zone Editor</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="btn btn-primary" onclick="saveZoneProfiles()" style="padding: 5px 16px; font-size: 12px; font-weight: 600;">Save &amp; Close</button>
+                    <button class="close-btn" onclick="closeZoneModal()">×</button>
+                </div>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0;">
+                <!-- Zone profile tabs A–I -->
+                <div style="display: flex; align-items: center; gap: 8px; padding: 12px 0 10px 0; flex-wrap: wrap; flex-shrink: 0;">
+                    <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px;">Zones</span>
+                    <div id="zoneProfileTabs" style="display: flex; gap: 3px; flex-wrap: wrap; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 3px;"></div>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                        <span id="zoneActiveLabel" style="font-size: 11px; color: var(--text-muted);">Active zone:</span>
+                        <select id="zoneActiveSelect" onchange="setActiveZoneProfile(this.value)" style="background: var(--input-bg, var(--card-bg)); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;">
+                            <option value="">None (full frame)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Canvas toolbar -->
+                <div style="display: flex; align-items: center; gap: 6px; padding: 8px 0; flex-wrap: wrap; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); margin-bottom: 12px; flex-shrink: 0;">
+                    <button type="button" id="btnZoneLoadSnap" onclick="zoneLoadSnapshot()" class="btn btn-grey" style="padding: 4px 12px; font-size: 11px;">
+                        Load Snapshot
+                    </button>
+                    <button type="button" onclick="zoneClearCurrent()" class="btn btn-danger" style="padding: 4px 12px; font-size: 11px;">
+                        Clear Zone
+                    </button>
+                    <button type="button" onclick="zoneUndoLast()" class="btn btn-grey" style="padding: 4px 12px; font-size: 11px;">
+                        Undo
+                    </button>
+                    <button type="button" onclick="zoneSetFullFrame()" class="btn btn-grey" style="padding: 4px 12px; font-size: 11px;">
+                        Full Frame
+                    </button>
+                    <span style="font-size: 10.5px; color: var(--text-muted); margin-left: 4px;">Click to add points · Drag to move · Right-click to delete</span>
+                    <span id="zonePointCount" style="margin-left: auto; font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 10px; border-radius: 8px;"></span>
+                </div>
+
+                <!-- Canvas -->
+                <div id="zoneEditorCanvasContainer" style="position: relative; width: 100%; background: #0d1117; border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; aspect-ratio: 16/9; max-height: calc(92vh - 230px); cursor: crosshair; flex-shrink: 0;">
+                    <canvas id="zoneEditorCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                    <div id="zoneEditorEmptyState" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none;">
+                        <div style="font-size: 28px; color: #2d3748; margin-bottom: 10px;">&#9650;</div>
+                        <div style="font-size: 12px; color: #4a5568;">Load a snapshot, then click to draw the detection zone polygon</div>
+                    </div>
+                </div>
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 8px; padding-bottom: 2px; flex-shrink: 0;">Each zone is independent. Only the active zone is used for detection — set to "None" to use the full frame.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Alerts Modal -->
+    <div id="ai-alerts-modal" class="modal">
+        <div class="modal-content" style="max-width: 1300px; width: 96%;">
+            <div class="modal-header">
+                <div class="modal-title">AI Detection Alerts</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="btn btn-grey" onclick="refreshAiAlertsModal()" style="padding: 5px 12px; font-size: 12px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <button class="btn btn-danger" onclick="clearAiAlertsModal()" style="padding: 5px 12px; font-size: 12px;"><i class="fas fa-trash-alt"></i> Clear</button>
+                    <button class="close-btn" onclick="closeAiAlertsModal()">×</button>
+                </div>
+            </div>
+            <!-- Filter bar -->
+            <div style="display: flex; align-items: center; gap: 10px; padding: 12px 0 8px 0; flex-wrap: wrap;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Camera:</span>
+                <select id="ai-alerts-cam-filter" onchange="filterAiAlerts()" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;">
+                    <option value="">All cameras</option>
+                </select>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-left: 10px;">Tag:</span>
+                <div id="ai-alerts-tag-filters" style="display: flex; gap: 6px;">
+                    <button type="button" data-tag="" onclick="setAiTagFilter(this)" class="aa-tag-btn aa-tag-active" style="padding: 3px 10px; border-radius: 10px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: #4a5568; color: #fff;">All</button>
+                    <button type="button" data-tag="person" onclick="setAiTagFilter(this)" class="aa-tag-btn" style="padding: 3px 10px; border-radius: 10px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: #2d3748; color: #90cdf4;">Person</button>
+                    <button type="button" data-tag="vehicle" onclick="setAiTagFilter(this)" class="aa-tag-btn" style="padding: 3px 10px; border-radius: 10px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: #2d3748; color: #c4b5fd;">Vehicle</button>
+                    <button type="button" data-tag="animal" onclick="setAiTagFilter(this)" class="aa-tag-btn" style="padding: 3px 10px; border-radius: 10px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: #2d3748; color: #9ae6b4;">Animal</button>
+                    <button type="button" data-tag="package" onclick="setAiTagFilter(this)" class="aa-tag-btn" style="padding: 3px 10px; border-radius: 10px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; background: #2d3748; color: #fbd38d;">Package</button>
+                </div>
+                <span id="ai-alerts-modal-count" style="margin-left: auto; font-size: 11px; color: var(--text-muted);"></span>
+            </div>
+            <!-- Main viewer -->
+            <div style="display: flex; gap: 16px; min-height: 480px;">
+                <!-- Thumbnail list (left) -->
+                <div id="ai-alerts-list" style="width: 220px; flex-shrink: 0; overflow-y: auto; max-height: 540px; display: flex; flex-direction: column; gap: 6px; padding-right: 6px;"></div>
+                <!-- Large image (right) -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+                    <div id="ai-alerts-modal-empty" style="display: none; flex: 1; padding: 60px 20px; text-align: center; color: var(--text-muted); background: rgba(255,255,255,0.02); border: 1px dashed var(--border-color); border-radius: 8px;">
+                        <i class="fas fa-images" style="font-size: 36px; opacity: 0.4; display: block; margin-bottom: 12px;"></i>
+                        <div style="font-size: 13px;">No AI detection images yet.</div>
+                        <div style="font-size: 11px; margin-top: 6px; opacity: 0.7;">Snapshots appear here automatically when AI detects people, vehicles, animals or packages.</div>
+                    </div>
+                    <div id="ai-alerts-modal-viewer" style="display: none; flex: 1; flex-direction: column; gap: 10px;">
+                        <div style="position: relative; background: #000; border-radius: 8px; overflow: hidden; text-align: center; flex: 1; min-height: 340px; display: flex; align-items: center; justify-content: center;">
+                            <img id="ai-alerts-modal-img" src="" alt="AI Detection" style="max-width: 100%; max-height: 480px; object-fit: contain;">
+                            <button type="button" onclick="stepAiAlertModal(-1)" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; font-size: 15px;"><i class="fas fa-chevron-left"></i></button>
+                            <button type="button" onclick="stepAiAlertModal(1)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 38px; height: 38px; cursor: pointer; font-size: 15px;"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="ai-alerts-modal-counter" style="font-size: 11px; font-weight: 600; color: var(--text-title); background: rgba(255,255,255,0.06); padding: 2px 10px; border-radius: 10px;"></span>
+                                <span id="ai-alerts-modal-tags"></span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                                <span id="ai-alerts-modal-cam" style="font-size: 11px; font-weight: 600; color: #a0aec0;"></span>
+                                <span id="ai-alerts-modal-time" style="font-size: 11px; color: var(--text-muted);"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="camera-modal" class="modal">
-        <div class="modal-content" style="max-width: 950px;">
+        <div class="modal-content" style="max-width: 940px; width: 94%;">
             <div class="modal-header">
                 <div class="modal-title" id="modal-title">Add New Camera</div>
                 <button class="close-btn" onclick="closeModal()">×</button>
@@ -2614,7 +3067,7 @@ def get_web_ui_html(current_settings=None):
                     <select class="form-input" id="copyFrom" onchange="copyCameraSettings(this.value)">
                         <option value="">Select a camera to copy...</option>
                     </select>
-                    <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                    <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
                         Select an existing camera to automatically fill in the details below
                     </small>
                 </div>
@@ -2672,7 +3125,7 @@ def get_web_ui_html(current_settings=None):
                                         <span class="toggle-slider"></span>
                                     </label>
                                 </label>
-                                <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
+                                <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">For cameras that only support one stream</small>
                             </div>
 
                             <div class="form-group" style="flex: 1; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
@@ -2683,7 +3136,7 @@ def get_web_ui_html(current_settings=None):
                                         <span class="toggle-slider"></span>
                                     </label>
                                 </label>
-                                <small style="color: #718096; font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
+                                <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
                             </div>
                         </div>
                     </div>
@@ -2702,14 +3155,14 @@ def get_web_ui_html(current_settings=None):
                                 </div>
                                 
                                 <label class="form-label">Resolution & FPS</label>
-                                <div class="form-row" style="margin-bottom: 0;">
+                                <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 0;">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <input type="number" class="form-input" id="mainWidth" placeholder="Width" value="1920" required>
                                     </div>
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <input type="number" class="form-input" id="mainHeight" placeholder="Height" value="1080" required>
                                     </div>
-                                    <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
+                                    <div class="form-group" style="margin-bottom: 0;">
                                         <input type="number" class="form-input" id="mainFramerate" placeholder="FPS" value="30" required>
                                     </div>
                                 </div>
@@ -2747,14 +3200,14 @@ def get_web_ui_html(current_settings=None):
                                     </div>
                                     
                                     <label class="form-label">Resolution & FPS</label>
-                                    <div class="form-row" style="margin-bottom: 0;">
+                                    <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 0;">
                                         <div class="form-group" style="margin-bottom: 0;">
                                             <input type="number" class="form-input" id="subWidth" placeholder="Width" value="640">
                                         </div>
                                         <div class="form-group" style="margin-bottom: 0;">
                                             <input type="number" class="form-input" id="subHeight" placeholder="Height" value="480">
                                         </div>
-                                        <div class="form-group" style="margin-bottom: 0; flex: 0.5;">
+                                        <div class="form-group" style="margin-bottom: 0;">
                                             <input type="number" class="form-input" id="subFramerate" placeholder="FPS" value="15">
                                         </div>
                                     </div>
@@ -2788,7 +3241,7 @@ def get_web_ui_html(current_settings=None):
                         <div class="form-group" style="flex: 1.5;">
                             <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                 <span>Device UUID</span>
-                                <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; height: auto; background: rgba(49, 130, 206, 0.15); border: 1px solid rgba(49, 130, 206, 0.3); color: #63b3ed; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="generateNewUuid()">
+                                <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; height: auto; background: rgba(49, 130, 206, 0.15); border: 1px solid rgba(49, 130, 206, 0.3); color: var(--btn-primary); cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" onclick="generateNewUuid()">
                                     <i class="fas fa-random"></i> Generate
                                 </button>
                             </label>
@@ -2821,7 +3274,7 @@ def get_web_ui_html(current_settings=None):
                                 </div>
                                 <div>
                                     <span class="auto-start-label" style="font-size: 14px; font-weight: 700; color: var(--text-title); display: block; line-height: 1.2;">Enable RTSP Audio</span>
-                                    <small style="color: #718096; font-size: 11px;">Enable audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
+                                    <small style="color: var(--text-muted); font-size: 11px;">Enable audio support for both Main and Sub streams (UniFi Protect ONLY supports AAC)</small>
                                 </div>
                             </div>
                             <label class="toggle-switch">
@@ -2838,7 +3291,7 @@ def get_web_ui_html(current_settings=None):
                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                                 <div>
                                     <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Main Audio</span>
-                                    <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
+                                    <small style="color: var(--text-muted); font-size: 11px;">If native audio is not AAC</small>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="transcodeMainAudio" onchange="toggleAudioSettings('main')">
@@ -2890,7 +3343,7 @@ def get_web_ui_html(current_settings=None):
                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                                 <div>
                                     <span class="auto-start-label" style="font-size: 13px; font-weight: 600; color: var(--text-title); display: block;">Transcode Sub Audio</span>
-                                    <small style="color: #718096; font-size: 11px;">If native audio is not AAC</small>
+                                    <small style="color: var(--text-muted); font-size: 11px;">If native audio is not AAC</small>
                                 </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="transcodeSubAudio" onchange="toggleAudioSettings('sub')">
@@ -2941,220 +3394,209 @@ def get_web_ui_html(current_settings=None):
 
                 <!-- AI SECTION -->
                 <div id="form-sec-ai" class="form-section">
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <div class="ai-card" style="margin-bottom: 14px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                             <input type="checkbox" id="enableEventForwarding" style="width: auto; cursor: pointer;" onchange="toggleEventForwardingFields()">
-                            <span class="form-label" style="margin: 0; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
-                                Enable AI Onvif Events or ONVIF Event Forwarding
-                                <span style="font-size: 10px; background-color: #d69e2e; color: #1a202c; padding: 1px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">Beta</span>
-                            </span>
+                            <span style="font-size: 14px; font-weight: 600; color: var(--text-title);">Enable AI / ONVIF Events</span>
+                            <span style="font-size: 9.5px; background-color: #d69e2e; color: #1a202c; padding: 2px 8px; border-radius: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Beta</span>
                         </label>
-                        <div style="color: var(--text-body); font-size: 11px; margin-left: 24px; margin-top: 4px;">
-                            Forward original motion and inputs from physical camera's ONVIF to virtual server. (Beta - please report any issues)
+                        <div class="ai-hint" style="margin-left: 27px; margin-top: 5px;">
+                            Send motion events to your NVR using local AI object detection, or forward events from the physical camera's ONVIF service.
                         </div>
                     </div>
-                    
-                    <div class="form-group" id="eventSourceGroup" style="display: none; margin-left: 24px; margin-top: 10px;">
-                        <label class="form-label" style="font-size: 12px;">Event Source Mode</label>
-                        <select class="form-input" id="eventSource" onchange="toggleEventSourceFields()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
-                            <option value="onvif">Forward Physical Camera ONVIF Events</option>
-                            <option value="ai">Local AI Object Detection (YOLOv8)</option>
-                        </select>
+
+                    <div id="aiModeAndModelConfig" style="display: none; gap: 14px; align-items: stretch; margin-bottom: 14px;">
+                        <!-- Left: Mode + Model dropdowns -->
+                        <div class="ai-card" style="flex: 1; display: flex; flex-direction: column; gap: 14px; justify-content: flex-start;">
+                            <div class="form-group" id="eventSourceGroup" style="margin-bottom: 0;">
+                                <label class="ai-field-label">Event Source</label>
+                                <select class="form-input" id="eventSource" onchange="toggleEventSourceFields()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
+                                    <option value="onvif">Forward Physical Camera ONVIF Events</option>
+                                    <option value="ai">Local AI Object Detection (YOLO)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" id="aiModelGroup" style="display: none; margin-bottom: 0;">
+                                <label class="ai-field-label">Detection Model</label>
+                                <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); max-width: 100%;">
+                                    <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt) - Default</option>
+                                    <option value="yolo11n.pt">YOLO11 Nano (yolo11n.pt) - Newest & Recommended</option>
+                                    <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
+                                    <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt)</option>
+                                    <option value="yolov8m.pt">YOLOv8 Medium (yolov8m.pt)</option>
+                                    <option value="yolo11l.pt">YOLO11 Large (yolo11l.pt)</option>
+                                    <option value="yolo11x.pt">YOLO11 Extra-Large (yolo11x.pt)</option>
+                                    <option value="yolov8l.pt">YOLOv8 Large (yolov8l.pt)</option>
+                                    <option value="yolov8x.pt">YOLOv8 Extra-Large (yolov8x.pt)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Right: Hardware + model info -->
+                        <div id="aiSettingsInfoBox" style="display: none; flex: 1.1; padding: 14px 16px; border-radius: 10px; background-color: var(--alert-info-bg); color: var(--alert-info-text); font-size: 11.5px; line-height: 1.55; flex-direction: column; gap: 8px; justify-content: center;">
+                            <div id="aiHardwareInfoGroup" style="display: none;">
+                                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent-green) 15%, transparent); border: 1px solid color-mix(in srgb, var(--accent-green) 40%, transparent); margin-bottom: 6px; align-self: flex-start;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); display: inline-block; flex-shrink: 0; box-shadow: 0 0 6px var(--accent-green);"></span>
+                                    <span style="font-size: 11px; font-weight: 600; color: var(--accent-green); letter-spacing: 0.02em;">Current Active Hardware:</span>
+                                    <span id="settings-ai-device" style="font-size: 11px; font-weight: 700; color: var(--accent-green);">Loading...</span>
+                                </div>
+                                <div style="color: var(--alert-info-text); opacity: 0.8;"><strong>Hardware Acceleration:</strong> NVIDIA (CUDA) and Apple Silicon (MPS/CoreML) supported.</div>
+                            </div>
+                            <hr id="aiInfoBoxDivider" style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 0; display: none;">
+                            <div id="aiModelDescription" style="display: none;">
+                                <!-- Dynamically populated description -->
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group" id="physicalOnvifPortGroup" style="display: none; margin-left: 24px;">
-                        <label class="form-label" style="font-size: 12px;">Physical Camera ONVIF Port</label>
+                    <div class="form-group" id="physicalOnvifPortGroup" style="display: none; margin-bottom: 14px;">
+                        <label class="ai-field-label">Physical Camera ONVIF Port</label>
                         <input type="number" class="form-input" id="physicalOnvifPort" placeholder="80" value="80" style="max-width: 150px;">
                     </div>
 
-                    <div id="onvifForwardingCredGroup" style="display: none; margin-left: 24px; margin-top: 10px;">
-                        <div style="font-size: 12px; color: var(--text-body); font-weight: 600; margin-bottom: 8px;">ONVIF Credentials</div>
+                    <div id="onvifForwardingCredGroup" class="ai-card" style="display: none; margin-bottom: 14px;">
+                        <div class="ai-card-title">ONVIF Credentials</div>
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 10px;">
                             <input type="checkbox" id="onvifUseAboveCredentials" style="width: auto; cursor: pointer;" checked onchange="toggleOnvifCredFields()">
-                            <span style="font-size: 12px; color: var(--text-title);">Use above camera credentials</span>
+                            <span style="font-size: 12.5px; color: var(--text-title);">Use above camera credentials</span>
                         </label>
                         <div id="onvifCustomCredFields" style="display: none;">
                             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                 <div style="flex: 1; min-width: 120px;">
-                                    <label class="form-label" style="font-size: 11px;">ONVIF Username</label>
+                                    <label class="ai-field-label" style="font-size: 11.5px;">ONVIF Username</label>
                                     <input type="text" class="form-input" id="onvifForwardingUsername" placeholder="admin" autocomplete="off">
                                 </div>
                                 <div style="flex: 1; min-width: 120px;">
-                                    <label class="form-label" style="font-size: 11px;">ONVIF Password</label>
+                                    <label class="ai-field-label" style="font-size: 11.5px;">ONVIF Password</label>
                                     <input type="password" class="form-input" id="onvifForwardingPassword" placeholder="password" autocomplete="new-password">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div id="aiHardwareInfoGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: var(--alert-info-bg); color: var(--alert-info-text); border-left: 3px solid #10b981; line-height: 1.5;">
-                        <i class="fas fa-microchip"></i> <strong>AI HW Acceleration:</strong> Supported on NVIDIA (CUDA) and Apple Silicon (MPS/CoreML).<br>
-                        <i class="fas fa-desktop"></i> <strong>Active Host Hardware:</strong> <span id="settings-ai-device" style="color: var(--btn-primary); font-weight: bold;">Loading...</span>
-                    </div>
-
-                    <div id="aiModelGroup" style="display: none; margin-left: 24px; margin-top: 12px; margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 12px; margin-bottom: 4px; display: block;">AI Object Detection Model</label>
-                        <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); max-width: 100%;">
-                            <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt) - Default</option>
-                            <option value="yolo11n.pt">YOLO11 Nano (yolo11n.pt) - Newest & Recommended</option>
-                            <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
-                            <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt)</option>
-                            <option value="yolov8m.pt">YOLOv8 Medium (yolov8m.pt)</option>
-                            <option value="yolo11l.pt">YOLO11 Large (yolo11l.pt)</option>
-                            <option value="yolo11x.pt">YOLO11 Extra-Large (yolo11x.pt)</option>
-                            <option value="yolov8l.pt">YOLOv8 Large (yolov8l.pt)</option>
-                            <option value="yolov8x.pt">YOLOv8 Extra-Large (yolov8x.pt)</option>
-                        </select>
-                        <div id="aiModelDescription" style="margin-top: 8px; font-size: 11px; padding: 10px; border-radius: 6px; background-color: var(--alert-info-bg); line-height: 1.4; color: var(--alert-info-text); border-left: 3px solid var(--btn-primary);">
-                            <!-- Dynamically populated description -->
-                        </div>
-                    </div>
-
-                    <div id="aiTargetClassesGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">AI Target Detection (COCO Objects)</div>
-                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                <input type="checkbox" id="aiTargetPerson" style="width: auto; cursor: pointer;" checked>
-                                <span style="font-size: 12px; color: #cbd5e0;">Person</span>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                <input type="checkbox" id="aiTargetVehicle" style="width: auto; cursor: pointer;" checked>
-                                <span style="font-size: 12px; color: #cbd5e0;">Vehicle</span>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                <input type="checkbox" id="aiTargetAnimal" style="width: auto; cursor: pointer;">
-                                <span style="font-size: 12px; color: #cbd5e0;">Animal</span>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                <input type="checkbox" id="aiTargetPackage" style="width: auto; cursor: pointer;">
-                                <span style="font-size: 12px; color: #cbd5e0;">Package</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div id="sendSmartOnvifTopicsGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">ONVIF Event Formatting</div>
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                            <input type="checkbox" id="sendSmartOnvifTopics" style="width: auto; cursor: pointer;" checked onchange="toggleSmartOnvifWarning()">
-                            <span style="font-size: 12px; color: #cbd5e0;">Send Smart ONVIF Topics (HumanShapeDetect, VehicleDetect, AnimalDetect, PackageDetect)</span>
-                        </label>
-                        <div style="font-size: 11px; color: #718096; margin-top: 4px; margin-left: 20px; line-height: 1.4;">
-                            If enabled, triggers specific smart ONVIF events when objects are detected. If disabled, reverts to standard generic motion events.
-                        </div>
-                        <div id="smartOnvifWarning" style="display: none; margin-top: 12px; margin-left: 20px; padding: 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 11px; color: #f6ad55; line-height: 1.5;">
-                            ⚠️ <strong>UniFi NVR Compatibility Note:</strong> To display Smart Detections (Person, Vehicle, etc.) in UniFi Protect, you currently need to run this third party project <a href="https://github.com/danielwoz/ubiquiti-protect-onvif-event-listener" target="_blank" style="color: #63b3ed; text-decoration: underline; font-weight: 500;">ubiquiti-protect-onvif-event-listener</a>. Without it, smart events will not be registered by the NVR. While I expect native support from Ubiquiti in a future update, this event listener is required for now. It is recommended you reboot the NVR after adding all your cameras.
-                        </div>
-                    </div>
-
-                    <div id="aiSensitivityGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Detection Sensitivity</div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">Low</span>
-                            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
-                                <input type="range" id="aiMotionSensitivity" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiSensitivityDisplay(this.value)">
-                                <div style="position: relative; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; margin-top: 2px;">
-                                    <div style="position: absolute; left: 35.3%; width: 23.5%; height: 100%; background: rgba(16, 185, 129, 0.45);" title="Recommended Indoor Range (40% - 60%)"></div>
-                                    <div style="position: absolute; left: 76.5%; width: 11.8%; height: 100%; background: rgba(245, 158, 11, 0.55);" title="Recommended Outdoor Range (75% - 85%)"></div>
+                    <div id="aiTwoColumnWrapper" style="display: none; grid-template-columns: 1.35fr 1fr; gap: 14px; align-items: stretch; margin-bottom: 14px;">
+                        <!-- Left: Detection settings -->
+                        <div class="ai-card" style="min-width: 0;">
+                            <div class="ai-card-title">Detection</div>
+                            <div style="display: flex; flex-direction: column; gap: 18px;">
+                                <div id="aiTargetClassesGroup" style="display: none;">
+                                    <div class="ai-field-label">Target Objects</div>
+                                    <div style="display: flex; gap: 18px; flex-wrap: wrap;">
+                                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                            <input type="checkbox" id="aiTargetPerson" style="width: auto; cursor: pointer;" checked>
+                                            <span style="font-size: 12.5px; color: var(--text-body);">Person</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                            <input type="checkbox" id="aiTargetVehicle" style="width: auto; cursor: pointer;" checked>
+                                            <span style="font-size: 12.5px; color: var(--text-body);">Vehicle</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                            <input type="checkbox" id="aiTargetAnimal" style="width: auto; cursor: pointer;">
+                                            <span style="font-size: 12.5px; color: var(--text-body);">Animal</span>
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                            <input type="checkbox" id="aiTargetPackage" style="width: auto; cursor: pointer;">
+                                            <span style="font-size: 12.5px; color: var(--text-body);">Package</span>
+                                        </label>
+                                    </div>
                                 </div>
-                                <div style="position: relative; height: 12px; margin-top: 2px;">
-                                    <span style="position: absolute; left: 47%; transform: translateX(-50%); font-size: 8px; color: #10b981; font-weight: bold; white-space: nowrap;">INDOOR (40-60%)</span>
-                                    <span style="position: absolute; left: 82.3%; transform: translateX(-50%); font-size: 8px; color: #f59e0b; font-weight: bold; white-space: nowrap;">OUTDOOR (75-85%)</span>
+
+                                <div id="aiSensitivityGroup" style="display: none;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                        <span class="ai-field-label" style="margin-bottom: 0;">Sensitivity</span>
+                                        <span style="display: flex; align-items: center; gap: 8px;">
+                                            <span id="aiSensitivityStatus" style="font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;"></span>
+                                            <span id="aiSensitivityValue" style="font-size: 12.5px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: right;">50%</span>
+                                        </span>
+                                    </div>
+                                    <input type="range" id="aiMotionSensitivity" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiSensitivityDisplay(this.value)">
+                                    <div class="ai-hint" style="margin-top: 5px;">
+                                        Higher detects more objects. Recommended: Indoor 40&ndash;60% &middot; Outdoor 75&ndash;85%.
+                                    </div>
+                                </div>
+
+                                <div id="aiConfidenceGroup" style="display: none;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                        <span class="ai-field-label" style="margin-bottom: 0;">Confidence Threshold</span>
+                                        <span id="aiConfidenceValue" style="font-size: 12.5px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: right;">50%</span>
+                                    </div>
+                                    <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
+                                    <div class="ai-hint" style="margin-top: 5px;">
+                                        Detections below this confidence are ignored. Higher reduces false positives.
+                                    </div>
+                                </div>
+
+                                <div id="sendSmartOnvifTopicsGroup" style="display: none;">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                        <input type="checkbox" id="sendSmartOnvifTopics" style="width: auto; cursor: pointer;" checked onchange="toggleSmartOnvifWarning()">
+                                        <span style="font-size: 12.5px; color: var(--text-body);">Send Smart ONVIF Topics</span>
+                                        <span id="smartOnvifInfoBtn" onclick="event.preventDefault(); toggleSmartOnvifPopup()" style="display: none; cursor: pointer; background: #d69e2e; color: #1a202c; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; margin-left: 2px;" title="UniFi compatibility note">⚠</span>
+                                    </label>
                                 </div>
                             </div>
-                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">High</span>
-                            <span id="aiSensitivityValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">50%</span>
                         </div>
-                        <div style="color: #718096; font-size: 10px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
-                            <span>Higher sensitivity detects more objects. Lower is more strict.</span>
-                            <span id="aiSensitivityStatus" style="font-weight: 600; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; border: 1px solid transparent;"></span>
-                        </div>
-                    </div>
 
-                    <div id="aiConfidenceGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">AI Confidence Threshold</div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">10%</span>
-                            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; position: relative;">
-                                <input type="range" id="aiConfidenceThreshold" min="10" max="95" value="50" style="width: 100%; cursor: pointer; accent-color: #3182ce; margin: 0;" oninput="updateAiConfidenceDisplay(this.value)">
-                            </div>
-                            <span style="font-size: 10px; color: #718096; white-space: nowrap;">95%</span>
-                            <span id="aiConfidenceValue" style="font-size: 12px; color: #3182ce; font-weight: 700; min-width: 36px; text-align: center;">50%</span>
-                        </div>
-                        <div style="color: #718096; font-size: 10px; margin-top: 6px;">
-                            Objects detected with confidence below this threshold will be ignored. Higher confidence reduces false positives.
-                        </div>
-                    </div>
-
-                    <div id="aiZoneGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <div style="font-size: 12px; color: #a0aec0; font-weight: 600;">Detection Zone</div>
-                            <div style="display: flex; gap: 6px;">
-                                <button type="button" id="btnLoadZoneSnapshot" onclick="loadZoneSnapshot()" style="padding: 4px 10px; font-size: 10px; background: #2d3748; color: #a0aec0; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                                    <i class="fas fa-camera"></i> Load Snapshot
-                                </button>
-                                <button type="button" id="btnClearZone" onclick="clearZone()" style="padding: 4px 10px; font-size: 10px; background: #2d3748; color: #f56565; border: 1px solid #4a5568; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                                    <i class="fas fa-trash"></i> Clear Zone
+                        <!-- Right: Zones + Notifications -->
+                        <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+                            <div id="aiZoneGroup" style="display: none;">
+                                <button type="button" onclick="openZoneModal()" style="width: 100%; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.45); border-radius: 10px; padding: 14px 16px; cursor: pointer; color: var(--text-title); text-align: left;">
+                                    <div style="font-size: 12.5px; font-weight: 600; color: var(--zone-title-color, #a5b4fc);">Detection Zones</div>
+                                    <div id="zoneProfileSummary" class="ai-hint" style="margin-top: 4px;">No zones configured — full frame monitored</div>
                                 </button>
                             </div>
-                        </div>
-                        <div id="zoneCanvasContainer" style="position: relative; width: 100%; background: #0f172a; border-radius: 8px; border: 1px solid #1e293b; overflow: hidden; aspect-ratio: 16/9; cursor: crosshair;">
-                            <canvas id="zoneCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
-                            <div id="zoneEmptyState" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                                <i class="fas fa-draw-polygon" style="font-size: 24px; color: #4a5568; margin-bottom: 8px; display: block;"></i>
-                                <div style="font-size: 11px; color: #4a5568;">Click "Load Snapshot" then click to draw a detection zone polygon</div>
+                            <div id="aiNotificationsGroup" style="display: none;">
+                                <button type="button" onclick="openNotifyModal()" style="width: 100%; background: rgba(72,187,120,0.07); border: 1px solid rgba(72,187,120,0.45); border-radius: 10px; padding: 14px 16px; cursor: pointer; color: var(--text-title); text-align: left;">
+                                    <div style="font-size: 12.5px; font-weight: 600; color: var(--rules-title-color, #9ae6b4);">Notification Rules</div>
+                                    <div id="notifySummary" class="ai-hint" style="margin-top: 4px;">Notifications disabled</div>
+                                </button>
+                                <!-- Hidden inputs carry values into the save payload -->
+                                <input type="hidden" id="notifyAiEnabled" value="false">
+                                <input type="hidden" id="notifyAiCooldown" value="60">
+                                <input type="hidden" id="notifyAiTargetsJson" value='["person","vehicle"]'>
+                                <input type="hidden" id="notifyAiAttachImage" value="false">
+                                <input type="hidden" id="notifyAiZoneFilter" value="">
+                                <input type="hidden" id="notifyAiSchedulesJson" value="[]">
                             </div>
                         </div>
-                        <div style="color: #718096; font-size: 10px; margin-top: 4px;">
-                            Draw a polygon zone. Only detections inside this zone will trigger events. Leave empty to monitor the full frame.
-                        </div>
-                    </div>
+                    </div> <!-- End of aiTwoColumnWrapper -->
 
-                    <div id="aiCopySettingsGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 12px; border-top: 1px dashed #2d3748;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <div style="font-size: 12px; color: #a0aec0; font-weight: 600;">Copy AI Settings to Other Cameras</div>
-                        </div>
-                        <button type="button" onclick="openCopyAiSettingsModal()" style="padding: 6px 14px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
-                            <i class="fas fa-copy"></i> Copy Settings to Cameras...
-                        </button>
-                        <div style="color: #718096; font-size: 10px; margin-top: 4px;">
-                            Copies event source, AI model, targets, and sensitivity to selected cameras. Motion zones are NOT copied.
-                        </div>
-                    </div>
 
-                    <div id="aiInstallGroup" style="display: none; margin-left: 24px; margin-top: 12px;">
+                    <div id="aiInstallGroup" style="display: none; margin-top: 12px;">
                         <div style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 12px;">
                             <div style="font-weight: bold; color: #f6ad55; font-size: 13px; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Local AI Dependencies Missing</div>
-                            <div style="color: #cbd5e0; font-size: 12px; line-height: 1.4;">The required AI libraries (<code>ultralytics</code> and <code>opencv-python-headless</code>) are not installed on this server. This is required for local object detection.</div>
+                            <div style="color: var(--text-body); font-size: 12px; line-height: 1.4;">The required AI libraries (<code>ultralytics</code> and <code>opencv-python-headless</code>) are not installed on this server. This is required for local object detection.</div>
                         </div>
                         <div style="margin-top: 10px;">
-                            <div style="font-size: 11px; font-weight: 600; color: #a0aec0; margin-bottom: 6px;">PyTorch Backend:</div>
+                            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">PyTorch Backend:</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;">
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid #2d3748;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: var(--input-bg); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
                                     <input type="radio" name="aiBackend" value="cpu" checked style="width: auto; accent-color: #3182ce;">
                                     <div>
-                                        <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">CPU Only</span>
-                                        <span style="font-size: 10px; color: #718096; margin-left: 6px;">~200MB download, works everywhere</span>
+                                        <span style="font-size: 12px; font-weight: 600; color: var(--text-title);">CPU Only</span>
+                                        <span style="font-size: 10px; color: var(--text-muted); margin-left: 6px;">~200MB download, works everywhere</span>
                                     </div>
                                 </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid #2d3748;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: var(--input-bg); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
                                     <input type="radio" name="aiBackend" value="cuda" style="width: auto; accent-color: #48bb78;">
                                     <div>
-                                        <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">NVIDIA CUDA GPU</span>
-                                        <span style="font-size: 10px; color: #718096; margin-left: 6px;">~2.5GB download, requires NVIDIA GPU</span>
+                                        <span style="font-size: 12px; font-weight: 600; color: var(--text-title);">NVIDIA CUDA GPU</span>
+                                        <span style="font-size: 10px; color: var(--text-muted); margin-left: 6px;">~2.5GB download, requires NVIDIA GPU</span>
                                     </div>
                                 </label>
-                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 6px; border: 1px solid #2d3748;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: var(--input-bg); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
                                     <input type="radio" name="aiBackend" value="mps" style="width: auto; accent-color: #9f7aea;">
                                     <div>
-                                        <span style="font-size: 12px; font-weight: 600; color: #e2e8f0;">Apple Silicon (MPS)</span>
-                                        <span style="font-size: 10px; color: #718096; margin-left: 6px;">Auto-detect, uses Metal on macOS</span>
+                                        <span style="font-size: 12px; font-weight: 600; color: var(--text-title);">Apple Silicon (MPS)</span>
+                                        <span style="font-size: 10px; color: var(--text-muted); margin-left: 6px;">Auto-detect, uses Metal on macOS</span>
                                     </div>
                                 </label>
                             </div>
                         </div>
-                        <button type="button" class="btn-submit" id="installAiBtn" onclick="startAiInstallation()" style="margin-top: 15px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                            <i class="fas fa-download"></i> Install AI Dependencies
-                        </button>
+                        <div style="margin-top: 15px;">
+                            <button type="button" class="btn btn-primary" id="installAiBtn" onclick="startAiInstallation()" style="padding: 8px 18px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-download"></i> Install AI Dependencies
+                            </button>
+                        </div>
                         <div id="aiInstallProgressContainer" style="display: none; margin-top: 15px;">
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                                 <span id="aiInstallStatusText" style="font-size: 12px; font-weight: 600; color: #3182ce;">Installing...</span>
@@ -3163,47 +3605,63 @@ def get_web_ui_html(current_settings=None):
                             <pre id="aiInstallLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
                         </div>
                     </div>
-                    
-                    <div id="aiTestEventGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3748;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Test Event Delivery</div>
-                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" class="btn" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
-                                <i class="fas fa-paper-plane"></i> Send Test ONVIF Event
-                            </button>
-                            <button type="button" class="btn" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
-                                <i class="fas fa-user"></i> Person
-                            </button>
-                            <button type="button" class="btn" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
-                                <i class="fas fa-car"></i> Vehicle
-                            </button>
-                            <button type="button" class="btn" id="btnTestAnimalEvent" onclick="sendTestOnvifEvent('animal')" disabled style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #38a169 0%, #2f855a 100%); color: white; border: none; border-radius: 4px; cursor: not-allowed; opacity: 0.5; transition: all 0.2s ease;">
-                                <i class="fas fa-paw"></i> Animal
-                            </button>
-                            <button type="button" class="btn" id="btnTestPackageEvent" onclick="sendTestOnvifEvent('package')" disabled style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #dd6b20 0%, #c05621 100%); color: white; border: none; border-radius: 4px; cursor: not-allowed; opacity: 0.5; transition: all 0.2s ease;">
-                                <i class="fas fa-box"></i> Package
-                            </button>
-                            <span id="aiTestEventFeedback" style="font-size: 11px; color: #a0aec0;"></span>
-                        </div>
-                        <div style="color: #718096; font-size: 10px; margin-top: 5px;">
-                            Sends a 3-second motion event to all ONVIF clients (e.g., UniFi Protect) currently subscribed to this camera.
-                        </div>
-                    </div>
-                    
-                    <div id="aiUninstallGroup" style="display: none; margin-left: 24px; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #2d3748;">
-                        <div style="font-size: 12px; color: #a0aec0; font-weight: 600; margin-bottom: 8px;">Maintenance</div>
-                        <button type="button" class="btn" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background-color: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s ease;">
-                            <i class="fas fa-trash-alt"></i> Uninstall AI Dependencies
-                        </button>
-                        <div style="color: #718096; font-size: 10px; margin-top: 5px;">
-                            Uninstalls YOLO framework, PyTorch, and related components from the python environment to free up disk space or allow a fresh reinstall.
+
+                    <div id="aiBottomActionsWrapper" style="display: none; grid-template-columns: 1fr; margin-bottom: 25px;">
+                        <div class="ai-card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px;">
+                            <div id="aiTestEventGroup" style="display: none; grid-column: 1 / -1;">
+                                <div class="ai-field-label">Test Event Delivery</div>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <button type="button" class="btn btn-teal" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                        Send Test Event
+                                    </button>
+                                    <button type="button" class="btn btn-indigo" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                        Person
+                                    </button>
+                                    <button type="button" class="btn btn-violet" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                        Vehicle
+                                    </button>
+                                    <span id="aiTestEventFeedback" class="ai-hint"></span>
+                                </div>
+                                <div class="ai-hint" style="margin-top: 6px;">
+                                    Sends a 3-second motion event to all ONVIF clients (e.g. UniFi Protect) subscribed to this camera.
+                                </div>
+                            </div>
+
+                            <div id="aiCopySettingsGroup" style="display: none;">
+                                <div class="ai-field-label">Copy AI Settings</div>
+                                <button type="button" class="btn btn-indigo" onclick="openCopyAiSettingsModal()" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                    Copy to Cameras...
+                                </button>
+                                <div class="ai-hint" style="margin-top: 6px;">
+                                    Copies event source, AI model, targets, and sensitivity to other cameras.
+                                </div>
+                            </div>
+
+                            <div id="aiUninstallGroup" style="display: none;">
+                                <div class="ai-field-label">Maintenance</div>
+                                <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                    Uninstall AI Dependencies
+                                </button>
+                                <div class="ai-hint" style="margin-top: 6px;">
+                                    Removes the YOLO framework, PyTorch, and related components from the server.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- NETWORKING SECTION -->
                 <div id="form-sec-networking" class="form-section">
+                    <div id="non-linux-network-section" style="display: none; padding: 30px 20px; text-align: center; background: rgba(255, 255, 255, 0.03); border: 1px dashed var(--border-color); border-radius: 8px;">
+                        <i class="fas fa-info-circle" style="font-size: 28px; color: var(--btn-primary); margin-bottom: 12px; opacity: 0.8;"></i>
+                        <h4 style="margin: 0 0 8px 0; color: var(--text-title); font-size: 14px;">Linux Only Feature</h4>
+                        <p style="margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.5;">
+                            Network configuration (Virtual MACVLAN NICs, static IP assignments, and physical interface bridging) is only supported on Linux host installations.
+                        </p>
+                    </div>
+
                     <div id="linux-network-section">
-                        <div style="font-size: 14px; font-weight: 600; color: #a0aec0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                             <span>Network Settings (Linux Only)</span>
                         </div>
 
@@ -3220,14 +3678,14 @@ def get_web_ui_html(current_settings=None):
                                     <input type="checkbox" id="vnicKeepalive" style="width: auto; cursor: pointer;">
                                     <span class="form-label" style="margin: 0; font-weight: normal;">Enable Switch Keepalive (Pings gateway/broadcast every 60s)</span>
                                 </label>
-                                <div style="font-size: 11px; color: #718096; margin-left: 22px; margin-top: 4px; line-height: 1.4;">
+                                <div style="font-size: 11px; color: var(--text-muted); margin-left: 22px; margin-top: 4px; line-height: 1.4;">
                                     Highly recommended if using UniFi or switches that drop inactive MAC addresses, preventing streams from timing out.
                                 </div>
                             </div>
 
                             <div class="form-group" style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 20px;">
                                 <div style="font-size: 12px; color: #f6ad55; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
-                                <div style="font-size: 11px; color: #a0aec0; line-height: 1.4;">
+                                <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
                                     UniFi Protect requires each camera to have a unique MAC address.
                                 </div>
                             </div>
@@ -3246,11 +3704,11 @@ def get_web_ui_html(current_settings=None):
                                 </select>
                                 <div id="manual-interface-container" style="display: none; margin-top: 10px;">
                                     <input type="text" class="form-input" id="parentInterfaceManual" placeholder="Type interface name (e.g. ens34)">
-                                    <small style="color: #a0aec0; font-size: 11px; margin-top: 4px; display: block;">
+                                    <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
                                         Enter the exact name from 'ip link' command
                                     </small>
                                 </div>
-                                <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block;">
+                                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
                                     Select the physical network port to bridge with
                                 </small>
                             </div>
@@ -3309,6 +3767,9 @@ def get_web_ui_html(current_settings=None):
                 <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-engine')" id="settings-tab-engine">
                     <i class="fas fa-sliders-h"></i> Engine
                 </button>
+                <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-notifications')" id="settings-tab-notifications">
+                    <i class="fas fa-bell"></i> Notifications
+                </button>
                 <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-maintenance')" id="settings-tab-maintenance">
                     <i class="fas fa-wrench"></i> Maintenance
                 </button>
@@ -3320,7 +3781,7 @@ def get_web_ui_html(current_settings=None):
                     <div class="form-group">
                         <label class="form-label">Server IP / Hostname (for RTSP URLs)</label>
                         <input type="text" class="form-input" id="serverIp" placeholder="192.168.1.10">
-                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                        <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
                             Leave as 'localhost' for local access, or enter your server's IP address for network access
                         </small>
                     </div>
@@ -3328,30 +3789,12 @@ def get_web_ui_html(current_settings=None):
                     <div class="form-group">
                         <label class="form-label">RTSP Server Port</label>
                         <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554">
-                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                        <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
                             The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.
                         </small>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">UI Theme</label>
-                        <select class="form-input" id="themeSelect">
-                            <option value="classic">Classic (Purple Gradient)</option>
-                            <option value="dark">Modern Dark (Blue Contrast)</option>
-                            <option value="nord">Nordic Frost (Arctic Blue)</option>
-                            <option value="dracula">Dracula (Pro Dark)</option>
-                            <option value="solar-light">Solarized Light (Earthy Warmth)</option>
-                            <option value="midnight">Midnight Ocean (Deep Blue)</option>
-                            <option value="emerald">Emerald Forest (Nature Green)</option>
-                            <option value="sunset">Sunset Glow (Vibrant Gradient)</option>
-                            <option value="matrix">Matrix Code (Digital Rain)</option>
-                            <option value="slate">Slate Professional (Neutral Grey)</option>
-                            <option value="cyberpunk">Cyberpunk 2077 (Neon Yellow)</option>
-                            <option value="amoled">Amoled Black (Pure OLED)</option>
-                            <option value="ui">UI</option>
-                        </select>
-                    </div>
-                    
+
                     <div class="form-group">
                         <label class="form-label">Dashboard Layout</label>
                         <select class="form-input" id="gridColumnsSelect">
@@ -3374,7 +3817,7 @@ def get_web_ui_html(current_settings=None):
                             <input type="checkbox" id="autoBoot" style="width: auto; cursor: pointer;">
                             <span class="form-label" style="margin: 0;">Auto-start on System Boot (Ubuntu Service)</span>
                         </label>
-                        <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                        <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
                             Creates and enables a systemd service to start this server automatically when the computer turns on.
                         </small>
                     </div>
@@ -3419,7 +3862,7 @@ def get_web_ui_html(current_settings=None):
                                 <input type="checkbox" id="authEnabled" style="width: auto; cursor: pointer;" onchange="toggleAuthFields()">
                                 <span class="form-label" style="margin: 0; color: #667eea; font-weight: 700;">Enable Web Interface Login</span>
                             </label>
-                            <small style="color: #718096; font-size: 12px; margin-top: 4px; display: block;">
+                            <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
                                 Require a username and password to access this dashboard.
                             </small>
                         </div>
@@ -3444,7 +3887,7 @@ def get_web_ui_html(current_settings=None):
                             <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
                             <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
                         </label>
-                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
                             Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
                         </small>
                     </div>
@@ -3454,7 +3897,7 @@ def get_web_ui_html(current_settings=None):
                             <input type="checkbox" id="debugMode" style="width: auto; cursor: pointer;">
                             <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Debug Mode (Show detailed logs)</span>
                         </label>
-                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
                             Enables verbose MediaMTX logging. Helpful for troubleshooting stream issues.
                         </small>
                     </div>
@@ -3467,7 +3910,7 @@ def get_web_ui_html(current_settings=None):
                                 Stream Watchdog (Experimental)
                             </span>
                         </label>
-                        <small style="color: #718096; font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
                             Monitors running streams and automatically restarts MediaMTX if a stream is dead or stale for &gt;2 minutes.
                             Disabled by default. May cause unexpected restarts — enable only if you experience persistent stream failures.
                         </small>
@@ -3553,6 +3996,241 @@ def get_web_ui_html(current_settings=None):
                     </div>
                 </div>
                 
+                <!-- Tab 5: Notifications -->
+                <div id="settings-notifications" class="settings-tab-content">
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-bell"></i> <span>System Notifications Setup</span>
+                        </div>
+                        <p style="color: var(--text-body); font-size: 12px; margin-bottom: 15px; line-height: 1.4;">
+                            Configure notification services to receive alerts for server state changes, errors, and AI detections. You can enable multiple notification methods simultaneously.
+                        </p>
+                    </div>
+
+                    <!-- Notification Providers (Collapsible Cards) -->
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                        
+                        <!-- Pushover -->
+                        <div class="card" style="border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; background: var(--card-bg);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-title); font-size: 13px;">
+                                    <i class="fab fa-bell" style="color: #307ecc;"></i> Pushover
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="testSingleProvider('pushover')">Send test notification</button>
+                                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 48px; height: 24px; margin: 0;">
+                                        <input type="checkbox" id="notify_pushover_enabled" onchange="toggleProviderFields('pushover')" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="fields_pushover" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">To use Pushover, create an application in your Pushover dashboard to get an API Token, and find your User Key on your main dashboard.</p>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label class="form-label" style="font-size: 11px;">API Token / Key</label>
+                                    <input type="text" class="form-input" id="notify_pushover_api_token" style="font-size: 12px; padding: 6px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 4px;">
+                                    <label class="form-label" style="font-size: 11px;">User Key</label>
+                                    <input type="text" class="form-input" id="notify_pushover_user_key" style="font-size: 12px; padding: 6px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ntfy -->
+                        <div class="card" style="border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; background: var(--card-bg);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-title); font-size: 13px;">
+                                    <i class="fas fa-paper-plane" style="color: #ff9f1c;"></i> ntfy
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="testSingleProvider('ntfy')">Send test notification</button>
+                                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 48px; height: 24px; margin: 0;">
+                                        <input type="checkbox" id="notify_ntfy_enabled" onchange="toggleProviderFields('ntfy')" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="fields_ntfy" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your ntfy server URL and a unique topic name to subscribe to. Leave Username and Password blank if your server does not require authentication.</p>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label class="form-label" style="font-size: 11px;">Server URL</label>
+                                    <input type="text" class="form-input" id="notify_ntfy_server_url" placeholder="https://ntfy.sh" style="font-size: 12px; padding: 6px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label class="form-label" style="font-size: 11px;">Topic</label>
+                                    <input type="text" class="form-input" id="notify_ntfy_topic" style="font-size: 12px; padding: 6px;">
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div class="form-group" style="margin-bottom: 4px;">
+                                        <label class="form-label" style="font-size: 11px;">Username (Optional)</label>
+                                        <input type="text" class="form-input" id="notify_ntfy_username" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 4px;">
+                                        <label class="form-label" style="font-size: 11px;">Password (Optional)</label>
+                                        <input type="password" class="form-input" id="notify_ntfy_password" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gotify -->
+                        <div class="card" style="border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; background: var(--card-bg);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-title); font-size: 13px;">
+                                    <i class="fas fa-comments" style="color: #48bb78;"></i> Gotify
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="testSingleProvider('gotify')">Send test notification</button>
+                                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 48px; height: 24px; margin: 0;">
+                                        <input type="checkbox" id="notify_gotify_enabled" onchange="toggleProviderFields('gotify')" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="fields_gotify" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your Gotify Server URL and an App Token generated from your Gotify UI.</p>
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label class="form-label" style="font-size: 11px;">Server URL</label>
+                                    <input type="text" class="form-input" id="notify_gotify_server_url" placeholder="https://gotify.mydomain.com" style="font-size: 12px; padding: 6px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 4px;">
+                                    <label class="form-label" style="font-size: 11px;">App Token</label>
+                                    <input type="text" class="form-input" id="notify_gotify_app_token" style="font-size: 12px; padding: 6px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bark -->
+                        <div class="card" style="border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; background: var(--card-bg);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-title); font-size: 13px;">
+                                    <i class="fas fa-dog" style="color: #f56565;"></i> Bark
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="testSingleProvider('bark')">Send test notification</button>
+                                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 48px; height: 24px; margin: 0;">
+                                        <input type="checkbox" id="notify_bark_enabled" onchange="toggleProviderFields('bark')" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="fields_bark" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your Bark URL, making sure it includes your unique device key at the end (e.g. https://api.day.app/YOUR_DEVICE_KEY).</p>
+                                <div class="form-group" style="margin-bottom: 4px;">
+                                    <label class="form-label" style="font-size: 11px;">Server URL (device key embedded, e.g. https://api.day.app/YOUR_KEY)</label>
+                                    <input type="text" class="form-input" id="notify_bark_server_url" placeholder="https://api.day.app/YOUR_KEY" style="font-size: 12px; padding: 6px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Apprise -->
+                        <div class="card" style="border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; background: var(--card-bg);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-title); font-size: 13px;">
+                                    <i class="fas fa-bullhorn" style="color: #ed64a6;"></i> Apprise (Requires apprise package)
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="testSingleProvider('apprise')">Send test notification</button>
+                                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 48px; height: 24px; margin: 0;">
+                                        <input type="checkbox" id="notify_apprise_enabled" onchange="toggleProviderFields('apprise')" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="fields_apprise" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Provide an Apprise connection URL to utilize over 80+ supported notification platforms. Ensure the python "apprise" package is installed.</p>
+                                <div class="form-group" style="margin-bottom: 4px;">
+                                    <label class="form-label" style="font-size: 11px;">Apprise Connection URL</label>
+                                    <input type="text" class="form-input" id="notify_apprise_url" placeholder="pover://user@token" style="font-size: 12px; padding: 6px;">
+                                </div>
+                                <button type="button" class="btn-submit" id="installAppriseBtn" onclick="startAppriseInstallation()" style="margin-top: 15px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; padding: 10px; background-color: #ed64a6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    <i class="fas fa-download"></i> Install Apprise Package
+                                </button>
+                                <div id="appriseInstallProgressContainer" style="display: none; margin-top: 15px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                        <span id="appriseInstallStatusText" style="font-size: 12px; font-weight: 600; color: #ed64a6;">Installing...</span>
+                                        <span id="appriseInstallSpinner"><i class="fas fa-spinner fa-spin" style="color: #ed64a6;"></i></span>
+                                    </div>
+                                    <pre id="appriseInstallLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SMTP Email -->
+                        <div class="card" style="border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; background: var(--card-bg);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-title); font-size: 13px;">
+                                    <i class="fas fa-envelope" style="color: var(--btn-primary);"></i> SMTP Email
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <button type="button" class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="testSingleProvider('smtp')">Send test notification</button>
+                                    <label class="toggle-switch" style="position: relative; display: inline-block; width: 48px; height: 24px; margin: 0;">
+                                        <input type="checkbox" id="notify_smtp_enabled" onchange="toggleProviderFields('smtp')" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="fields_smtp" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                                <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your SMTP server configuration. Ensure you use an App Password if required by your email provider (like Gmail).</p>
+                                <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-bottom: 8px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" style="font-size: 11px;">SMTP Host</label>
+                                        <input type="text" class="form-input" id="notify_smtp_host" placeholder="smtp.gmail.com" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Port</label>
+                                        <input type="number" class="form-input" id="notify_smtp_port" value="587" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Username (Optional)</label>
+                                        <input type="text" class="form-input" id="notify_smtp_username" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" style="font-size: 11px;">Password (Optional)</label>
+                                        <input type="password" class="form-input" id="notify_smtp_password" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" style="font-size: 11px;">From Email Address</label>
+                                        <input type="text" class="form-input" id="notify_smtp_from_addr" placeholder="sender@gmail.com" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" style="font-size: 11px;">To Email Address(es)</label>
+                                        <input type="text" class="form-input" id="notify_smtp_to_addrs" placeholder="receiver@gmail.com" style="font-size: 12px; padding: 6px;">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 4px;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="checkbox" id="notify_smtp_use_tls" style="width: auto; cursor: pointer;" checked>
+                                        <span style="font-size: 11px; color: var(--text-body);">Use STARTTLS (if disabled, SMTP-SSL will be used)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Event triggers checklist -->
+                    <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Select Event Notification Triggers</div>
+                        <div id="notification-events-checklist" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <!-- Dynamically loaded checkboxes -->
+                        </div>
+                    </div>
+
+                    <!-- Global Test Button & Status -->
+                    <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
+                        <button type="button" class="btn btn-secondary" onclick="testAllProviders()" style="background: rgba(72, 187, 120, 0.15); border: 1px solid rgba(72, 187, 120, 0.3); color: #48bb78; font-weight: 600;">
+                            <i class="fas fa-bell"></i> Send Test to All Enabled Providers
+                        </button>
+                        <div id="test-notifications-status" style="font-size: 11px; text-align: center; min-height: 15px;"></div>
+                    </div>
+                </div>
+                
                 <button id="settings-save-btn" type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
             </form>
 
@@ -3571,7 +4249,7 @@ def get_web_ui_html(current_settings=None):
                             <i class="fas fa-network-wired"></i> Reset All MACs
                         </button>
                     </div>
-                    <small style="color: #718096; font-size: 11px; margin-top: 8px; display: block;">
+                    <small style="color: var(--text-muted); font-size: 11px; margin-top: 8px; display: block;">
                         Warning: Resetting UUIDs or MAC addresses will force clients (like Ubiquiti or NVRs) to re-discover/re-add the cameras.
                     </small>
                 </div>
@@ -3675,7 +4353,7 @@ def get_web_ui_html(current_settings=None):
             <div id="update-modal-content">
                 <div id="docker-update-warning" style="display: none; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; color: #ed8936; line-height: 1.4; text-align: left;">
                     <i class="fas fa-exclamation-triangle"></i> <strong>Running in Docker:</strong> Self-updating through the Web UI is disabled to prevent configuration and data loss. Please update your container using:
-                    <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 8px; color: #cbd5e0; word-break: break-all; font-family: monospace;">git pull && docker compose down && docker compose up -d --build</code>
+                    <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 8px; color: var(--text-body); word-break: break-all; font-family: monospace;">git pull && docker compose down && docker compose up -d --build</code>
                 </div>
                 <div id="update-info" style="display: none;">
                     <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.3);">
@@ -3768,6 +4446,9 @@ def get_web_ui_html(current_settings=None):
                 // Legacy support for specific ID
                 const linuxSection = document.getElementById('linux-network-section');
                 if (linuxSection) linuxSection.style.display = 'none';
+
+                const nonLinuxSection = document.getElementById('non-linux-network-section');
+                if (nonLinuxSection) nonLinuxSection.style.display = 'block';
             }}
             // Hide host-reboot buttons when running inside Docker or on non-Linux
             if (isDocker || !isLinux) {{
@@ -4106,11 +4787,9 @@ def get_web_ui_html(current_settings=None):
             const overlay = document.getElementById('matrix-overlay');
             if (active) {{
                 overlay.classList.add('active');
-                
+
                 // Update URL to support bookmarking/direct link
-                const url = new URL(window.location.href);
-                url.searchParams.set('view', 'matrix');
-                window.history.replaceState({{}}, '', url.toString());
+                window.history.replaceState({{}}, '', '/matrix');
                 
                 // Initialize checkboxes from global settings
                 document.getElementById('matrixStretchToggle').checked = settings.matrixStretchFill === true;
@@ -4137,12 +4816,10 @@ def get_web_ui_html(current_settings=None):
                 renderMatrix();
             }} else {{
                 overlay.classList.remove('active');
-                
-                // Remove view=matrix from URL
-                const url = new URL(window.location.href);
-                url.searchParams.delete('view');
-                window.history.replaceState({{}}, '', url.toString());
-                
+
+                // Return to the dashboard URL
+                window.history.replaceState({{}}, '', '/');
+
                 stopCarousel();
                 focusedCameraId = null;
                 // Stop any video players in matrix
@@ -4557,8 +5234,8 @@ def get_web_ui_html(current_settings=None):
                         return `
                             <div class="matrix-item ${{isFocused ? 'focused' : ''}} ${{hasAiAlert ? 'ai-alert' : ''}}" data-id="${{cam.id}}" draggable="true" ondragstart="handleDragStart(event, ${{cam.id}})" ondragover="handleDragOver(event)" ondrop="handleDrop(event, ${{cam.id}})" ondragend="handleDragEnd(event)" ondblclick="toggleCameraFocus(${{cam.id}})" style="display: flex; align-items: center; justify-content: center; background: #1a202c; border: 1px solid var(--border-color); flex-direction: column;">
                                 <div class="matrix-label">${{cam.name}}</div>
-                                <div style="font-size: 24px; color: #a0aec0; margin-bottom: 5px;"><i class="fas fa-video-slash"></i></div>
-                                <div style="color: #a0aec0; font-size: 12px; font-weight: 500;">Substream Disabled</div>
+                                <div style="font-size: 24px; color: var(--text-muted); margin-bottom: 5px;"><i class="fas fa-video-slash"></i></div>
+                                <div style="color: var(--text-muted); font-size: 12px; font-weight: 500;">Substream Disabled</div>
                             </div>
                         `;
                     }}
@@ -4678,36 +5355,52 @@ def get_web_ui_html(current_settings=None):
                             }}
                             <button class="icon-btn icon-btn-edit" onclick="openEditModal(${{cam.id}})" title="Edit"><i class="fas fa-edit"></i> Edit</button>
                             <button class="icon-btn icon-btn-delete" onclick="deleteCamera(${{cam.id}})" title="Delete"><i class="fas fa-trash"></i> Delete</button>
+                            <button class="icon-btn icon-btn-autostart" onclick="toggleAutoStart(${{cam.id}}, ${{!cam.autoStart}})" title="Auto-start on server startup"><i class="fa-solid ${{cam.autoStart ? 'fa-toggle-on' : 'fa-toggle-off'}}" style="${{cam.autoStart ? 'color: var(--btn-primary);' : 'opacity: 0.6;'}}"></i> Auto</button>
                         </div>
                     </div>
                     
                     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
-                        <div class="status-badge ${{cam.assignedIp ? 'running' : ''}}" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; ${{!cam.assignedIp ? 'background: #4a5568; color: white;' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
-                        <div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4a5568; color: white;" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
-                        ${{cam.uuid ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #805ad5; color: white;" title="UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
+                        <div class="info-badge ${{cam.assignedIp ? 'info-badge-green' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
+                        <div class="info-badge" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
+                        ${{cam.uuid ? `<div class="info-badge info-badge-purple" title="UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
                         ${{(() => {{
                             let onvifText = 'ONVIF: Offline';
-                            let onvifBg = '#4a5568';
+                            let onvifClass = '';
                             let onvifTooltip = 'Camera is offline/stopped.';
                             if (cam.status === 'running') {{
                                 const subs = cam.onvifActiveSubscriptions || 0;
                                 const ips = cam.onvifSubscribersIPs || [];
                                 if (subs > 0) {{
                                     onvifText = 'ONVIF: (' + subs + ')';
-                                    onvifBg = '#48bb78';
+                                    onvifClass = 'info-badge-green';
                                     const ipListStr = ips.length > 0 ? ' (IPs: ' + ips.join(', ') + ')' : '';
                                     onvifTooltip = 'ONVIF Events Subscription is Active: ' + subs + ' NVR/Client(s)' + ipListStr + ' are actively subscribed to receive ONVIF events.';
                                 }} else {{
                                     onvifText = 'ONVIF: No Subs';
-                                    onvifBg = '#e53e3e';
+                                    onvifClass = 'info-badge-red';
                                     onvifTooltip = 'ONVIF Events: No NVR/Client is currently subscribed to events from this virtual camera. If the camera is not receiving ONVIF events in Protect, try removing the camera from Protect and adding it again.';
                                 }}
                             }}
-                            return '<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: ' + onvifBg + '; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="' + onvifTooltip.replace(/"/g, '&quot;') + '">' + onvifText + '</div>';
+                            return '<div class="info-badge ' + onvifClass + '" style="display: flex; align-items: center; gap: 4px;" title="' + onvifTooltip.replace(/"/g, '&quot;') + '">' + onvifText + '</div>';
                         }})()}}
-                        ${{cam.enableAudio ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #4299e1; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio: RTSP audio stream forwarding is enabled for main/sub streams (AAC format).">Audio</div>` : ''}}
-                        ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="status-badge" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #3182ce; color: white; display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="Audio Transcoded: Audio stream is actively transcoded to AAC format for compatibility (e.g. with UniFi Protect).">Audio Transcoded</div>` : ''}}
-                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="status-badge ai-badge" data-count="${{cam.aiDetectionCount || 0}}" style="width: auto; height: auto; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ecc94b; color: #744210; display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; transition: transform 0.2s;" onclick="event.stopPropagation(); toggleONVIFView(true, ${{cam.id}}, 'ai');" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}. Click to view AI events.">AI: ${{cam.aiDetectionCount || 0}}</div>` : ''}}
+                        ${{cam.enableAudio ? `<div class="info-badge info-badge-blue" style="display: flex; align-items: center; gap: 4px;" title="Audio: RTSP audio stream forwarding is enabled for main/sub streams (AAC format).">Audio</div>` : ''}}
+                        ${{(cam.transcodeMainAudio || cam.transcodeSubAudio) ? `<div class="info-badge info-badge-blue" style="display: flex; align-items: center; gap: 4px;" title="Audio Transcoded: Audio stream is actively transcoded to AAC format for compatibility (e.g. with UniFi Protect).">Audio Transcoded</div>` : ''}}
+                        ${{cam.eventSource === 'ai' && cam.enableEventForwarding ? `<div class="info-badge info-badge-yellow ai-badge" data-count="${{cam.aiDetectionCount || 0}}" style="display: flex; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.2s;" onclick="event.stopPropagation(); toggleONVIFView(true, ${{cam.id}}, 'ai');" title="AI: Local AI object detection is active on this stream, analyzing for targets: ${{cam.aiTargets ? cam.aiTargets.join(', ') : 'person, vehicle'}} using model ${{cam.aiModel}}. Click to view AI events.">AI: ${{cam.aiDetectionCount || 0}}</div>` : ''}}
+                        ${{(() => {{
+                            const sp = cam.streamProbe || {{}};
+                            if (!sp.mismatch) return '';
+                            const parts = [];
+                            ['main', 'sub'].forEach(k => {{
+                                const e = sp[k];
+                                if (e && e.mismatch) {{
+                                    let detail = (k === 'main' ? 'Main' : 'Sub') + ': configured ' + e.configuredWidth + 'x' + e.configuredHeight + ' but source is ' + e.width + 'x' + e.height;
+                                    if (e.codec && e.codec !== 'h264') detail += ' ' + e.codec.toUpperCase();
+                                    parts.push(detail);
+                                }}
+                            }});
+                            const tip = 'Stream mismatch detected — ' + parts.join(' | ') + '. NVRs like UniFi Protect may flap this camera between resolution classes. Click to update this camera\\'s settings to match the actual stream.';
+                            return '<div class="info-badge info-badge-red" style="cursor: pointer;" onclick="event.stopPropagation(); syncStreamProbe(' + cam.id + ');" title="' + tip.replace(/"/g, '&quot;') + '">Resolution Mismatch</div>';
+                        }})()}}
                     </div>
                 </div>
                 
@@ -4716,9 +5409,9 @@ def get_web_ui_html(current_settings=None):
                     ${{cam.status === 'running' 
                         ? (cam.disableSubstream 
                             ? `<div class="video-placeholder" style="background: #1a202c; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                                <div style="font-size: 48px; color: #a0aec0; margin-bottom: 10px;"><i class="fas fa-video-slash"></i></div>
+                                <div style="font-size: 48px; color: var(--text-muted); margin-bottom: 10px;"><i class="fas fa-video-slash"></i></div>
                                 <div style="color: #e2e8f0; font-weight: 500;">Substream Disabled</div>
-                                <div style="font-size: 12px; color: #a0aec0; margin-top: 4px;">Enable substream in settings to preview video here</div>
+                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Enable substream in settings to preview video here</div>
                                </div>`
                             : `<video id="player-${{cam.id}}" autoplay muted playsinline></video>
                                <button class="fullscreen-btn" onclick="toggleFullScreenPlayer(${{cam.id}})" title="Maximize">Full Screen</button>`)
@@ -4763,17 +5456,30 @@ def get_web_ui_html(current_settings=None):
                         </div>
                     </div>
                 </div>
-                
-                <div class="auto-start-row">
-                    <span class="auto-start-label">Auto-start on server startup</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" ${{cam.autoStart ? 'checked' : ''}} onchange="toggleAutoStart(${{cam.id}}, this.checked)">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
             `;
         }}
         
+        async function syncStreamProbe(camId) {{
+            const cam = cameras.find(c => c.id === camId);
+            const name = cam ? cam.name : 'this camera';
+            if (!confirm(`Update ${{name}}'s configured resolution and framerate to match the actual source stream? If the camera is already adopted in an NVR, restart the camera afterwards so the new values are reported.`)) return;
+            try {{
+                const res = await fetch(`/api/cameras/${{camId}}/sync-stream-info`, {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }} }});
+                const data = await res.json();
+                if (!res.ok) {{
+                    alert(data.error || 'Sync failed');
+                    return;
+                }}
+                const parts = [];
+                if (data.applied && data.applied.main) parts.push('Main: ' + data.applied.main);
+                if (data.applied && data.applied.sub) parts.push('Sub: ' + data.applied.sub);
+                alert('Camera settings updated to match the source stream. ' + parts.join(', '));
+                loadData();
+            }} catch (e) {{
+                alert('Sync failed: ' + e);
+            }}
+        }}
+
         async function copyToClipboard(text, btn) {{
             // Attempt to resolve button if not passed explicitly (for backward compatibility)
             if (!btn && window.event) btn = window.event.target;
@@ -5087,7 +5793,7 @@ def get_web_ui_html(current_settings=None):
                     <div class="video-placeholder">
                         <div style="font-size: 48px;"></div>
                         <div>${{message}}</div>
-                        <div style="font-size: 12px; color: #a0aec0;">Check camera connection</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Check camera connection</div>
                     </div>
                 `;
             }}
@@ -5302,7 +6008,13 @@ def get_web_ui_html(current_settings=None):
             updateAiConfidenceDisplay(50);
             currentZonePoints = [];
             zoneSnapshotLoaded = false;
-            
+            _zProfiles = {{}};
+            _zActiveProfile = '';
+            updateZoneProfileSummary();
+            _nmState = {{ enabled: false, cooldown: 60, targets: ['person','vehicle'], attachImage: false, zoneFilter: '', schedules: [] }};
+            _nmFlushToHiddenInputs();
+            updateNotifySummary();
+
             toggleOnvifCredFields();
             toggleEventForwardingFields();
             toggleSmartOnvifWarning();
@@ -5410,6 +6122,26 @@ def get_web_ui_html(current_settings=None):
             updateAiConfidenceDisplay(conf);
             currentZonePoints = camera.aiZone || [];
             zoneSnapshotLoaded = false;
+            _zProfiles = JSON.parse(JSON.stringify(camera.aiZoneProfiles || {{}}));
+            _zActiveProfile = camera.aiActiveZoneProfile || '';
+            // Migrate legacy aiZone into profile "A" if profiles are empty and a zone exists
+            if (!Object.keys(_zProfiles).length && currentZonePoints.length >= 3) {{
+                _zProfiles['A'] = JSON.parse(JSON.stringify(currentZonePoints));
+                _zActiveProfile = _zActiveProfile || 'A';
+            }}
+            updateZoneProfileSummary();
+            
+            // Populate Notifications hidden inputs (modal state loaded separately on open)
+            _nmState = {{
+                enabled: camera.notifyAiEnabled === true,
+                cooldown: camera.notifyAiCooldown !== undefined ? camera.notifyAiCooldown : 60,
+                targets: camera.notifyAiTargets || ['person', 'vehicle'],
+                attachImage: camera.notifyAiAttachImage === true,
+                zoneFilter: camera.notifyAiZoneFilter || '',
+                schedules: JSON.parse(JSON.stringify(camera.notifyAiSchedules || [])),
+            }};
+            _nmFlushToHiddenInputs();
+            updateNotifySummary();
             
             toggleOnvifCredFields();
             toggleEventForwardingFields();
@@ -5499,7 +6231,6 @@ def get_web_ui_html(current_settings=None):
                 console.error("Failed to check AI status:", err);
             }}
         }}
-
         function updateAiUiState() {{
             const source = document.getElementById('eventSource').value;
             const checked = document.getElementById('enableEventForwarding').checked;
@@ -5511,28 +6242,50 @@ def get_web_ui_html(current_settings=None):
             const aiHwInfoGroup = document.getElementById('aiHardwareInfoGroup');
             const aiUninstallGroup = document.getElementById('aiUninstallGroup');
             
+            const infoBox = document.getElementById('aiSettingsInfoBox');
+            const infoDivider = document.getElementById('aiInfoBoxDivider');
+            const aiModelDesc = document.getElementById('aiModelDescription');
+            
+            const colWrapper = document.getElementById('aiTwoColumnWrapper');
+            const actionsWrapper = document.getElementById('aiBottomActionsWrapper');
+            
             if (checked && source === 'ai') {{
                 if (isAiInstalled) {{
+                    if (colWrapper) colWrapper.style.display = 'grid';
+                    if (actionsWrapper) actionsWrapper.style.display = 'grid';
                     if (aiTargetGroup) aiTargetGroup.style.display = 'block';
                     if (aiModelGroup) {{
                         aiModelGroup.style.display = 'block';
                         updateModelDescription();
                     }}
                     if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'block';
+                    if (aiModelDesc) aiModelDesc.style.display = 'block';
+                    if (infoDivider) infoDivider.style.display = 'block';
+                    if (infoBox) infoBox.style.display = 'flex';
                     if (smartGroup) smartGroup.style.display = 'block';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'none';
                     if (aiUninstallGroup) aiUninstallGroup.style.display = 'block';
                 }} else {{
+                    if (colWrapper) colWrapper.style.display = 'none';
+                    if (actionsWrapper) actionsWrapper.style.display = 'none';
                     if (aiTargetGroup) aiTargetGroup.style.display = 'none';
                     if (aiModelGroup) aiModelGroup.style.display = 'none';
                     if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
+                    if (aiModelDesc) aiModelDesc.style.display = 'none';
+                    if (infoDivider) infoDivider.style.display = 'none';
+                    if (infoBox) infoBox.style.display = 'none';
                     if (smartGroup) smartGroup.style.display = 'none';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'block';
                     if (aiUninstallGroup) aiUninstallGroup.style.display = 'none';
                 }}
             }} else {{
+                if (colWrapper) colWrapper.style.display = 'none';
+                if (actionsWrapper) actionsWrapper.style.display = 'none';
                 if (aiModelGroup) aiModelGroup.style.display = 'none';
                 if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
+                if (aiModelDesc) aiModelDesc.style.display = 'none';
+                if (infoDivider) infoDivider.style.display = 'none';
+                if (infoBox) infoBox.style.display = 'none';
                 if (smartGroup) smartGroup.style.display = 'none';
                 if (aiInstallGroup) aiInstallGroup.style.display = 'none';
                 if (aiUninstallGroup) aiUninstallGroup.style.display = 'none';
@@ -5700,6 +6453,88 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
 
+        let appriseInstallInterval = null;
+
+        async function checkAppriseInstalled() {{
+            try {{
+                const resp = await fetch('/api/apprise/status');
+                const data = await resp.json();
+                const btn = document.getElementById('installAppriseBtn');
+                const container = document.getElementById('appriseInstallProgressContainer');
+                if (data.installed && btn) {{
+                    btn.style.display = 'none';
+                    if (container) container.style.display = 'none';
+                    // Show installed badge
+                    const existing = document.getElementById('appriseInstalledBadge');
+                    if (!existing) {{
+                        const badge = document.createElement('div');
+                        badge.id = 'appriseInstalledBadge';
+                        badge.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:11px;color:#48bb78;font-weight:600;margin-top:10px;';
+                        badge.innerHTML = '<i class="fas fa-check-circle"></i> Apprise package installed (v' + (data.version || '?') + ')';
+                        btn.parentNode.insertBefore(badge, btn);
+                    }}
+                }}
+            }} catch(e) {{}}
+        }}
+
+        async function startAppriseInstallation() {{
+            const btn = document.getElementById('installAppriseBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Installer...';
+            
+            try {{
+                const response = await fetch('/api/apprise/install', {{ method: 'POST' }});
+                const data = await response.json();
+                
+                document.getElementById('appriseInstallProgressContainer').style.display = 'block';
+                pollAppriseInstallProgress();
+                appriseInstallInterval = setInterval(pollAppriseInstallProgress, 1000);
+            }} catch (err) {{
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-download"></i> Install Apprise Package';
+                alert("Failed to start installation: " + err);
+            }}
+        }}
+
+        async function pollAppriseInstallProgress() {{
+            try {{
+                const response = await fetch('/api/apprise/install/progress');
+                const data = await response.json();
+                
+                const logBox = document.getElementById('appriseInstallLogs');
+                if (logBox && data.log) {{
+                    logBox.textContent = data.log.join('\\n');
+                    logBox.scrollTop = logBox.scrollHeight;
+                }}
+                
+                const statusText = document.getElementById('appriseInstallStatusText');
+                const spinner = document.getElementById('appriseInstallSpinner');
+                const installBtn = document.getElementById('installAppriseBtn');
+                
+                if (data.status === 'success') {{
+                    clearInterval(appriseInstallInterval);
+                    statusText.textContent = "Installation Completed Successfully!";
+                    statusText.style.color = "#48bb78";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-check-circle" style="color: #48bb78;"></i>';
+                }} else if (data.status === 'failed') {{
+                    clearInterval(appriseInstallInterval);
+                    statusText.textContent = "Operation Failed!";
+                    statusText.style.color = "#f56565";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-times-circle" style="color: #f56565;"></i>';
+                    if (installBtn) {{
+                        installBtn.disabled = false;
+                        installBtn.innerHTML = '<i class="fas fa-redo"></i> Retry Installation';
+                    }}
+                }} else {{
+                    statusText.textContent = "Installing Apprise Package (this may take a minute)...";
+                    statusText.style.color = "#ed64a6";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #ed64a6;"></i>';
+                }}
+            }} catch (err) {{
+                console.error("Error polling progress:", err);
+            }}
+        }}
+
         function closeModal() {{
             if (aiInstallInterval) {{
                 clearInterval(aiInstallInterval);
@@ -5730,6 +6565,156 @@ def get_web_ui_html(current_settings=None):
             if (selectedSec) selectedSec.classList.add('active');
         }}
 
+        // ========== AI Alerts Modal ==========
+        const TAG_COLORS = {{ person: '#3182ce', vehicle: '#8b5cf6', animal: '#48bb78', package: '#ed8936' }};
+        let _aaAllAlerts = [];   // full list from server
+        let _aaFiltered = [];    // after camera + tag filter
+        let _aaIndex = 0;
+        let _aaTagFilter = '';
+        let _aaCamMap = {{}};     // camera_id -> camera name (from cameras array)
+
+        async function openAiAlertsModal() {{
+            document.getElementById('ai-alerts-modal').classList.add('active');
+            _buildAaCamFilter();
+            await _loadAaAlerts();
+        }}
+
+        function closeAiAlertsModal() {{
+            document.getElementById('ai-alerts-modal').classList.remove('active');
+        }}
+
+        function _buildAaCamFilter() {{
+            const sel = document.getElementById('ai-alerts-cam-filter');
+            const current = sel.value;
+            sel.innerHTML = '<option value="">All cameras</option>';
+            _aaCamMap = {{}};
+            if (typeof cameras !== 'undefined') {{
+                cameras.forEach(c => {{
+                    _aaCamMap[c.id] = c.name;
+                    const o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = c.name;
+                    sel.appendChild(o);
+                }});
+            }}
+            sel.value = current;
+        }}
+
+        async function _loadAaAlerts() {{
+            try {{
+                const resp = await fetch('/api/ai-alerts');
+                const data = await resp.json();
+                _aaAllAlerts = data.alerts || [];
+            }} catch(e) {{
+                console.error('Failed to load AI alerts:', e);
+                _aaAllAlerts = [];
+            }}
+            _aaApplyFilters();
+        }}
+
+        function _aaApplyFilters() {{
+            const camId = document.getElementById('ai-alerts-cam-filter').value;
+            _aaFiltered = _aaAllAlerts.filter(a => {{
+                if (camId && String(a.camera_id) !== String(camId)) return false;
+                if (_aaTagFilter && !(a.tags || []).includes(_aaTagFilter)) return false;
+                return true;
+            }});
+            _renderAaList();
+            _showAaAlert(0);
+        }}
+
+        function filterAiAlerts() {{ _aaApplyFilters(); }}
+
+        function setAiTagFilter(btn) {{
+            _aaTagFilter = btn.dataset.tag;
+            document.querySelectorAll('.aa-tag-btn').forEach(b => {{
+                const active = b === btn;
+                b.classList.toggle('aa-tag-active', active);
+                b.style.background = active ? '#4a5568' : '#2d3748';
+                b.style.color = active ? '#fff' : (TAG_COLORS[b.dataset.tag] || '#fff');
+            }});
+            _aaApplyFilters();
+        }}
+
+        function _renderAaList() {{
+            const list = document.getElementById('ai-alerts-list');
+            list.innerHTML = '';
+            if (!_aaFiltered.length) return;
+            _aaFiltered.forEach((a, i) => {{
+                const card = document.createElement('div');
+                card.dataset.idx = i;
+                card.style.cssText = 'display:flex;gap:8px;align-items:center;padding:6px;border-radius:6px;cursor:pointer;border:2px solid transparent;background:rgba(255,255,255,0.03);flex-shrink:0;';
+                card.onclick = () => _showAaAlert(i);
+                const thumb = document.createElement('img');
+                thumb.src = `/api/ai-alerts/image/${{a.file}}`;
+                thumb.loading = 'lazy';
+                thumb.style.cssText = 'width:72px;height:48px;object-fit:cover;border-radius:4px;flex-shrink:0;';
+                const meta = document.createElement('div');
+                meta.style.cssText = 'min-width:0;flex:1;';
+                const camName = _aaCamMap[a.camera_id] || `Cam ${{a.camera_id}}`;
+                const tagBadges = (a.tags||[]).map(t=>`<span style="background:${{TAG_COLORS[t]||'#718096'}};color:#fff;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;text-transform:capitalize;">${{t}}</span>`).join(' ');
+                meta.innerHTML = `<div style="font-size:10px;font-weight:600;color:#a0aec0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{camName}}</div><div style="margin:2px 0;">${{tagBadges}}</div><div style="font-size:9px;color:var(--text-muted);">${{new Date(a.ts).toLocaleTimeString()}} ${{new Date(a.ts).toLocaleDateString()}}</div>`;
+                card.appendChild(thumb);
+                card.appendChild(meta);
+                list.appendChild(card);
+            }});
+            document.getElementById('ai-alerts-modal-count').textContent = `${{_aaFiltered.length}} of ${{_aaAllAlerts.length}} alerts`;
+        }}
+
+        function _showAaAlert(i) {{
+            const empty = document.getElementById('ai-alerts-modal-empty');
+            const viewer = document.getElementById('ai-alerts-modal-viewer');
+            if (!_aaFiltered.length) {{
+                empty.style.display = 'flex';
+                viewer.style.display = 'none';
+                return;
+            }}
+            empty.style.display = 'none';
+            viewer.style.display = 'flex';
+            _aaIndex = Math.max(0, Math.min(i, _aaFiltered.length - 1));
+            const a = _aaFiltered[_aaIndex];
+            document.getElementById('ai-alerts-modal-img').src = `/api/ai-alerts/image/${{a.file}}`;
+            document.getElementById('ai-alerts-modal-counter').textContent = `${{_aaIndex + 1}} / ${{_aaFiltered.length}}`;
+            document.getElementById('ai-alerts-modal-time').textContent = new Date(a.ts).toLocaleString();
+            document.getElementById('ai-alerts-modal-cam').textContent = _aaCamMap[a.camera_id] || `Camera ${{a.camera_id}}`;
+            document.getElementById('ai-alerts-modal-tags').innerHTML = (a.tags||[]).map(t =>
+                `<span style="background:${{TAG_COLORS[t]||'#718096'}};color:white;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:capitalize;margin-right:4px;">${{t}}</span>`
+            ).join('');
+            // Highlight active thumbnail
+            document.querySelectorAll('#ai-alerts-list [data-idx]').forEach(card => {{
+                const active = parseInt(card.dataset.idx) === _aaIndex;
+                card.style.borderColor = active ? '#8b5cf6' : 'transparent';
+                card.style.background = active ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.03)';
+                if (active) card.scrollIntoView({{ block: 'nearest' }});
+            }});
+        }}
+
+        function stepAiAlertModal(delta) {{ _showAaAlert(_aaIndex + delta); }}
+
+        async function refreshAiAlertsModal() {{
+            _buildAaCamFilter();
+            await _loadAaAlerts();
+        }}
+
+        async function clearAiAlertsModal() {{
+            const camId = document.getElementById('ai-alerts-cam-filter').value;
+            const camName = camId ? (document.getElementById('ai-alerts-cam-filter').selectedOptions[0]?.text || 'this camera') : 'all cameras';
+            if (!confirm(`Delete AI alert image history for ${{camName}}?`)) return;
+            let url = '/api/ai-alerts';
+            if (camId) url += `?camera_id=${{camId}}`;
+            try {{ await fetch(url, {{ method: 'DELETE' }}); }} catch(e) {{}}
+            await _loadAaAlerts();
+        }}
+
+        // Arrow key navigation inside the AI Alerts modal
+        document.addEventListener('keydown', (e) => {{
+            const modal = document.getElementById('ai-alerts-modal');
+            if (!modal || !modal.classList.contains('active')) return;
+            if (e.target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+            if (e.key === 'ArrowLeft') {{ stepAiAlertModal(-1); e.preventDefault(); }}
+            if (e.key === 'ArrowRight') {{ stepAiAlertModal(1); e.preventDefault(); }}
+        }});
+
         function toggleAudioSettings(type) {{
             const checked = document.getElementById(`transcode${{type.charAt(0).toUpperCase() + type.slice(1)}}Audio`).checked;
             const settings = document.getElementById(`${{type}}AudioSettings`);
@@ -5748,8 +6733,8 @@ def get_web_ui_html(current_settings=None):
         
         function toggleEventForwardingFields() {{
             const checked = document.getElementById('enableEventForwarding').checked;
-            const esGroup = document.getElementById('eventSourceGroup');
-            if (esGroup) esGroup.style.display = checked ? 'block' : 'none';
+            const esRow = document.getElementById('aiModeAndModelConfig');
+            if (esRow) esRow.style.display = checked ? 'flex' : 'none';
             
             const cameraId = document.getElementById('camera-id').value;
             const isEdit = cameraId !== '';
@@ -5770,6 +6755,8 @@ def get_web_ui_html(current_settings=None):
                 const aiZoneGroup = document.getElementById('aiZoneGroup');
                 const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
                 const smartGroup = document.getElementById('sendSmartOnvifTopicsGroup');
+                const aiNotifyGroup = document.getElementById('aiNotificationsGroup');
+                const infoBox = document.getElementById('aiSettingsInfoBox');
                 if (portGroup) portGroup.style.display = 'none';
                 if (credGroup) credGroup.style.display = 'none';
                 if (aiGroup) aiGroup.style.display = 'none';
@@ -5781,6 +6768,13 @@ def get_web_ui_html(current_settings=None):
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
                 if (smartGroup) smartGroup.style.display = 'none';
+                if (aiNotifyGroup) aiNotifyGroup.style.display = 'none';
+                if (infoBox) infoBox.style.display = 'none';
+                // Hide the card wrappers too, or their borders show as empty boxes
+                const colWrapper = document.getElementById('aiTwoColumnWrapper');
+                if (colWrapper) colWrapper.style.display = 'none';
+                const actionsWrapper = document.getElementById('aiBottomActionsWrapper');
+                if (actionsWrapper) actionsWrapper.style.display = 'none';
             }}
         }}
 
@@ -5872,6 +6866,7 @@ def get_web_ui_html(current_settings=None):
             const aiConfidenceGroup = document.getElementById('aiConfidenceGroup');
             const aiZoneGroup = document.getElementById('aiZoneGroup');
             const aiCopyGroup = document.getElementById('aiCopySettingsGroup');
+            const aiNotifyGroup = document.getElementById('aiNotificationsGroup');
             
             const cameraId = document.getElementById('camera-id').value;
             const isEdit = cameraId !== '';
@@ -5885,9 +6880,16 @@ def get_web_ui_html(current_settings=None):
                 if (aiConfidenceGroup) aiConfidenceGroup.style.display = 'none';
                 if (aiZoneGroup) aiZoneGroup.style.display = 'none';
                 if (aiCopyGroup) aiCopyGroup.style.display = 'none';
+                if (aiNotifyGroup) aiNotifyGroup.style.display = 'none';
                 if (document.getElementById('sendSmartOnvifTopicsGroup')) document.getElementById('sendSmartOnvifTopicsGroup').style.display = 'none';
                 if (document.getElementById('aiHardwareInfoGroup')) document.getElementById('aiHardwareInfoGroup').style.display = 'none';
+                if (document.getElementById('aiSettingsInfoBox')) document.getElementById('aiSettingsInfoBox').style.display = 'none';
                 document.getElementById('aiInstallGroup').style.display = 'none';
+                
+                const colWrapper = document.getElementById('aiTwoColumnWrapper');
+                if (colWrapper) colWrapper.style.display = 'none';
+                const actionsWrapper = document.getElementById('aiBottomActionsWrapper');
+                if (actionsWrapper) actionsWrapper.style.display = 'none';
             }} else {{
                 if (portGroup) portGroup.style.display = 'none';
                 if (credGroup) credGroup.style.display = 'none';
@@ -5895,6 +6897,7 @@ def get_web_ui_html(current_settings=None):
                 if (aiConfidenceGroup) aiConfidenceGroup.style.display = 'block';
                 if (aiZoneGroup && isEdit) aiZoneGroup.style.display = 'block';
                 if (aiCopyGroup && isEdit) aiCopyGroup.style.display = 'block';
+                if (aiNotifyGroup) aiNotifyGroup.style.display = 'block';
                 checkAiStatus();
             }}
         }}
@@ -5906,44 +6909,187 @@ def get_web_ui_html(current_settings=None):
         }}
 
         function toggleSmartOnvifWarning() {{
-            const warningEl = document.getElementById('smartOnvifWarning');
             const checkbox = document.getElementById('sendSmartOnvifTopics');
-            if (warningEl && checkbox) {{
-                warningEl.style.display = checkbox.checked ? 'block' : 'none';
+            const btn = document.getElementById('smartOnvifInfoBtn');
+            if (btn) btn.style.display = (checkbox && checkbox.checked) ? 'inline-flex' : 'none';
+        }}
+
+        function toggleSmartOnvifPopup() {{
+            const existing = document.getElementById('smartOnvifPopup');
+            if (existing) {{ existing.remove(); return; }}
+            const btn = document.getElementById('smartOnvifInfoBtn');
+            const popup = document.createElement('div');
+            popup.id = 'smartOnvifPopup';
+            popup.style.cssText = 'position:fixed;z-index:9999;max-width:360px;background:#1a202c;border:1px solid #d69e2e;border-radius:8px;padding:14px 16px;font-size:11px;color:#fefcbf;line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,0.6);';
+            popup.innerHTML = `<div style="font-weight:700;margin-bottom:6px;color:#f6ad55;">⚠️ UniFi NVR Compatibility</div>To display Smart Detections (Person, Vehicle, etc.) in UniFi Protect, you currently need to run <a href="https://github.com/danielwoz/ubiquiti-protect-onvif-event-listener" target="_blank" style="color:#63b3ed;text-decoration:underline;font-weight:600;">ubiquiti-protect-onvif-event-listener</a>. Without it, smart events will not be registered by the NVR. Reboot NVR after adding all cameras.<div style="text-align:right;margin-top:10px;"><button onclick="document.getElementById('smartOnvifPopup').remove()" style="background:#2d3748;color:#e2e8f0;border:1px solid #4a5568;border-radius:5px;padding:3px 12px;cursor:pointer;font-size:11px;">Close</button></div>`;
+            // Position near the ⚠ button
+            document.body.appendChild(popup);
+            const rect = btn.getBoundingClientRect();
+            const pw = popup.offsetWidth || 360;
+            let left = rect.left;
+            if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
+            popup.style.left = left + 'px';
+            popup.style.top = (rect.bottom + 8) + 'px';
+            // Close on outside click
+            setTimeout(() => {{
+                document.addEventListener('click', function _close(e) {{
+                    if (!popup.contains(e.target) && e.target !== btn) {{
+                        popup.remove();
+                        document.removeEventListener('click', _close);
+                    }}
+                }});
+            }}, 10);
+        }}
+
+        // ========== Zone Editor ==========
+        const ZONE_NAMES = ['A','B','C','D','E','F','G','H','I'];
+        const ZONE_COLORS = {{
+            A:'#10b981', B:'#3b82f6', C:'#f59e0b', D:'#ef4444', E:'#8b5cf6',
+            F:'#06b6d4', G:'#ec4899', H:'#84cc16', I:'#f97316'
+        }};
+
+        // Shared state (also used by form save)
+        let currentZonePoints = [];  // kept for legacy compat but not used directly
+        let _zProfiles = {{}};         // {{ A: [{{x,y}},...], B: [...], ... }}
+        let _zActiveProfile = '';     // which profile is active for detection
+        let _zCurrentTab = 'A';      // which tab is open in the editor
+        let _zSnapshotImg = null;
+        let _zSnapLoaded = false;
+        let _zDragIdx = -1;
+        let _zIsDragging = false;
+        let _zMouseDownPos = null;
+
+        const ZONE_LABELS = {{ A:'Zone A',B:'Zone B',C:'Zone C',D:'Zone D',E:'Zone E',F:'Zone F',G:'Zone G',H:'Zone H',I:'Zone I' }};
+
+        function openZoneModal() {{
+            const camId = document.getElementById('camera-id').value;
+            if (!camId) {{ showToast('Save the camera first before editing zones.', 'warning'); return; }}
+            _buildZoneProfileTabs();
+            _zCurrentTab = ZONE_NAMES[0];
+            _zSnapLoaded = false;
+            _zSnapshotImg = null;
+            _selectZoneTab(_zCurrentTab);
+            document.getElementById('zone-editor-modal').classList.add('active');
+            requestAnimationFrame(() => _drawZoneEditor());
+        }}
+
+        function closeZoneModal() {{
+            document.getElementById('zone-editor-modal').classList.remove('active');
+        }}
+
+        function saveZoneProfiles() {{
+            // Flush the current tab's points into _zProfiles before closing
+            _flushZoneTab();
+            updateZoneProfileSummary();
+            closeZoneModal();
+        }}
+
+        function _flushZoneTab() {{
+            const pts = _zGetCurrentPoints();
+            if (pts && pts.length >= 3) {{
+                _zProfiles[_zCurrentTab] = pts.map(p => ({{ x: p.x, y: p.y }}));
+            }} else {{
+                delete _zProfiles[_zCurrentTab];
             }}
         }}
 
-        // ========== Zone Drawing ==========
-        let currentZonePoints = [];
-        let zoneSnapshotLoaded = false;
-        let zoneSnapshotImage = null;
-        let zoneDragIndex = -1;
-        let zoneIsDragging = false;
-        let zoneMouseDownPos = null;
+        function _buildZoneProfileTabs() {{
+            const container = document.getElementById('zoneProfileTabs');
+            container.innerHTML = '';
+            ZONE_NAMES.forEach(name => {{
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.zone = name;
+                const hasZone = _zProfiles[name] && _zProfiles[name].length >= 3;
+                btn.style.cssText = `padding: 5px 13px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; background: ${{hasZone ? ZONE_COLORS[name] + '28' : 'transparent'}}; color: ${{hasZone ? ZONE_COLORS[name] : 'var(--text-muted)'}}; transition: background 0.15s, color 0.15s; position: relative;`;
+                btn.title = `Zone ${{name}}`;
+                btn.innerHTML = `${{name}}${{hasZone ? `<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${{ZONE_COLORS[name]}};margin-left:5px;vertical-align:middle;opacity:0.8;"></span>` : ''}}`;
+                btn.onclick = () => {{ _flushZoneTab(); _zCurrentTab = name; _selectZoneTab(name); }};
+                container.appendChild(btn);
+            }});
+            // Active profile select
+            const sel = document.getElementById('zoneActiveSelect');
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">None (full frame)</option>';
+            ZONE_NAMES.forEach(name => {{
+                if (_zProfiles[name] && _zProfiles[name].length >= 3) {{
+                    const o = document.createElement('option');
+                    o.value = name;
+                    o.textContent = `Zone ${{name}}`;
+                    sel.appendChild(o);
+                }}
+            }});
+            sel.value = _zActiveProfile || prev;
+            if (_zCurrentTab) _selectZoneTab(_zCurrentTab);
+        }}
 
-        async function loadZoneSnapshot() {{
-            const cameraId = document.getElementById('camera-id').value;
-            if (!cameraId) {{
-                showToast('Save the camera first before loading a snapshot.', 'warning');
-                return;
+        function _selectZoneTab(name) {{
+            _zCurrentTab = name;
+            // Highlight active tab
+            document.querySelectorAll('#zoneProfileTabs button').forEach(b => {{
+                const z = b.dataset.zone;
+                const isActive = z === name;
+                const hasZone = _zProfiles[z] && _zProfiles[z].length >= 3;
+                b.style.background = isActive ? ZONE_COLORS[z] + '40' : (hasZone ? ZONE_COLORS[z] + '20' : 'transparent');
+                b.style.color = (isActive || hasZone) ? ZONE_COLORS[z] : 'var(--text-muted)';
+                b.style.boxShadow = isActive ? `inset 0 0 0 1px ${{ZONE_COLORS[z]}}80` : 'none';
+                b.style.fontWeight = isActive ? '700' : '600';
+            }});
+            _drawZoneEditor();
+            _updateZonePointCount();
+        }}
+
+        function setActiveZoneProfile(val) {{
+            _zActiveProfile = val;
+        }}
+
+        function _zGetCurrentPoints() {{
+            return _zProfiles[_zCurrentTab] ? _zProfiles[_zCurrentTab].map(p => ({{...p}})) : [];
+        }}
+
+        function _zSetCurrentPoints(pts) {{
+            if (pts.length === 0) {{ delete _zProfiles[_zCurrentTab]; }}
+            else {{ _zProfiles[_zCurrentTab] = pts; }}
+            _updateZonePointCount();
+        }}
+
+        function _updateZonePointCount() {{
+            const pts = _zGetCurrentPoints();
+            const el = document.getElementById('zonePointCount');
+            if (el) el.textContent = pts.length === 0 ? 'No points' : `${{pts.length}} point${{pts.length !== 1 ? 's' : ''}}${{pts.length >= 3 ? ' ✓' : ' (need 3+)'}}`;
+        }}
+
+        function updateZoneProfileSummary() {{
+            const el = document.getElementById('zoneProfileSummary');
+            if (!el) return;
+            const defined = ZONE_NAMES.filter(n => _zProfiles[n] && _zProfiles[n].length >= 3);
+            if (!defined.length) {{
+                el.textContent = 'No zones configured — full frame monitored';
+            }} else {{
+                const activeLabel = _zActiveProfile ? `Zone ${{_zActiveProfile}} active` : 'no active zone';
+                el.textContent = `${{defined.length}} zone${{defined.length !== 1 ? 's' : ''}} defined (Zone${{defined.length > 1 ? 's' : ''}} ${{defined.join(', ')}}) · ${{activeLabel}}`;
             }}
-            const btn = document.getElementById('btnLoadZoneSnapshot');
+        }}
+
+        async function zoneLoadSnapshot() {{
+            const cameraId = document.getElementById('camera-id').value;
+            if (!cameraId) {{ showToast('Save the camera first.', 'warning'); return; }}
+            const btn = document.getElementById('btnZoneLoadSnap');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
             btn.disabled = true;
             try {{
                 const resp = await fetch(`/api/cameras/${{cameraId}}/snapshot`);
-                if (!resp.ok) throw new Error('Failed to capture snapshot');
+                if (!resp.ok) throw new Error('snapshot failed');
                 const blob = await resp.blob();
                 const img = new Image();
-                img.onload = function() {{
-                    zoneSnapshotImage = img;
-                    zoneSnapshotLoaded = true;
-                    document.getElementById('zoneEmptyState').style.display = 'none';
-                    drawZoneCanvas();
+                img.onload = () => {{
+                    _zSnapshotImg = img;
+                    _zSnapLoaded = true;
+                    document.getElementById('zoneEditorEmptyState').style.display = 'none';
+                    _drawZoneEditor();
                 }};
                 img.src = URL.createObjectURL(blob);
-            }} catch (e) {{
-                console.error('Snapshot error:', e);
+            }} catch(e) {{
                 showToast('Failed to load snapshot. Is the camera running?', 'error');
             }} finally {{
                 btn.innerHTML = '<i class="fas fa-camera"></i> Load Snapshot';
@@ -5951,188 +7097,213 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
 
-        function getZonePointAtPos(nx, ny, canvas) {{
-            const hitRadius = 20;
-            for (let i = 0; i < currentZonePoints.length; i++) {{
-                const pt = currentZonePoints[i];
-                const dx = (nx - pt.x) * canvas.width;
-                const dy = (ny - pt.y) * canvas.height;
-                if (Math.sqrt(dx * dx + dy * dy) < hitRadius) return i;
+        function _zGetPointAtPos(nx, ny, canvas) {{
+            const pts = _zGetCurrentPoints();
+            for (let i = 0; i < pts.length; i++) {{
+                const dx = (nx - pts[i].x) * canvas.width;
+                const dy = (ny - pts[i].y) * canvas.height;
+                if (Math.sqrt(dx*dx + dy*dy) < 20) return i;
             }}
             return -1;
         }}
 
-        function drawZoneCanvas(hoveredIdx) {{
-            const canvas = document.getElementById('zoneCanvas');
-            const container = document.getElementById('zoneCanvasContainer');
+        function _drawZoneEditor(hoveredIdx) {{
+            const canvas = document.getElementById('zoneEditorCanvas');
+            const container = document.getElementById('zoneEditorCanvasContainer');
             if (!canvas || !container) return;
-            
             const rect = container.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (zoneSnapshotImage) {{
-                ctx.drawImage(zoneSnapshotImage, 0, 0, canvas.width, canvas.height);
-                // Darken areas outside zone
-                if (currentZonePoints.length >= 3) {{
+            const pts = _zGetCurrentPoints();
+            const color = ZONE_COLORS[_zCurrentTab] || '#10b981';
+
+            if (_zSnapshotImg) {{
+                ctx.drawImage(_zSnapshotImg, 0, 0, canvas.width, canvas.height);
+                // Draw all OTHER zones as semi-transparent overlays
+                ZONE_NAMES.forEach(name => {{
+                    if (name === _zCurrentTab) return;
+                    const other = _zProfiles[name];
+                    if (!other || other.length < 3) return;
                     ctx.save();
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+                    ctx.globalAlpha = 0.25;
+                    ctx.strokeStyle = ZONE_COLORS[name];
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4,4]);
+                    ctx.beginPath();
+                    ctx.moveTo(other[0].x * canvas.width, other[0].y * canvas.height);
+                    other.slice(1).forEach(p => ctx.lineTo(p.x * canvas.width, p.y * canvas.height));
+                    ctx.closePath();
+                    ctx.fillStyle = ZONE_COLORS[name] + '22';
+                    ctx.fill();
+                    ctx.stroke();
+                    // Zone label
+                    ctx.setLineDash([]);
+                    ctx.globalAlpha = 0.6;
+                    ctx.fillStyle = ZONE_COLORS[name];
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.fillText(`Zone ${{name}}`, other[0].x * canvas.width + 4, other[0].y * canvas.height - 4);
+                    ctx.restore();
+                }});
+                // Darken outside current zone
+                if (pts.length >= 3) {{
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.globalCompositeOperation = 'destination-out';
                     ctx.beginPath();
-                    ctx.moveTo(currentZonePoints[0].x * canvas.width, currentZonePoints[0].y * canvas.height);
-                    for (let i = 1; i < currentZonePoints.length; i++) {{
-                        ctx.lineTo(currentZonePoints[i].x * canvas.width, currentZonePoints[i].y * canvas.height);
-                    }}
+                    ctx.moveTo(pts[0].x * canvas.width, pts[0].y * canvas.height);
+                    pts.slice(1).forEach(p => ctx.lineTo(p.x * canvas.width, p.y * canvas.height));
                     ctx.closePath();
                     ctx.fill();
                     ctx.restore();
                 }}
             }}
-            
-            // Draw zone polygon
-            if (currentZonePoints.length > 0) {{
-                ctx.strokeStyle = '#10b981';
+
+            if (pts.length > 0) {{
+                ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.setLineDash([]);
                 ctx.beginPath();
-                ctx.moveTo(currentZonePoints[0].x * canvas.width, currentZonePoints[0].y * canvas.height);
-                for (let i = 1; i < currentZonePoints.length; i++) {{
-                    ctx.lineTo(currentZonePoints[i].x * canvas.width, currentZonePoints[i].y * canvas.height);
-                }}
-                if (currentZonePoints.length >= 3) ctx.closePath();
+                ctx.moveTo(pts[0].x * canvas.width, pts[0].y * canvas.height);
+                pts.slice(1).forEach(p => ctx.lineTo(p.x * canvas.width, p.y * canvas.height));
+                if (pts.length >= 3) ctx.closePath();
                 ctx.stroke();
-                
-                // Fill zone area with transparent green
-                if (currentZonePoints.length >= 3) {{
-                    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+                if (pts.length >= 3) {{
+                    ctx.fillStyle = color + '26';
                     ctx.fill();
                 }}
-                
-                // Draw points
-                currentZonePoints.forEach((pt, idx) => {{
-                    const isHovered = (hoveredIdx !== undefined && hoveredIdx === idx);
-                    const radius = isHovered ? 8 : 5;
+                pts.forEach((pt, idx) => {{
+                    const hov = (hoveredIdx !== undefined && hoveredIdx === idx);
                     ctx.beginPath();
-                    ctx.arc(pt.x * canvas.width, pt.y * canvas.height, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = idx === 0 ? '#f59e0b' : (isHovered ? '#34d399' : '#10b981');
+                    ctx.arc(pt.x * canvas.width, pt.y * canvas.height, hov ? 9 : 5, 0, Math.PI*2);
+                    ctx.fillStyle = idx === 0 ? '#f59e0b' : (hov ? '#fff' : color);
                     ctx.fill();
                     ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = isHovered ? 2.5 : 1.5;
+                    ctx.lineWidth = hov ? 2.5 : 1.5;
                     ctx.stroke();
                 }});
+                // Zone label
+                ctx.fillStyle = color;
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(`Zone ${{_zCurrentTab}}`, pts[0].x * canvas.width + 6, pts[0].y * canvas.height - 6);
             }}
         }}
 
-        // Mouse events for zone canvas: drag points + add new points
+        // Zone editor mouse events
         document.addEventListener('mousedown', function(e) {{
-            const canvas = document.getElementById('zoneCanvas');
-            if (!canvas || e.target !== canvas || !zoneSnapshotLoaded) return;
-            
+            const canvas = document.getElementById('zoneEditorCanvas');
+            if (!canvas || e.target !== canvas || !_zSnapLoaded) return;
             const rect = canvas.getBoundingClientRect();
             const nx = (e.clientX - rect.left) / rect.width;
             const ny = (e.clientY - rect.top) / rect.height;
-            
-            const hitIdx = getZonePointAtPos(nx, ny, canvas);
+            const hitIdx = _zGetPointAtPos(nx, ny, canvas);
             if (hitIdx >= 0) {{
-                // Start dragging an existing point
-                zoneDragIndex = hitIdx;
-                zoneIsDragging = false;
-                zoneMouseDownPos = {{ x: nx, y: ny }};
+                _zDragIdx = hitIdx;
+                _zIsDragging = false;
+                _zMouseDownPos = {{ x: nx, y: ny }};
                 e.preventDefault();
             }} else {{
-                zoneDragIndex = -1;
-                zoneMouseDownPos = {{ x: nx, y: ny }};
+                _zDragIdx = -1;
+                _zMouseDownPos = {{ x: nx, y: ny }};
             }}
         }});
 
         document.addEventListener('mousemove', function(e) {{
-            const canvas = document.getElementById('zoneCanvas');
-            if (!canvas || !zoneSnapshotLoaded) return;
-            
+            const canvas = document.getElementById('zoneEditorCanvas');
+            if (!canvas || !_zSnapLoaded) return;
             const rect = canvas.getBoundingClientRect();
             const nx = (e.clientX - rect.left) / rect.width;
             const ny = (e.clientY - rect.top) / rect.height;
-            
-            if (zoneDragIndex >= 0) {{
-                // Dragging a point
-                zoneIsDragging = true;
-                currentZonePoints[zoneDragIndex].x = parseFloat(Math.max(0, Math.min(1, nx)).toFixed(4));
-                currentZonePoints[zoneDragIndex].y = parseFloat(Math.max(0, Math.min(1, ny)).toFixed(4));
-                drawZoneCanvas(zoneDragIndex);
+            if (_zDragIdx >= 0) {{
+                _zIsDragging = true;
+                const pts = _zGetCurrentPoints();
+                pts[_zDragIdx].x = parseFloat(Math.max(0, Math.min(1, nx)).toFixed(4));
+                pts[_zDragIdx].y = parseFloat(Math.max(0, Math.min(1, ny)).toFixed(4));
+                _zSetCurrentPoints(pts);
+                _drawZoneEditor(_zDragIdx);
                 canvas.style.cursor = 'grabbing';
                 return;
             }}
-            
-            // Hover detection for cursor change
             if (e.target === canvas) {{
-                const hitIdx = getZonePointAtPos(nx, ny, canvas);
-                if (hitIdx >= 0) {{
-                    canvas.style.cursor = 'grab';
-                    drawZoneCanvas(hitIdx);
-                }} else {{
-                    canvas.style.cursor = 'crosshair';
-                    drawZoneCanvas();
-                }}
+                const hi = _zGetPointAtPos(nx, ny, canvas);
+                canvas.style.cursor = hi >= 0 ? 'grab' : 'crosshair';
+                _drawZoneEditor(hi >= 0 ? hi : undefined);
             }}
         }});
 
         document.addEventListener('mouseup', function(e) {{
-            const canvas = document.getElementById('zoneCanvas');
-            if (!canvas || !zoneSnapshotLoaded) return;
-            
-            if (zoneDragIndex >= 0 && zoneIsDragging) {{
-                // Finished dragging
-                zoneDragIndex = -1;
-                zoneIsDragging = false;
-                zoneMouseDownPos = null;
+            const canvas = document.getElementById('zoneEditorCanvas');
+            if (!canvas || !_zSnapLoaded) return;
+            if (_zDragIdx >= 0 && _zIsDragging) {{
+                _zDragIdx = -1; _zIsDragging = false; _zMouseDownPos = null;
                 canvas.style.cursor = 'crosshair';
-                drawZoneCanvas();
+                _buildZoneProfileTabs();
+                _drawZoneEditor();
                 return;
             }}
-            
-            // If not dragging, treat as a click to add a new point
-            if (e.target === canvas && zoneDragIndex < 0 && zoneMouseDownPos) {{
+            if (e.target === canvas && _zDragIdx < 0 && _zMouseDownPos) {{
                 const rect = canvas.getBoundingClientRect();
                 const nx = (e.clientX - rect.left) / rect.width;
                 const ny = (e.clientY - rect.top) / rect.height;
-                
-                // Check we didn't move much (it's a click, not a drag)
-                const dx = Math.abs(nx - zoneMouseDownPos.x) * rect.width;
-                const dy = Math.abs(ny - zoneMouseDownPos.y) * rect.height;
+                const dx = Math.abs(nx - _zMouseDownPos.x) * rect.width;
+                const dy = Math.abs(ny - _zMouseDownPos.y) * rect.height;
                 if (dx < 5 && dy < 5) {{
-                    currentZonePoints.push({{ x: parseFloat(nx.toFixed(4)), y: parseFloat(ny.toFixed(4)) }});
-                    drawZoneCanvas();
+                    const pts = _zGetCurrentPoints();
+                    pts.push({{ x: parseFloat(nx.toFixed(4)), y: parseFloat(ny.toFixed(4)) }});
+                    _zSetCurrentPoints(pts);
+                    _buildZoneProfileTabs();
+                    _drawZoneEditor();
                 }}
             }}
-            
-            zoneDragIndex = -1;
-            zoneIsDragging = false;
-            zoneMouseDownPos = null;
+            _zDragIdx = -1; _zIsDragging = false; _zMouseDownPos = null;
         }});
 
-        // Right-click to delete a point
         document.addEventListener('contextmenu', function(e) {{
-            const canvas = document.getElementById('zoneCanvas');
-            if (!canvas || e.target !== canvas || !zoneSnapshotLoaded) return;
-            
+            const canvas = document.getElementById('zoneEditorCanvas');
+            if (!canvas || e.target !== canvas || !_zSnapLoaded) return;
             const rect = canvas.getBoundingClientRect();
             const nx = (e.clientX - rect.left) / rect.width;
             const ny = (e.clientY - rect.top) / rect.height;
-            const hitIdx = getZonePointAtPos(nx, ny, canvas);
+            const hitIdx = _zGetPointAtPos(nx, ny, canvas);
             if (hitIdx >= 0) {{
                 e.preventDefault();
-                currentZonePoints.splice(hitIdx, 1);
-                drawZoneCanvas();
+                const pts = _zGetCurrentPoints();
+                pts.splice(hitIdx, 1);
+                _zSetCurrentPoints(pts);
+                _buildZoneProfileTabs();
+                _drawZoneEditor();
             }}
         }});
 
-        function clearZone() {{
-            currentZonePoints = [];
-            drawZoneCanvas();
+        function zoneClearCurrent() {{
+            _zSetCurrentPoints([]);
+            delete _zProfiles[_zCurrentTab];
+            if (_zActiveProfile === _zCurrentTab) _zActiveProfile = '';
+            _buildZoneProfileTabs();
+            _drawZoneEditor();
         }}
+
+        function zoneUndoLast() {{
+            const pts = _zGetCurrentPoints();
+            if (pts.length > 0) {{
+                pts.pop();
+                _zSetCurrentPoints(pts);
+                _buildZoneProfileTabs();
+                _drawZoneEditor();
+            }}
+        }}
+
+        function zoneSetFullFrame() {{
+            const pts = [{{x:0,y:0}},{{x:1,y:0}},{{x:1,y:1}},{{x:0,y:1}}];
+            _zSetCurrentPoints(pts);
+            _buildZoneProfileTabs();
+            _drawZoneEditor();
+        }}
+
+        // Legacy stub — no longer used directly, kept so any old refs don't throw
+        function clearZone() {{ zoneClearCurrent(); }}
 
         // ========== Copy AI Settings ==========
         function openCopyAiSettingsModal() {{
@@ -6161,7 +7332,7 @@ def get_web_ui_html(current_settings=None):
                             <span>${{cam.name}}</span>
                             ${{aiBadge}}
                         </div>
-                        <div style="font-size: 10px; color: #718096;">ID: ${{cam.id}} &mdash; ${{cam.status}}</div>
+                        <div style="font-size: 10px; color: var(--text-muted);">ID: ${{cam.id}} &mdash; ${{cam.status}}</div>
                     </div>
                 `;
                 list.appendChild(item);
@@ -6223,12 +7394,15 @@ def get_web_ui_html(current_settings=None):
         let onvifViewActive = false;
         let onvifPollInterval = null;
         let onvifEvents = [];
+        let onvifAlertList = [];  // cached AI alert snapshots for hover previews
 
         function toggleONVIFView(active, initialCameraId = null, initialEventType = null) {{
             onvifViewActive = active;
             const overlay = document.getElementById('onvif-overlay');
             if (active) {{
                 overlay.classList.add('active');
+                // Update URL to support bookmarking/direct link
+                window.history.replaceState({{}}, '', '/onvif');
                 populateCameraFilter();
                 document.getElementById('onvif-camera-filter').value = initialCameraId !== null ? initialCameraId : 'all';
                 document.getElementById('onvif-type-filter').value = initialEventType !== null ? initialEventType : 'all';
@@ -6236,6 +7410,10 @@ def get_web_ui_html(current_settings=None):
                 onvifPollInterval = setInterval(refreshONVIFEvents, 2000);
             }} else {{
                 overlay.classList.remove('active');
+                // Return to the dashboard URL
+                if (window.location.pathname === '/onvif' || window.location.pathname === '/ai') {{
+                    window.history.replaceState({{}}, '', '/');
+                }}
                 if (onvifPollInterval) {{
                     clearInterval(onvifPollInterval);
                     onvifPollInterval = null;
@@ -6255,12 +7433,21 @@ def get_web_ui_html(current_settings=None):
 
         async function refreshONVIFEvents() {{
             try {{
+                // Refresh the AI snapshot list so event rows can show hover previews
+                try {{
+                    const alertResp = await fetch('/api/ai-alerts');
+                    if (alertResp.ok) {{
+                        const ad = await alertResp.json();
+                        onvifAlertList = ad.alerts || [];
+                    }}
+                }} catch (e) {{ /* previews are optional */ }}
+
                 const response = await fetch('/api/onvif/events');
                 if (response.ok) {{
                     onvifEvents = await response.json();
                     renderONVIFEvents();
                 }}
-                
+
                 const camResp = await fetch('/api/cameras');
                 if (camResp.ok) {{
                     const latestCams = await camResp.json();
@@ -6304,7 +7491,7 @@ def get_web_ui_html(current_settings=None):
                 let detectionStr = 'None';
                 if (isRunning && cam.aiLastDetection && cam.aiLastDetection.length > 0) {{
                     detectionStr = cam.aiLastDetection.map(d => 
-                        `<span style="background: rgba(236, 201, 75, 0.1); color: #ecc94b; border: 1px solid rgba(236, 201, 75, 0.3); padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; text-transform: uppercase; font-weight: bold;">${{d}}</span>`
+                        `<span style="background: rgba(236, 201, 75, 0.1); color: var(--yellow-text); border: 1px solid rgba(236, 201, 75, 0.3); padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; text-transform: uppercase; font-weight: bold;">${{d}}</span>`
                     ).join('');
                 }}
                 
@@ -6322,7 +7509,7 @@ def get_web_ui_html(current_settings=None):
                         <td style="padding: 8px 12px; text-align: center; color: #a855f7;">${{queue}}</td>
                         <td style="padding: 8px 12px;">${{detectionStr}}</td>
                         <td style="padding: 8px 12px; text-align: right; color: #64748b;">${{count.toLocaleString()}}</td>
-                        <td style="padding: 8px 12px; text-align: right; color: #ecc94b; font-weight: bold;">${{detectCount.toLocaleString()}}</td>
+                        <td style="padding: 8px 12px; text-align: right; color: var(--yellow-text); font-weight: bold;">${{detectCount.toLocaleString()}}</td>
                     </tr>
                 `;
             }});
@@ -6423,10 +7610,16 @@ def get_web_ui_html(current_settings=None):
                     }});
                 }}
 
+                const alert = findAlertForEvent(evt);
+                const rowAttrs = alert
+                    ? ` data-alert-file="${{alert.file}}" data-alert-cam="${{(evt.camera_name || '').replace(/"/g, '&quot;')}}" data-alert-time="${{localTime}}" style="border-bottom: 1px solid var(--border-color); cursor: zoom-in;" class="onvif-evt-has-img"`
+                    : ` style="border-bottom: 1px solid var(--border-color);"`;
+                const camCell = `${{evt.camera_name}}`;
+
                 tbody.innerHTML += `
-                    <tr style="border-bottom: 1px solid var(--border-color);">
+                    <tr${{rowAttrs}}>
                         <td style="padding: 10px; color: var(--text-muted);">${{localTime}}</td>
-                        <td style="padding: 10px; font-weight: 600; color: var(--btn-primary);">${{evt.camera_name}}</td>
+                        <td style="padding: 10px; font-weight: 600; color: var(--btn-primary);">${{camCell}}</td>
                         <td style="padding: 10px;">${{typeBadge}}</td>
                         <td style="padding: 10px; color: var(--text-body);">${{evt.topic}}</td>
                         <td style="padding: 10px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">${{stateBadge}}${{tagsHtml}}</td>
@@ -6434,6 +7627,65 @@ def get_web_ui_html(current_settings=None):
                 `;
             }});
         }}
+
+        // Find the stored AI snapshot that best matches a logged event:
+        // same camera, closest timestamp within a short window, tag overlap preferred.
+        function findAlertForEvent(evt) {{
+            if (!evt || evt.type !== 'ai' || !onvifAlertList.length) return null;
+            const ets = new Date(evt.timestamp).getTime();
+            if (isNaN(ets)) return null;
+            const evtTags = evt.tags || [];
+            let best = null, bestScore = Infinity;
+            const WINDOW = 8000; // 8s
+            for (const a of onvifAlertList) {{
+                if (String(a.camera_id) !== String(evt.camera_id)) continue;
+                const diff = Math.abs(a.ts - ets);
+                if (diff > WINDOW) continue;
+                // Prefer tag overlap, then nearest time
+                const overlap = (a.tags || []).some(t => evtTags.includes(t));
+                const score = diff + (overlap ? 0 : 4000);
+                if (score < bestScore) {{ bestScore = score; best = a; }}
+            }}
+            return best;
+        }}
+
+        // Hover preview wiring (event delegation on the events table body)
+        (function initOnvifAlertPreview() {{
+            const body = document.getElementById('onvif-events-body');
+            const pop = document.getElementById('onvif-alert-preview');
+            if (!body || !pop) return;
+            const img = document.getElementById('onvif-alert-preview-img');
+            const cap = document.getElementById('onvif-alert-preview-cap');
+
+            function place(e) {{
+                const pad = 18;
+                const w = pop.offsetWidth, h = pop.offsetHeight;
+                let x = e.clientX + pad, y = e.clientY + pad;
+                if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+                if (y + h > window.innerHeight - 8) y = Math.max(8, window.innerHeight - h - 8);
+                if (x < 8) x = 8;
+                pop.style.left = x + 'px';
+                pop.style.top = y + 'px';
+            }}
+            function hide() {{ pop.style.display = 'none'; }}
+
+            body.addEventListener('mouseover', e => {{
+                const tr = e.target.closest('tr.onvif-evt-has-img');
+                if (!tr) return;
+                img.src = '/api/ai-alerts/image/' + encodeURIComponent(tr.dataset.alertFile);
+                cap.innerHTML = '<span style="font-weight:700; color:var(--text-title);">' + (tr.dataset.alertCam || '') +
+                    '</span><span style="color:var(--text-muted);">' + (tr.dataset.alertTime || '') + '</span>';
+                pop.style.display = 'flex';
+                place(e);
+            }});
+            body.addEventListener('mousemove', e => {{
+                if (pop.style.display !== 'none') place(e);
+            }});
+            body.addEventListener('mouseout', e => {{
+                const to = e.relatedTarget;
+                if (!to || !to.closest || !to.closest('tr.onvif-evt-has-img')) hide();
+            }});
+        }})();
 
         async function clearONVIFEvents() {{
             if (!confirm("Are you sure you want to clear all ONVIF event logs?")) return;
@@ -6514,8 +7766,17 @@ def get_web_ui_html(current_settings=None):
                 }})(),
                 aiMotionSensitivity: parseInt(document.getElementById('aiMotionSensitivity').value) || 50,
                 aiConfidenceThreshold: parseInt(document.getElementById('aiConfidenceThreshold').value) || 50,
-                aiZone: currentZonePoints || [],
-                sendSmartOnvifTopics: document.getElementById('sendSmartOnvifTopics').checked
+                aiZone: (function() {{ const ap = _zActiveProfile; const pts = _zProfiles[ap]; return (ap && pts && pts.length >= 3) ? pts : []; }})(),
+                aiZoneProfiles: JSON.parse(JSON.stringify(_zProfiles)),
+                aiActiveZoneProfile: _zActiveProfile,
+                sendSmartOnvifTopics: document.getElementById('sendSmartOnvifTopics').checked,
+                notifyAiEnabled: document.getElementById('notifyAiEnabled').value === 'true',
+                notifyAiCooldown: parseInt(document.getElementById('notifyAiCooldown').value) || 60,
+                notifyAiTargets: JSON.parse(document.getElementById('notifyAiTargetsJson').value || '[]'),
+                notifyAiAttachImage: document.getElementById('notifyAiAttachImage').value === 'true',
+                notifyAiZoneFilter: document.getElementById('notifyAiZoneFilter').value || '',
+                notifyAiSchedules: JSON.parse(document.getElementById('notifyAiSchedulesJson').value || '[]'),
+                notifyScheduleEnabled: JSON.parse(document.getElementById('notifyAiSchedulesJson').value || '[]').length > 0
             }};
             // Add ONVIF port if specified
             const onvifPort = document.getElementById('onvifPort').value;
@@ -6746,8 +8007,8 @@ def get_web_ui_html(current_settings=None):
                         document.body.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #1a202c; color: #fff; text-align: center; padding: 20px;">' +
                             '<i class="fas fa-power-off" style="font-size: 64px; color: #f56565; margin-bottom: 20px;"></i>' +
                             '<h1>Server Stopped</h1>' +
-                            '<p style="font-size: 18px; color: #a0aec0;">The ONVIF server has been shut down successfully.</p>' +
-                            '<p style="color: #718096; margin-top: 30px; font-size: 14px;">You can safely close this browser tab.</p>' +
+                            '<p style="font-size: 18px; color: var(--text-muted);">The ONVIF server has been shut down successfully.</p>' +
+                            '<p style="color: var(--text-muted); margin-top: 30px; font-size: 14px;">You can safely close this browser tab.</p>' +
                             '</div>';
                     }}, 1500);
                 }} else {{
@@ -6758,8 +8019,8 @@ def get_web_ui_html(current_settings=None):
                 document.body.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; flex-direction: column; background: #1a202c; color: #fff; text-align: center; padding: 20px;">' +
                     '<i class="fas fa-power-off" style="font-size: 64px; color: #f56565; margin-bottom: 20px;"></i>' +
                     '<h1>Server Stopped</h1>' +
-                    '<p style="font-size: 18px; color: #a0aec0;">The ONVIF server has been shut down successfully.</p>' +
-                    '<p style="color: #718096; margin-top: 30px; font-size: 14px;">You can safely close this browser tab.</p>' +
+                    '<p style="font-size: 18px; color: var(--text-muted);">The ONVIF server has been shut down successfully.</p>' +
+                    '<p style="color: var(--text-muted); margin-top: 30px; font-size: 14px;">You can safely close this browser tab.</p>' +
                     '</div>';
             }}
         }}
@@ -6892,8 +8153,6 @@ def get_web_ui_html(current_settings=None):
                     
                     const browserField = document.getElementById('openBrowser');
                     if (browserField) browserField.checked = settings.openBrowser === true;
-                    const themeField = document.getElementById('themeSelect');
-                    if (themeField) themeField.value = settings.theme || 'dracula';
                     
                     const gridField = document.getElementById('gridColumnsSelect');
                     if (gridField) gridField.value = settings.gridColumns || 3;
@@ -6945,6 +8204,73 @@ def get_web_ui_html(current_settings=None):
                     
                     toggleAuthFields();
                     
+                    // Load notifications config
+                    try {{
+                        const notifResp = await fetch('/api/notifications/config?t=' + new Date().getTime());
+                        if (notifResp.ok) {{
+                            const notifData = await notifResp.json();
+                            const ncfg = notifData.config || {{}};
+                            const events = ncfg.enabled_events || [];
+                            const providers = ncfg.providers || {{}};
+                            const eventLabels = notifData.event_labels || {{}};
+                            
+                            // Populate event triggers checklist
+                            const checklistEl = document.getElementById('notification-events-checklist');
+                            if (checklistEl) {{
+                                checklistEl.innerHTML = '';
+                                Object.keys(eventLabels).forEach(evKey => {{
+                                    const evLabel = eventLabels[evKey];
+                                    const isChecked = events.includes(evKey);
+                                    checklistEl.innerHTML += `
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                            <input type="checkbox" class="notify-event-checkbox" data-event="${{evKey}}" style="width: auto; cursor: pointer;" ${{isChecked ? 'checked' : ''}}>
+                                            <span style="font-size: 11px; color: var(--text-body);">${{evLabel}}</span>
+                                        </label>
+                                    `;
+                                }});
+                            }}
+                            
+                            // Populate providers
+                            const pnames = ['pushover', 'ntfy', 'gotify', 'bark', 'apprise', 'smtp'];
+                            pnames.forEach(pname => {{
+                                const pcfg = providers[pname] || {{}};
+                                const enabledEl = document.getElementById(`notify_${{pname}}_enabled`);
+                                if (enabledEl) {{
+                                    enabledEl.checked = pcfg.enabled === true;
+                                    toggleProviderFields(pname);
+                                }}
+                                
+                                // Fields mapping
+                                if (pname === 'pushover') {{
+                                    document.getElementById('notify_pushover_api_token').value = pcfg.api_token || '';
+                                    document.getElementById('notify_pushover_user_key').value = pcfg.user_key || '';
+                                }} else if (pname === 'ntfy') {{
+                                    document.getElementById('notify_ntfy_server_url').value = pcfg.server_url || 'https://ntfy.sh';
+                                    document.getElementById('notify_ntfy_topic').value = pcfg.topic || '';
+                                    document.getElementById('notify_ntfy_username').value = pcfg.username || '';
+                                    document.getElementById('notify_ntfy_password').value = pcfg.password || '';
+                                }} else if (pname === 'gotify') {{
+                                    document.getElementById('notify_gotify_server_url').value = pcfg.server_url || '';
+                                    document.getElementById('notify_gotify_app_token').value = pcfg.app_token || '';
+                                }} else if (pname === 'bark') {{
+                                    document.getElementById('notify_bark_server_url').value = pcfg.server_url || '';
+                                }} else if (pname === 'apprise') {{
+                                    document.getElementById('notify_apprise_url').value = pcfg.apprise_url || '';
+                                }} else if (pname === 'smtp') {{
+                                    document.getElementById('notify_smtp_host').value = pcfg.host || '';
+                                    document.getElementById('notify_smtp_port').value = pcfg.port || 587;
+                                    document.getElementById('notify_smtp_username').value = pcfg.username || '';
+                                    document.getElementById('notify_smtp_password').value = pcfg.password || '';
+                                    document.getElementById('notify_smtp_from_addr').value = pcfg.from_addr || '';
+                                    document.getElementById('notify_smtp_to_addrs').value = pcfg.to_addrs || '';
+                                    document.getElementById('notify_smtp_use_tls').checked = pcfg.use_tls !== false;
+                                }}
+                            }});
+                        }}
+                    }} catch (err) {{
+                        console.error('Error loading notification config:', err);
+                    }}
+                    
                     applyTheme(settings.theme);
                     applyGridLayout(settings.gridColumns || 3);
                 }}
@@ -6977,6 +8303,7 @@ def get_web_ui_html(current_settings=None):
             }}
             
             document.getElementById('settings-modal').classList.add('active');
+            checkAppriseInstalled();
             switchSettingsTab('settings-general');
         }}
         
@@ -7054,7 +8381,7 @@ def get_web_ui_html(current_settings=None):
             const data = {{
                 serverIp: document.getElementById('serverIp').value || 'localhost',
                 openBrowser: document.getElementById('openBrowser').checked,
-                theme: document.getElementById('themeSelect').value,
+                theme: settings.theme,
                 gridColumns: parseInt(document.getElementById('gridColumnsSelect').value),
                 rtspPort: parseInt(document.getElementById('rtspPortSettings').value || 8554),
                 autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
@@ -7100,6 +8427,69 @@ def get_web_ui_html(current_settings=None):
                 }});
                 
                 if (response.ok) {{
+                    // Save Notifications Config
+                    const notificationsData = {{
+                        enabled_events: (function() {{
+                            const events = [];
+                            document.querySelectorAll('.notify-event-checkbox').forEach(el => {{
+                                if (el.checked) events.push(el.getAttribute('data-event'));
+                            }});
+                            return events;
+                        }})(),
+                        providers: {{
+                            pushover: {{
+                                enabled: document.getElementById('notify_pushover_enabled').checked,
+                                api_token: document.getElementById('notify_pushover_api_token').value,
+                                user_key: document.getElementById('notify_pushover_user_key').value
+                            }},
+                            ntfy: {{
+                                enabled: document.getElementById('notify_ntfy_enabled').checked,
+                                server_url: document.getElementById('notify_ntfy_server_url').value,
+                                topic: document.getElementById('notify_ntfy_topic').value,
+                                username: document.getElementById('notify_ntfy_username').value,
+                                password: document.getElementById('notify_ntfy_password').value
+                            }},
+                            gotify: {{
+                                enabled: document.getElementById('notify_gotify_enabled').checked,
+                                server_url: document.getElementById('notify_gotify_server_url').value,
+                                app_token: document.getElementById('notify_gotify_app_token').value
+                            }},
+                            bark: {{
+                                enabled: document.getElementById('notify_bark_enabled').checked,
+                                server_url: document.getElementById('notify_bark_server_url').value
+                            }},
+                            apprise: {{
+                                enabled: document.getElementById('notify_apprise_enabled').checked,
+                                apprise_url: document.getElementById('notify_apprise_url').value
+                            }},
+                            smtp: {{
+                                enabled: document.getElementById('notify_smtp_enabled').checked,
+                                host: document.getElementById('notify_smtp_host').value,
+                                port: parseInt(document.getElementById('notify_smtp_port').value) || 587,
+                                username: document.getElementById('notify_smtp_username').value,
+                                password: document.getElementById('notify_smtp_password').value,
+                                from_addr: document.getElementById('notify_smtp_from_addr').value,
+                                to_addrs: document.getElementById('notify_smtp_to_addrs').value,
+                                use_tls: document.getElementById('notify_smtp_use_tls').checked
+                            }}
+                        }}
+                    }};
+                    
+                    try {{
+                        const notifResp = await fetch('/api/notifications/config', {{
+                            method: 'POST',
+                            headers: {{'Content-Type': 'application/json'}},
+                            body: JSON.stringify(notificationsData)
+                        }});
+                        if (!notifResp.ok) {{
+                            const notifErr = await notifResp.json();
+                            alert('Settings saved, but error saving notifications: ' + (notifErr.error || 'Unknown error'));
+                        }}
+                    }} catch (notifErr) {{
+                        console.error('Error saving notifications:', notifErr);
+                        alert('Settings saved, but failed to connect to notifications API.');
+                    }}
+                    
                     closeSettingsModal();
                     await loadData(); // Reload everything
                 }} else {{
@@ -7115,9 +8505,626 @@ def get_web_ui_html(current_settings=None):
             }}
         }}
         
+        function toggleProviderFields(provider) {{
+            const enabled = document.getElementById(`notify_${{provider}}_enabled`).checked;
+            const fieldsEl = document.getElementById(`fields_${{provider}}`);
+            if (fieldsEl) {{
+                fieldsEl.style.display = enabled ? 'block' : 'none';
+            }}
+        }}
+
+        async function testSingleProvider(provider) {{
+            const statusEl = document.getElementById('test-notifications-status');
+            if (statusEl) {{
+                statusEl.textContent = `Testing ${{provider}}...`;
+                statusEl.style.color = 'var(--text-body)';
+            }}
+            try {{
+                const notificationsData = {{
+                    enabled_events: (function() {{
+                        const events = [];
+                        document.querySelectorAll('.notify-event-checkbox').forEach(el => {{
+                            if (el.checked) events.push(el.getAttribute('data-event'));
+                        }});
+                        return events;
+                    }})(),
+                    providers: {{
+                        pushover: {{
+                            enabled: document.getElementById('notify_pushover_enabled').checked,
+                            api_token: document.getElementById('notify_pushover_api_token').value,
+                            user_key: document.getElementById('notify_pushover_user_key').value
+                        }},
+                        ntfy: {{
+                            enabled: document.getElementById('notify_ntfy_enabled').checked,
+                            server_url: document.getElementById('notify_ntfy_server_url').value,
+                            topic: document.getElementById('notify_ntfy_topic').value,
+                            username: document.getElementById('notify_ntfy_username').value,
+                            password: document.getElementById('notify_ntfy_password').value
+                        }},
+                        gotify: {{
+                            enabled: document.getElementById('notify_gotify_enabled').checked,
+                            server_url: document.getElementById('notify_gotify_server_url').value,
+                            app_token: document.getElementById('notify_gotify_app_token').value
+                        }},
+                        bark: {{
+                            enabled: document.getElementById('notify_bark_enabled').checked,
+                            server_url: document.getElementById('notify_bark_server_url').value
+                        }},
+                        apprise: {{
+                            enabled: document.getElementById('notify_apprise_enabled').checked,
+                            apprise_url: document.getElementById('notify_apprise_url').value
+                        }},
+                        smtp: {{
+                            enabled: document.getElementById('notify_smtp_enabled').checked,
+                            host: document.getElementById('notify_smtp_host').value,
+                            port: parseInt(document.getElementById('notify_smtp_port').value) || 587,
+                            username: document.getElementById('notify_smtp_username').value,
+                            password: document.getElementById('notify_smtp_password').value,
+                            from_addr: document.getElementById('notify_smtp_from_addr').value,
+                            to_addrs: document.getElementById('notify_smtp_to_addrs').value,
+                            use_tls: document.getElementById('notify_smtp_use_tls').checked
+                        }}
+                    }}
+                }};
+                
+                await fetch('/api/notifications/config', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify(notificationsData)
+                }});
+                
+                const data = {{ provider: provider }};
+                const response = await fetch('/api/notifications/test', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify(data)
+                }});
+                
+                if (response.ok) {{
+                    const result = await response.json();
+                    const status = result.results[provider];
+                    if (status === 'ok') {{
+                        if (statusEl) {{
+                            statusEl.textContent = `Test message successfully sent to ${{provider}}!`;
+                            statusEl.style.color = '#48bb78';
+                        }}
+                    }} else {{
+                        if (statusEl) {{
+                            statusEl.textContent = `Test failed for ${{provider}}: ${{status}}`;
+                            statusEl.style.color = '#f56565';
+                        }}
+                    }}
+                }} else {{
+                    const err = await response.json();
+                    if (statusEl) {{
+                        statusEl.textContent = `HTTP Error: ${{err.error || 'Unknown error'}}`;
+                        statusEl.style.color = '#f56565';
+                    }}
+                }}
+            }} catch (error) {{
+                console.error(`Error testing provider ${{provider}}:`, error);
+                if (statusEl) {{
+                    statusEl.textContent = `Error testing provider: ${{error.message}}`;
+                    statusEl.style.color = '#f56565';
+                }}
+            }}
+        }}
+
+        async function testAllProviders() {{
+            const statusEl = document.getElementById('test-notifications-status');
+            if (statusEl) {{
+                statusEl.textContent = 'Saving settings and sending test notification to all enabled providers...';
+                statusEl.style.color = 'var(--text-body)';
+            }}
+            try {{
+                const notificationsData = {{
+                    enabled_events: (function() {{
+                        const events = [];
+                        document.querySelectorAll('.notify-event-checkbox').forEach(el => {{
+                            if (el.checked) events.push(el.getAttribute('data-event'));
+                        }});
+                        return events;
+                    }})(),
+                    providers: {{
+                        pushover: {{
+                            enabled: document.getElementById('notify_pushover_enabled').checked,
+                            api_token: document.getElementById('notify_pushover_api_token').value,
+                            user_key: document.getElementById('notify_pushover_user_key').value
+                        }},
+                        ntfy: {{
+                            enabled: document.getElementById('notify_ntfy_enabled').checked,
+                            server_url: document.getElementById('notify_ntfy_server_url').value,
+                            topic: document.getElementById('notify_ntfy_topic').value,
+                            username: document.getElementById('notify_ntfy_username').value,
+                            password: document.getElementById('notify_ntfy_password').value
+                        }},
+                        gotify: {{
+                            enabled: document.getElementById('notify_gotify_enabled').checked,
+                            server_url: document.getElementById('notify_gotify_server_url').value,
+                            app_token: document.getElementById('notify_gotify_app_token').value
+                        }},
+                        bark: {{
+                            enabled: document.getElementById('notify_bark_enabled').checked,
+                            server_url: document.getElementById('notify_bark_server_url').value
+                        }},
+                        apprise: {{
+                            enabled: document.getElementById('notify_apprise_enabled').checked,
+                            apprise_url: document.getElementById('notify_apprise_url').value
+                        }},
+                        smtp: {{
+                            enabled: document.getElementById('notify_smtp_enabled').checked,
+                            host: document.getElementById('notify_smtp_host').value,
+                            port: parseInt(document.getElementById('notify_smtp_port').value) || 587,
+                            username: document.getElementById('notify_smtp_username').value,
+                            password: document.getElementById('notify_smtp_password').value,
+                            from_addr: document.getElementById('notify_smtp_from_addr').value,
+                            to_addrs: document.getElementById('notify_smtp_to_addrs').value,
+                            use_tls: document.getElementById('notify_smtp_use_tls').checked
+                        }}
+                    }}
+                }};
+                
+                await fetch('/api/notifications/config', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify(notificationsData)
+                }});
+
+                const response = await fetch('/api/notifications/test', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{}})
+                }});
+                
+                if (response.ok) {{
+                    const result = await response.json();
+                    const results = result.results;
+                    const errors = [];
+                    const success = [];
+                    Object.keys(results).forEach(k => {{
+                        if (results[k] === 'ok') {{
+                            success.push(k);
+                        }} else if (results[k] !== 'not configured') {{
+                            errors.push(`${{k}}: ${{results[k]}}`);
+                        }}
+                    }});
+                    
+                    if (statusEl) {{
+                        if (errors.length === 0) {{
+                            if (success.length === 0) {{
+                                statusEl.textContent = 'No notification providers enabled or configured.';
+                                statusEl.style.color = '#f6ad55';
+                            }} else {{
+                                statusEl.textContent = `Success! Test sent to: ${{success.join(', ')}}`;
+                                statusEl.style.color = '#48bb78';
+                            }}
+                        }} else {{
+                            statusEl.textContent = `Sent to: ${{success.join(', ') || 'none'}}. Failed: ${{errors.join('; ')}}`;
+                            statusEl.style.color = '#f56565';
+                        }}
+                    }}
+                }} else {{
+                    const err = await response.json();
+                    if (statusEl) {{
+                        statusEl.textContent = `HTTP Error: ${{err.error || 'Unknown error'}}`;
+                        statusEl.style.color = '#f56565';
+                    }}
+                }}
+            }} catch (error) {{
+                console.error('Error testing all notification providers:', error);
+                if (statusEl) {{
+                    statusEl.textContent = `Error testing notification: ${{error.message}}`;
+                    statusEl.style.color = '#f56565';
+                }}
+            }}
+        }}
+
+        // ========== Notification Rules Modal ==========
+        const NM_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        let _nmState = {{ enabled: false, cooldown: 60, targets: ['person','vehicle'], attachImage: false, zoneFilter: '', schedules: [] }};
+
+        function _nmFlushToHiddenInputs() {{
+            document.getElementById('notifyAiEnabled').value = _nmState.enabled ? 'true' : 'false';
+            document.getElementById('notifyAiCooldown').value = _nmState.cooldown;
+            document.getElementById('notifyAiTargetsJson').value = JSON.stringify(_nmState.targets);
+            document.getElementById('notifyAiAttachImage').value = _nmState.attachImage ? 'true' : 'false';
+            document.getElementById('notifyAiZoneFilter').value = _nmState.zoneFilter || '';
+            document.getElementById('notifyAiSchedulesJson').value = JSON.stringify(_nmState.schedules);
+        }}
+
+        function updateNotifySummary() {{
+            const el = document.getElementById('notifySummary');
+            if (!el) return;
+            if (!_nmState.enabled) {{ el.textContent = 'Notifications disabled'; return; }}
+            const t = (_nmState.targets || []).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ') || 'nothing';
+            const s = (_nmState.schedules || []).filter(x => x.enabled).length;
+            const z = _nmState.zoneFilter ? ` · Zone ${{_nmState.zoneFilter}} only` : '';
+            const sched = s ? ` · ${{s}} schedule${{s>1?'s':''}}` : ' · always';
+            el.textContent = `Notifying on: ${{t}}${{z}}${{sched}} · ${{_nmState.cooldown}}s cooldown`;
+        }}
+
+        function openNotifyModal() {{
+            // Populate modal from _nmState
+            document.getElementById('nm-enabled').checked = _nmState.enabled;
+            document.getElementById('nm-cooldown').value = _nmState.cooldown;
+            document.getElementById('nm-target-person').checked = (_nmState.targets||[]).includes('person');
+            document.getElementById('nm-target-vehicle').checked = (_nmState.targets||[]).includes('vehicle');
+            document.getElementById('nm-target-animal').checked = (_nmState.targets||[]).includes('animal');
+            document.getElementById('nm-target-package').checked = (_nmState.targets||[]).includes('package');
+            document.getElementById('nm-attach-image').checked = _nmState.attachImage;
+            toggleNmTestImageBtn();
+            // Zone filter dropdown — populate from current profiles
+            const sel = document.getElementById('nm-zone-filter');
+            sel.innerHTML = '<option value="">Any zone / full frame</option>';
+            ZONE_NAMES.forEach(n => {{
+                if (_zProfiles[n] && _zProfiles[n].length >= 3) {{
+                    const o = document.createElement('option');
+                    o.value = n; o.textContent = `Zone ${{n}}`;
+                    sel.appendChild(o);
+                }}
+            }});
+            sel.value = _nmState.zoneFilter || '';
+            toggleNmFields();
+            _nmRenderSchedules();
+            document.getElementById('notify-editor-modal').classList.add('active');
+        }}
+
+        function closeNotifyModal() {{
+            document.getElementById('notify-editor-modal').classList.remove('active');
+        }}
+
+        function saveNotifyModal() {{
+            const targets = [];
+            if (document.getElementById('nm-target-person').checked) targets.push('person');
+            if (document.getElementById('nm-target-vehicle').checked) targets.push('vehicle');
+            if (document.getElementById('nm-target-animal').checked) targets.push('animal');
+            if (document.getElementById('nm-target-package').checked) targets.push('package');
+            _nmState = {{
+                enabled: document.getElementById('nm-enabled').checked,
+                cooldown: parseInt(document.getElementById('nm-cooldown').value) || 60,
+                targets,
+                attachImage: document.getElementById('nm-attach-image').checked,
+                zoneFilter: document.getElementById('nm-zone-filter').value || '',
+                schedules: JSON.parse(JSON.stringify(_nmState.schedules)),
+            }};
+            _nmFlushToHiddenInputs();
+            updateNotifySummary();
+            closeNotifyModal();
+        }}
+
+        function toggleNmFields() {{
+            document.getElementById('nm-body').style.display = document.getElementById('nm-enabled').checked ? 'block' : 'none';
+        }}
+
+        function toggleNmTestImageBtn() {{
+            const btn = document.getElementById('nm-test-image-btn');
+            if (btn) btn.style.display = document.getElementById('nm-attach-image').checked ? 'inline-block' : 'none';
+        }}
+
+        // Stubs kept so any old references don't throw
+        function toggleAiNotifyFields() {{}}
+        function toggleAiNotifyScheduleFields() {{}}
+        function toggleTestImageButton() {{
+            toggleNmTestImageBtn();
+        }}
+
+        function nmAddSchedule() {{
+            _nmState.schedules.push({{ name: `Schedule ${{_nmState.schedules.length + 1}}`, enabled: true, days: [0,1,2,3,4,5,6], start: '00:00', end: '23:59', zone: '', targets: ['person', 'vehicle'] }});
+            _nmRenderSchedules();
+        }}
+
+        function nmRemoveSchedule(i) {{
+            _nmState.schedules.splice(i, 1);
+            _nmRenderSchedules();
+        }}
+
+        function _nmBuildZoneOptions(selectedZone) {{
+            // Build <option> HTML for zone selectors — always includes defined zones from _zProfiles
+            let opts = '<option value="">Any zone</option>';
+            ZONE_NAMES.forEach(n => {{
+                if (_zProfiles[n] && _zProfiles[n].length >= 3) {{
+                    const sel = selectedZone === n ? ' selected' : '';
+                    opts += `<option value="${{n}}"${{sel}}>Zone ${{n}}</option>`;
+                }}
+            }});
+            return opts;
+        }}
+
+        // ===== Time Picker =====
+        let _nmTpTarget = null; // {{el, schedIdx, field}}
+        let _nmTpH = 12, _nmTpM = 0, _nmTpAmPm = 'AM';
+
+        function _nmTo12h(t24) {{
+            if (!t24) return '';
+            const parts = t24.split(':');
+            let h = parseInt(parts[0], 10), m = parseInt(parts[1] || '0', 10);
+            const ap = h < 12 ? 'AM' : 'PM';
+            if (h === 0) h = 12; else if (h > 12) h -= 12;
+            return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ' ' + ap;
+        }}
+
+        function _nmParse12h(str) {{
+            if (!str) return null;
+            str = str.trim().toUpperCase().replace(/\\./g,'');
+            const m = str.match(/^(\\d{{1,2}}):?(\\d{{2}})?\\s*(AM|PM|A|P)?$/);
+            if (!m) return null;
+            let h = parseInt(m[1], 10), mn = m[2] ? parseInt(m[2], 10) : 0;
+            let ap = m[3] ? (m[3][0] === 'P' ? 'PM' : 'AM') : (h < 12 ? 'AM' : 'PM');
+            if (ap === 'PM' && h !== 12) h += 12;
+            if (ap === 'AM' && h === 12) h = 0;
+            if (h > 23 || mn > 59) return null;
+            return String(h).padStart(2,'0') + ':' + String(mn).padStart(2,'0');
+        }}
+
+        function _nmGetTimePicker() {{
+            let p = document.getElementById('nm-time-popup');
+            if (p) return p;
+            p = document.createElement('div');
+            p.id = 'nm-time-popup';
+            p.style.cssText = 'display:none;position:fixed;z-index:10000;background:var(--card-bg,#1e2533);border:1px solid var(--border-color,#4a5568);border-radius:12px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,0.55);width:230px;';
+            p.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-title);"><i class="fas fa-clock" style="margin-right:5px;color:var(--btn-primary);"></i>Select Time</span>
+                    <button type="button" onclick="nmTimePickerClose()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;">&times;</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:12px;">
+                    <div style="flex:1;">
+                        <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Hour</div>
+                        <div id="nm-tp-hours" style="height:130px;overflow-y:auto;border:1px solid var(--border-color);border-radius:7px;scroll-snap-type:y mandatory;scrollbar-width:thin;"></div>
+                    </div>
+                    <div style="font-size:20px;font-weight:700;color:var(--text-title);padding-top:18px;">:</div>
+                    <div style="flex:1;">
+                        <div style="font-size:9px;color:var(--text-muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;">Min</div>
+                        <div id="nm-tp-minutes" style="height:130px;overflow-y:auto;border:1px solid var(--border-color);border-radius:7px;scroll-snap-type:y mandatory;scrollbar-width:thin;"></div>
+                    </div>
+                    <div style="padding-top:18px;display:flex;flex-direction:column;gap:5px;margin-left:4px;">
+                        <button type="button" id="nm-tp-am-btn" onclick="nmTpSetAmPm('AM')" style="padding:8px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;border:1px solid var(--border-color);background:transparent;color:var(--text-title);transition:all .15s;">AM</button>
+                        <button type="button" id="nm-tp-pm-btn" onclick="nmTpSetAmPm('PM')" style="padding:8px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;border:1px solid var(--border-color);background:transparent;color:var(--text-title);transition:all .15s;">PM</button>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+                    <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">Type:</span>
+                    <input type="text" id="nm-tp-manual" placeholder="8:30 AM" autocomplete="off" style="flex:1;background:rgba(0,0,0,0.25);color:var(--text-title);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;font-size:11px;" oninput="_nmTpManualSync(this.value)">
+                </div>
+                <button type="button" onclick="nmTimePickerApply()" style="width:100%;padding:7px;background:var(--btn-primary,#3182ce);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.02em;">Set Time</button>
+            `;
+            // Populate hours 1-12
+            const hCol = p.querySelector('#nm-tp-hours');
+            for (let h = 1; h <= 12; h++) {{
+                const d = document.createElement('div');
+                d.dataset.h = h;
+                d.textContent = String(h).padStart(2,'0');
+                d.style.cssText = 'scroll-snap-align:start;padding:7px 4px;text-align:center;cursor:pointer;font-size:13px;border-radius:4px;color:var(--text-body);';
+                d.addEventListener('click', () => _nmTpPickH(h));
+                hCol.appendChild(d);
+            }}
+            // Populate minutes 00-59 (steps of 5 shown, others accessible by typing)
+            const mCol = p.querySelector('#nm-tp-minutes');
+            for (let m = 0; m <= 55; m += 5) {{
+                const d = document.createElement('div');
+                d.dataset.m = m;
+                d.textContent = String(m).padStart(2,'0');
+                d.style.cssText = 'scroll-snap-align:start;padding:7px 4px;text-align:center;cursor:pointer;font-size:13px;border-radius:4px;color:var(--text-body);';
+                d.addEventListener('click', () => _nmTpPickM(m));
+                mCol.appendChild(d);
+            }}
+            document.addEventListener('mousedown', function(e) {{
+                const pp = document.getElementById('nm-time-popup');
+                if (pp && pp.style.display !== 'none' && !pp.contains(e.target) && !e.target.closest('.nm-tp-btn') && !e.target.closest('.nm-tp-display')) nmTimePickerClose();
+            }});
+            document.body.appendChild(p);
+            return p;
+        }}
+
+        function _nmTpHighlight() {{
+            const p = document.getElementById('nm-time-popup');
+            if (!p) return;
+            const accent = getComputedStyle(document.body).getPropertyValue('--btn-primary') || '#3182ce';
+            p.querySelectorAll('#nm-tp-hours div').forEach(d => {{
+                const sel = parseInt(d.dataset.h) === _nmTpH;
+                d.style.background = sel ? 'var(--btn-primary,#3182ce)' : '';
+                d.style.color = sel ? '#fff' : 'var(--text-body)';
+                d.style.fontWeight = sel ? '700' : '';
+            }});
+            p.querySelectorAll('#nm-tp-minutes div').forEach(d => {{
+                const mv = Math.round(_nmTpM / 5) * 5;
+                const sel = parseInt(d.dataset.m) === mv;
+                d.style.background = sel ? 'var(--btn-primary,#3182ce)' : '';
+                d.style.color = sel ? '#fff' : 'var(--text-body)';
+                d.style.fontWeight = sel ? '700' : '';
+            }});
+            const amBtn = p.querySelector('#nm-tp-am-btn'), pmBtn = p.querySelector('#nm-tp-pm-btn');
+            if (_nmTpAmPm === 'AM') {{
+                amBtn.style.background = 'var(--btn-primary,#3182ce)'; amBtn.style.color = '#fff'; amBtn.style.borderColor = 'var(--btn-primary,#3182ce)';
+                pmBtn.style.background = 'transparent'; pmBtn.style.color = 'var(--text-title)'; pmBtn.style.borderColor = 'var(--border-color)';
+            }} else {{
+                pmBtn.style.background = 'var(--btn-primary,#3182ce)'; pmBtn.style.color = '#fff'; pmBtn.style.borderColor = 'var(--btn-primary,#3182ce)';
+                amBtn.style.background = 'transparent'; amBtn.style.color = 'var(--text-title)'; amBtn.style.borderColor = 'var(--border-color)';
+            }}
+            // Sync manual input
+            const manual = p.querySelector('#nm-tp-manual');
+            if (manual !== document.activeElement) manual.value = String(_nmTpH).padStart(2,'0') + ':' + String(_nmTpM).padStart(2,'0') + ' ' + _nmTpAmPm;
+        }}
+
+        function _nmTpScrollTo(colId, val, isMinute) {{
+            const col = document.getElementById(colId);
+            if (!col) return;
+            const items = col.querySelectorAll('div');
+            for (const d of items) {{
+                const dv = isMinute ? parseInt(d.dataset.m) : parseInt(d.dataset.h);
+                const target = isMinute ? (Math.round(val / 5) * 5) : val;
+                if (dv === target) {{ d.scrollIntoView({{block:'nearest', behavior:'smooth'}}); break; }}
+            }}
+        }}
+
+        function _nmTpPickH(h) {{ _nmTpH = h; _nmTpHighlight(); }}
+        function _nmTpPickM(m) {{ _nmTpM = m; _nmTpHighlight(); }}
+        function nmTpSetAmPm(ap) {{ _nmTpAmPm = ap; _nmTpHighlight(); }}
+
+        function _nmTpManualSync(val) {{
+            const parsed = _nmParse12h(val);
+            if (!parsed) return;
+            const parts = parsed.split(':');
+            let h24 = parseInt(parts[0]), m = parseInt(parts[1]);
+            _nmTpAmPm = h24 < 12 ? 'AM' : 'PM';
+            if (h24 === 0) h24 = 12; else if (h24 > 12) h24 -= 12;
+            _nmTpH = h24; _nmTpM = m;
+            _nmTpHighlight();
+            _nmTpScrollTo('nm-tp-hours', h24, false);
+            _nmTpScrollTo('nm-tp-minutes', m, true);
+        }}
+
+        function nmOpenTimePicker(displayEl, schedIdx, field) {{
+            const p = _nmGetTimePicker();
+            _nmTpTarget = {{el: displayEl, schedIdx, field}};
+            const t24 = displayEl.dataset.val24 || '08:00';
+            const parts = t24.split(':');
+            let h24 = parseInt(parts[0]), m = parseInt(parts[1] || '0');
+            _nmTpAmPm = h24 < 12 ? 'AM' : 'PM';
+            if (h24 === 0) h24 = 12; else if (h24 > 12) h24 -= 12;
+            _nmTpH = h24; _nmTpM = m;
+            p.style.display = 'block';
+            // Position near button
+            const rect = displayEl.getBoundingClientRect();
+            const pw = 230, ph = 300;
+            let top = rect.bottom + 6, left = rect.left;
+            if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+            if (top + ph > window.innerHeight - 8) top = rect.top - ph - 6;
+            p.style.top = top + 'px'; p.style.left = left + 'px';
+            _nmTpHighlight();
+            setTimeout(() => {{ _nmTpScrollTo('nm-tp-hours', _nmTpH, false); _nmTpScrollTo('nm-tp-minutes', _nmTpM, true); }}, 50);
+        }}
+
+        function nmTimePickerClose() {{
+            const p = document.getElementById('nm-time-popup');
+            if (p) p.style.display = 'none';
+            _nmTpTarget = null;
+        }}
+
+        function nmTimePickerApply() {{
+            if (!_nmTpTarget) return;
+            let h24 = _nmTpH;
+            if (_nmTpAmPm === 'PM' && h24 !== 12) h24 += 12;
+            if (_nmTpAmPm === 'AM' && h24 === 12) h24 = 0;
+            const t24 = String(h24).padStart(2,'0') + ':' + String(_nmTpM).padStart(2,'0');
+            const {{el, schedIdx, field}} = _nmTpTarget;
+            el.dataset.val24 = t24;
+            el.value = _nmTo12h(t24);
+            if (field === 'start') _nmState.schedules[schedIdx].start = t24;
+            else _nmState.schedules[schedIdx].end = t24;
+            nmTimePickerClose();
+        }}
+        // ===== End Time Picker =====
+
+        function _nmRenderSchedules() {{
+            const list = document.getElementById('nm-schedules-list');
+            const empty = document.getElementById('nm-schedules-empty');
+            list.innerHTML = '';
+            if (!_nmState.schedules.length) {{ empty.style.display = 'block'; return; }}
+            empty.style.display = 'none';
+            _nmState.schedules.forEach((sched, i) => {{
+                const card = document.createElement('div');
+                card.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;';
+                const daysRow = NM_DAYS.map((d,idx) => `<label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-day="${{idx}}" class="nm-day-cb" style="width:auto;cursor:pointer;"${{sched.days.includes(idx) ? ' checked' : ''}}> ${{d}}</label>`).join('');
+                const zoneOpts = _nmBuildZoneOptions(sched.zone || '');
+                const schedTargets = sched.targets || ['person', 'vehicle'];
+                card.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;">
+                            <input type="checkbox" class="nm-sched-enabled" data-sched="${{i}}" style="width:auto;cursor:pointer;"${{sched.enabled ? ' checked' : ''}}><span style="font-size:12px;font-weight:600;color:var(--text-title);">${{sched.name}}</span>
+                        </label>
+                        <input type="text" class="nm-sched-name" data-sched="${{i}}" value="${{sched.name}}" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-radius:5px;padding:3px 8px;font-size:11px;width:120px;">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;">
+                            <label style="font-size:10px;color:var(--text-muted);">Zone</label>
+                            <select class="nm-sched-zone" data-sched="${{i}}" style="background:var(--card-bg);color:var(--text-title);border:1px solid var(--border-color);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;">${{zoneOpts}}</select>
+                            <label style="font-size:10px;color:var(--text-muted);">From</label>
+                            <div style="display:inline-flex;align-items:stretch;">
+                                <input type="text" class="nm-sched-start nm-tp-display" data-sched="${{i}}" data-field="start" data-val24="${{sched.start}}" value="${{_nmTo12h(sched.start)}}" placeholder="08:00 AM" autocomplete="off" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-right:none;border-radius:5px 0 0 5px;padding:3px 6px;font-size:11px;width:76px;">
+                                <button type="button" class="nm-tp-btn" data-sched="${{i}}" data-field="start" style="background:rgba(0,0,0,0.25);color:var(--text-muted);border:1px solid var(--border-color);border-radius:0 5px 5px 0;padding:3px 7px;cursor:pointer;font-size:10px;"><i class="fas fa-clock"></i></button>
+                            </div>
+                            <label style="font-size:10px;color:var(--text-muted);">To</label>
+                            <div style="display:inline-flex;align-items:stretch;">
+                                <input type="text" class="nm-sched-end nm-tp-display" data-sched="${{i}}" data-field="end" data-val24="${{sched.end}}" value="${{_nmTo12h(sched.end)}}" placeholder="11:59 PM" autocomplete="off" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-right:none;border-radius:5px 0 0 5px;padding:3px 6px;font-size:11px;width:76px;">
+                                <button type="button" class="nm-tp-btn" data-sched="${{i}}" data-field="end" style="background:rgba(0,0,0,0.25);color:var(--text-muted);border:1px solid var(--border-color);border-radius:0 5px 5px 0;padding:3px 7px;cursor:pointer;font-size:10px;"><i class="fas fa-clock"></i></button>
+                            </div>
+                            <button type="button" onclick="nmRemoveSchedule(${{i}})" style="background:transparent;color:#f56565;border:1px solid var(--border-color);border-radius:5px;padding:3px 8px;cursor:pointer;font-size:11px;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;border-top:1px dashed var(--border-color);padding-top:8px;">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">${{daysRow}}</div>
+                        <div style="display:flex;gap:10px;align-items:center;">
+                            <span style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Alert on:</span>
+                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="person" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('person') ? ' checked' : ''}}> Person</label>
+                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="vehicle" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('vehicle') ? ' checked' : ''}}> Vehicle</label>
+                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="animal" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('animal') ? ' checked' : ''}}> Animal</label>
+                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="package" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('package') ? ' checked' : ''}}> Package</label>
+                        </div>
+                    </div>`;
+                list.appendChild(card);
+            }});
+            // Live-bind change events
+            list.querySelectorAll('.nm-sched-enabled').forEach(el => el.addEventListener('change', function() {{
+                _nmState.schedules[+this.dataset.sched].enabled = this.checked;
+            }}));
+            list.querySelectorAll('.nm-sched-name').forEach(el => el.addEventListener('input', function() {{
+                _nmState.schedules[+this.dataset.sched].name = this.value;
+            }}));
+            list.querySelectorAll('.nm-sched-zone').forEach(el => el.addEventListener('change', function() {{
+                _nmState.schedules[+this.dataset.sched].zone = this.value;
+            }}));
+            list.querySelectorAll('.nm-sched-start').forEach(el => el.addEventListener('blur', function() {{
+                const v = _nmParse12h(this.value);
+                if (v) {{ this.dataset.val24 = v; this.value = _nmTo12h(v); _nmState.schedules[+this.dataset.sched].start = v; }}
+                else {{ this.value = _nmTo12h(this.dataset.val24); }}
+            }}));
+            list.querySelectorAll('.nm-sched-end').forEach(el => el.addEventListener('blur', function() {{
+                const v = _nmParse12h(this.value);
+                if (v) {{ this.dataset.val24 = v; this.value = _nmTo12h(v); _nmState.schedules[+this.dataset.sched].end = v; }}
+                else {{ this.value = _nmTo12h(this.dataset.val24); }}
+            }}));
+            list.querySelectorAll('.nm-tp-btn').forEach(el => el.addEventListener('click', function() {{
+                const wrap = this.closest('div');
+                const displayEl = wrap.querySelector('.nm-tp-display');
+                nmOpenTimePicker(displayEl, +displayEl.dataset.sched, displayEl.dataset.field, false);
+            }}));
+            list.querySelectorAll('.nm-day-cb').forEach(el => el.addEventListener('change', function() {{
+                const s = _nmState.schedules[+this.dataset.sched];
+                const d = +this.dataset.day;
+                if (this.checked) {{ if (!s.days.includes(d)) s.days.push(d); }}
+                else {{ s.days = s.days.filter(x => x !== d); }}
+            }}));
+            list.querySelectorAll('.nm-sched-target-cb').forEach(el => el.addEventListener('change', function() {{
+                const s = _nmState.schedules[+this.dataset.sched];
+                const t = this.dataset.target;
+                if (!s.targets) s.targets = ['person', 'vehicle'];
+                if (this.checked) {{ if (!s.targets.includes(t)) s.targets.push(t); }}
+                else {{ s.targets = s.targets.filter(x => x !== t); }}
+            }}));
+        }}
+
+        async function sendTestImageNotification() {{
+            const cameraId = document.getElementById('camera-id').value;
+            if (!cameraId) {{ showToast('Save the camera first.', 'error'); return; }}
+            const btn = document.getElementById('nm-test-image-btn');
+            const orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            try {{
+                const resp = await fetch(`/api/cameras/${{cameraId}}/test-image-notification`, {{ method: 'POST', headers: {{'Content-Type':'application/json'}} }});
+                const result = await resp.json();
+                if (resp.ok) showToast('Test image notification sent!', 'success');
+                else showToast('Failed: ' + (result.error || result.message), 'error');
+            }} catch(e) {{
+                showToast('Error: ' + e.message, 'error');
+            }} finally {{
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }}
+        }}
+        
         function showToast(message, type = 'info') {{
             const toast = document.createElement('div');
-            toast.className = `toast toast-${{type}}`;
+            toast.className = `toast toast-${type}`;
             
             if (type === 'info') toast.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             else if (type === 'success') toast.style.background = '#48bb78';
@@ -7608,9 +9615,9 @@ def get_web_ui_html(current_settings=None):
                                 hasAi = true;
                                 const detections = c.aiDetectionCount || 0;
                                 const runs = c.aiInferenceCount || 0;
-                                aiHtml += `<div style="display: flex; justify-content: space-between;">
-                                    <span style="font-weight: 600; color: var(--text-title);">${{c.name}}</span>
-                                    <span style="font-family: monospace; color: #ecc94b; font-size: 10px;">${{runs}} runs / ${{detections}} detections</span>
+                                aiHtml += `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; gap: 12px;">
+                                    <span style="font-weight: 500; color: var(--text-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${{c.name}}</span>
+                                    <span style="font-family: monospace; color: var(--yellow-text); font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">${{runs}} runs / ${{detections}} detections</span>
                                 </div>`;
                             }}
                         }});
@@ -7642,22 +9649,36 @@ def get_web_ui_html(current_settings=None):
                     if (mainStats) {{
                         const stats = mainStats;
                         const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
+                        const viewers = stats.readers || 0;
+                        const readerIps = stats.reader_ips || [];
+                        const ipsTooltip = readerIps.length > 0 ? '\\nConnected IPs:\\n' + readerIps.join('\\n') : '';
+                        
                         html += `
-                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Main Stream Status'}}" style="min-width: 115px; justify-content: center;">
+                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Main Stream Status'}}${{ipsTooltip}}" style="min-width: 115px; justify-content: center;">
                                 MAIN: ${{ (stats.bitrate / 1000).toFixed(1) }} Mbps
                             </div>
                         `;
+                        if (viewers > 0) {{
+                            html += `
+                                <div class="metric-badge live" title="Active Viewers (Main)${{ipsTooltip}}" style="min-width: 40px; justify-content: center;">
+                                    <i class="fas fa-users"></i> ${{viewers}}
+                                </div>
+                            `;
+                        }}
                     }}
                     
                     if (subStats) {{
                         const stats = subStats;
                         const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
                         const viewers = stats.readers || 0;
+                        const readerIps = stats.reader_ips || [];
+                        const ipsTooltip = readerIps.length > 0 ? '\\nConnected IPs:\\n' + readerIps.join('\\n') : '';
+                        
                         html += `
-                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}" style="min-width: 105px; justify-content: center;">
+                            <div class="metric-badge ${{statusClass}}" title="${{stats.stale ? 'Stream Stalled' : 'Sub Stream Status'}}${{ipsTooltip}}" style="min-width: 105px; justify-content: center;">
                                 SUB: ${{ (stats.bitrate / 1000).toFixed(1) }} Mbps
                             </div>
-                            <div class="metric-badge ${{viewers > 0 ? 'live' : ''}}" title="Active Viewers" style="min-width: 40px; justify-content: center;">
+                            <div class="metric-badge ${{viewers > 0 ? 'live' : ''}}" title="Active Viewers (Sub)${{ipsTooltip}}" style="min-width: 40px; justify-content: center;">
                                 <i class="fas fa-users"></i> ${{viewers}}
                             </div>
                         `;
@@ -7701,16 +9722,34 @@ def get_web_ui_html(current_settings=None):
             const themes = ['dark', 'nord', 'dracula', 'solar-light', 'midnight', 'emerald', 'sunset', 'matrix', 'slate', 'cyberpunk', 'amoled', 'ui'];
             themes.forEach(t => document.body.classList.remove(`theme-${{t}}`));
             
+            // Map dark/light to our actual CSS classes
+            let cssTheme = theme;
+            if (theme === 'dark') cssTheme = 'dracula';
+            if (theme === 'light') cssTheme = 'ui';
+
             // Add the selected one
-            if (theme && theme !== 'classic') {{
-                document.body.classList.add(`theme-${{theme}}`);
+            if (cssTheme && cssTheme !== 'classic') {{
+                document.body.classList.add(`theme-${{cssTheme}}`);
             }}
 
-            // Sync dropdowns
-            const s1 = document.getElementById('themeSwitcher');
-            const s2 = document.getElementById('themeSelect');
-            if (s1) s1.value = theme || 'dracula';
-            if (s2) s2.value = theme || 'dracula';
+            // Update icon
+            const icon = document.getElementById('themeToggleIcon');
+            if (icon) {{
+                if (theme === 'light') {{
+                    icon.className = 'fas fa-sun';
+                    icon.style.color = '#ed8936';
+                }} else {{
+                    icon.className = 'fas fa-moon';
+                    icon.style.color = '#cbd5e0';
+                }}
+            }}
+        }}
+
+        function toggleSimpleTheme() {{
+            // We use settings.theme which is 'dark' or 'light'
+            const current = settings.theme || 'dark';
+            const nextTheme = current === 'dark' ? 'light' : 'dark';
+            changeTheme(nextTheme);
         }}
 
         async function changeTheme(theme) {{
@@ -7760,10 +9799,15 @@ def get_web_ui_html(current_settings=None):
             await updateStats();
             fetchSystemVersions();
             
-            // Check if matrix view is requested via URL search param or hash
+            // Open a full-screen view directly when requested by URL.
+            // Preferred: dedicated paths /matrix and /onvif (alias /ai).
+            // Still supported: legacy ?view=matrix and #matrix.
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('view') === 'matrix' || window.location.hash === '#matrix') {{
+            const path = window.location.pathname;
+            if (path === '/matrix' || urlParams.get('view') === 'matrix' || window.location.hash === '#matrix') {{
                 toggleMatrixView(true);
+            }} else if (path === '/onvif' || path === '/ai') {{
+                toggleONVIFView(true);
             }}
             
             // Auto-refresh data and stats
@@ -7821,7 +9865,7 @@ def get_web_ui_html(current_settings=None):
                 const data = await resp.json();
                 
                 if (resp.ok) {{
-                    let html = '<h4>Found Profiles:</h4><p style="font-size:12px;color:#718096;margin-bottom:10px">Click to use profile</p>';
+                    let html = '<h4>Found Profiles:</h4><p style="font-size:12px;color: var(--text-muted);margin-bottom:10px">Click to use profile</p>';
                     if (data.profiles.length === 0) {{
                         html += '<p>No profiles found.</p>';
                     }} else {{
@@ -7829,7 +9873,7 @@ def get_web_ui_html(current_settings=None):
                             html += `<div class="result-item" style="cursor:default">
                                 <div style="margin-bottom:8px">
                                     <strong>${{p.name}}</strong> (${{p.width}}x${{p.height}} @ ${{p.framerate}}fps)<br>
-                                    <span style="font-size:10px;color:#718096;word-break:break-all">${{p.streamUrl}}</span>
+                                    <span style="font-size:10px;color: var(--text-muted);word-break:break-all">${{p.streamUrl}}</span>
                                 </div>
                                 <div style="display:flex;gap:10px">
                                     <button type="button" class="btn" style="padding:5px 10px;font-size:12px;background:#667eea;color:white" onclick='applyProfile(${{JSON.stringify(p).replace(/'/g, "&#39;")}}, "${{data.device_info.host}}", "${{data.device_info.port}}", "main", this)'>Set as Main</button>
@@ -8079,93 +10123,248 @@ def get_web_ui_html(current_settings=None):
 
 def get_login_html():
     """Generate Login Page HTML"""
+    github_url = "https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server"
     return f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys Onvif-RTSP Server v{CURRENT_VERSION}</title>
+    <title>Login - Tonys ONVIF-RTSP Server v{CURRENT_VERSION}</title>
     <style>
         :root {{
-            --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --page-bg: #e9ecf6;
             --card-bg: #ffffff;
-            --text-title: #2d3748;
-            --text-body: #718096;
+            --panel-grad: linear-gradient(160deg, #667eea 0%, #764ba2 100%);
+            --text-title: #1a202c;
+            --text-body: #5a6678;
+            --text-muted: #95a0b3;
+            --input-bg: #ffffff;
+            --input-border: #e2e8f0;
+            --input-text: #1a202c;
             --btn-primary: #667eea;
             --btn-hover: #5a67d8;
-            --border: #e2e8f0;
+            --divider: #edf1f7;
+            --chip-bg: rgba(255,255,255,0.16);
+            --chip-border: rgba(255,255,255,0.25);
+            --shadow: 0 24px 60px rgba(45, 55, 90, 0.28);
+        }}
+        @media (prefers-color-scheme: dark) {{
+            :root {{
+                --page-bg: #0a0d12;
+                --card-bg: #12161d;
+                --panel-grad: linear-gradient(160deg, #4b3f9e 0%, #5a2f78 100%);
+                --text-title: #f0f6fc;
+                --text-body: #9da7b3;
+                --text-muted: #64707f;
+                --input-bg: #0d1117;
+                --input-border: #2a313b;
+                --input-text: #e6edf3;
+                --btn-primary: #7c83f0;
+                --btn-hover: #8b91f2;
+                --divider: #21262d;
+                --chip-bg: rgba(255,255,255,0.12);
+                --chip-border: rgba(255,255,255,0.18);
+                --shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+            }}
         }}
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--primary-bg);
-            height: 100vh;
+            background: var(--page-bg);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 24px;
             color: var(--text-title);
         }}
-        .login-card {{
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        .login-shell {{
+            display: flex;
             width: 100%;
-            max-width: 400px;
-            text-align: center;
+            max-width: 880px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
         }}
-        h1 {{ font-size: 24px; margin-bottom: 8px; }}
-        p {{ color: var(--text-body); font-size: 14px; margin-bottom: 30px; }}
-        .form-group {{ margin-bottom: 20px; text-align: left; }}
-        label {{ display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--text-body); }}
+
+        /* ---- Brand panel ---- */
+        .brand-panel {{
+            flex: 1 1 44%;
+            background: var(--panel-grad);
+            color: #fff;
+            padding: 44px 38px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }}
+        .brand-panel::after {{
+            content: "";
+            position: absolute;
+            width: 320px; height: 320px;
+            right: -120px; bottom: -120px;
+            background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%);
+            border-radius: 50%;
+        }}
+        .brand-logo {{
+            display: flex; align-items: center; gap: 12px; margin-bottom: 22px;
+        }}
+        .brand-logo .mark {{
+            width: 44px; height: 44px; border-radius: 12px;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.28);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }}
+        .brand-logo .name {{ font-size: 17px; font-weight: 800; letter-spacing: 0.2px; line-height: 1.2; }}
+        .brand-logo .name small {{ display: block; font-size: 11px; font-weight: 600; opacity: 0.8; letter-spacing: 0.3px; }}
+        .brand-tagline {{ font-size: 14px; line-height: 1.6; opacity: 0.92; margin-bottom: 26px; max-width: 320px; position: relative; z-index: 1; }}
+        .feature-list {{ list-style: none; display: flex; flex-direction: column; gap: 13px; position: relative; z-index: 1; }}
+        .feature-list li {{ display: flex; align-items: flex-start; gap: 11px; font-size: 13px; line-height: 1.45; opacity: 0.96; }}
+        .feature-list .tick {{
+            width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+            background: rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center; margin-top: 1px;
+        }}
+        .brand-foot {{ margin-top: auto; padding-top: 28px; position: relative; z-index: 1; }}
+        .gh-btn {{
+            display: inline-flex; align-items: center; gap: 9px;
+            background: var(--chip-bg);
+            border: 1px solid var(--chip-border);
+            color: #fff; text-decoration: none;
+            padding: 9px 15px; border-radius: 9px;
+            font-size: 13px; font-weight: 600;
+            transition: background 0.18s, transform 0.18s;
+        }}
+        .gh-btn:hover {{ background: rgba(255,255,255,0.26); transform: translateY(-1px); }}
+        .version-pill {{
+            display: inline-block; margin-left: 10px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.4px;
+            padding: 4px 10px; border-radius: 20px;
+            background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);
+        }}
+
+        /* ---- Form panel ---- */
+        .form-panel {{
+            flex: 1 1 56%;
+            padding: 48px 44px;
+            display: flex; flex-direction: column; justify-content: center;
+        }}
+        .form-panel h1 {{ font-size: 25px; font-weight: 800; margin-bottom: 7px; color: var(--text-title); }}
+        .form-panel .sub {{ color: var(--text-body); font-size: 14px; margin-bottom: 30px; }}
+        .form-group {{ margin-bottom: 18px; }}
+        label {{ display: block; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; color: var(--text-body); }}
         input[type="text"], input[type="password"] {{
             width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--input-text);
+            border-radius: 9px;
             font-size: 14px;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.18s, box-shadow 0.18s;
         }}
-        input:focus {{ border-color: var(--btn-primary); }}
-        .checkbox-group {{ display: flex; align-items: center; gap: 8px; margin-bottom: 25px; cursor: pointer; }}
+        input[type="text"]:focus, input[type="password"]:focus {{
+            border-color: var(--btn-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--btn-primary) 18%, transparent);
+        }}
+        .checkbox-group {{ display: flex; align-items: center; gap: 9px; margin: 4px 0 24px 0; cursor: pointer; }}
+        .checkbox-group input {{ width: 15px; height: 15px; accent-color: var(--btn-primary); cursor: pointer; }}
+        .checkbox-group label {{ margin-bottom: 0; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; color: var(--text-body); cursor: pointer; }}
         .btn {{
             width: 100%;
             padding: 14px;
             background: var(--btn-primary);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-weight: 600;
+            border-radius: 9px;
+            font-weight: 700;
+            font-size: 14px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.18s, transform 0.1s;
         }}
         .btn:hover {{ background: var(--btn-hover); }}
-        .error {{ color: #e53e3e; font-size: 13px; margin-top: 15px; display: none; }}
+        .btn:active {{ transform: translateY(1px); }}
+        .error {{ color: #e53e3e; font-size: 13px; margin-top: 16px; text-align: center; display: none; }}
+        .form-foot {{
+            margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--divider);
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 12px; color: var(--text-muted);
+        }}
+        .form-foot a {{ color: var(--text-body); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }}
+        .form-foot a:hover {{ color: var(--btn-primary); }}
+
+        @media (max-width: 720px) {{
+            .login-shell {{ flex-direction: column; max-width: 440px; }}
+            .brand-panel {{ padding: 32px 30px; }}
+            .feature-list {{ display: none; }}
+            .brand-tagline {{ margin-bottom: 4px; }}
+            .brand-foot {{ padding-top: 22px; }}
+            .form-panel {{ padding: 36px 30px; }}
+        }}
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h1>Welcome Back</h1>
-        <p>Login to manage your ONVIF cameras</p>
-        
-        <form id="loginForm">
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" required>
+    <div class="login-shell">
+        <aside class="brand-panel">
+            <div class="brand-logo">
+                <div class="name">Tonys ONVIF-RTSP Server<small>Camera virtualization &amp; streaming</small></div>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" required>
+            <p class="brand-tagline">
+                Turn any RTSP feed into a fully ONVIF-compatible virtual camera &mdash; with AI detection,
+                event forwarding, and UniFi Protect support, all from one dashboard.
+            </p>
+            <ul class="feature-list">
+                <li><span class="tick">&#10003;</span><span>Expose RTSP streams as discoverable ONVIF cameras</span></li>
+                <li><span class="tick">&#10003;</span><span>AI person, vehicle &amp; package detection with alerts</span></li>
+                <li><span class="tick">&#10003;</span><span>UniFi Protect compatible event forwarding</span></li>
+                <li><span class="tick">&#10003;</span><span>Live multi-camera matrix &amp; GridFusion layouts</span></li>
+            </ul>
+            <div class="brand-foot">
+                <a class="gh-btn" href="{github_url}" target="_blank" rel="noopener">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="#fff" aria-hidden="true">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    View on GitHub
+                </a>
+                <span class="version-pill">v{CURRENT_VERSION}</span>
             </div>
-            <div class="checkbox-group" onclick="document.getElementById('remember').click()">
-                <input type="checkbox" id="remember" name="remember">
-                <label style="margin-bottom: 0; text-transform: none; cursor: pointer;">Stay logged in for 30 days</label>
+        </aside>
+
+        <main class="form-panel">
+            <h1>Welcome Back</h1>
+            <p class="sub">Sign in to manage your virtual ONVIF cameras.</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" autocomplete="username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" autocomplete="current-password" required>
+                </div>
+                <div class="checkbox-group" onclick="if(event.target.tagName!=='INPUT')document.getElementById('remember').click()">
+                    <input type="checkbox" id="remember" name="remember">
+                    <label for="remember">Stay logged in for 30 days</label>
+                </div>
+                <button type="submit" class="btn">Sign In</button>
+            </form>
+            <div id="error" class="error"></div>
+
+            <div class="form-foot">
+                <span>&copy; Tonys ONVIF-RTSP Server</span>
+                <a href="{github_url}" target="_blank" rel="noopener">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    GitHub
+                </a>
             </div>
-            <button type="submit" class="btn">Login</button>
-        </form>
-        <div id="error" class="error"></div>
+        </main>
     </div>
 
     <script>
@@ -8173,10 +10372,10 @@ def get_login_html():
             e.preventDefault();
             const formData = new FormData(e.target);
             formData.append('remember', document.getElementById('remember').checked);
-            
+
             const errorDiv = document.getElementById('error');
             errorDiv.style.display = 'none';
-            
+
             try {{
                 const res = await fetch('/login', {{
                     method: 'POST',

@@ -201,11 +201,10 @@ class ONVIFService:
         @require_auth
         def snapshot():
             """Capture and return a real-time snapshot for ONVIF"""
-            # Use sub-stream if available for faster capture
-            if not getattr(self.camera, 'disable_substream', False):
-                stream_path = f"{self.camera.path_name}_sub"
-            else:
-                stream_path = f"{self.camera.path_name}_main"
+            # Capture from the MAIN stream so the snapshot dimensions match the
+            # advertised main resolution. Serving sub-resolution snapshots made
+            # NVRs (UniFi Protect) flap the camera's resolution class (issue #42).
+            stream_path = f"{self.camera.path_name}_main"
             
             # Construct local MediaMTX URL
             rtsp_port = self.camera.rtsp_port
@@ -225,9 +224,11 @@ class ONVIFService:
             try:
                 success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
                 if not success:
-                    # Fallback to direct camera URL if MediaMTX failed
-                    stream_url = self.camera.sub_stream_url if not getattr(self.camera, 'disable_substream', False) else self.camera.main_stream_url
-                    success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+                    # Fallback to direct camera main URL if MediaMTX failed
+                    success, error = ffmpeg_mgr.capture_snapshot(self.camera.main_stream_url, path)
+                if not success and self.camera.sub_stream_url and not getattr(self.camera, 'disable_substream', False):
+                    # Last resort: sub stream (wrong resolution beats no snapshot)
+                    success, error = ffmpeg_mgr.capture_snapshot(self.camera.sub_stream_url, path)
                 
                 if success:
                     with open(path, 'rb') as f:
@@ -258,45 +259,81 @@ class ONVIFService:
                 
                 # Parse SOAP request
                 soap_body = request.data.decode('utf-8')
-                
+
+                # Order matters: longer action names must be checked before their
+                # prefixes (GetProfiles before GetProfile, ...ConfigurationOptions
+                # before ...Configurations before ...Configuration).
+
                 # GetProfiles
                 if 'GetProfiles' in soap_body:
                     return self._handle_get_profiles()
-                
+
+                # GetProfile (singular, by token)
+                elif 'GetProfile' in soap_body:
+                    return self._handle_get_profile()
+
                 # GetStreamUri
                 elif 'GetStreamUri' in soap_body:
                     return self._handle_get_stream_uri(local_ip)
-                
+
                 # GetSnapshotUri
                 elif 'GetSnapshotUri' in soap_body:
                     return self._handle_get_snapshot_uri(local_ip)
-                
+
                 # GetVideoSources
                 elif 'GetVideoSources' in soap_body:
                     return self._handle_get_video_sources()
-                
-                # GetAudioSources
-                elif 'GetAudioSources' in soap_body and getattr(self.camera, 'enable_audio', False):
-                    return self._handle_get_audio_sources()
-                
+
+                # GetAudioSources (empty list when audio is disabled)
+                elif 'GetAudioSources' in soap_body:
+                    if getattr(self.camera, 'enable_audio', False):
+                        return self._handle_get_audio_sources()
+                    return self._handle_empty_media_response('GetAudioSources')
+
                 # GetAudioEncoderConfigurations
-                elif 'GetAudioEncoderConfigurations' in soap_body and getattr(self.camera, 'enable_audio', False):
-                    return self._handle_get_audio_encoder_configs()
-                
+                elif 'GetAudioEncoderConfigurations' in soap_body:
+                    if getattr(self.camera, 'enable_audio', False):
+                        return self._handle_get_audio_encoder_configs()
+                    return self._handle_empty_media_response('GetAudioEncoderConfigurations')
+
                 # GetAudioSourceConfigurations
-                elif 'GetAudioSourceConfigurations' in soap_body and getattr(self.camera, 'enable_audio', False):
-                    return self._handle_get_audio_source_configs()
-                
+                elif 'GetAudioSourceConfigurations' in soap_body:
+                    if getattr(self.camera, 'enable_audio', False):
+                        return self._handle_get_audio_source_configs()
+                    return self._handle_empty_media_response('GetAudioSourceConfigurations')
+
+                # GetVideoEncoderConfigurationOptions
+                elif 'GetVideoEncoderConfigurationOptions' in soap_body:
+                    return self._handle_get_video_encoder_config_options()
+
                 # GetVideoEncoderConfigurations
                 elif 'GetVideoEncoderConfigurations' in soap_body:
                     return self._handle_get_video_encoder_configs()
-                
+
+                # GetVideoEncoderConfiguration (singular, by token)
+                elif 'GetVideoEncoderConfiguration' in soap_body:
+                    return self._handle_get_video_encoder_config()
+
+                # GetVideoSourceConfigurationOptions
+                elif 'GetVideoSourceConfigurationOptions' in soap_body:
+                    return self._handle_get_video_source_config_options()
+
                 # GetVideoSourceConfigurations
                 elif 'GetVideoSourceConfigurations' in soap_body:
                     return self._handle_get_video_source_configs()
-                
-                # Default: return profiles
-                return self._handle_get_profiles()
+
+                # GetVideoSourceConfiguration (singular, by token)
+                elif 'GetVideoSourceConfiguration' in soap_body:
+                    return self._handle_get_video_source_config()
+
+                # GetServiceCapabilities
+                elif 'GetServiceCapabilities' in soap_body:
+                    return self._handle_get_media_service_capabilities()
+
+                # Unknown action: return a proper SOAP fault. Answering with
+                # GetProfiles data here made NVRs parse the wrong profile's
+                # resolution (UniFi Protect HD/4K flapping, issue #42).
+                return self._soap_fault()
                 
             except Exception as e:
                 print(f"  Error in media service: {e}")
@@ -1076,6 +1113,278 @@ class ONVIFService:
                 <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
             </trt:Configurations>
         </trt:GetVideoSourceConfigurationsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _soap_fault(self, subcode='ter:ActionNotSupported', reason='Action not supported'):
+        """Return a standard ONVIF SOAP fault for unsupported/invalid requests."""
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:ter="http://www.onvif.org/ver10/error">
+    <SOAP-ENV:Body>
+        <SOAP-ENV:Fault>
+            <SOAP-ENV:Code>
+                <SOAP-ENV:Value>SOAP-ENV:Sender</SOAP-ENV:Value>
+                <SOAP-ENV:Subcode>
+                    <SOAP-ENV:Value>{subcode}</SOAP-ENV:Value>
+                </SOAP-ENV:Subcode>
+            </SOAP-ENV:Code>
+            <SOAP-ENV:Reason>
+                <SOAP-ENV:Text xml:lang="en">{reason}</SOAP-ENV:Text>
+            </SOAP-ENV:Reason>
+        </SOAP-ENV:Fault>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml', status=400)
+
+    def _handle_empty_media_response(self, action):
+        """Return an empty-but-valid response for list-type requests
+        (e.g. audio queries when audio is disabled)."""
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:{action}Response></trt:{action}Response>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _requested_sub_profile(self, soap_body):
+        """True if the request body references the sub stream profile/encoder."""
+        cam_id = self.camera.id
+        return (f'subStream_{cam_id}' in soap_body or 'subStream' in soap_body
+                or f'VideoEncoderSub_{cam_id}' in soap_body or 'VideoEncoderSub' in soap_body)
+
+    def _handle_get_profile(self):
+        """Handle GetProfile (singular) — return ONLY the requested profile.
+
+        Answering this with a two-profile GetProfilesResponse lets clients
+        latch onto the wrong stream's resolution (UniFi Protect HD/4K
+        classification flapping, issue #42).
+        """
+        soap_body = request.data.decode('utf-8')
+        cam_id = self.camera.id
+        want_sub = self._requested_sub_profile(soap_body)
+        if want_sub and getattr(self.camera, 'disable_substream', False):
+            return self._soap_fault('ter:InvalidArgVal', 'The requested profile token does not exist')
+
+        use_count = 2 if not getattr(self.camera, 'disable_substream', False) else 1
+        if want_sub:
+            token, name = f"subStream_{cam_id}", "subStream"
+            enc_token, enc_name = f"VideoEncoderSub_{cam_id}", "Sub Video Encoder"
+            width, height = self.camera.sub_width, self.camera.sub_height
+            framerate = self.camera.sub_framerate
+            quality, bitrate, h264_profile = 3, 1024, "Baseline"
+        else:
+            token, name = f"mainStream_{cam_id}", "mainStream"
+            enc_token, enc_name = f"VideoEncoderMain_{cam_id}", "Main Video Encoder"
+            width, height = self.camera.main_width, self.camera.main_height
+            framerate = self.camera.main_framerate
+            quality, bitrate, h264_profile = 5, 4096, "Main"
+
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetProfileResponse>
+            <trt:Profile token="{token}" fixed="true">
+                <tt:Name>{name}</tt:Name>
+                <tt:VideoSourceConfiguration token="VideoSource_{cam_id}">
+                    <tt:Name>Video Source</tt:Name>
+                    <tt:UseCount>{use_count}</tt:UseCount>
+                    <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
+                    <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
+                </tt:VideoSourceConfiguration>
+                <tt:VideoEncoderConfiguration token="{enc_token}">
+                    <tt:Name>{enc_name}</tt:Name>
+                    <tt:UseCount>1</tt:UseCount>
+                    <tt:Encoding>H264</tt:Encoding>
+                    <tt:Resolution>
+                        <tt:Width>{width}</tt:Width>
+                        <tt:Height>{height}</tt:Height>
+                    </tt:Resolution>
+                    <tt:Quality>{quality}</tt:Quality>
+                    <tt:RateControl>
+                        <tt:FrameRateLimit>{framerate}</tt:FrameRateLimit>
+                        <tt:EncodingInterval>1</tt:EncodingInterval>
+                        <tt:BitrateLimit>{bitrate}</tt:BitrateLimit>
+                    </tt:RateControl>
+                    <tt:H264>
+                        <tt:GovLength>{framerate}</tt:GovLength>
+                        <tt:H264Profile>{h264_profile}</tt:H264Profile>
+                    </tt:H264>
+                </tt:VideoEncoderConfiguration>
+            </trt:Profile>
+        </trt:GetProfileResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_video_encoder_config(self):
+        """Handle GetVideoEncoderConfiguration (singular, by token)"""
+        soap_body = request.data.decode('utf-8')
+        cam_id = self.camera.id
+        if self._requested_sub_profile(soap_body):
+            token, name = f"VideoEncoderSub_{cam_id}", "Sub Video Encoder"
+            width, height = self.camera.sub_width, self.camera.sub_height
+            framerate = self.camera.sub_framerate
+            quality, bitrate, h264_profile = 3, 1024, "Baseline"
+        else:
+            token, name = f"VideoEncoderMain_{cam_id}", "Main Video Encoder"
+            width, height = self.camera.main_width, self.camera.main_height
+            framerate = self.camera.main_framerate
+            quality, bitrate, h264_profile = 5, 4096, "Main"
+
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetVideoEncoderConfigurationResponse>
+            <trt:Configuration token="{token}">
+                <tt:Name>{name}</tt:Name>
+                <tt:UseCount>1</tt:UseCount>
+                <tt:Encoding>H264</tt:Encoding>
+                <tt:Resolution>
+                    <tt:Width>{width}</tt:Width>
+                    <tt:Height>{height}</tt:Height>
+                </tt:Resolution>
+                <tt:Quality>{quality}</tt:Quality>
+                <tt:RateControl>
+                    <tt:FrameRateLimit>{framerate}</tt:FrameRateLimit>
+                    <tt:EncodingInterval>1</tt:EncodingInterval>
+                    <tt:BitrateLimit>{bitrate}</tt:BitrateLimit>
+                </tt:RateControl>
+                <tt:H264>
+                    <tt:GovLength>{framerate}</tt:GovLength>
+                    <tt:H264Profile>{h264_profile}</tt:H264Profile>
+                </tt:H264>
+            </trt:Configuration>
+        </trt:GetVideoEncoderConfigurationResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_video_encoder_config_options(self):
+        """Handle GetVideoEncoderConfigurationOptions request"""
+        soap_body = request.data.decode('utf-8')
+        cam_id = self.camera.id
+        if self._requested_sub_profile(soap_body):
+            resolutions = [(self.camera.sub_width, self.camera.sub_height)]
+            max_fps = self.camera.sub_framerate
+        elif f'VideoEncoderMain_{cam_id}' in soap_body or f'mainStream_{cam_id}' in soap_body:
+            resolutions = [(self.camera.main_width, self.camera.main_height)]
+            max_fps = self.camera.main_framerate
+        else:
+            # No token specified: advertise both streams' resolutions
+            resolutions = [
+                (self.camera.main_width, self.camera.main_height),
+                (self.camera.sub_width, self.camera.sub_height),
+            ]
+            max_fps = max(self.camera.main_framerate, self.camera.sub_framerate)
+
+        res_xml = "".join(
+            f"""
+                    <tt:ResolutionsAvailable>
+                        <tt:Width>{w}</tt:Width>
+                        <tt:Height>{h}</tt:Height>
+                    </tt:ResolutionsAvailable>""" for w, h in resolutions
+        )
+
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetVideoEncoderConfigurationOptionsResponse>
+            <trt:Options>
+                <tt:QualityRange>
+                    <tt:Min>1</tt:Min>
+                    <tt:Max>5</tt:Max>
+                </tt:QualityRange>
+                <tt:H264>{res_xml}
+                    <tt:GovLengthRange>
+                        <tt:Min>1</tt:Min>
+                        <tt:Max>{max_fps * 4}</tt:Max>
+                    </tt:GovLengthRange>
+                    <tt:FrameRateRange>
+                        <tt:Min>1</tt:Min>
+                        <tt:Max>{max_fps}</tt:Max>
+                    </tt:FrameRateRange>
+                    <tt:EncodingIntervalRange>
+                        <tt:Min>1</tt:Min>
+                        <tt:Max>1</tt:Max>
+                    </tt:EncodingIntervalRange>
+                    <tt:H264ProfilesSupported>Baseline</tt:H264ProfilesSupported>
+                    <tt:H264ProfilesSupported>Main</tt:H264ProfilesSupported>
+                </tt:H264>
+            </trt:Options>
+        </trt:GetVideoEncoderConfigurationOptionsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_video_source_config(self):
+        """Handle GetVideoSourceConfiguration (singular) — there is only one source."""
+        cam_id = self.camera.id
+        use_count = 2 if not getattr(self.camera, 'disable_substream', False) else 1
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetVideoSourceConfigurationResponse>
+            <trt:Configuration token="VideoSource_{cam_id}">
+                <tt:Name>Video Source</tt:Name>
+                <tt:UseCount>{use_count}</tt:UseCount>
+                <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
+                <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
+            </trt:Configuration>
+        </trt:GetVideoSourceConfigurationResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_video_source_config_options(self):
+        """Handle GetVideoSourceConfigurationOptions — bounds are fixed to the source size."""
+        cam_id = self.camera.id
+        w, h = self.camera.main_width, self.camera.main_height
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetVideoSourceConfigurationOptionsResponse>
+            <trt:Options>
+                <tt:BoundsRange>
+                    <tt:XRange><tt:Min>0</tt:Min><tt:Max>0</tt:Max></tt:XRange>
+                    <tt:YRange><tt:Min>0</tt:Min><tt:Max>0</tt:Max></tt:YRange>
+                    <tt:WidthRange><tt:Min>{w}</tt:Min><tt:Max>{w}</tt:Max></tt:WidthRange>
+                    <tt:HeightRange><tt:Min>{h}</tt:Min><tt:Max>{h}</tt:Max></tt:HeightRange>
+                </tt:BoundsRange>
+                <tt:VideoSourceTokensAvailable>VideoSource_{cam_id}</tt:VideoSourceTokensAvailable>
+            </trt:Options>
+        </trt:GetVideoSourceConfigurationOptionsResponse>
+    </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>"""
+        return Response(soap_response, mimetype='application/soap+xml')
+
+    def _handle_get_media_service_capabilities(self):
+        """Handle GetServiceCapabilities on the media service"""
+        max_profiles = 1 if getattr(self.camera, 'disable_substream', False) else 2
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl">
+    <SOAP-ENV:Body>
+        <trt:GetServiceCapabilitiesResponse>
+            <trt:Capabilities SnapshotUri="true" Rotation="false">
+                <trt:ProfileCapabilities MaximumNumberOfProfiles="{max_profiles}"/>
+                <trt:StreamingCapabilities RTPMulticast="false" RTP_TCP="true" RTP_RTSP_TCP="true"/>
+            </trt:Capabilities>
+        </trt:GetServiceCapabilitiesResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
         return Response(soap_response, mimetype='application/soap+xml')

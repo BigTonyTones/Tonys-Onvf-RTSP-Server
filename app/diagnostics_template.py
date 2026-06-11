@@ -2,8 +2,11 @@
 Diagnostics page template for troubleshooting
 """
 
-def get_diagnostics_html():
-    return r'''
+def get_diagnostics_html(theme=''):
+    from .theme_css import APP_THEME_CSS, body_theme_class
+    theme_class = body_theme_class(theme)
+    
+    html = r'''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -69,9 +72,9 @@ def get_diagnostics_html():
         }
 
         .back-btn {
-            background: #24262b;
-            color: var(--text-main);
-            border: 1px solid #333742;
+            background: transparent;
+            color: var(--accent-purple);
+            border: 1.5px solid var(--accent-purple);
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
@@ -81,8 +84,7 @@ def get_diagnostics_html():
         }
         
         .back-btn:hover {
-            background: #2f333e;
-            border-color: #454b59;
+            background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
             transform: translateY(-1px);
         }
 
@@ -99,7 +101,7 @@ def get_diagnostics_html():
         }
 
         .clear-btn:hover {
-            background: #24262b;
+            background: color-mix(in srgb, var(--text-muted) 14%, transparent);
             border-color: var(--text-muted);
             color: var(--text-main);
         }
@@ -237,9 +239,9 @@ def get_diagnostics_html():
         }
         
         .btn {
-            background: #24262b;
-            color: var(--text-main);
-            border: 1px solid #333742;
+            background: transparent;
+            color: var(--accent-purple);
+            border: 1.5px solid var(--accent-purple);
             padding: 10px 20px;
             border-radius: 6px;
             cursor: pointer;
@@ -253,8 +255,7 @@ def get_diagnostics_html():
         }
         
         .btn:hover {
-            background: #2f333e;
-            border-color: #454b59;
+            background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
             transform: translateY(-1px);
         }
         
@@ -275,7 +276,7 @@ def get_diagnostics_html():
         }
 
         .btn-secondary:hover {
-            background: #24262b;
+            background: color-mix(in srgb, var(--text-muted) 14%, transparent);
             border-color: var(--text-muted);
             color: var(--text-main);
         }
@@ -428,7 +429,7 @@ def get_diagnostics_html():
         .scan-use-btn {
             margin-top: 8px;
             background: transparent;
-            border: 1px solid #333742;
+            border: 1px solid var(--border-color);
             color: var(--text-muted);
             padding: 5px 12px;
             border-radius: 5px;
@@ -440,9 +441,9 @@ def get_diagnostics_html():
         }
 
         .scan-use-btn:hover {
-            background: #24262b;
-            color: var(--text-main);
-            border-color: #454b59;
+            background: color-mix(in srgb, var(--accent-purple) 10%, transparent);
+            color: var(--accent-purple);
+            border-color: var(--accent-purple);
         }
 
         .scan-count-badge {
@@ -1953,3 +1954,30 @@ def get_diagnostics_html():
 </body>
 </html>
 '''
+
+    # Inject theme styling rules
+    themed_style = f"""
+        /* Dashboard theme palette (only active when body has a theme class) */
+{APP_THEME_CSS}
+        body {{
+            --bg-color: var(--app-bg, #0f1012);
+            --sidebar-bg: var(--app-header, #151619);
+            --card-bg: var(--app-card, #1a1b1e);
+            --header-bg: var(--app-header, #151619);
+            --text-main: var(--app-title, #f0f2f5);
+            --text-muted: var(--app-muted, #888e99);
+            --accent-purple: var(--app-accent, #3b82f6);
+            --accent-pink: var(--app-accent2, #f43f5e);
+            --accent-cyan: var(--app-accent, #00a2ff);
+            --accent-green: var(--app-success, #10b981);
+            --accent-orange: var(--app-accent2, #f97316);
+            --accent-red: var(--app-danger, #ef4444);
+            --border-color: var(--app-border, #24262b);
+            --input-bg: var(--app-input, #1a1b1e);
+            --console-bg: var(--app-input, #0d0e10);
+        }}
+    """
+    
+    html = html.replace('</style>', themed_style + '\n    </style>')
+    html = html.replace('<body>', f'<body class="{theme_class}">')
+    return html

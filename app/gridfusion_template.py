@@ -1,9 +1,13 @@
 import json
 import platform
 
+from .theme_css import APP_THEME_CSS, body_theme_class
+
 def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
     """Generate GridFusion Editor Page HTML"""
-    
+
+    theme_class = body_theme_class((current_settings or {}).get('theme', ''))
+
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -27,6 +31,22 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             --border: #334155;
             --bg-hover: #3e4c5e;
             --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }}
+
+        /* Dashboard theme palette (only active when <body> has a theme class) */
+{APP_THEME_CSS}
+        body {{
+            --bg-primary: var(--app-bg, #0f172a);
+            --bg-secondary: var(--app-card, #1e293b);
+            --bg-accent: var(--app-border, #334155);
+            --text-primary: var(--app-title, #f8fafc);
+            --text-secondary: var(--app-body, #94a3b8);
+            --accent-color: var(--app-accent, #6366f1);
+            --accent-hover: var(--app-accent2, #4f46e5);
+            --danger: var(--app-danger, #ef4444);
+            --success: var(--app-success, #22c55e);
+            --border: var(--app-border, #334155);
+            --bg-hover: var(--app-border, #3e4c5e);
         }}
 
         * {{
@@ -263,7 +283,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         .select-input:focus, .text-input:focus {{
             border-color: var(--accent-color);
             background-color: var(--bg-hover);
-            color: #ffffff;
+            color: var(--text-primary);
         }}
 
         .select-input option {{
@@ -745,7 +765,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             cursor: pointer;
         }}
         .btn-xs-danger:hover {{ background: var(--danger); color: white; }}
-        
+
         .btn-xs-primary {{
             padding: 2px 6px;
             font-size: 10px;
@@ -756,9 +776,22 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             cursor: pointer;
         }}
         .btn-xs-primary:hover {{ background: var(--success); color: white; }}
+
+        /* On light themes the faint tint + colored text is unreadable, so use
+           solid fills there only; dark themes keep the original look. */
+        body.theme-ui .btn-xs-primary,
+        body.theme-solar-light .btn-xs-primary,
+        body.theme-sunset .btn-xs-primary {{
+            background: var(--success); color: #fff; font-weight: 600;
+        }}
+        body.theme-ui .btn-xs-danger,
+        body.theme-solar-light .btn-xs-danger,
+        body.theme-sunset .btn-xs-danger {{
+            background: var(--danger); color: #fff; font-weight: 600;
+        }}
     </style>
 </head>
-<body>
+<body class="{theme_class}">
     <header>
         <div class="logo-area">
             <a href="/" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
@@ -789,7 +822,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         <button class="btn-xs-danger" onclick="deleteCurrentLayout()" title="Delete Layout" style="font-size: 11px; padding: 2px 5px;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
-                <select id="layout-select" onchange="switchLayout(this.value)" style="width:100%; background: var(--bg-primary); color: white; border: 1px solid var(--border); padding: 5px; border-radius: 4px; margin-bottom: 5px;">
+                <select id="layout-select" onchange="switchLayout(this.value)" style="width:100%; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); padding: 5px; border-radius: 4px; margin-bottom: 5px;">
                     <!-- Populated via JS -->
                 </select>
                 <input type="text" id="layout-name-edit" style="width:100%; background: rgba(0,0,0,0.2); color: var(--text-secondary); border: 1px solid transparent; padding: 4px; border-radius: 4px; font-size: 11px;" placeholder="Layout Name" onchange="updateLayoutName(this.value)">
@@ -803,7 +836,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                     </div>
                 </div>
                 <div style="display: flex; gap: 5px; align-items: center;">
-                    <select id="looks-select" style="flex: 1; background: var(--bg-primary); color: white; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
+                    <select id="looks-select" style="flex: 1; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
                         <option value="">-- Select a Look --</option>
                     </select>
                     <button class="btn-xs-primary" onclick="recallLook()" title="Apply Selected Look" style="font-size: 10px; padding: 4px 6px;">Apply</button>

@@ -165,6 +165,8 @@ class VirtualONVIFCamera:
         # Frame rate settings
         self.main_framerate = config.get('mainFramerate', 30)
         self._sub_framerate = config.get('subFramerate', 15)
+        # Runtime-only: actual source stream attributes probed at start (issue #42)
+        self.stream_probe = {}
         
         # ONVIF authentication credentials
         self.onvif_username = config.get('onvifUsername', 'admin')
@@ -215,11 +217,37 @@ class VirtualONVIFCamera:
         self.ai_motion_sensitivity = config.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
         self.ai_confidence_threshold = config.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
         self.ai_zone = config.get('aiZone', [])
+        self.ai_zone_profiles = config.get('aiZoneProfiles', {})
+        self.ai_active_zone_profile = config.get('aiActiveZoneProfile', '')
         self.send_smart_onvif_topics = config.get('sendSmartOnvifTopics', True)
         self._active_smart_tags = set()
         self._motion_state = False
         self._ai_thread = None
         self._ai_running = False
+        
+        # Per-camera AI notification settings
+        self.notify_ai_enabled = config.get('notifyAiEnabled', False)
+        self.notify_ai_cooldown = config.get('notifyAiCooldown', 60)
+        self.notify_ai_targets = config.get('notifyAiTargets', ['person'])
+        self.notify_ai_attach_image = config.get('notifyAiAttachImage', False)
+        self.notify_ai_zone_filter = config.get('notifyAiZoneFilter', '')
+        # Multi-schedule support — migrate legacy single schedule on first load
+        _legacy_sched = []
+        if config.get('notifyScheduleEnabled', False):
+            _legacy_sched = [{
+                'name': 'Schedule 1',
+                'enabled': True,
+                'days': config.get('notifyScheduleDays', list(range(7))),
+                'start': config.get('notifyScheduleStart', '00:00'),
+                'end': config.get('notifyScheduleEnd', '23:59'),
+            }]
+        self.notify_ai_schedules = config.get('notifyAiSchedules', _legacy_sched)
+        # Keep legacy fields populated for any code that still reads them directly
+        self.notify_schedule_enabled = bool(self.notify_ai_schedules)
+        first = self.notify_ai_schedules[0] if self.notify_ai_schedules else {}
+        self.notify_schedule_days = first.get('days', list(range(7)))
+        self.notify_schedule_start = first.get('start', '00:00')
+        self.notify_schedule_end = first.get('end', '23:59')
         
         # AI statistics
         self.ai_inference_count = 0
@@ -293,6 +321,11 @@ class VirtualONVIFCamera:
                 self._start_keepalive(vnic_name)
         
         self._start_onvif_service()
+
+        # Verify the configured resolution/codec against the real source streams
+        threading.Thread(target=self._probe_source_streams, daemon=True,
+                         name=f"probe-{self.path_name}").start()
+
         if self.enable_event_forwarding:
             if self.event_source == 'ai':
                 self.onvif_subscription_active = False
@@ -304,6 +337,61 @@ class VirtualONVIFCamera:
             self.onvif_subscription_active = False
             self.onvif_subscription_error = "Event forwarding is disabled in settings."
         
+    def _probe_source_streams(self):
+        """Probe the real source streams and flag mismatches vs configured values.
+
+        UniFi Protect reads resolution from both the ONVIF metadata (our
+        configured values) and the live RTSP stream — when they disagree it
+        flaps the camera's resolution classification (issue #42). Transcoded
+        streams are skipped: their output is forced to the configured values.
+        """
+        try:
+            from .ffmpeg_manager import FFmpegManager
+            ffmpeg_mgr = FFmpegManager()
+            probe = {}
+
+            if not self.transcode_main:
+                info = ffmpeg_mgr.probe_stream(self.main_stream_url)
+                if info and info.get('width'):
+                    entry = dict(info)
+                    entry['configuredWidth'] = self.main_width
+                    entry['configuredHeight'] = self.main_height
+                    entry['mismatch'] = (
+                        info['width'] != self.main_width or
+                        info['height'] != self.main_height or
+                        info['codec'] not in ('h264', '')
+                    )
+                    probe['main'] = entry
+
+            sub_url = self.main_stream_url if self.use_main_as_substream else self.sub_stream_url
+            if sub_url and not self.disable_substream and not self.transcode_sub:
+                info = ffmpeg_mgr.probe_stream(sub_url)
+                if info and info.get('width'):
+                    entry = dict(info)
+                    entry['configuredWidth'] = self.sub_width
+                    entry['configuredHeight'] = self.sub_height
+                    entry['mismatch'] = (
+                        info['width'] != self.sub_width or
+                        info['height'] != self.sub_height or
+                        info['codec'] not in ('h264', '')
+                    )
+                    probe['sub'] = entry
+
+            if probe:
+                probe['mismatch'] = any(e.get('mismatch') for e in probe.values() if isinstance(e, dict))
+                probe['checkedAt'] = time.time()
+                self.stream_probe = probe
+                if probe['mismatch']:
+                    for which in ('main', 'sub'):
+                        e = probe.get(which)
+                        if e and e.get('mismatch'):
+                            print(f"  [Stream Check] {self.name} {which}: configured "
+                                  f"{e['configuredWidth']}x{e['configuredHeight']} H264 but source is "
+                                  f"{e['width']}x{e['height']} {e['codec'].upper()} — "
+                                  f"NVRs may flap this camera's resolution")
+        except Exception as e:
+            print(f"  [Stream Check] Probe failed for {self.name}: {e}")
+
     def stop(self):
         """Mark camera as stopped, shutdown ONVIF service, and cleanup networking"""
         self.status = "stopped"
@@ -484,7 +572,19 @@ class VirtualONVIFCamera:
             'aiMotionSensitivity': self.ai_motion_sensitivity,
             'aiConfidenceThreshold': self.ai_confidence_threshold,
             'aiZone': self.ai_zone,
+            'aiZoneProfiles': self.ai_zone_profiles,
+            'aiActiveZoneProfile': self.ai_active_zone_profile,
             'sendSmartOnvifTopics': self.send_smart_onvif_topics,
+            'notifyAiEnabled': self.notify_ai_enabled,
+            'notifyAiCooldown': self.notify_ai_cooldown,
+            'notifyAiTargets': self.notify_ai_targets,
+            'notifyAiAttachImage': self.notify_ai_attach_image,
+            'notifyAiZoneFilter': self.notify_ai_zone_filter,
+            'notifyAiSchedules': self.notify_ai_schedules,
+            'notifyScheduleEnabled': self.notify_schedule_enabled,
+            'notifyScheduleDays': self.notify_schedule_days,
+            'notifyScheduleStart': self.notify_schedule_start,
+            'notifyScheduleEnd': self.notify_schedule_end,
             'onvifSubscriptionActive': self.onvif_subscription_active,
             'onvifSubscriptionError': self.onvif_subscription_error,
             'onvifActiveSubscriptions': len(self.onvif_service.subscriptions) if self.onvif_service else 0,
@@ -496,7 +596,8 @@ class VirtualONVIFCamera:
             'aiAvgInferenceLatency': self.ai_avg_inference_latency,
             'aiQueueTime': self.ai_queue_time,
             'aiFpsMeasurement': self.ai_fps_measurement,
-            'aiLastDetection': self.ai_last_detection
+            'aiLastDetection': self.ai_last_detection,
+            'streamProbe': self.stream_probe
         }
     
     def to_config_dict(self):
@@ -549,7 +650,19 @@ class VirtualONVIFCamera:
             'aiMotionSensitivity': self.ai_motion_sensitivity,
             'aiConfidenceThreshold': self.ai_confidence_threshold,
             'aiZone': self.ai_zone,
-            'sendSmartOnvifTopics': self.send_smart_onvif_topics
+            'aiZoneProfiles': self.ai_zone_profiles,
+            'aiActiveZoneProfile': self.ai_active_zone_profile,
+            'sendSmartOnvifTopics': self.send_smart_onvif_topics,
+            'notifyAiEnabled': self.notify_ai_enabled,
+            'notifyAiCooldown': self.notify_ai_cooldown,
+            'notifyAiTargets': self.notify_ai_targets,
+            'notifyAiAttachImage': self.notify_ai_attach_image,
+            'notifyAiZoneFilter': self.notify_ai_zone_filter,
+            'notifyAiSchedules': self.notify_ai_schedules,
+            'notifyScheduleEnabled': self.notify_schedule_enabled,
+            'notifyScheduleDays': self.notify_schedule_days,
+            'notifyScheduleStart': self.notify_schedule_start,
+            'notifyScheduleEnd': self.notify_schedule_end,
         }
 
     def _start_keepalive(self, vnic_name):
@@ -950,6 +1063,8 @@ class VirtualONVIFCamera:
         
         motion_state = False
         last_detected_time = 0
+        last_alert_saved = 0
+        alert_save_interval = 10.0  # During sustained motion, save a history image at most this often
         cooldown_period = AI_COOLDOWN_SECONDS
         prev_gray = None
         startup_frames = 0
@@ -958,9 +1073,14 @@ class VirtualONVIFCamera:
         consecutive_errors = 0
         max_consecutive_errors = 20
         
-        # Zone-aware motion masking: only detect motion inside the drawn zone
+        # Zone-aware motion masking: use active profile if set, else legacy aiZone
         import numpy as np
-        zone_points = self.ai_zone if len(self.ai_zone) >= 3 else None
+        _active_profile = getattr(self, 'ai_active_zone_profile', '')
+        _profiles = getattr(self, 'ai_zone_profiles', {})
+        if _active_profile and _active_profile in _profiles and len(_profiles[_active_profile]) >= 3:
+            zone_points = _profiles[_active_profile]
+        else:
+            zone_points = self.ai_zone if len(self.ai_zone) >= 3 else None
         zone_mask = None
         zone_pixel_count = 0
         
@@ -1052,7 +1172,12 @@ class VirtualONVIFCamera:
                             detected_tags = set()
                             tag_confidences = {}
                             h, w = frame.shape[:2]
-                            zone = self.ai_zone if len(self.ai_zone) >= 3 else None
+                            _ap = getattr(self, 'ai_active_zone_profile', '')
+                            _zp = getattr(self, 'ai_zone_profiles', {})
+                            if _ap and _ap in _zp and len(_zp[_ap]) >= 3:
+                                zone = _zp[_ap]
+                            else:
+                                zone = self.ai_zone if len(self.ai_zone) >= 3 else None
                             
                             for result in results:
                                 for box in result.boxes:
@@ -1084,11 +1209,31 @@ class VirtualONVIFCamera:
                             self.ai_last_detection = list(detected_tags)
                             if detected_tags:
                                 last_detected_time = time.time()
+                                is_new_event = (not motion_state) or (self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags))
+                                save_alert = is_new_event or (last_detected_time - last_alert_saved >= alert_save_interval)
+                                # Capture bounding box screenshot for notifications and/or alert history
+                                _snapshot_bytes = None
+                                if getattr(self, 'notify_ai_attach_image', False) or save_alert:
+                                    try:
+                                        import cv2 as _cv2
+                                        _annotated = results[0].plot()
+                                        _, _enc = _cv2.imencode('.jpg', _annotated, [_cv2.IMWRITE_JPEG_QUALITY, 80])
+                                        _snapshot_bytes = _enc.tobytes()
+                                    except Exception:
+                                        _snapshot_bytes = None
+                                if save_alert and _snapshot_bytes:
+                                    try:
+                                        from .ai_alerts import alert_store
+                                        alert_store.save(self.id, list(detected_tags), _snapshot_bytes)
+                                        last_alert_saved = last_detected_time
+                                    except Exception:
+                                        pass  # History errors must never break detection
+                                _notify_bytes = _snapshot_bytes if getattr(self, 'notify_ai_attach_image', False) else None
                                 if not motion_state:
                                     motion_state = True
-                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences)
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes)
                                 elif self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags):
-                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences)
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes)
                             else:
                                 if motion_state and (time.time() - last_detected_time > cooldown_period):
                                     motion_state = False
@@ -1147,7 +1292,7 @@ class VirtualONVIFCamera:
         threading.Thread(target=_clear_after_delay, daemon=True).start()
         return True
 
-    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None):
+    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None, image_bytes=None):
         """Broadcast motion state from local AI engine to subscribers"""
         from datetime import datetime
         import queue
@@ -1205,6 +1350,31 @@ class VirtualONVIFCamera:
             if is_active and tag_confidences:
                 conf_pct = {t: int(c * 100) for t, c in tag_confidences.items() if t in tags}
             send_evt('RuleEngine/CellMotionDetector/Motion', 'IsMotion', val, tags, confidences=conf_pct)
+            
+            # Fire push notification for new detections
+            if is_active and self.manager and hasattr(self.manager, 'notifier'):
+                cam_notify_cfg = {
+                    'notifyAiEnabled': getattr(self, 'notify_ai_enabled', False),
+                    'notifyAiCooldown': getattr(self, 'notify_ai_cooldown', 60),
+                    'notifyAiTargets': getattr(self, 'notify_ai_targets', []),
+                    'notifyAiZoneFilter': getattr(self, 'notify_ai_zone_filter', ''),
+                    'notifyAiSchedules': getattr(self, 'notify_ai_schedules', []),
+                    # Legacy fallbacks
+                    'notifyScheduleEnabled': getattr(self, 'notify_schedule_enabled', False),
+                    'notifyScheduleDays': getattr(self, 'notify_schedule_days', list(range(7))),
+                    'notifyScheduleStart': getattr(self, 'notify_schedule_start', '00:00'),
+                    'notifyScheduleEnd': getattr(self, 'notify_schedule_end', '23:59'),
+                }
+                try:
+                    self.manager.notifier.send_ai_detection(
+                        camera_id=self.id,
+                        camera_name=self.name,
+                        detected_labels=list(tags),
+                        camera_notify_cfg=cam_notify_cfg,
+                        image_bytes=image_bytes
+                    )
+                except Exception as _ne:
+                    pass  # Notification errors must never crash the event loop
 
         # 2. If smart topics are enabled, update individual smart events
         if getattr(self, 'send_smart_onvif_topics', True):

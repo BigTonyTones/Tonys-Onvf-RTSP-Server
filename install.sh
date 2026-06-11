@@ -235,7 +235,9 @@ setup_venv() {
     print_info "  - pyyaml (YAML parsing)"
     print_info "  - psutil (system utilities)"
     print_info "  - onvif-zeep (ONVIF protocol)"
-    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep 2>/dev/null
+    print_info "  - apprise (Notifications)"
+    echo "Installing Python dependencies..."
+    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise 2>/dev/null
     
     # Clean up local tmp directory
     rm -rf "$local_tmp"

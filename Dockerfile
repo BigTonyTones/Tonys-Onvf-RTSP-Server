@@ -38,7 +38,8 @@ RUN pip install --no-cache-dir \
     requests \
     pyyaml \
     psutil \
-    onvif-zeep
+    onvif-zeep \
+    apprise
 
 # Install CPU-only PyTorch first (keeps the image small, ~200MB vs ~2GB for GPU)
 RUN pip install --no-cache-dir \

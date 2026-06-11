@@ -249,8 +249,9 @@ function Setup-PythonEnvironment {
     Write-Info "  - pyyaml (YAML parsing)"
     Write-Info "  - psutil (system utilities)"
     Write-Info "  - onvif-zeep (ONVIF protocol)"
+    Write-Info "  - apprise (Notifications)"
     
-    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep 2>&1 | Out-Null
+    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise 2>&1 | Out-Null
     
     Write-Success "Python environment configured"
 }
