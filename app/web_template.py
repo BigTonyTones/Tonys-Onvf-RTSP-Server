@@ -3590,7 +3590,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
 
                     <div id="aiInstallGroup" style="display: none; margin-top: 12px;">
-                        <div style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); padding: 12px; border-radius: 8px; border-left: 4px solid var(--alert-warning-text, #f6ad55); border-top: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.2)); border-right: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.2)); border-bottom: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.2)); margin-bottom: 12px;">
+                        <div style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); padding: 12px; border-radius: 8px; border: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.3)); margin-bottom: 12px;">
                             <div style="font-weight: bold; color: var(--alert-warning-text, #f6ad55); font-size: 13.5px; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Local AI Dependencies Missing</div>
                             <div style="color: var(--text-body); font-size: 12px; line-height: 1.4;">The required AI libraries (<code>ultralytics</code> and <code>opencv-python-headless</code>) are not installed on this server. This is required for local object detection.</div>
                         </div>
@@ -4379,7 +4379,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 <button class="close-btn" onclick="closeUpdateModal()">×</button>
             </div>
             <div id="update-modal-content">
-                <div id="docker-update-warning" style="display: none; background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; color: #ed8936; line-height: 1.4; text-align: left;">
+                <div id="docker-update-warning" style="display: none; background: var(--alert-warning-bg, rgba(237, 137, 54, 0.1)); border: 1px solid var(--alert-warning-border, rgba(237, 137, 54, 0.3)); padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: var(--alert-warning-text, #ed8936); line-height: 1.4; text-align: left;">
                     <i class="fas fa-exclamation-triangle"></i> <strong>Running in Docker:</strong> Self-updating through the Web UI is disabled to prevent configuration and data loss. Please update your container using:
                     <code style="display: block; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin-top: 8px; color: var(--text-body); word-break: break-all; font-family: monospace;">git pull && docker compose down && docker compose up -d --build</code>
                 </div>
@@ -4421,7 +4421,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </div>
                         <div id="progress-percent" style="font-size: 14px; color: var(--text-muted);">0%</div>
                     </div>
-                    <div style="background: var(--alert-warning-bg, rgba(237, 137, 54, 0.1)); border-left: 3px solid var(--alert-warning-text, #ed8936); padding: 15px; border-radius: 4px;">
+                    <div style="background: var(--alert-warning-bg, rgba(237, 137, 54, 0.1)); border: 1px solid var(--alert-warning-border, rgba(237, 137, 54, 0.3)); padding: 15px; border-radius: 6px;">
                         <small style="color: var(--yellow-text, #f6ad55); font-size: 12.5px; font-weight: 600;">
                             <i class="fas fa-info-circle"></i> Please do not close this window. The server will restart automatically after the update is complete.
                         </small>
