@@ -1,6 +1,6 @@
 # One-Line Installers
 
-This directory contains automated installers for Tonys Onvif-RTSP Server that handle all dependencies automatically.
+This directory contains automated installers for Tonys Onvif-RTSP-AI Server that handle all dependencies automatically.
 
 ## Linux/macOS Installation
 

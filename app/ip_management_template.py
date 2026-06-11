@@ -12,7 +12,7 @@ def get_ip_management_html(whitelist, theme=''):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Management - Tonys Onvif Server</title>
+    <title>IP Management - Tonys Onvif-RTSP-AI Server</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {{

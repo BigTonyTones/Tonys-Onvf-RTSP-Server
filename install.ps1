@@ -1,4 +1,4 @@
-# Tonys Onvif-RTSP Server - One-Line Windows Installer
+# Tonys Onvif-RTSP-AI Server - One-Line Windows Installer
 # Usage: irm https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.ps1 | iex
 # Or:    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.ps1" -UseBasicParsing | Invoke-Expression
 
@@ -17,7 +17,7 @@ $REPO_URL = "https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git"
 function Write-Banner {
     Write-Host ""
     Write-Host "==============================================================" -ForegroundColor Cyan
-    Write-Host "     Tonys Onvif-RTSP Server - Automated Installer" -ForegroundColor Yellow
+    Write-Host "     Tonys Onvif-RTSP-AI Server - Automated Installer" -ForegroundColor Yellow
     Write-Host "==============================================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  Installation Directory: " -NoNewline -ForegroundColor Cyan
@@ -444,7 +444,7 @@ function New-StartScript {
     $startScript = @"
 @echo off
 cd /d "%~dp0"
-echo Starting Tonys Onvif-RTSP Server...
+echo Starting Tonys Onvif-RTSP-AI Server...
 call venv\Scripts\activate.bat
 python run.py
 pause
@@ -495,7 +495,7 @@ function Write-Completion {
     Write-Host "  Web UI: " -NoNewline -ForegroundColor Yellow
     Write-Host "http://localhost:5552"
     Write-Host ""
-    Write-Host "  Thank you for using Tonys Onvif-RTSP Server!" -ForegroundColor Cyan
+    Write-Host "  Thank you for using Tonys Onvif-RTSP-AI Server!" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -520,7 +520,7 @@ function Start-Installation {
     
     if ($startNow -eq 'y' -or $startNow -eq 'Y' -or $startNow -eq 'yes' -or $startNow -eq 'Yes') {
         Write-Host ""
-        Write-Host "Starting Tonys Onvif-RTSP Server..." -ForegroundColor Green
+        Write-Host "Starting Tonys Onvif-RTSP-AI Server..." -ForegroundColor Green
         Write-Host ""
         Set-Location $INSTALL_DIR
         & ".\start-server.bat"

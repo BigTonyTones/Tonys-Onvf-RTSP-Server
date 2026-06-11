@@ -14,7 +14,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GridFusion Editor - Tonys Onvif Server</title>
+    <title>GridFusion Editor - Tonys Onvif-RTSP-AI Server</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1063,7 +1063,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
     <div id="stats-bar">
         <div id="canvas-info">Canvas: 1920 x 1080 | Scaling: 100%</div>
-        <div style="color: var(--text-secondary);">Tonys Onvif Server GridFusion Engine</div>
+        <div style="color: var(--text-secondary);">Tonys Onvif-RTSP-AI Server GridFusion Engine</div>
     </div>
 
     <script>

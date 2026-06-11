@@ -1,5 +1,5 @@
 """
-Version management for Tonys Onvif-RTSP Server
+Version management for Tonys Onvif-RTSP-AI Server
 Single source of truth for version information
 """
 

@@ -1,12 +1,12 @@
 @echo off
 REM ========================================
-REM Tonys Onvif-RTSP Server
+REM Tonys Onvif-RTSP-AI Server
 REM Auto-Start Batch File
 REM ========================================
 
 echo.
 echo ========================================
-echo  Tonys Onvif-RTSP Server
+echo  Tonys Onvif-RTSP-AI Server
 echo ========================================
 echo.
 

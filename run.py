@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tonys Onvif-RTSP Server with Web UI
+Tonys Onvif-RTSP-AI Server with Web UI
 Entry Point
 """
 import sys

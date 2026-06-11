@@ -24,7 +24,7 @@ def main():
         net_mgr = LinuxNetworkManager()
         net_mgr.cleanup_all_vnics()
 
-    print(f"\nTonys Onvif-RTSP Server\n")
+    print(f"\nTonys Onvif-RTSP-AI Server\n")
     
     # Check for updates in background (non-blocking)
     def check_updates_background():

@@ -42,7 +42,7 @@ class LinuxServiceManager:
             return False, "Not running on Linux"
 
         service_content = f"""[Unit]
-Description=Tonys Onvif-RTSP Server
+Description=Tonys Onvif-RTSP-AI Server
 After=network.target
 
 [Service]

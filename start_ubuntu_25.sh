@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Tonys Onvif Server - Ubuntu 25.04 Startup Script
+# Tonys Onvif-RTSP-AI Server - Ubuntu 25.04 Startup Script
 # This script installs dependencies, sets up a virtual environment, and starts the server.
 
 # 0. Check for sudo privileges
@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "============================================================"
-echo -e "${YELLOW}Tonys Onvif-RTSP Server - Ubuntu Development Setup${NC}"
+echo -e "${YELLOW}Tonys Onvif-RTSP-AI Server - Ubuntu Development Setup${NC}"
 echo "============================================================"
 
 # 1. Install system-level Python dependencies (only if missing)
@@ -113,7 +113,7 @@ ulimit -n 65535
 # 7. Start the application with auto-restart support
 echo ""
 echo "============================================================"
-echo "Starting Tonys Onvif Server..."
+echo "Starting Tonys Onvif-RTSP-AI Server..."
 echo "============================================================"
 
 # Loop to handle restart requests (exit code 42)

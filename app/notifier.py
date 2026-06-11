@@ -224,7 +224,7 @@ class NotificationManager:
         results = {}
         providers_cfg = cfg.get('providers', {})
         title = '🔔 Test Notification'
-        message = 'Your Tonys ONVIF Server notification system is working correctly!'
+        message = 'Your Tonys ONVIF-RTSP-AI Server notification system is working correctly!'
 
         targets = [provider] if provider else list(providers_cfg.keys())
         for pname in targets:
@@ -422,7 +422,7 @@ class NotificationManager:
   <h2 style="color:#58a6ff;margin:0 0 12px">{title}</h2>
   <p style="color:#8b949e;margin:0">{message}</p>
   <hr style="border-color:#30363d;margin:16px 0">
-  <small style="color:#484f58">Sent by Tonys ONVIF Server &bull; {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</small>
+  <small style="color:#484f58">Sent by Tonys ONVIF-RTSP-AI Server &bull; {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</small>
 </div>
 </body></html>"""
 

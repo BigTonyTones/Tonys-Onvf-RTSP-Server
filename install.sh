@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Tonys Onvif-RTSP Server - One-Line Installer
+# Tonys Onvif-RTSP-AI Server - One-Line Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash
 # Or:    wget -qO- https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash
 
@@ -29,7 +29,7 @@ REPO_URL="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git"
 print_banner() {
     echo ""
     echo -e "${CYAN}==============================================================${NC}"
-    echo -e "${YELLOW}     Tonys Onvif-RTSP Server - Automated Installer (v${INSTALLER_VERSION})${NC}"
+    echo -e "${YELLOW}     Tonys Onvif-RTSP-AI Server - Automated Installer (v${INSTALLER_VERSION})${NC}"
     echo -e "${CYAN}==============================================================${NC}"
     echo ""
     echo -e "  ${CYAN}Installation Directory:${NC} $INSTALL_DIR"
@@ -644,7 +644,7 @@ EOF
         
         cat > /etc/systemd/system/tonys-onvif.service << 'EOF'
 [Unit]
-Description=Tonys Onvif-RTSP Server
+Description=Tonys Onvif-RTSP-AI Server
 After=network.target
 
 [Service]
@@ -714,7 +714,7 @@ print_completion() {
     echo ""
     echo -e "  ${YELLOW}Web UI:${NC} http://localhost:5552"
     echo ""
-    echo -e "  ${CYAN}Thank you for using Tonys Onvif-RTSP Server!${NC}"
+    echo -e "  ${CYAN}Thank you for using Tonys Onvif-RTSP-AI Server!${NC}"
     echo ""
 }
 
@@ -746,7 +746,7 @@ main() {
     
     if [[ $start_now == [yY] || $start_now == [yY][eE][sS] ]]; then
         echo ""
-        echo -e "${GREEN}Starting Tonys Onvif-RTSP Server...${NC}"
+        echo -e "${GREEN}Starting Tonys Onvif-RTSP-AI Server...${NC}"
         echo ""
         cd "$INSTALL_DIR"
         exec ./start_ubuntu_25.sh

@@ -10,7 +10,7 @@ def get_alerts_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Detection Alerts - Tonys Onvif Server</title>
+    <title>AI Detection Alerts - Tonys Onvif-RTSP-AI Server</title>
     <style>
         :root {
             --bg-color: #0f1012;

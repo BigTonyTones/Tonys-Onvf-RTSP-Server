@@ -13,7 +13,7 @@ def get_web_ui_html(current_settings=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tonys Onvif-RTSP Server</title>
+    <title>Tonys Onvif-RTSP-AI Server</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -2392,7 +2392,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             <div class="header-top">
                 <div class="header-title-area">
                     <h1>
-                        <span>Tonys Onvif-RTSP Server</span>
+                        <span>Tonys Onvif-RTSP-AI Server</span>
                         <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; margin-left: 10px; font-size: 18px; display: inline-flex; align-items: center; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="View on GitHub">
                             <i class="fa-brands fa-github"></i>
                         </a>
@@ -2610,7 +2610,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
         <div class="footer">
-            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP Server</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
+            <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP-AI Server</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
                 <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
             </a>
@@ -4313,7 +4313,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
     <div id="about-modal" class="modal">
         <div class="modal-content" style="max-width: 850px;">
             <div class="modal-header">
-                <div class="modal-title">About Tonys Onvif-RTSP Server</div>
+                <div class="modal-title">About Tonys Onvif-RTSP-AI Server</div>
                 <button class="close-btn" onclick="closeAboutModal()">×</button>
             </div>
             <div style="line-height: 1.6; color: var(--text-body); font-size: 15px;">
@@ -10281,7 +10281,7 @@ def get_login_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tonys ONVIF-RTSP Server v{CURRENT_VERSION}</title>
+    <title>Login - Tonys ONVIF-RTSP-AI Server v{CURRENT_VERSION}</title>
     <style>
         :root {{
             --page-bg: #e9ecf6;
@@ -10462,7 +10462,7 @@ def get_login_html():
     <div class="login-shell">
         <aside class="brand-panel">
             <div class="brand-logo">
-                <div class="name">Tonys ONVIF-RTSP Server<small>Camera virtualization &amp; streaming</small></div>
+                <div class="name">Tonys ONVIF-RTSP-AI Server<small>Camera virtualization &amp; streaming</small></div>
             </div>
             <p class="brand-tagline">
                 Turn any RTSP feed into a fully ONVIF-compatible virtual camera &mdash; with AI detection,
@@ -10507,7 +10507,7 @@ def get_login_html():
             <div id="error" class="error"></div>
 
             <div class="form-foot">
-                <span>&copy; Tonys ONVIF-RTSP Server</span>
+                <span>&copy; Tonys ONVIF-RTSP-AI Server</span>
                 <a href="{github_url}" target="_blank" rel="noopener">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                         <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
@@ -10557,7 +10557,7 @@ def get_setup_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Initial Setup - Tonys Onvif-RTSP Server v{CURRENT_VERSION}</title>
+    <title>Initial Setup - Tonys Onvif-RTSP-AI Server v{CURRENT_VERSION}</title>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #48bb78 0%, #38a169 100%);

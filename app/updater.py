@@ -1,5 +1,5 @@
 """
-Update checker and self-update module for Tonys Onvif-RTSP Server
+Update checker and self-update module for Tonys Onvif-RTSP-AI Server
 Handles checking GitHub for updates, downloading releases, and applying updates
 """
 
