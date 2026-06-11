@@ -1782,6 +1782,14 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         .matrix-overlay.stretch-fill .matrix-controls * {{
             pointer-events: auto;
         }}
+        .matrix-overlay.stretch-fill .matrix-controls,
+        .matrix-overlay.stretch-fill .matrix-controls label,
+        .matrix-overlay.stretch-fill .matrix-controls span {{
+            color: #f3f4f6 !important;
+        }}
+        .matrix-overlay.stretch-fill .matrix-controls div {{
+            border-color: rgba(255, 255, 255, 0.15) !important;
+        }}
         .matrix-overlay.stretch-fill:hover .matrix-controls {{
             opacity: 1;
         }}
