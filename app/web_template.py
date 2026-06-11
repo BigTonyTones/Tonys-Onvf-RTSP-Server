@@ -4311,12 +4311,12 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
     
     <!-- About Modal -->
     <div id="about-modal" class="modal">
-        <div class="modal-content" style="max-width: 850px;">
-            <div class="modal-header">
+        <div class="modal-content" style="max-width: 850px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding: 24px;">
+            <div class="modal-header" style="flex-shrink: 0; margin-bottom: 20px;">
                 <div class="modal-title">About Tonys Onvif-RTSP-AI Server</div>
                 <button class="close-btn" onclick="closeAboutModal()">×</button>
             </div>
-            <div style="line-height: 1.6; color: var(--text-body); font-size: 15px;">
+            <div style="flex: 1; overflow-y: auto; line-height: 1.6; color: var(--text-body); font-size: 15px; padding-right: 8px;">
                 <p style="margin-bottom: 15px;">Hello, my name is <strong style="color: var(--text-title);">Tony</strong>. This program was developed to address two primary needs:</p>
                 <div style="background: rgba(102, 126, 234, 0.08); padding: 20px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3); margin-bottom: 20px;">
                     <p style="margin-bottom: 15px;"><strong style="color: var(--text-title);">Ubiquiti Protect NVR Compatibility:</strong><br>
