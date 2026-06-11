@@ -93,7 +93,8 @@ class NotificationManager:
         self._executor.submit(self._dispatch, cfg, title, message)
 
     def send_ai_detection(self, camera_id: int, camera_name: str, detected_labels: list,
-                          camera_notify_cfg: dict = None, image_bytes: bytes = None, is_test: bool = False):
+                          camera_notify_cfg: dict = None, image_bytes: bytes = None, is_test: bool = False,
+                          license_plate: str = None):
         """
         Fire an AI detection notification, subject to:
         - Global 'ai_detection' event being enabled
@@ -116,6 +117,25 @@ class NotificationManager:
             if not camera_notify_cfg.get('notifyAiEnabled', False):
                 return
 
+            # Wildcard matching helper for plates
+            import fnmatch
+            def matches_plate_filter(plate: str, filter_str: str) -> bool:
+                if not filter_str or not filter_str.strip():
+                    return True
+                if not plate:
+                    return False
+                patterns = [p.strip().lower() for p in filter_str.split(',') if p.strip()]
+                if not patterns:
+                    return True
+                plate_lower = plate.lower()
+                for pattern in patterns:
+                    if '*' in pattern or '?' in pattern:
+                        if fnmatch.fnmatch(plate_lower, pattern):
+                            return True
+                    elif pattern == plate_lower:
+                        return True
+                return False
+
             # Filter detected labels (against active schedules if enabled, otherwise fallback to camera-wide targets)
             schedules = camera_notify_cfg.get('notifyAiSchedules', [])
             active_schedules = [s for s in schedules if s.get('enabled', True)]
@@ -134,7 +154,16 @@ class NotificationManager:
                     if allowed_targets is None:
                         # Fallback to overall camera targets if not defined per schedule (migration/backward compatibility)
                         allowed_targets = camera_notify_cfg.get('notifyAiTargets', [])
-                    s_matched = [lbl for lbl in detected_labels if lbl.lower() in [t.lower() for t in allowed_targets]]
+                    
+                    s_matched = []
+                    for lbl in detected_labels:
+                        if lbl.lower() in [t.lower() for t in allowed_targets]:
+                            if lbl.lower() == 'license_plate':
+                                s_plate_filter = s.get('licensePlates', '')
+                                if matches_plate_filter(license_plate, s_plate_filter):
+                                    s_matched.append(lbl)
+                            else:
+                                s_matched.append(lbl)
                     matched.extend(s_matched)
                 
                 if not matched:
@@ -145,7 +174,15 @@ class NotificationManager:
                     return
                 
                 notify_targets = camera_notify_cfg.get('notifyAiTargets', [])
-                matched = [lbl for lbl in detected_labels if lbl.lower() in [t.lower() for t in notify_targets]]
+                matched = []
+                for lbl in detected_labels:
+                    if lbl.lower() in [t.lower() for t in notify_targets]:
+                        if lbl.lower() == 'license_plate':
+                            camera_plate_filter = camera_notify_cfg.get('notifyAiLicensePlates', '')
+                            if matches_plate_filter(license_plate, camera_plate_filter):
+                                matched.append(lbl)
+                        else:
+                            matched.append(lbl)
                 if not matched:
                     return
 
@@ -162,7 +199,16 @@ class NotificationManager:
         else:
             matched_labels = detected_labels
 
-        label_str = ', '.join(sorted(set(m.capitalize() for m in matched_labels)))
+        capitalized = []
+        for m in matched_labels:
+            if m.lower() == 'license_plate':
+                if license_plate:
+                    capitalized.append(f'License Plate ({license_plate.upper()})')
+                else:
+                    capitalized.append('License Plate')
+            else:
+                capitalized.append(m.capitalize())
+        label_str = ', '.join(sorted(set(capitalized)))
         title = f'{"[TEST] " if is_test else ""}AI Detection — {camera_name}'
         message = f'{"[TEST] " if is_test else ""}Detected: {label_str} on camera "{camera_name}"'
         self._executor.submit(self._dispatch, cfg, title, message, image_bytes)

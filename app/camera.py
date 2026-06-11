@@ -230,6 +230,7 @@ class VirtualONVIFCamera:
         self.notify_ai_cooldown = config.get('notifyAiCooldown', 60)
         self.notify_ai_targets = config.get('notifyAiTargets', ['person'])
         self.notify_ai_attach_image = config.get('notifyAiAttachImage', False)
+        self.notify_ai_license_plates = config.get('notifyAiLicensePlates', '')
         self.notify_ai_zone_filter = config.get('notifyAiZoneFilter', '')
         # Multi-schedule support — migrate legacy single schedule on first load
         _legacy_sched = []
@@ -579,6 +580,7 @@ class VirtualONVIFCamera:
             'notifyAiCooldown': self.notify_ai_cooldown,
             'notifyAiTargets': self.notify_ai_targets,
             'notifyAiAttachImage': self.notify_ai_attach_image,
+            'notifyAiLicensePlates': self.notify_ai_license_plates,
             'notifyAiZoneFilter': self.notify_ai_zone_filter,
             'notifyAiSchedules': self.notify_ai_schedules,
             'notifyScheduleEnabled': self.notify_schedule_enabled,
@@ -657,6 +659,7 @@ class VirtualONVIFCamera:
             'notifyAiCooldown': self.notify_ai_cooldown,
             'notifyAiTargets': self.notify_ai_targets,
             'notifyAiAttachImage': self.notify_ai_attach_image,
+            'notifyAiLicensePlates': self.notify_ai_license_plates,
             'notifyAiZoneFilter': self.notify_ai_zone_filter,
             'notifyAiSchedules': self.notify_ai_schedules,
             'notifyScheduleEnabled': self.notify_schedule_enabled,
@@ -1040,10 +1043,15 @@ class VirtualONVIFCamera:
             'package': [24, 26, 28]
         }
         
+        has_license_plate_target = 'license_plate' in self.ai_targets
         monitored_classes = []
         for target in self.ai_targets:
             if target in class_map:
                 monitored_classes.extend(class_map[target])
+        if has_license_plate_target:
+            for v_class in class_map['vehicle']:
+                if v_class not in monitored_classes:
+                    monitored_classes.append(v_class)
                 
         if not monitored_classes:
             monitored_classes = [0, 2, 3, 5, 7]  # Default fallback
@@ -1179,6 +1187,9 @@ class VirtualONVIFCamera:
                             else:
                                 zone = self.ai_zone if len(self.ai_zone) >= 3 else None
                             
+                            detected_plate = None
+                            plate_draw_boxes = []
+                            
                             for result in results:
                                 for box in result.boxes:
                                     cls_id = int(box.cls[0])
@@ -1206,34 +1217,103 @@ class VirtualONVIFCamera:
                                         detected_tags.add(tag)
                                         tag_confidences[tag] = max(tag_confidences.get(tag, 0.0), conf)
                                         
+                                        # If it's a vehicle and we target license plates, run LPR
+                                        if tag == 'vehicle' and has_license_plate_target:
+                                            try:
+                                                lp_model = get_shared_ai_model("keremberke/yolov8n-license-plate-detector")
+                                                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                                                vx1, vy1, vx2, vy2 = map(int, [x1, y1, x2, y2])
+                                                vx1 = max(0, vx1)
+                                                vy1 = max(0, vy1)
+                                                vx2 = min(w, vx2)
+                                                vy2 = min(h, vy2)
+                                                vehicle_crop = frame[vy1:vy2, vx1:vx2]
+                                                
+                                                if vehicle_crop.size > 0:
+                                                    with _AI_INFERENCE_LOCK:
+                                                        lp_kwargs = {"verbose": False, "conf": conf_threshold}
+                                                        if hasattr(lp_model, "device") and lp_model.device is not None:
+                                                            lp_kwargs["device"] = lp_model.device
+                                                        lp_results = lp_model(vehicle_crop, **lp_kwargs)
+                                                    
+                                                    best_lp_box = None
+                                                    best_lp_conf = 0.0
+                                                    for lp_result in lp_results:
+                                                        for lp_box in lp_result.boxes:
+                                                            lp_conf = float(lp_box.conf[0])
+                                                            if lp_conf > best_lp_conf:
+                                                                best_lp_conf = lp_conf
+                                                                best_lp_box = lp_box
+                                                    
+                                                    if best_lp_box is not None:
+                                                        lpx1, lpy1, lpx2, lpy2 = map(int, best_lp_box.xyxy[0].tolist())
+                                                        plate_x1 = max(0, vx1 + lpx1)
+                                                        plate_y1 = max(0, vy1 + lpy1)
+                                                        plate_x2 = min(w, vx1 + lpx2)
+                                                        plate_y2 = min(h, vy1 + lpy2)
+                                                        
+                                                        plate_crop = frame[plate_y1:plate_y2, plate_x1:plate_x2]
+                                                        
+                                                        plate_text = "DETECTED"
+                                                        try:
+                                                            import easyocr
+                                                            from .ai_device import get_shared_ocr_reader
+                                                            reader = get_shared_ocr_reader()
+                                                            if reader is not None and plate_crop.size > 0:
+                                                                ocr_results = reader.readtext(plate_crop)
+                                                                if ocr_results:
+                                                                    texts = []
+                                                                    for (_, text, ocr_conf) in ocr_results:
+                                                                        cleaned = "".join([c.upper() for c in text if c.isalnum()])
+                                                                        if len(cleaned) >= 3:
+                                                                            texts.append(cleaned)
+                                                                    if texts:
+                                                                        plate_text = "".join(texts)
+                                                        except Exception as ocr_err:
+                                                            print(f"  [AI LPR] EasyOCR extraction bypassed or failed: {ocr_err}")
+                                                            plate_text = "DETECTED"
+                                                        
+                                                        detected_tags.add('license_plate')
+                                                        tag_confidences['license_plate'] = max(tag_confidences.get('license_plate', 0.0), best_lp_conf)
+                                                        if not detected_plate or detected_plate == "DETECTED":
+                                                            detected_plate = plate_text
+                                                        plate_draw_boxes.append((plate_x1, plate_y1, plate_x2, plate_y2, plate_text))
+                                            except Exception as lpr_err:
+                                                print(f"  [AI LPR Error] License plate detection failed: {lpr_err}")
+                                        
                             self.ai_last_detection = list(detected_tags)
                             if detected_tags:
                                 last_detected_time = time.time()
                                 is_new_event = (not motion_state) or (self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags))
                                 save_alert = is_new_event or (last_detected_time - last_alert_saved >= alert_save_interval)
-                                # Capture bounding box screenshot for notifications and/or alert history
                                 _snapshot_bytes = None
                                 if getattr(self, 'notify_ai_attach_image', False) or save_alert:
                                     try:
                                         import cv2 as _cv2
                                         _annotated = results[0].plot()
+                                        for p_x1, p_y1, p_x2, p_y2, p_txt in plate_draw_boxes:
+                                            _cv2.rectangle(_annotated, (p_x1, p_y1), (p_x2, p_y2), (0, 255, 0), 2)
+                                            label_text = f"LP: {p_txt}"
+                                            _cv2.putText(_annotated, label_text, (p_x1, max(15, p_y1 - 5)), _cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, _cv2.LINE_AA)
+                                            _cv2.putText(_annotated, label_text, (p_x1, max(15, p_y1 - 5)), _cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, _cv2.LINE_AA)
                                         _, _enc = _cv2.imencode('.jpg', _annotated, [_cv2.IMWRITE_JPEG_QUALITY, 80])
                                         _snapshot_bytes = _enc.tobytes()
-                                    except Exception:
+                                    except Exception as ann_err:
+                                        print(f"  [AI Camera ({self.name})] Bbox drawing/encoding error: {ann_err}")
                                         _snapshot_bytes = None
                                 if save_alert and _snapshot_bytes:
                                     try:
                                         from .ai_alerts import alert_store
-                                        alert_store.save(self.id, list(detected_tags), _snapshot_bytes)
+                                        alert_store.save(self.id, list(detected_tags), _snapshot_bytes, license_plate=detected_plate)
                                         last_alert_saved = last_detected_time
                                     except Exception:
                                         pass  # History errors must never break detection
                                 _notify_bytes = _snapshot_bytes if getattr(self, 'notify_ai_attach_image', False) else None
                                 if not motion_state:
                                     motion_state = True
-                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes)
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes, license_plate=detected_plate)
                                 elif self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags):
-                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes)
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes, license_plate=detected_plate)
                             else:
                                 if motion_state and (time.time() - last_detected_time > cooldown_period):
                                     motion_state = False
@@ -1292,7 +1372,7 @@ class VirtualONVIFCamera:
         threading.Thread(target=_clear_after_delay, daemon=True).start()
         return True
 
-    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None, image_bytes=None):
+    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None, image_bytes=None, license_plate=None):
         """Broadcast motion state from local AI engine to subscribers"""
         from datetime import datetime
         import queue
@@ -1357,6 +1437,7 @@ class VirtualONVIFCamera:
                     'notifyAiEnabled': getattr(self, 'notify_ai_enabled', False),
                     'notifyAiCooldown': getattr(self, 'notify_ai_cooldown', 60),
                     'notifyAiTargets': getattr(self, 'notify_ai_targets', []),
+                    'notifyAiLicensePlates': getattr(self, 'notify_ai_license_plates', ''),
                     'notifyAiZoneFilter': getattr(self, 'notify_ai_zone_filter', ''),
                     'notifyAiSchedules': getattr(self, 'notify_ai_schedules', []),
                     # Legacy fallbacks
@@ -1371,7 +1452,8 @@ class VirtualONVIFCamera:
                         camera_name=self.name,
                         detected_labels=list(tags),
                         camera_notify_cfg=cam_notify_cfg,
-                        image_bytes=image_bytes
+                        image_bytes=image_bytes,
+                        license_plate=license_plate
                     )
                 except Exception as _ne:
                     pass  # Notification errors must never crash the event loop

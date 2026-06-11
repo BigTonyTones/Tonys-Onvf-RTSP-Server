@@ -704,7 +704,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             padding: 10px 20px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1593,6 +1593,14 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             border-left: 4px solid #f39c12;
         }}
         .alert-success {{ background: #c6f6d5; color: #22543d; }}
+        .unifi-protect-warning {{
+            background: var(--alert-warning-bg);
+            border: 1px solid var(--alert-warning-border, #fcd34d);
+        }}
+        body.theme-ui .unifi-protect-warning, body.theme-solar-light .unifi-protect-warning {{
+            background: #ffffff !important;
+            border-color: #f6ad55 !important;
+        }}
         .toggle-switch {{
             position: relative;
             display: inline-block;
@@ -2359,13 +2367,13 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             opacity: 1;
         }}
         .btn-add-schedule {{
-            padding: 4px 12px;
+            padding: 6px 14px;
             background: transparent;
             color: var(--btn-success);
             border: 1.5px solid var(--btn-success);
             border-radius: 6px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 600;
             white-space: nowrap;
             flex-shrink: 0;
@@ -2835,78 +2843,89 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
     
     <!-- Notification Rules Editor Modal -->
     <div id="notify-editor-modal" class="modal" style="z-index: 1200;">
-        <div class="modal-content" style="max-width: 820px; width: 96%;">
-            <div class="modal-header">
-                <div class="modal-title">AI Detection Notification Rules</div>
+        <div class="modal-content" style="max-width: 1020px; width: 96%; padding: 25px;">
+            <div class="modal-header" style="margin-bottom: 20px;">
+                <div class="modal-title" style="font-size: 20px; font-weight: 700;">AI Detection Notification Rules</div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-success" onclick="saveNotifyModal()" style="padding: 5px 16px; font-size: 12px; font-weight: 600;"><i class="fas fa-save"></i> Save &amp; Close</button>
-                    <button class="close-btn" onclick="closeNotifyModal()">×</button>
+                    <button class="btn btn-success" onclick="saveNotifyModal()" style="padding: 8px 18px; font-size: 14px; font-weight: 600; height: 38px;"><i class="fas fa-save"></i> Save &amp; Close</button>
+                    <button class="close-btn" onclick="closeNotifyModal()" style="font-size: 28px;">×</button>
                 </div>
             </div>
 
             <!-- Enable toggle -->
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0 12px 0; border-bottom: 1px solid var(--border-color);">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="nm-enabled" style="width: auto; cursor: pointer; transform: scale(1.2);" onchange="toggleNmFields()">
-                    <span style="font-size: 13px; font-weight: 600; color: var(--text-title);">Enable AI Detection Notifications</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                    <input type="checkbox" id="nm-enabled" style="width: auto; cursor: pointer; transform: scale(1.3);" onchange="toggleNmFields()">
+                    <span style="font-size: 15.5px; font-weight: 600; color: var(--text-title);">Enable AI Detection Notifications</span>
                 </label>
-                <span style="font-size: 11px; color: var(--text-muted);">Requires a notification provider configured in Settings</span>
+                <span style="font-size: 13px; color: var(--text-muted);">Requires a notification provider configured in Settings</span>
             </div>
 
-            <div id="nm-body" style="display: none; margin-top: 14px;">
+            <div id="nm-body" style="display: none; margin-top: 20px;">
                 <!-- Row 1: Cooldown + Targets + Zone -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 24px; margin-bottom: 24px;">
                     <div>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Cooldown</div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="number" id="nm-cooldown" min="0" value="60" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 12px; width: 80px;">
-                            <span style="font-size: 11px; color: var(--text-muted);">seconds between alerts</span>
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Cooldown</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="nm-cooldown" min="0" value="60" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 90px; height: 38px; box-sizing: border-box;">
+                            <span style="font-size: 13px; color: var(--text-muted);">seconds between alerts</span>
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Alert on</div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-person" style="width:auto;cursor:pointer;" checked> Person</label>
-                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-vehicle" style="width:auto;cursor:pointer;" checked> Vehicle</label>
-                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-animal" style="width:auto;cursor:pointer;"> Animal</label>
-                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 11px; color: var(--text-body);"><input type="checkbox" id="nm-target-package" style="width:auto;cursor:pointer;"> Package</label>
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Alert on</div>
+                        <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center; min-height: 38px;">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13.5px; color: var(--text-body);"><input type="checkbox" id="nm-target-person" style="width:auto;cursor:pointer;transform:scale(1.15);" checked> Person</label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13.5px; color: var(--text-body);"><input type="checkbox" id="nm-target-vehicle" style="width:auto;cursor:pointer;transform:scale(1.15);" checked> Vehicle</label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13.5px; color: var(--text-body);"><input type="checkbox" id="nm-target-license_plate" style="width:auto;cursor:pointer;transform:scale(1.15);" onchange="toggleNmLicensePlateFilterGroup()"> License Plate</label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13.5px; color: var(--text-body);"><input type="checkbox" id="nm-target-animal" style="width:auto;cursor:pointer;transform:scale(1.15);"> Animal</label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13.5px; color: var(--text-body);"><input type="checkbox" id="nm-target-package" style="width:auto;cursor:pointer;transform:scale(1.15);"> Package</label>
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Zone Filter</div>
-                        <select id="nm-zone-filter" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 12px; width: 100%;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Zone Filter</div>
+                        <select id="nm-zone-filter" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; font-size: 14px; width: 100%; height: 38px; box-sizing: border-box; cursor: pointer;">
                             <option value="">Any zone / full frame</option>
                         </select>
-                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px;">Only notify when detection occurs inside this zone</div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Only notify when detection occurs inside this zone</div>
+                    </div>
+                    <div id="nm-license-plate-filter-group" style="display: none; grid-column: span 3; background: rgba(0,0,0,0.08); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">License Plate Filter</div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="nm-license-plate-add-input" placeholder="Add plate (e.g. ABC1234)" style="background: var(--card-bg); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 14px; font-size: 13.5px; flex: 1; height: 38px; box-sizing: border-box;">
+                            <button type="button" onclick="nmAddGlobalPlateTag()" style="background: #2b6cb0; color: white; border: none; border-radius: 6px; padding: 8px 18px; font-size: 13.5px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 38px;"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div id="nm-global-plates-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; min-height: 38px; padding: 8px 12px; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid var(--border-color); align-items: center;"></div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Add license plates to notify on. Supports wildcards (*, ?). If empty, notifications trigger on any plate.</div>
+                        <input type="hidden" id="nm-license-plates" value="">
                     </div>
                 </div>
 
                 <!-- Attach screenshot -->
-                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 16px; gap: 12px;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1;">
-                        <input type="checkbox" id="nm-attach-image" style="width:auto;cursor:pointer;" onchange="toggleNmTestImageBtn()">
-                        <div>
-                            <span style="font-size: 12px; font-weight: 600; color: var(--text-title);">Attach Detection Screenshot</span>
-                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Include annotated JPEG with bounding boxes (Pushover, ntfy, SMTP, Apprise)</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 24px; gap: 16px;">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;">
+                        <input type="checkbox" id="nm-attach-image" style="width:auto;cursor:pointer;transform:scale(1.25);" onchange="toggleNmTestImageBtn()">
+                        <div style="margin-left: 4px;">
+                            <span style="font-size: 15px; font-weight: 600; color: var(--text-title);">Attach Detection Screenshot</span>
+                            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">Include annotated JPEG with bounding boxes (Pushover, ntfy, SMTP, Apprise)</div>
                         </div>
                     </label>
-                    <button type="button" id="nm-test-image-btn" onclick="sendTestImageNotification()" style="display:none; background:#3182ce; color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
+                    <button type="button" id="nm-test-image-btn" onclick="sendTestImageNotification()" style="display:none; background:#3182ce; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-size:13.5px; font-weight:600; white-space:nowrap; height: 38px;">
                         <i class="fas fa-image"></i> Send Test Image
                     </button>
                 </div>
 
                 <!-- Schedules -->
-                <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
-                        <span style="font-size: 12px; font-weight: 700; color: var(--text-title);">Schedule Windows</span>
-                        <span style="font-size: 10px; color: var(--text-muted); margin-left: 8px;">Notifications only fire when at least one enabled schedule matches the current time. Leave empty to always notify.</span>
+                        <span style="font-size: 15px; font-weight: 700; color: var(--text-title);">Schedule Windows</span>
+                        <span style="font-size: 12px; color: var(--text-muted); margin-left: 10px;">Notifications only fire when at least one enabled schedule matches the current time. Leave empty to always notify.</span>
                     </div>
                     <button type="button" class="btn-add-schedule" onclick="nmAddSchedule()">
                         <i class="fas fa-plus"></i> Add Schedule
                     </button>
                 </div>
-                <div id="nm-schedules-list" style="display: flex; flex-direction: column; gap: 10px; min-height: 40px;"></div>
-                <div id="nm-schedules-empty" style="font-size: 11px; color: var(--text-muted); padding: 10px 0; display: none;">No schedules — notifications fire at any time.</div>
+                <div id="nm-schedules-list" style="display: flex; flex-direction: column; gap: 12px; min-height: 40px;"></div>
+                <div id="nm-schedules-empty" style="font-size: 13px; color: var(--text-muted); padding: 12px 0; display: none;">No schedules — notifications fire at any time.</div>
             </div>
         </div>
     </div>
@@ -3188,7 +3207,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                         <span class="toggle-slider"></span>
                                     </label>
                                 </div>
-                                <div id="mainTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: 10px; font-weight: 500;">
+                                <div id="mainTranscodeNotice" style="display: none; color: var(--yellow-text, #f6ad55); font-size: 12px; margin-top: 10px; font-weight: 600;">
                                     <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
                                 </div>
                             </div>
@@ -3233,7 +3252,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                             <span class="toggle-slider"></span>
                                         </label>
                                     </div>
-                                    <div id="subTranscodeNotice" style="display: none; color: #f6ad55; font-size: 11px; margin-top: 10px; font-weight: 500;">
+                                    <div id="subTranscodeNotice" style="display: none; color: var(--yellow-text, #f6ad55); font-size: 12px; margin-top: 10px; font-weight: 600;">
                                         <i class="fas fa-info-circle"></i> Video will be transcoded to the resolution set in the Resolution and FPS section above.
                                     </div>
                                 </div>
@@ -3277,7 +3296,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div style="background: rgba(0,0,0,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 24px;">
                         <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="background: var(--primary-color); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <div style="background: var(--btn-primary, #3182ce); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                                     <i class="fas fa-volume-up"></i>
                                 </div>
                                 <div>
@@ -3290,7 +3309,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 <span class="toggle-slider"></span>
                             </label>
                         </label>
-                        <small style="color: #f6ad55; font-size: 11px; display: block; margin-top: 10px;"><i class="fas fa-info-circle"></i> If you're running UniFi Protect version 7.1 or newer, make sure to enable "Stream Compatibility Mode – Improved" in your UniFi Console's camera settings to ensure audio is properly supported.</small>
+                        <small style="color: var(--yellow-text, #f6ad55); font-size: 12px; display: block; margin-top: 10px; font-weight: 600;"><i class="fas fa-info-circle"></i> If you're running UniFi Protect version 7.1 or newer, make sure to enable "Stream Compatibility Mode – Improved" in your UniFi Console's camera settings to ensure audio is properly supported.</small>
                     </div>
 
                     <div class="form-row" style="align-items: flex-start; gap: 24px;">
@@ -3562,6 +3581,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 <input type="hidden" id="notifyAiCooldown" value="60">
                                 <input type="hidden" id="notifyAiTargetsJson" value='["person","vehicle"]'>
                                 <input type="hidden" id="notifyAiAttachImage" value="false">
+                                <input type="hidden" id="notifyAiLicensePlates" value="">
                                 <input type="hidden" id="notifyAiZoneFilter" value="">
                                 <input type="hidden" id="notifyAiSchedulesJson" value="[]">
                             </div>
@@ -3570,8 +3590,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
 
                     <div id="aiInstallGroup" style="display: none; margin-top: 12px;">
-                        <div style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 12px;">
-                            <div style="font-weight: bold; color: #f6ad55; font-size: 13px; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Local AI Dependencies Missing</div>
+                        <div style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); padding: 12px; border-radius: 8px; border-left: 4px solid var(--alert-warning-text, #f6ad55); border-top: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.2)); border-right: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.2)); border-bottom: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.2)); margin-bottom: 12px;">
+                            <div style="font-weight: bold; color: var(--alert-warning-text, #f6ad55); font-size: 13.5px; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Local AI Dependencies Missing</div>
                             <div style="color: var(--text-body); font-size: 12px; line-height: 1.4;">The required AI libraries (<code>ultralytics</code> and <code>opencv-python-headless</code>) are not installed on this server. This is required for local object detection.</div>
                         </div>
                         <div style="margin-top: 10px;">
@@ -3601,7 +3621,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             </div>
                         </div>
                         <div style="margin-top: 15px;">
-                            <button type="button" class="btn btn-primary" id="installAiBtn" onclick="startAiInstallation()" style="padding: 8px 18px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <button type="button" class="btn btn-primary" id="installAiBtn" onclick="startAiInstallation()" style="padding: 10px 20px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                                 <i class="fas fa-download"></i> Install AI Dependencies
                             </button>
                         </div>
@@ -3619,13 +3639,13 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             <div id="aiTestEventGroup" style="display: none; grid-column: 1 / -1;">
                                 <div class="ai-field-label">Test Event Delivery</div>
                                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                    <button type="button" class="btn btn-teal" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                    <button type="button" class="btn btn-teal" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
                                         Send Test Event
                                     </button>
-                                    <button type="button" class="btn btn-indigo" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                    <button type="button" class="btn btn-indigo" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
                                         Person
                                     </button>
-                                    <button type="button" class="btn btn-violet" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
+                                    <button type="button" class="btn btn-violet" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
                                         Vehicle
                                     </button>
                                     <span id="aiTestEventFeedback" class="ai-hint"></span>
@@ -3636,20 +3656,20 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             </div>
 
                             <div id="aiCopySettingsGroup" style="display: none;">
-                                <div class="ai-field-label">Copy AI Settings</div>
-                                <button type="button" class="btn btn-indigo" onclick="openCopyAiSettingsModal()" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
-                                    Copy to Cameras...
-                                </button>
-                                <div class="ai-hint" style="margin-top: 6px;">
-                                    Copies event source, AI model, targets, and sensitivity to other cameras.
+                                    <div class="ai-field-label">Copy AI Settings</div>
+                                    <button type="button" class="btn btn-indigo" onclick="openCopyAiSettingsModal()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                        Copy to Cameras...
+                                    </button>
+                                    <div class="ai-hint" style="margin-top: 6px;">
+                                        Copies event source, AI model, targets, and sensitivity to other cameras.
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div id="aiUninstallGroup" style="display: none;">
-                                <div class="ai-field-label">Maintenance</div>
-                                <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 6px 14px; font-size: 11.5px; font-weight: 500; border-radius: 6px; height: 32px; box-sizing: border-box;">
-                                    Uninstall AI Dependencies
-                                </button>
+                                <div id="aiUninstallGroup" style="display: none;">
+                                    <div class="ai-field-label">Maintenance</div>
+                                    <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                        Uninstall AI Dependencies
+                                    </button>
                                 <div class="ai-hint" style="margin-top: 6px;">
                                     Removes the YOLO framework, PyTorch, and related components from the server.
                                 </div>
@@ -3691,8 +3711,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 </div>
                             </div>
 
-                            <div class="form-group" style="background: rgba(246, 173, 85, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #f6ad55; margin-bottom: 20px;">
-                                <div style="font-size: 12px; color: #f6ad55; font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
+                            <div class="form-group unifi-protect-warning" style="padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                                <div style="font-size: 12px; color: var(--alert-warning-text, #f6ad55); font-weight: 600; margin-bottom: 4px;"><i class="fas fa-exclamation-triangle"></i> Ubiquiti / UniFi Protect Alert</div>
                                 <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
                                     UniFi Protect requires each camera to have a unique MAC address.
                                 </div>
@@ -3893,7 +3913,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
+                            <span class="form-label" style="margin: 0; color: var(--yellow-text, #f6ad55); font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
                         </label>
                         <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
                             Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
@@ -3903,7 +3923,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="debugMode" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">Debug Mode (Show detailed logs)</span>
+                            <span class="form-label" style="margin: 0; color: var(--yellow-text, #f6ad55); font-weight: 700;">Debug Mode (Show detailed logs)</span>
                         </label>
                         <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
                             Enables verbose MediaMTX logging. Helpful for troubleshooting stream issues.
@@ -3913,7 +3933,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="watchdogEnabled" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0; color: #f6ad55; font-weight: 700;">
+                            <span class="form-label" style="margin: 0; color: var(--yellow-text, #f6ad55); font-weight: 700;">
                                 <i class="fas fa-flask" style="font-size: 11px; margin-right: 3px;"></i>
                                 Stream Watchdog (Experimental)
                             </span>
@@ -4250,10 +4270,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllUUIDs()">
+                        <button type="button" class="btn" style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); border: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.3)); color: var(--yellow-text, #f6ad55); font-size: 13.5px; padding: 10px; font-weight: 600;" onclick="resetAllUUIDs()">
                             <i class="fas fa-id-card"></i> Reset All UUIDs
                         </button>
-                        <button type="button" class="btn" style="background: rgba(246, 173, 85, 0.1); border: 1px solid rgba(246, 173, 85, 0.3); color: #f6ad55; font-size: 12px; padding: 10px;" onclick="resetAllMACs()">
+                        <button type="button" class="btn" style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); border: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.3)); color: var(--yellow-text, #f6ad55); font-size: 13.5px; padding: 10px; font-weight: 600;" onclick="resetAllMACs()">
                             <i class="fas fa-network-wired"></i> Reset All MACs
                         </button>
                     </div>
@@ -4401,15 +4421,15 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </div>
                         <div id="progress-percent" style="font-size: 14px; color: var(--text-muted);">0%</div>
                     </div>
-                    <div style="background: rgba(237, 137, 54, 0.1); border-left: 3px solid #ed8936; padding: 15px; border-radius: 4px;">
-                        <small style="color: #f6ad55; font-size: 12px;">
+                    <div style="background: var(--alert-warning-bg, rgba(237, 137, 54, 0.1)); border-left: 3px solid var(--alert-warning-text, #ed8936); padding: 15px; border-radius: 4px;">
+                        <small style="color: var(--yellow-text, #f6ad55); font-size: 12.5px; font-weight: 600;">
                             <i class="fas fa-info-circle"></i> Please do not close this window. The server will restart automatically after the update is complete.
                         </small>
                     </div>
                 </div>
                 
                 <div id="update-checking" style="text-align: center; padding: 40px 20px;">
-                    <i class="fas fa-sync-alt fa-spin" style="font-size: 48px; color: var(--primary-color); margin-bottom: 20px;"></i>
+                    <i class="fas fa-sync-alt fa-spin" style="font-size: 48px; color: var(--btn-primary, #3182ce); margin-bottom: 20px;"></i>
                     <div style="font-size: 16px; color: var(--text-title);">Checking for updates...</div>
                 </div>
                 
@@ -6145,6 +6165,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 cooldown: camera.notifyAiCooldown !== undefined ? camera.notifyAiCooldown : 60,
                 targets: camera.notifyAiTargets || ['person', 'vehicle'],
                 attachImage: camera.notifyAiAttachImage === true,
+                licensePlates: camera.notifyAiLicensePlates || '',
                 zoneFilter: camera.notifyAiZoneFilter || '',
                 schedules: JSON.parse(JSON.stringify(camera.notifyAiSchedules || [])),
             }};
@@ -7782,6 +7803,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 notifyAiCooldown: parseInt(document.getElementById('notifyAiCooldown').value) || 60,
                 notifyAiTargets: JSON.parse(document.getElementById('notifyAiTargetsJson').value || '[]'),
                 notifyAiAttachImage: document.getElementById('notifyAiAttachImage').value === 'true',
+                notifyAiLicensePlates: document.getElementById('notifyAiLicensePlates').value || '',
                 notifyAiZoneFilter: document.getElementById('notifyAiZoneFilter').value || '',
                 notifyAiSchedules: JSON.parse(document.getElementById('notifyAiSchedulesJson').value || '[]'),
                 notifyScheduleEnabled: JSON.parse(document.getElementById('notifyAiSchedulesJson').value || '[]').length > 0
@@ -8729,13 +8751,15 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
         // ========== Notification Rules Modal ==========
         const NM_DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-        let _nmState = {{ enabled: false, cooldown: 60, targets: ['person','vehicle'], attachImage: false, zoneFilter: '', schedules: [] }};
+        let _nmState = {{ enabled: false, cooldown: 60, targets: ['person','vehicle'], attachImage: false, licensePlates: '', zoneFilter: '', schedules: [] }};
+        let _nmGlobalPlates = [];
 
         function _nmFlushToHiddenInputs() {{
             document.getElementById('notifyAiEnabled').value = _nmState.enabled ? 'true' : 'false';
             document.getElementById('notifyAiCooldown').value = _nmState.cooldown;
             document.getElementById('notifyAiTargetsJson').value = JSON.stringify(_nmState.targets);
             document.getElementById('notifyAiAttachImage').value = _nmState.attachImage ? 'true' : 'false';
+            document.getElementById('notifyAiLicensePlates').value = _nmState.licensePlates || '';
             document.getElementById('notifyAiZoneFilter').value = _nmState.zoneFilter || '';
             document.getElementById('notifyAiSchedulesJson').value = JSON.stringify(_nmState.schedules);
         }}
@@ -8757,9 +8781,28 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             document.getElementById('nm-cooldown').value = _nmState.cooldown;
             document.getElementById('nm-target-person').checked = (_nmState.targets||[]).includes('person');
             document.getElementById('nm-target-vehicle').checked = (_nmState.targets||[]).includes('vehicle');
+            document.getElementById('nm-target-license_plate').checked = (_nmState.targets||[]).includes('license_plate');
             document.getElementById('nm-target-animal').checked = (_nmState.targets||[]).includes('animal');
             document.getElementById('nm-target-package').checked = (_nmState.targets||[]).includes('package');
             document.getElementById('nm-attach-image').checked = _nmState.attachImage;
+            document.getElementById('nm-license-plates').value = _nmState.licensePlates || '';
+            
+            const plateStr = _nmState.licensePlates || '';
+            _nmGlobalPlates = plateStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            nmRenderGlobalPlateTags();
+
+            const addInput = document.getElementById('nm-license-plate-add-input');
+            if (addInput && !addInput.dataset.listenerBound) {{
+                addInput.addEventListener('keydown', function(e) {{
+                    if (e.key === 'Enter') {{
+                        e.preventDefault();
+                        nmAddGlobalPlateTag();
+                    }}
+                }});
+                addInput.dataset.listenerBound = 'true';
+            }}
+            
+            toggleNmLicensePlateFilterGroup();
             toggleNmTestImageBtn();
             // Zone filter dropdown — populate from current profiles
             const sel = document.getElementById('nm-zone-filter');
@@ -8785,6 +8828,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             const targets = [];
             if (document.getElementById('nm-target-person').checked) targets.push('person');
             if (document.getElementById('nm-target-vehicle').checked) targets.push('vehicle');
+            if (document.getElementById('nm-target-license_plate').checked) targets.push('license_plate');
             if (document.getElementById('nm-target-animal').checked) targets.push('animal');
             if (document.getElementById('nm-target-package').checked) targets.push('package');
             _nmState = {{
@@ -8792,6 +8836,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 cooldown: parseInt(document.getElementById('nm-cooldown').value) || 60,
                 targets,
                 attachImage: document.getElementById('nm-attach-image').checked,
+                licensePlates: _nmGlobalPlates.join(','),
                 zoneFilter: document.getElementById('nm-zone-filter').value || '',
                 schedules: JSON.parse(JSON.stringify(_nmState.schedules)),
             }};
@@ -8809,6 +8854,47 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             if (btn) btn.style.display = document.getElementById('nm-attach-image').checked ? 'inline-block' : 'none';
         }}
 
+        function toggleNmLicensePlateFilterGroup() {{
+            const cb = document.getElementById('nm-target-license_plate');
+            const group = document.getElementById('nm-license-plate-filter-group');
+            if (cb && group) {{
+                group.style.display = cb.checked ? 'block' : 'none';
+            }}
+        }}
+
+        function nmRenderGlobalPlateTags() {{
+            const container = document.getElementById('nm-global-plates-tags-container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (!_nmGlobalPlates || _nmGlobalPlates.length === 0) {{
+                container.innerHTML = '<span style="font-size: 10px; color: var(--text-muted); padding: 2px 6px;">No plate filters active (notify on all)</span>';
+                return;
+            }}
+            _nmGlobalPlates.forEach((plate, idx) => {{
+                const badge = document.createElement('span');
+                badge.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: #2b6cb0; color: white; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px; line-height: 1;';
+                badge.innerHTML = `<span>${{plate.toUpperCase()}}</span><i class="fas fa-times" onclick="nmRemoveGlobalPlateTag(${{idx}})" style="cursor: pointer; opacity: 0.7; font-size: 10px;"></i>`;
+                container.appendChild(badge);
+            }});
+        }}
+
+        function nmAddGlobalPlateTag() {{
+            const input = document.getElementById('nm-license-plate-add-input');
+            if (!input) return;
+            const val = input.value.trim().toUpperCase();
+            if (!val) return;
+            if (!_nmGlobalPlates.includes(val)) {{
+                _nmGlobalPlates.push(val);
+                nmRenderGlobalPlateTags();
+            }}
+            input.value = '';
+        }}
+
+        function nmRemoveGlobalPlateTag(idx) {{
+            _nmGlobalPlates.splice(idx, 1);
+            nmRenderGlobalPlateTags();
+        }}
+
         // Stubs kept so any old references don't throw
         function toggleAiNotifyFields() {{}}
         function toggleAiNotifyScheduleFields() {{}}
@@ -8817,7 +8903,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
 
         function nmAddSchedule() {{
-            _nmState.schedules.push({{ name: `Schedule ${{_nmState.schedules.length + 1}}`, enabled: true, days: [0,1,2,3,4,5,6], start: '00:00', end: '23:59', zone: '', targets: ['person', 'vehicle'] }});
+            _nmState.schedules.push({{ name: `Schedule ${{_nmState.schedules.length + 1}}`, enabled: true, days: [0,1,2,3,4,5,6], start: '00:00', end: '23:59', zone: '', targets: ['person', 'vehicle'], licensePlates: '' }});
             _nmRenderSchedules();
         }}
 
@@ -9024,6 +9110,17 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
         // ===== End Time Picker =====
 
+        function _nmRenderSchedPlatesHTML(sched, i) {{
+            const listPlates = (sched.licensePlates || '').split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (listPlates.length === 0) return '<span style="font-size: 9px; color:var(--text-muted); padding: 2px 0;">Notify on all plates</span>';
+            return listPlates.map((p, idx) => `
+                <span style="display:inline-flex;align-items:center;gap:4px;background:#2b6cb0;color:white;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;line-height:1;">
+                    <span>${{p.toUpperCase()}}</span>
+                    <i class="fas fa-times nm-sched-lp-remove-btn" data-sched="${{i}}" data-idx="${{idx}}" style="cursor:pointer;opacity:0.7;font-size:9px;"></i>
+                </span>
+            `).join('');
+        }}
+
         function _nmRenderSchedules() {{
             const list = document.getElementById('nm-schedules-list');
             const empty = document.getElementById('nm-schedules-empty');
@@ -9032,40 +9129,51 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             empty.style.display = 'none';
             _nmState.schedules.forEach((sched, i) => {{
                 const card = document.createElement('div');
-                card.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;';
-                const daysRow = NM_DAYS.map((d,idx) => `<label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-day="${{idx}}" class="nm-day-cb" style="width:auto;cursor:pointer;"${{sched.days.includes(idx) ? ' checked' : ''}}> ${{d}}</label>`).join('');
+                card.style.cssText = 'background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:8px;padding:16px 20px;margin-bottom:12px;';
+                const daysRow = NM_DAYS.map((d,idx) => `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-day="${{idx}}" class="nm-day-cb" style="width:auto;cursor:pointer;transform:scale(1.15);"${{sched.days.includes(idx) ? ' checked' : ''}}> ${{d}}</label>`).join('');
                 const zoneOpts = _nmBuildZoneOptions(sched.zone || '');
                 const schedTargets = sched.targets || ['person', 'vehicle'];
                 card.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;">
-                            <input type="checkbox" class="nm-sched-enabled" data-sched="${{i}}" style="width:auto;cursor:pointer;"${{sched.enabled ? ' checked' : ''}}><span style="font-size:12px;font-weight:600;color:var(--text-title);">${{sched.name}}</span>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;">
+                            <input type="checkbox" class="nm-sched-enabled" data-sched="${{i}}" style="width:auto;cursor:pointer;transform:scale(1.2);"${{sched.enabled ? ' checked' : ''}}><span style="font-size:14px;font-weight:600;color:var(--text-title);">${{sched.name}}</span>
                         </label>
-                        <input type="text" class="nm-sched-name" data-sched="${{i}}" value="${{sched.name}}" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-radius:5px;padding:3px 8px;font-size:11px;width:120px;">
-                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto;">
-                            <label style="font-size:10px;color:var(--text-muted);">Zone</label>
-                            <select class="nm-sched-zone" data-sched="${{i}}" style="background:var(--card-bg);color:var(--text-title);border:1px solid var(--border-color);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;">${{zoneOpts}}</select>
-                            <label style="font-size:10px;color:var(--text-muted);">From</label>
-                            <div style="display:inline-flex;align-items:stretch;">
-                                <input type="text" class="nm-sched-start nm-tp-display" data-sched="${{i}}" data-field="start" data-val24="${{sched.start}}" value="${{_nmTo12h(sched.start)}}" placeholder="08:00 AM" autocomplete="off" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-right:none;border-radius:5px 0 0 5px;padding:3px 6px;font-size:11px;width:76px;">
-                                <button type="button" class="nm-tp-btn" data-sched="${{i}}" data-field="start" style="background:rgba(0,0,0,0.25);color:var(--text-muted);border:1px solid var(--border-color);border-radius:0 5px 5px 0;padding:3px 7px;cursor:pointer;font-size:10px;"><i class="fas fa-clock"></i></button>
+                        <input type="text" class="nm-sched-name" data-sched="${{i}}" value="${{sched.name}}" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-radius:6px;padding:6px 10px;font-size:13px;width:140px;height:32px;box-sizing:border-box;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;">
+                            <label style="font-size:12px;color:var(--text-muted);">Zone</label>
+                            <select class="nm-sched-zone" data-sched="${{i}}" style="background:var(--card-bg);color:var(--text-title);border:1px solid var(--border-color);border-radius:6px;padding:4px 10px;font-size:13px;cursor:pointer;height:32px;box-sizing:border-box;">${{zoneOpts}}</select>
+                            <label style="font-size:12px;color:var(--text-muted);">From</label>
+                            <div style="display:inline-flex;align-items:stretch;height:32px;">
+                                <input type="text" class="nm-sched-start nm-tp-display" data-sched="${{i}}" data-field="start" data-val24="${{sched.start}}" value="${{_nmTo12h(sched.start)}}" placeholder="08:00 AM" autocomplete="off" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-right:none;border-radius:6px 0 0 6px;padding:4px 10px;font-size:13px;width:90px;box-sizing:border-box;">
+                                <button type="button" class="nm-tp-btn" data-sched="${{i}}" data-field="start" style="background:rgba(0,0,0,0.25);color:var(--text-muted);border:1px solid var(--border-color);border-radius:0 6px 6px 0;padding:4px 12px;cursor:pointer;font-size:13px;height:32px;box-sizing:border-box;"><i class="fas fa-clock"></i></button>
                             </div>
-                            <label style="font-size:10px;color:var(--text-muted);">To</label>
-                            <div style="display:inline-flex;align-items:stretch;">
-                                <input type="text" class="nm-sched-end nm-tp-display" data-sched="${{i}}" data-field="end" data-val24="${{sched.end}}" value="${{_nmTo12h(sched.end)}}" placeholder="11:59 PM" autocomplete="off" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-right:none;border-radius:5px 0 0 5px;padding:3px 6px;font-size:11px;width:76px;">
-                                <button type="button" class="nm-tp-btn" data-sched="${{i}}" data-field="end" style="background:rgba(0,0,0,0.25);color:var(--text-muted);border:1px solid var(--border-color);border-radius:0 5px 5px 0;padding:3px 7px;cursor:pointer;font-size:10px;"><i class="fas fa-clock"></i></button>
+                            <label style="font-size:12px;color:var(--text-muted);">To</label>
+                            <div style="display:inline-flex;align-items:stretch;height:32px;">
+                                <input type="text" class="nm-sched-end nm-tp-display" data-sched="${{i}}" data-field="end" data-val24="${{sched.end}}" value="${{_nmTo12h(sched.end)}}" placeholder="11:59 PM" autocomplete="off" style="background:rgba(0,0,0,0.2);color:var(--text-title);border:1px solid var(--border-color);border-right:none;border-radius:6px 0 0 6px;padding:4px 10px;font-size:13px;width:90px;box-sizing:border-box;">
+                                <button type="button" class="nm-tp-btn" data-sched="${{i}}" data-field="end" style="background:rgba(0,0,0,0.25);color:var(--text-muted);border:1px solid var(--border-color);border-radius:0 6px 6px 0;padding:4px 12px;cursor:pointer;font-size:13px;height:32px;box-sizing:border-box;"><i class="fas fa-clock"></i></button>
                             </div>
-                            <button type="button" onclick="nmRemoveSchedule(${{i}})" style="background:transparent;color:#f56565;border:1px solid var(--border-color);border-radius:5px;padding:3px 8px;cursor:pointer;font-size:11px;"><i class="fas fa-trash"></i></button>
+                            <button type="button" onclick="nmRemoveSchedule(${{i}})" style="background:transparent;color:#f56565;border:1px solid var(--border-color);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:13px;height:32px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;border-top:1px dashed var(--border-color);padding-top:8px;">
-                        <div style="display:flex;gap:8px;flex-wrap:wrap;">${{daysRow}}</div>
-                        <div style="display:flex;gap:10px;align-items:center;">
-                            <span style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Alert on:</span>
-                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="person" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('person') ? ' checked' : ''}}> Person</label>
-                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="vehicle" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('vehicle') ? ' checked' : ''}}> Vehicle</label>
-                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="animal" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('animal') ? ' checked' : ''}}> Animal</label>
-                            <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="package" class="nm-sched-target-cb" style="width:auto;cursor:pointer;"${{schedTargets.includes('package') ? ' checked' : ''}}> Package</label>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;border-top:1px dashed var(--border-color);padding-top:12px;">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">${{daysRow}}</div>
+                        <div style="display:flex;gap:12px;align-items:center;">
+                            <span style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Alert on:</span>
+                            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="person" class="nm-sched-target-cb" style="width:auto;cursor:pointer;transform:scale(1.15);"${{schedTargets.includes('person') ? ' checked' : ''}}> Person</label>
+                            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="vehicle" class="nm-sched-target-cb" style="width:auto;cursor:pointer;transform:scale(1.15);"${{schedTargets.includes('vehicle') ? ' checked' : ''}}> Vehicle</label>
+                            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="license_plate" class="nm-sched-target-cb" style="width:auto;cursor:pointer;transform:scale(1.15);"${{schedTargets.includes('license_plate') ? ' checked' : ''}}> License Plate</label>
+                            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="animal" class="nm-sched-target-cb" style="width:auto;cursor:pointer;transform:scale(1.15);"${{schedTargets.includes('animal') ? ' checked' : ''}}> Animal</label>
+                            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text-body);"><input type="checkbox" data-sched="${{i}}" data-target="package" class="nm-sched-target-cb" style="width:auto;cursor:pointer;transform:scale(1.15);"${{schedTargets.includes('package') ? ' checked' : ''}}> Package</label>
+                        </div>
+                    </div>
+                    <div class="nm-sched-lp-group" data-sched="${{i}}" style="display: ${{schedTargets.includes('license_plate') ? 'block' : 'none'}}; margin-top: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 14px; border: 1px dashed var(--border-color);">
+                        <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">License Plates</div>
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="text" class="nm-sched-lp-add-input" data-sched="${{i}}" placeholder="Add plate (e.g. ABC1234)" style="background:rgba(0,0,0,0.25);color:var(--text-title);border:1px solid var(--border-color);border-radius:6px;padding:6px 10px;font-size:13px;flex:1;height:32px;box-sizing:border-box;">
+                            <button type="button" class="nm-sched-lp-add-btn" data-sched="${{i}}" style="background:#2b6cb0;color:white;border:none;border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;font-weight:bold;height:32px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="nm-sched-lp-tags-container" data-sched="${{i}}" style="display:flex;flex-wrap:wrap;gap:6px;min-height:24px;align-items:center;">
+                            ${{_nmRenderSchedPlatesHTML(sched, i)}}
                         </div>
                     </div>`;
                 list.appendChild(card);
@@ -9107,6 +9215,41 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 if (!s.targets) s.targets = ['person', 'vehicle'];
                 if (this.checked) {{ if (!s.targets.includes(t)) s.targets.push(t); }}
                 else {{ s.targets = s.targets.filter(x => x !== t); }}
+                
+                if (t === 'license_plate') {{
+                    const lpGroup = list.querySelector(`.nm-sched-lp-group[data-sched="${{this.dataset.sched}}"]`);
+                    if (lpGroup) lpGroup.style.display = this.checked ? 'block' : 'none';
+                }}
+            }}));
+            list.querySelectorAll('.nm-sched-lp-add-btn').forEach(el => el.addEventListener('click', function() {{
+                const schedIdx = +this.dataset.sched;
+                const input = list.querySelector(`.nm-sched-lp-add-input[data-sched="${{schedIdx}}"]`);
+                if (!input) return;
+                const val = input.value.trim().toUpperCase();
+                if (!val) return;
+                const s = _nmState.schedules[schedIdx];
+                let currentPlates = (s.licensePlates || '').split(',').map(x => x.trim()).filter(x => x.length > 0);
+                if (!currentPlates.includes(val)) {{
+                    currentPlates.push(val);
+                    s.licensePlates = currentPlates.join(',');
+                    _nmRenderSchedules();
+                }}
+            }}));
+            list.querySelectorAll('.nm-sched-lp-add-input').forEach(el => el.addEventListener('keydown', function(e) {{
+                if (e.key === 'Enter') {{
+                    e.preventDefault();
+                    const btn = this.closest('div').querySelector('.nm-sched-lp-add-btn');
+                    if (btn) btn.click();
+                }}
+            }}));
+            list.querySelectorAll('.nm-sched-lp-remove-btn').forEach(el => el.addEventListener('click', function() {{
+                const schedIdx = +this.dataset.sched;
+                const idx = +this.dataset.idx;
+                const s = _nmState.schedules[schedIdx];
+                let currentPlates = (s.licensePlates || '').split(',').map(x => x.trim()).filter(x => x.length > 0);
+                currentPlates.splice(idx, 1);
+                s.licensePlates = currentPlates.join(',');
+                _nmRenderSchedules();
             }}));
         }}
 

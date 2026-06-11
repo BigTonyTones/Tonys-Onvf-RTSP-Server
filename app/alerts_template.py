@@ -127,6 +127,7 @@ def get_alerts_html():
         .tag-chip { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 8px; background: rgba(0,0,0,0.65); }
         .tag-person  { color: #90cdf4; } .tag-vehicle { color: #c4b5fd; }
         .tag-animal  { color: #9ae6b4; } .tag-package { color: #fbd38d; }
+        .tag-license_plate { color: #60a5fa; }
         .tag-chip.tag-other { color: #cbd5e0; }
         .thumb .check {
             position: absolute; top: 6px; left: 6px;
@@ -239,9 +240,12 @@ def get_alerts_html():
             <button class="pill active" data-tag="" onclick="setTag(this)">All</button>
             <button class="pill" data-tag="person" onclick="setTag(this)">Person</button>
             <button class="pill" data-tag="vehicle" onclick="setTag(this)">Vehicle</button>
+            <button class="pill" data-tag="license_plate" onclick="setTag(this)">License Plate</button>
             <button class="pill" data-tag="animal" onclick="setTag(this)">Animal</button>
             <button class="pill" data-tag="package" onclick="setTag(this)">Package</button>
         </div>
+        <label>Plate Search</label>
+        <input type="text" id="filter-plate" oninput="applyFilters()" placeholder="Search plate..." style="background: var(--input-bg, rgba(255,255,255,0.05)); color: var(--text-title); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-size: 11px; width: 110px;">
         <label>When</label>
         <div class="pill-group" id="time-pills">
             <button class="pill active" data-hours="" onclick="setRange(this)">All</button>
@@ -315,7 +319,7 @@ def get_alerts_html():
         let liveTimer = null;
         let maxAlerts = null;
 
-        const tagClass = t => ['person','vehicle','animal','package'].includes(t) ? 'tag-' + t : 'tag-other';
+        const tagClass = t => ['person','vehicle','animal','package','license_plate'].includes(t) ? 'tag-' + t : 'tag-other';
         const imgUrl = f => '/api/ai-alerts/image/' + encodeURIComponent(f);
         const camName = id => camMap[id] || ('Camera ' + id);
 
@@ -386,10 +390,12 @@ def get_alerts_html():
         function applyFilters() {
             const camId = document.getElementById('filter-cam').value;
             const cutoff = curHours ? Date.now() - parseFloat(curHours) * 3600 * 1000 : 0;
+            const plateSearch = document.getElementById('filter-plate').value.trim().toLowerCase();
             filtered = allAlerts.filter(a =>
                 (!camId || String(a.camera_id) === camId) &&
                 (!curTag || (a.tags || []).includes(curTag)) &&
-                (a.ts >= cutoff)
+                (a.ts >= cutoff) &&
+                (!plateSearch || (a.license_plate && a.license_plate.toLowerCase().includes(plateSearch)))
             );
             // Drop selections that are no longer visible on disk
             const known = new Set(allAlerts.map(a => a.file));
@@ -431,7 +437,12 @@ def get_alerts_html():
                     html += '<div class="thumb' + (selected.has(a.file) ? ' selected' : '') + '" data-idx="' + i + '" data-file="' + a.file + '">' +
                         '<img src="' + imgUrl(a.file) + '" loading="lazy" alt="">' +
                         '<div class="check" onclick="toggleSelect(event, \'' + a.file + '\')">' + (selected.has(a.file) ? '&#10003;' : '') + '</div>' +
-                        '<div class="tags">' + (a.tags || []).map(tg => '<span class="tag-chip ' + tagClass(tg) + '">' + tg + '</span>').join('') + '</div>' +
+                        '<div class="tags">' + (a.tags || []).map(tg => {
+                            if (tg === 'license_plate' && a.license_plate) {
+                                return '<span class="tag-chip tag-license_plate" style="background:#1d4ed8; color:#eff6ff; font-weight:700; border:1px solid #3b82f6;">LP: ' + a.license_plate.toUpperCase() + '</span>';
+                            }
+                            return '<span class="tag-chip ' + tagClass(tg) + '">' + tg + '</span>';
+                        }).join('') + '</div>' +
                         '<div class="meta"><span class="cam">' + camName(a.camera_id) + '</span>' +
                         '<span class="time">' + t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</span></div></div>';
                 });
@@ -553,11 +564,15 @@ def get_alerts_html():
             const a = filtered[lbIndex];
             if (!a) { closeLightbox(); return; }
             document.getElementById('lb-img').src = imgUrl(a.file);
-            document.getElementById('lb-cam').textContent = camName(a.camera_id);
+            document.getElementById('lb-cam').innerHTML = camName(a.camera_id) + (a.license_plate ? ' <span style="color:#60a5fa; font-weight:800; margin-left: 10px;">[LP: ' + a.license_plate.toUpperCase() + ']</span>' : '');
             document.getElementById('lb-time').textContent = new Date(a.ts).toLocaleString();
             document.getElementById('lb-counter').textContent = (lbIndex + 1) + ' / ' + filtered.length;
-            document.getElementById('lb-tags').innerHTML = (a.tags || []).map(tg =>
-                '<span class="tag-chip ' + tagClass(tg) + '">' + tg + '</span>').join('');
+            document.getElementById('lb-tags').innerHTML = (a.tags || []).map(tg => {
+                if (tg === 'license_plate' && a.license_plate) {
+                    return '<span class="tag-chip tag-license_plate" style="background:#1d4ed8; color:#eff6ff; font-weight:700; border:1px solid #3b82f6;">LP: ' + a.license_plate.toUpperCase() + '</span>';
+                }
+                return '<span class="tag-chip ' + tagClass(tg) + '">' + tg + '</span>';
+            }).join('');
             document.querySelectorAll('#lb-filmstrip img').forEach((im, i) => {
                 im.classList.toggle('current', i === lbIndex);
                 if (i === lbIndex) im.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
@@ -676,7 +691,7 @@ def get_alerts_html():
                     const a = filtered[parseInt(thumb.dataset.idx)];
                     if (!a || document.getElementById('lightbox').classList.contains('open')) return;
                     document.getElementById('hp-img').src = imgUrl(a.file);
-                    document.getElementById('hp-cam').textContent = camName(a.camera_id);
+                    document.getElementById('hp-cam').innerHTML = camName(a.camera_id) + (a.license_plate ? ' <span style="color:#60a5fa; font-weight:800; margin-left: 6px;">[LP: ' + a.license_plate.toUpperCase() + ']</span>' : '');
                     document.getElementById('hp-time').textContent = new Date(a.ts).toLocaleString();
                     hp.classList.add('visible');
                     positionPreview(e);

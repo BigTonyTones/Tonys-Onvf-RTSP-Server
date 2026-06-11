@@ -19,8 +19,8 @@ MAX_ALERTS_CAP = 10000
 # Persisted store settings (currently just the cap)
 _SETTINGS_FILE = os.path.join(DATA_DIR, "ai_alerts_settings.json")
 
-# Filename format: <epoch_ms>_<camera_id>_<tag1-tag2>.jpg
-_FILENAME_RE = re.compile(r'^(\d+)_(\d+)_([a-z\-]+)\.jpg$')
+# Filename format: <epoch_ms>_<camera_id>_<tag1-tag2>[_lp-PLATE].jpg
+_FILENAME_RE = re.compile(r'^(\d+)_(\d+)_([a-z0-9\-]+)(?:_lp-([a-zA-Z0-9\-]+))?\.jpg$')
 
 
 class AIAlertStore:
@@ -63,14 +63,21 @@ class AIAlertStore:
             self._prune()
         return self.max_alerts
 
-    def save(self, camera_id, tags, image_bytes):
+    def save(self, camera_id, tags, image_bytes, license_plate=None):
         """Save an annotated JPEG and prune history beyond MAX_ALERTS."""
         if not image_bytes:
             return
         ts_ms = int(time.time() * 1000)
         tag_str = '-'.join(sorted(set(t.lower() for t in tags)))
-        tag_str = re.sub(r'[^a-z\-]', '', tag_str) or 'unknown'
-        filename = f"{ts_ms}_{int(camera_id)}_{tag_str}.jpg"
+        tag_str = re.sub(r'[^a-z0-9\-]', '', tag_str) or 'unknown'
+        if license_plate:
+            cleaned_plate = re.sub(r'[^a-zA-Z0-9\-]', '', license_plate).upper()
+            if cleaned_plate:
+                filename = f"{ts_ms}_{int(camera_id)}_{tag_str}_lp-{cleaned_plate}.jpg"
+            else:
+                filename = f"{ts_ms}_{int(camera_id)}_{tag_str}.jpg"
+        else:
+            filename = f"{ts_ms}_{int(camera_id)}_{tag_str}.jpg"
         with self._lock:
             try:
                 with open(os.path.join(ALERTS_DIR, filename), 'wb') as f:
@@ -114,6 +121,7 @@ class AIAlertStore:
                 'ts': int(m.group(1)),
                 'camera_id': cid,
                 'tags': m.group(3).split('-'),
+                'license_plate': m.group(4),
             })
         alerts.sort(key=lambda a: a['ts'], reverse=True)
         return alerts

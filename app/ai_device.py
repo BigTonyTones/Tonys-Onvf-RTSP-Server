@@ -92,8 +92,27 @@ def get_shared_model(model_name):
         return _AI_MODELS[model_name]
 
 
+_EASYOCR_READER = None
+_EASYOCR_LOCK = threading.Lock()
+
+def get_shared_ocr_reader():
+    """Return a cached, thread-safe instance of EasyOCR Reader."""
+    global _EASYOCR_READER
+    with _EASYOCR_LOCK:
+        if _EASYOCR_READER is None:
+            import easyocr
+            device = select_device()
+            gpu_enabled = (device in ["cuda", "mps"])
+            print(f"  [AI LPR] Initializing EasyOCR Reader (GPU: {gpu_enabled}, device: {device})...")
+            _EASYOCR_READER = easyocr.Reader(['en'], gpu=gpu_enabled, verbose=False)
+            print("  [AI LPR] EasyOCR Reader initialized successfully.")
+    return _EASYOCR_READER
+
+
 def clear_models():
     """Clear the model cache. Intended for testing."""
-    global _AI_MODELS
+    global _AI_MODELS, _EASYOCR_READER
     with _AI_MODEL_LOCK:
         _AI_MODELS.clear()
+    with _EASYOCR_LOCK:
+        _EASYOCR_READER = None

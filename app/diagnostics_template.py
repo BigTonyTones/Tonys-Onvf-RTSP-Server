@@ -1510,6 +1510,7 @@ def get_diagnostics_html(theme=''):
                     log(`  Software Stack:`, 'purple');
                     log(`    • YOLOv8 (ultralytics): ${data.yolo_installed ? '✓ ' + data.yolo_version : '✗ Not Installed'}`);
                     log(`    • PyTorch:              ${data.torch_installed ? '✓ ' + data.torch_version : '✗ Not Installed'}`);
+                    log(`    • EasyOCR (LPR):        ${data.easyocr_installed ? '✓ ' + data.easyocr_version : '✗ Not Installed'}`);
                     
                     // Hardware Acceleration Info
                     log(`  Hardware Acceleration:`, 'purple');

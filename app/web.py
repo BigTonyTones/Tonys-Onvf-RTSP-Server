@@ -515,6 +515,7 @@ def create_web_app(manager):
                 camera.notify_ai_cooldown = data.get('notifyAiCooldown', 60)
                 camera.notify_ai_targets = data.get('notifyAiTargets', ['person'])
                 camera.notify_ai_attach_image = data.get('notifyAiAttachImage', False)
+                camera.notify_ai_license_plates = data.get('notifyAiLicensePlates', '')
                 camera.notify_schedule_days = data.get('notifyScheduleDays', [0, 1, 2, 3, 4, 5, 6])
                 camera.notify_schedule_start = data.get('notifyScheduleStart', '00:00')
                 camera.notify_schedule_end = data.get('notifyScheduleEnd', '23:59')
@@ -587,6 +588,7 @@ def create_web_app(manager):
                 camera.notify_ai_cooldown = data.get('notifyAiCooldown', 60)
                 camera.notify_ai_targets = data.get('notifyAiTargets', ['person'])
                 camera.notify_ai_attach_image = data.get('notifyAiAttachImage', False)
+                camera.notify_ai_license_plates = data.get('notifyAiLicensePlates', '')
                 camera.notify_schedule_days = data.get('notifyScheduleDays', [0, 1, 2, 3, 4, 5, 6])
                 camera.notify_schedule_start = data.get('notifyScheduleStart', '00:00')
                 camera.notify_schedule_end = data.get('notifyScheduleEnd', '23:59')
@@ -1880,6 +1882,15 @@ def create_web_app(manager):
             except ImportError:
                 pass
                 
+            easyocr_installed = False
+            easyocr_version = "Not Installed"
+            try:
+                import easyocr
+                easyocr_installed = True
+                easyocr_version = easyocr.__version__
+            except ImportError:
+                pass
+
             try:
                 import torch
                 torch_installed = True
@@ -1922,6 +1933,8 @@ def create_web_app(manager):
                 'yolo_installed': yolo_installed,
                 'yolo_version': yolo_version,
                 'torch_installed': torch_installed,
+                'easyocr_installed': easyocr_installed,
+                'easyocr_version': easyocr_version,
                 'torch_version': torch_version,
                 'cuda_available': cuda_available,
                 'cuda_device_count': cuda_device_count,
@@ -2509,6 +2522,17 @@ def create_web_app(manager):
                 # Step 4: Install opencv-python-headless
                 cmd_head = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "opencv-python-headless"]
                 rc = self._run_cmd(cmd_head, custom_env)
+                if rc != 0:
+                    with self.lock:
+                        self.status = "failed"
+                        self.log.append(f"Failed to install opencv-python-headless (exit code {rc})")
+                    return
+
+                # Step 5: Install easyocr
+                with self.lock:
+                    self.log.append("Installing easyocr (License Plate character recognition)...")
+                cmd_ocr = [sys.executable, "-m", "pip", "install", "--no-cache-dir", "easyocr"]
+                rc = self._run_cmd(cmd_ocr, custom_env)
                 
                 with self.lock:
                     if rc == 0:
@@ -2516,7 +2540,7 @@ def create_web_app(manager):
                         self.log.append("Installation finished successfully!")
                     else:
                         self.status = "failed"
-                        self.log.append(f"Failed to install opencv-python-headless (exit code {rc})")
+                        self.log.append(f"Failed to install easyocr (exit code {rc})")
             except Exception as e:
                 with self.lock:
                     self.status = "failed"
@@ -2536,7 +2560,7 @@ def create_web_app(manager):
                 with self.lock:
                     self.log.append("Uninstalling AI dependencies...")
                 
-                cmd = [sys.executable, "-m", "pip", "uninstall", "-y", "ultralytics", "torch", "torchvision", "torchaudio", "opencv-python-headless"]
+                cmd = [sys.executable, "-m", "pip", "uninstall", "-y", "ultralytics", "torch", "torchvision", "torchaudio", "opencv-python-headless", "easyocr"]
                 rc = self._run_cmd(cmd, os.environ.copy())
                 
                 with self.lock:
