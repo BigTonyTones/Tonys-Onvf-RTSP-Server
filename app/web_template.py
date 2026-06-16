@@ -1085,6 +1085,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.show-bandwidth .metrics-overlay {{
             display: flex;
         }}
+        body.hide-info .camera-info-badges {{
+            display: none !important;
+        }}
         .icon-btn i {{ font-size: 14px; }}
         .icon-btn:hover {{ 
             transform: translateY(-2px);
@@ -2718,6 +2721,13 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             <span>Bandwidth</span>
                             <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-group" title="Show the info tags on each camera card (IP, MAC, UUID, ONVIF, Audio, AI, etc.)">
+                            <span>Info</span>
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
+                                <input type="checkbox" id="infoToggle" onchange="toggleInfo(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
@@ -5606,7 +5616,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </div>
                     </div>
                     
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
+                    <div class="camera-info-badges" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
                         <div class="info-badge ${{cam.assignedIp ? 'info-badge-green' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
                         <div class="info-badge" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
                         ${{cam.uuid ? `<div class="info-badge info-badge-purple" title="UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
@@ -5788,14 +5798,21 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         const storedBandwidth = localStorage.getItem('showBandwidth');
         let showBandwidth = storedBandwidth === 'true'; // Default is false
 
+        const storedInfo = localStorage.getItem('showInfo');
+        let showInfo = storedInfo === null ? true : storedInfo === 'true'; // Default is ON
+
         window.addEventListener('DOMContentLoaded', () => {{
             const toggle = document.getElementById('latencyToggle');
             if (toggle) toggle.checked = useLowLatency;
 
             const bwToggle = document.getElementById('bandwidthToggle');
             if (bwToggle) bwToggle.checked = showBandwidth;
-            
+
             if (showBandwidth) document.body.classList.add('show-bandwidth');
+
+            const infoToggleEl = document.getElementById('infoToggle');
+            if (infoToggleEl) infoToggleEl.checked = showInfo;
+            if (!showInfo) document.body.classList.add('hide-info');
         }});
 
         function toggleLatencyMode(enabled) {{
@@ -5811,6 +5828,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 document.body.classList.add('show-bandwidth');
             }} else {{
                 document.body.classList.remove('show-bandwidth');
+            }}
+        }}
+
+        function toggleInfo(enabled) {{
+            showInfo = enabled;
+            localStorage.setItem('showInfo', enabled);
+            if (enabled) {{
+                document.body.classList.remove('hide-info');
+            }} else {{
+                document.body.classList.add('hide-info');
             }}
         }}
 
