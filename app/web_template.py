@@ -856,13 +856,13 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
         .camera-grid {{ 
             display: grid; 
-            gap: 20px; 
+            gap: 12px; 
             grid-template-columns: repeat(var(--grid-cols, 3), 1fr); 
         }}
         .camera-card {{
             background: var(--card-bg);
             border-radius: 12px;
-            padding: 24px 24px 18px;
+            padding: 16px 16px 12px;
             box-shadow: var(--shadow);
             border: 1px solid var(--card-border);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -1127,7 +1127,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             padding-bottom: 56.25%;
             background: #000;
             border-radius: 8px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             position: relative;
             overflow: hidden;
         }}
@@ -1209,7 +1209,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             padding: 14px 16px;
             background: var(--body-bg);
             border-radius: 8px;
-            margin-top: 16px;
+            margin-top: 12px;
         }}
         /* Trim the dead space below the last row inside the info panel */
         .info-section .info-value:last-child {{ margin-bottom: 0; }}
@@ -5608,7 +5608,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         function getCameraCardContent(cam, serverIp) {{
             const displayIp = cam.assignedIp || serverIp;
             return `
-                <div class="camera-header" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 20px;">
+                <div class="camera-header" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <div class="camera-title" style="display: flex; align-items: center; gap: 12px;">
                             <div class="status-badge ${{cam.status === 'running' ? 'running' : ''}}"></div>
