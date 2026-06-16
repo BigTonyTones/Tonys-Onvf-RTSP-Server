@@ -250,8 +250,10 @@ function Setup-PythonEnvironment {
     Write-Info "  - psutil (system utilities)"
     Write-Info "  - onvif-zeep (ONVIF protocol)"
     Write-Info "  - apprise (Notifications)"
-    
-    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise 2>&1 | Out-Null
+    Write-Info "  - paramiko (SSH client for NVR listener checks)"
+    Write-Info "  - cryptography (encrypts stored SSH passwords)"
+
+    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography 2>&1 | Out-Null
     
     Write-Success "Python environment configured"
 }

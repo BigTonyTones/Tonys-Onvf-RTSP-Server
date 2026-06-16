@@ -39,7 +39,9 @@ RUN pip install --no-cache-dir \
     pyyaml \
     psutil \
     onvif-zeep \
-    apprise
+    apprise \
+    paramiko \
+    cryptography
 
 # Install CPU-only PyTorch first (keeps the image small, ~200MB vs ~2GB for GPU)
 RUN pip install --no-cache-dir \

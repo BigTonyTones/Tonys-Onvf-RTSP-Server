@@ -1084,6 +1084,104 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 400
 
+    # --- UniFi Protect ONVIF Listener API Routes ---
+
+    @app.route('/api/protect-listener', methods=['GET'])
+    @login_required
+    def protect_listener_get():
+        """Return all NVR targets + monitor settings (passwords redacted)."""
+        return jsonify(manager.protect_listener.get_public_state())
+
+    @app.route('/api/protect-listener', methods=['POST'])
+    @login_required
+    def protect_listener_add():
+        """Add a new NVR target."""
+        data = request.json or {}
+        try:
+            nvr = manager.protect_listener.add_nvr(data)
+            return jsonify({'status': 'ok', 'id': nvr['id']})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/protect-listener/settings', methods=['POST'])
+    @login_required
+    def protect_listener_settings():
+        """Update global monitor settings (enabled / interval)."""
+        data = request.json or {}
+        try:
+            manager.protect_listener.update_monitor_settings(
+                enabled=data.get('monitorEnabled'),
+                interval_minutes=data.get('monitorIntervalMinutes'),
+            )
+            return jsonify({'status': 'ok'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/protect-listener/status', methods=['GET'])
+    @login_required
+    def protect_listener_status_all():
+        """Run a health check against every configured NVR."""
+        try:
+            results = manager.protect_listener.check_all()
+            return jsonify({'status': 'ok', 'results': results})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/protect-listener/<nvr_id>', methods=['PUT'])
+    @login_required
+    def protect_listener_update(nvr_id):
+        data = request.json or {}
+        if manager.protect_listener.update_nvr(nvr_id, data):
+            return jsonify({'status': 'ok'})
+        return jsonify({'error': 'NVR not found'}), 404
+
+    @app.route('/api/protect-listener/<nvr_id>', methods=['DELETE'])
+    @login_required
+    def protect_listener_delete(nvr_id):
+        if manager.protect_listener.delete_nvr(nvr_id):
+            return jsonify({'status': 'ok'})
+        return jsonify({'error': 'NVR not found'}), 404
+
+    @app.route('/api/protect-listener/<nvr_id>/test', methods=['POST'])
+    @login_required
+    def protect_listener_test(nvr_id):
+        """Test SSH connectivity to a single NVR."""
+        return jsonify(manager.protect_listener.test_connection(nvr_id))
+
+    @app.route('/api/protect-listener/<nvr_id>/status', methods=['GET'])
+    @login_required
+    def protect_listener_status_one(nvr_id):
+        return jsonify(manager.protect_listener.check_status(nvr_id))
+
+    @app.route('/api/protect-listener/<nvr_id>/reboot', methods=['POST'])
+    @login_required
+    def protect_listener_reboot(nvr_id):
+        """Reboot the Ubiquiti NVR over SSH."""
+        return jsonify(manager.protect_listener.reboot(nvr_id))
+
+    @app.route('/api/protect-listener/<nvr_id>/install', methods=['POST'])
+    @login_required
+    def protect_listener_install(nvr_id):
+        """Run the upstream installer on the NVR over SSH (streams logs)."""
+        if manager.protect_listener.start_install(nvr_id):
+            return jsonify({'status': 'ok'})
+        return jsonify({'error': 'Install already running or NVR not found'}), 409
+
+    @app.route('/api/protect-listener/<nvr_id>/install/progress', methods=['GET'])
+    @login_required
+    def protect_listener_install_progress(nvr_id):
+        return jsonify(manager.protect_listener.get_install_progress(nvr_id))
+
+    @app.route('/api/protect-listener/<nvr_id>/uninstall', methods=['POST'])
+    @login_required
+    def protect_listener_uninstall(nvr_id):
+        """Uninstall onvif-recorder over SSH (remove, or purge if requested)."""
+        data = request.json or {}
+        purge = bool(data.get('purge', False))
+        if manager.protect_listener.start_uninstall(nvr_id, purge=purge):
+            return jsonify({'status': 'ok'})
+        return jsonify({'error': 'Action already running or NVR not found'}), 409
+
     # --- Notification API Routes ---
 
     @app.route('/api/notifications/config', methods=['GET'])

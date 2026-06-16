@@ -67,11 +67,11 @@ fi
 # 4. Install initial required Python packages
 echo "Checking Python packages..."
 if ! python3 -c "import flask" &> /dev/null; then
-    echo "  Missing core Python packages: flask, flask-cors, requests, pyyaml, psutil, onvif-zeep"
+    echo "  Missing core Python packages: flask, flask-cors, requests, pyyaml, psutil, onvif-zeep, paramiko, cryptography"
     read -p "  Would you like to install them now via pip? (y/n): " confirm
     if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
         echo "  Installing packages..."
-        pip install flask flask-cors requests pyyaml psutil onvif-zeep
+        pip install flask flask-cors requests pyyaml psutil onvif-zeep paramiko cryptography
     else
         echo "  Installation skipped. Please install dependencies manually."
         exit 1
@@ -94,6 +94,23 @@ if ! python3 -c "from onvif import ONVIFCamera" &> /dev/null; then
         fi
     else
         echo "  Installation skipped. Note: ONVIF camera discovery will not work without onvif-zeep."
+    fi
+fi
+
+# 4c. Check for paramiko + cryptography (added later — UniFi Protect ONVIF listener feature)
+if ! python3 -c "import paramiko, cryptography" &> /dev/null; then
+    echo "  Missing paramiko / cryptography (used for UniFi Protect ONVIF listener health checks)"
+    read -p "  Would you like to install them now via pip? (y/n): " confirm
+    if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
+        echo "  Installing paramiko and cryptography..."
+        pip install paramiko cryptography
+        if [ $? -eq 0 ]; then
+            echo "  paramiko and cryptography installed successfully."
+        else
+            echo "  Warning: Failed to install. The UniFi Protect ONVIF listener feature will be unavailable."
+        fi
+    else
+        echo "  Skipped. The UniFi Protect ONVIF listener feature will be unavailable until installed."
     fi
 fi
 

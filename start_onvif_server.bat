@@ -94,13 +94,13 @@ echo Checking Python packages...
 if not errorlevel 1 goto :packages_ok
 
 echo.
-echo [WARNING] Missing core Python packages: flask, flask-cors, requests, pyyaml, psutil, onvif-zeep
+echo [WARNING] Missing core Python packages: flask, flask-cors, requests, pyyaml, psutil, onvif-zeep, paramiko, cryptography
 echo.
 choice /C YN /M "Would you like to install them now via pip?"
 if errorlevel 2 (
     echo.
     echo [ERROR] Installation skipped. Please install dependencies manually.
-    echo Run: %PYTHON_CMD% -m pip install flask flask-cors requests pyyaml psutil onvif-zeep
+    echo Run: %PYTHON_CMD% -m pip install flask flask-cors requests pyyaml psutil onvif-zeep paramiko cryptography
     echo.
     pause
     exit /b 1
@@ -108,7 +108,7 @@ if errorlevel 2 (
 
 echo.
 echo Installing critical packages (Flask, etc.)...
-%PYTHON_CMD% -m pip install flask flask-cors requests pyyaml onvif-zeep
+%PYTHON_CMD% -m pip install flask flask-cors requests pyyaml onvif-zeep paramiko cryptography
 
 echo.
 echo Attempting to install optional system metrics (psutil)...
@@ -121,7 +121,7 @@ REM Final verification: Is the core app (flask) actually usable?
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to install core dependencies.
-    echo Please try running this manually: %PYTHON_CMD% -m pip install flask flask-cors requests pyyaml onvif-zeep
+    echo Please try running this manually: %PYTHON_CMD% -m pip install flask flask-cors requests pyyaml onvif-zeep paramiko cryptography
     echo.
     pause
     exit /b 1

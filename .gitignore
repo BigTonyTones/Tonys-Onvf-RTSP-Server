@@ -38,6 +38,10 @@ camera_config.json
 mediamtx.yml
 *.log
 
+# Encryption key for stored credentials — never commit
+.secret.key
+data/.secret.key
+
 # IDEs
 .vscode/
 .idea/

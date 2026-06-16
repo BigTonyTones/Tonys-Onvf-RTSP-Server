@@ -17,6 +17,7 @@ from .mediamtx_manager import MediaMTXManager
 from .linux_service import LinuxServiceManager
 from .analytics import AnalyticsManager
 from .notifier import NotificationManager, NOTIFICATION_EVENTS, DEFAULT_ENABLED_EVENTS
+from .protect_listener import ProtectListenerManager
 import requests
 
 class CameraManager:
@@ -55,7 +56,15 @@ class CameraManager:
         self.notification_config = {}
         self.notifier = NotificationManager({})
 
-        
+        # UniFi Protect ONVIF listener health monitor (populated by load_config)
+        self.protect_listener_config = {
+            'monitorEnabled': True,
+            'monitorIntervalMinutes': 30,
+            'nvrs': [],
+        }
+        self.protect_listener = None
+
+
         # Auth settings
         self.auth_enabled = False
         self.username = None
@@ -82,7 +91,11 @@ class CameraManager:
         
         self.ip_whitelist = []
         self.load_config()
-        
+
+        # UniFi Protect ONVIF listener health monitor
+        self.protect_listener = ProtectListenerManager(self, self.protect_listener_config)
+        self.protect_listener.start_monitor()
+
         # Start watchdog only if enabled in settings
         if getattr(self, 'watchdog_enabled', False):
             self.start_watchdog()
@@ -190,6 +203,13 @@ class CameraManager:
                 'providers': {}
             })
             self.notifier.update_config(self.notification_config)
+
+            # Load UniFi Protect ONVIF listener config
+            self.protect_listener_config = config.get('protectListener', {
+                'monitorEnabled': True,
+                'monitorIntervalMinutes': 30,
+                'nvrs': [],
+            })
         else:
             self.server_ip = 'localhost'
             self.open_browser = False
@@ -319,7 +339,16 @@ class CameraManager:
             'notifications': getattr(self, 'notification_config', {
                 'enabled_events': DEFAULT_ENABLED_EVENTS,
                 'providers': {}
-            })
+            }),
+            'protectListener': (
+                self.protect_listener.to_config()
+                if getattr(self, 'protect_listener', None)
+                else getattr(self, 'protect_listener_config', {
+                    'monitorEnabled': True,
+                    'monitorIntervalMinutes': 30,
+                    'nvrs': [],
+                })
+            )
         }
         
         try:

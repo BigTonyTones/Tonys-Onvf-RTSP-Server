@@ -1664,6 +1664,35 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             color: #38a169;
             opacity: 1;
         }}
+
+        /* Ubiquiti Protect Tab (Blue) */
+        #settings-tab-protect {{
+            color: var(--text-title);
+            opacity: 0.75;
+        }}
+        #settings-tab-protect svg {{
+            color: #006fff;
+            opacity: 1;
+            transition: transform 0.2s ease;
+        }}
+        #settings-tab-protect:hover {{
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(0, 111, 255, 0.05);
+        }}
+        #settings-tab-protect:hover svg {{
+            transform: scale(1.15);
+        }}
+        #settings-tab-protect.active {{
+            color: var(--text-title) !important;
+            opacity: 1;
+            background: rgba(0, 111, 255, 0.08) !important;
+            border-bottom: 2px solid #006fff !important;
+        }}
+        #settings-tab-protect.active svg {{
+            color: #006fff;
+            opacity: 1;
+        }}
         .settings-tab-content {{
             display: none;
         }}
@@ -3658,6 +3687,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                         <span style="font-size: 12.5px; color: var(--text-body);">Send Smart ONVIF Topics</span>
                                         <span id="smartOnvifInfoBtn" onclick="event.preventDefault(); toggleSmartOnvifPopup()" style="display: none; cursor: pointer; background: #d69e2e; color: #1a202c; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; font-weight: 800; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1; margin-left: 2px;" title="UniFi compatibility note">⚠</span>
                                     </label>
+                                    <div id="smartOnvifNvrStatus" style="margin-top: 8px; display: none; flex-direction: column; gap: 4px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -3888,6 +3918,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 <button type="button" class="settings-tab-btn active" onclick="switchSettingsTab('settings-general')" id="settings-tab-general">
                     <i class="fas fa-cog"></i> General
                 </button>
+                <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-protect')" id="settings-tab-protect">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 129" aria-hidden="true" style="height:1em; width:auto; vertical-align:-0.12em; margin-right:5px;"><path fill="currentColor" d="M123.998 0h-7.999v7.999h7.999V0ZM96.01 56.02V39.994l.004.005h15.993v15.997H128v5.07c0 5.862-.498 12.807-1.644 18.26-.642 3.049-1.615 6.078-2.756 8.987-1.169 2.976-2.516 5.827-3.982 8.382a62.776 62.776 0 0 1-6.695 9.547l-.136.158-.224.262c-.617.724-1.227 1.44-1.898 2.139a63.215 63.215 0 0 1-2.415 2.415c-10.237 9.859-23.575 16.017-37.521 17.431-1.678.172-5.047.35-6.729.35-1.687-.005-5.051-.178-6.729-.35-13.946-1.414-27.284-7.577-37.52-17.431a63.155 63.155 0 0 1-2.416-2.415c-.704-.729-1.339-1.477-1.98-2.233l-.003-.002-.275-.324a62.658 62.658 0 0 1-6.695-9.547c-1.466-2.56-2.813-5.406-3.982-8.382-1.141-2.91-2.114-5.938-2.756-8.986C.498 73.867 0 66.928 0 61.067V1.002h31.99V56.02s0 4.218.053 5.598l.012.322v.002c.068 1.785.133 3.534.319 5.274.527 4.94 1.62 9.628 3.872 13.592.652 1.145 1.313 2.257 2.104 3.311 4.812 6.417 12.135 11.234 21.27 12.576 1.087.158 3.283.297 4.38.297s3.292-.139 4.38-.297c9.135-1.342 16.458-6.159 21.27-12.576.795-1.054 1.452-2.166 2.104-3.311 2.252-3.964 3.345-8.651 3.872-13.592.186-1.743.252-3.495.319-5.284l.012-.314c.053-1.38.053-5.598.053-5.598ZM100.002 12h12v11.996H128v15.998h-15.998V24.001h-12v-12Z"/></svg> Ubiquiti Protect
+                </button>
                 <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-security')" id="settings-tab-security">
                     <i class="fas fa-shield-alt"></i> Security
                 </button>
@@ -3964,6 +3997,75 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
                             Creates and enables a systemd service to start this server automatically when the computer turns on.
                         </small>
+                    </div>
+                </div>
+
+                <!-- Tab: UniFi Protect ONVIF Listener -->
+                <div id="settings-protect" class="settings-tab-content">
+                    <div class="form-group">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 6px;">Ubiquiti NVR — ONVIF Event Recorder</div>
+                        <small style="color: var(--text-body); font-size: 13.5px; display: block; margin-bottom: 10px; line-height: 1.6;">
+                            Add your <b>Ubiquiti UniFi Protect NVR(s)</b> here. This connects over SSH to check whether the
+                            <code>onvif-event-recorder</code> service is <b>installed and running</b> — which is required for the
+                            "Send Smart ONVIF Topics" feature. UniFi firmware updates can silently remove it, so this monitors it,
+                            can <b>install / reinstall</b> it for you, and can <b>reboot</b> the NVR remotely.
+                        </small>
+                        <small style="color: var(--text-body); font-size: 12.5px; display: block; margin-bottom: 10px; line-height: 1.6;">
+                            <i class="fas fa-info-circle" style="color:#d69e2e;"></i>
+                            The listener is a <b>third-party project</b> — this app is <b>not affiliated</b> with it. Source &amp; details:
+                            <a href="https://github.com/danielwoz/ubiquiti-protect-onvif-event-listener" target="_blank" rel="noopener noreferrer" style="color: var(--accent, #667eea);">github.com/danielwoz/ubiquiti-protect-onvif-event-listener</a>
+                        </small>
+                        <div style="font-size:12.5px; color: var(--text-body); margin-bottom:14px;">
+                            <i class="fas fa-lock" style="color:#48bb78;"></i> Passwords are encrypted and stored.
+                        </div>
+
+                        <div id="protectListenerUnavailable" style="display:none; background: rgba(246,173,85,0.1); border:1px solid rgba(246,173,85,0.3); border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color: var(--text-body);"></div>
+
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:4px;">
+                            <input type="checkbox" id="protectMonitorEnabled" style="width:auto; cursor:pointer;" onchange="saveProtectMonitorSettings()">
+                            <span class="form-label" style="margin:0;">Enable periodic health checks</span>
+                        </label>
+                        <small style="color: var(--text-muted); font-size:11px; display:block; margin-bottom:14px;">Each NVR is checked on its own interval (set below). You'll be notified when a listener goes offline.</small>
+
+                        <div id="protectNvrList" style="display:flex; flex-direction:column; gap:10px;"></div>
+
+                        <button type="button" class="btn btn-primary" onclick="openNvrForm()" style="margin-top:12px; padding:8px 14px; font-size:13px;">
+                            <i class="fas fa-plus"></i> Add Ubiquiti NVR
+                        </button>
+
+                        <!-- Add/Edit inline form -->
+                        <div id="nvrFormPanel" style="display:none; margin-top:14px; padding:14px; background: var(--input-bg); border:1px solid var(--border-color); border-radius:8px;">
+                            <input type="hidden" id="nvrEditId" value="">
+                            <div class="form-group"><label class="form-label">Name</label><input type="text" class="form-input" id="nvrName" placeholder="Garage NVR"></div>
+                            <div class="form-row">
+                                <div class="form-col"><div class="form-group"><label class="form-label">SSH Host / IP</label><input type="text" class="form-input" id="nvrHost" placeholder="192.168.1.1"></div></div>
+                                <div class="form-col"><div class="form-group"><label class="form-label">SSH Port</label><input type="number" class="form-input" id="nvrPort" value="22"></div></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-col"><div class="form-group"><label class="form-label">SSH Username</label><input type="text" class="form-input" id="nvrUser" value="root"></div></div>
+                                <div class="form-col"><div class="form-group" style="margin-bottom:0;"><label class="form-label">SSH Password</label><input type="password" class="form-input" id="nvrPassword" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"></div></div>
+                            </div>
+                            <small id="nvrPasswordHint" style="display:none; color: var(--text-muted); font-size:11px; margin-top:4px;">Leave blank to keep the existing password.</small>
+                            <div class="form-group" style="margin-top:12px; margin-bottom:0;">
+                                <label class="form-label">Check interval (minutes)</label>
+                                <input type="number" class="form-input" id="nvrInterval" min="5" value="30" style="max-width:160px;">
+                                <small style="color: var(--text-muted); font-size:11px; margin-top:4px; display:block;">How often this NVR is checked. Minimum 5 minutes.</small>
+                            </div>
+                            <div style="display:flex; gap:8px; margin-top:12px;">
+                                <button type="button" class="btn btn-primary" onclick="saveNvr()">Save</button>
+                                <button type="button" class="btn btn-grey" onclick="closeNvrForm()">Cancel</button>
+                            </div>
+                            <div id="nvrFormStatus" style="margin-top:8px; font-size:12px;"></div>
+                        </div>
+
+                        <!-- Install progress (shared) -->
+                        <div id="nvrInstallPanel" style="display:none; margin-top:14px;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                                <span id="nvrInstallTitle" style="font-size:12px; font-weight:600; color:#3182ce;">Installing...</span>
+                                <span id="nvrInstallSpinner"><i class="fas fa-spinner fa-spin" style="color:#3182ce;"></i></span>
+                            </div>
+                            <pre id="nvrInstallLogs" style="background:#0f172a; color:#38bdf8; font-family:monospace; font-size:11px; padding:12px; border-radius:8px; max-height:180px; overflow-y:auto; white-space:pre-wrap; margin:0; border:1px solid #1e293b;"></pre>
+                        </div>
                     </div>
                 </div>
 
@@ -6408,7 +6510,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     if (aiModelDesc) aiModelDesc.style.display = 'block';
                     if (infoDivider) infoDivider.style.display = 'block';
                     if (infoBox) infoBox.style.display = 'flex';
-                    if (smartGroup) smartGroup.style.display = 'block';
+                    if (smartGroup) {{ smartGroup.style.display = 'block'; renderSmartOnvifNvrStatus(); }}
                     if (aiInstallGroup) aiInstallGroup.style.display = 'none';
                     if (aiUninstallGroup) aiUninstallGroup.style.display = 'block';
                 }} else {{
@@ -7058,6 +7160,52 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             const checkbox = document.getElementById('sendSmartOnvifTopics');
             const btn = document.getElementById('smartOnvifInfoBtn');
             if (btn) btn.style.display = (checkbox && checkbox.checked) ? 'inline-flex' : 'none';
+        }}
+
+        function smartOnvifStatusMeta(status) {{
+            switch (status) {{
+                case 'active':
+                    return {{ color: '#1a7f40', label: 'Installed &amp; running',
+                        desc: 'onvif-event-recorder is installed and running on this NVR — Smart ONVIF Topics will be recorded into UniFi Protect.' }};
+                case 'stopped':
+                    return {{ color: '#b9770e', label: 'Installed, not running',
+                        desc: 'onvif-event-recorder is installed but its service is stopped. Smart ONVIF Topics will not be recorded until it is started or reinstalled (Settings → Ubiquiti Protect).' }};
+                case 'not_installed':
+                    return {{ color: '#c0392b', label: 'Not installed',
+                        desc: 'onvif-event-recorder is NOT installed on this NVR. Smart ONVIF Topics will not appear in UniFi Protect until you install it (Settings → Ubiquiti Protect).' }};
+                case 'ssh_error':
+                    return {{ color: 'var(--text-muted)', label: 'Unreachable',
+                        desc: 'Could not reach this NVR over SSH to check the listener. Verify the SSH details in Settings → Ubiquiti Protect.' }};
+                default:
+                    return {{ color: 'var(--text-muted)', label: 'Status unknown',
+                        desc: 'Not checked yet. Open Settings → Ubiquiti Protect and use "Check Now", or wait for the periodic health check.' }};
+            }}
+        }}
+
+        async function renderSmartOnvifNvrStatus() {{
+            const box = document.getElementById('smartOnvifNvrStatus');
+            if (!box) return;
+            try {{
+                const resp = await fetch('/api/protect-listener?t=' + Date.now());
+                if (!resp.ok) {{ box.style.display = 'none'; return; }}
+                const state = await resp.json();
+                if (!state.nvrs || !state.nvrs.length) {{ box.style.display = 'none'; return; }}
+                box.style.display = 'flex';
+                const rows = state.nvrs.map(n => {{
+                    const m = smartOnvifStatusMeta(n.status);
+                    const safeDesc = m.desc.replace(/"/g, '&quot;');
+                    return `
+                        <div title="${{safeDesc}}" style="display:flex; align-items:center; gap:6px; font-size:11px; cursor:help;">
+                            <span style="color:${{m.color}};">&#9679;</span>
+                            <span style="color: var(--text-body); font-weight:600;">${{n.name}}</span>
+                            <span style="color: var(--text-muted);">—</span>
+                            <span style="color:${{m.color}};">${{m.label}}</span>
+                        </div>`;
+                }}).join('');
+                box.innerHTML = `<div style="font-size:10.5px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:2px;">UniFi Protect listener status</div>${{rows}}`;
+            }} catch (e) {{
+                box.style.display = 'none';
+            }}
         }}
 
         function toggleSmartOnvifPopup() {{
@@ -8043,7 +8191,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             // Toggle Save Settings button visibility based on tab
             const saveBtn = document.getElementById('settings-save-btn');
             if (saveBtn) {{
-                if (tabId === 'settings-maintenance') {{
+                if (tabId === 'settings-maintenance' || tabId === 'settings-protect') {{
                     saveBtn.style.display = 'none';
                 }} else {{
                     saveBtn.style.display = 'block';
@@ -8445,6 +8593,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 if (el) el.style.display = 'none';
             }});
             loadSettings();
+            loadProtectListener();
             
             // Auto-detect server IP if not set
             const serverIpField = document.getElementById('serverIp');
@@ -8695,6 +8844,310 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     statusEl.style.display = 'none';
                 }}
             }}, 500);
+        }}
+
+        // ── UniFi Protect ONVIF Listener ────────────────────────────────────
+        let protectNvrState = {{ nvrs: [] }};
+        let nvrInstallInterval = null;
+
+        async function loadProtectListener() {{
+            try {{
+                const resp = await fetch('/api/protect-listener?t=' + Date.now());
+                if (!resp.ok) return;
+                const state = await resp.json();
+                protectNvrState = state;
+
+                const enabledEl = document.getElementById('protectMonitorEnabled');
+                if (enabledEl) enabledEl.checked = state.monitorEnabled === true;
+
+                const warn = document.getElementById('protectListenerUnavailable');
+                if (warn) {{
+                    const missing = [];
+                    if (!state.sshAvailable) missing.push('paramiko (SSH)');
+                    if (!state.cryptoAvailable) missing.push('cryptography (password encryption)');
+                    if (missing.length) {{
+                        warn.style.display = 'block';
+                        warn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Missing libraries: <b>' + missing.join(', ') + '</b>. Install them on the server (pip install paramiko cryptography) and restart to use this feature.';
+                    }} else {{
+                        warn.style.display = 'none';
+                    }}
+                }}
+                renderNvrList(state);
+            }} catch (e) {{
+                console.error('Failed to load Protect listener state:', e);
+            }}
+        }}
+
+        function nvrStatusBadge(status) {{
+            const map = {{
+                active:       {{ color: '#1a7f40', text: 'Running' }},
+                stopped:      {{ color: '#c0392b', text: 'Stopped' }},
+                not_installed:{{ color: '#b9770e', text: 'Not Installed' }},
+                ssh_error:    {{ color: 'var(--text-muted)', text: 'SSH Error' }},
+                unknown:      {{ color: 'var(--text-muted)', text: 'Unknown' }},
+            }};
+            const s = map[status] || map.unknown;
+            return `<span style="font-size:12px; font-weight:600; color:${{s.color}};">&#9679; ${{s.text}}</span>`;
+        }}
+
+        function renderNvrList(state) {{
+            const list = document.getElementById('protectNvrList');
+            if (!list) return;
+            if (!state.nvrs || !state.nvrs.length) {{
+                list.innerHTML = '<div style="font-size:12px; color: var(--text-muted); padding:8px 0;">No Ubiquiti NVRs configured yet.</div>';
+                return;
+            }}
+            list.innerHTML = state.nvrs.map(n => `
+                <div style="padding:12px; background: var(--input-bg); border:1px solid var(--border-color); border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="min-width:0;">
+                            <div style="font-weight:600; color: var(--text-title); font-size:13px;">${{n.name}}</div>
+                            <div style="font-size:11px; color: var(--text-muted);">${{n.sshUser}}@${{n.sshHost}}:${{n.sshPort}} &bull; checks every ${{n.intervalMinutes || 30}} min ${{n.passwordSet ? '' : '&bull; (no password set)'}}</div>
+                        </div>
+                        <div>${{nvrStatusBadge(n.status)}}</div>
+                    </div>
+                    <div id="nvrDetail-${{n.id}}" style="font-size:11px; color: var(--text-muted); margin-top:6px;">${{n.detail || ''}}</div>
+                    <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-teal" style="padding:5px 10px; font-size:12px;" onclick="checkNvr('${{n.id}}')">Check Now</button>
+                        <button type="button" class="btn btn-grey" style="padding:5px 10px; font-size:12px;" onclick="testNvr('${{n.id}}')">Test SSH</button>
+                        <button type="button" class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="installNvr('${{n.id}}', '${{(n.name || '').replace(/'/g, "")}}')">Install / Reinstall</button>
+                        <button type="button" class="btn btn-grey" style="padding:5px 10px; font-size:12px;" onclick="uninstallNvr('${{n.id}}', '${{(n.name || '').replace(/'/g, "")}}')">Uninstall</button>
+                        <button type="button" class="btn btn-amber" style="padding:5px 10px; font-size:12px;" onclick="rebootNvr('${{n.id}}', '${{(n.name || '').replace(/'/g, "")}}')">Reboot NVR</button>
+                        <button type="button" class="btn btn-grey" style="padding:5px 10px; font-size:12px;" onclick="openNvrForm('${{n.id}}')">Edit</button>
+                        <button type="button" class="btn btn-danger" style="padding:5px 10px; font-size:12px;" onclick="deleteNvr('${{n.id}}', '${{(n.name || '').replace(/'/g, "")}}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }}
+
+        async function saveProtectMonitorSettings() {{
+            const enabled = document.getElementById('protectMonitorEnabled').checked;
+            try {{
+                await fetch('/api/protect-listener/settings', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{ monitorEnabled: enabled }})
+                }});
+            }} catch (e) {{ console.error('Failed to save monitor settings:', e); }}
+        }}
+
+        function openNvrForm(id) {{
+            const panel = document.getElementById('nvrFormPanel');
+            document.getElementById('nvrFormStatus').textContent = '';
+            const hint = document.getElementById('nvrPasswordHint');
+            if (id) {{
+                const n = (protectNvrState.nvrs || []).find(x => x.id === id);
+                if (!n) return;
+                document.getElementById('nvrEditId').value = id;
+                document.getElementById('nvrName').value = n.name || '';
+                document.getElementById('nvrHost').value = n.sshHost || '';
+                document.getElementById('nvrPort').value = n.sshPort || 22;
+                document.getElementById('nvrUser').value = n.sshUser || 'root';
+                document.getElementById('nvrInterval').value = n.intervalMinutes || 30;
+                document.getElementById('nvrPassword').value = '';
+                hint.style.display = 'block';
+            }} else {{
+                document.getElementById('nvrEditId').value = '';
+                document.getElementById('nvrName').value = '';
+                document.getElementById('nvrHost').value = '';
+                document.getElementById('nvrPort').value = 22;
+                document.getElementById('nvrUser').value = 'root';
+                document.getElementById('nvrInterval').value = 30;
+                document.getElementById('nvrPassword').value = '';
+                hint.style.display = 'none';
+            }}
+            panel.style.display = 'block';
+        }}
+
+        function closeNvrForm() {{
+            document.getElementById('nvrFormPanel').style.display = 'none';
+        }}
+
+        async function saveNvr() {{
+            const id = document.getElementById('nvrEditId').value;
+            const payload = {{
+                name: document.getElementById('nvrName').value,
+                sshHost: document.getElementById('nvrHost').value,
+                sshPort: parseInt(document.getElementById('nvrPort').value || 22),
+                sshUser: document.getElementById('nvrUser').value,
+                intervalMinutes: parseInt(document.getElementById('nvrInterval').value || 30),
+                sshPassword: document.getElementById('nvrPassword').value
+            }};
+            const statusEl = document.getElementById('nvrFormStatus');
+            if (!payload.sshHost) {{ statusEl.style.color = '#c0392b'; statusEl.textContent = 'SSH host is required.'; return; }}
+            try {{
+                const url = id ? `/api/protect-listener/${{id}}` : '/api/protect-listener';
+                const method = id ? 'PUT' : 'POST';
+                const resp = await fetch(url, {{
+                    method, headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify(payload)
+                }});
+                if (resp.ok) {{
+                    closeNvrForm();
+                    await loadProtectListener();
+                }} else {{
+                    const err = await resp.json();
+                    statusEl.style.color = '#c0392b';
+                    statusEl.textContent = 'Error: ' + (err.error || 'Unknown');
+                }}
+            }} catch (e) {{
+                statusEl.style.color = '#c0392b';
+                statusEl.textContent = 'Error: ' + e.message;
+            }}
+        }}
+
+        async function deleteNvr(id, name) {{
+            if (!confirm('Delete Ubiquiti NVR "' + name + '"? This only removes it from monitoring; it does not uninstall anything on the NVR.')) return;
+            try {{
+                await fetch(`/api/protect-listener/${{id}}`, {{ method: 'DELETE' }});
+                await loadProtectListener();
+            }} catch (e) {{ console.error(e); }}
+        }}
+
+        async function rebootNvr(id, name) {{
+            if (!confirm('Reboot Ubiquiti NVR "' + name + '"?\\n\\nThis will restart the NVR over SSH. UniFi Protect and all cameras on it will be briefly unavailable.')) return;
+            const detail = document.getElementById('nvrDetail-' + id);
+            if (detail) {{ detail.style.color = 'var(--text-muted)'; detail.textContent = 'Sending reboot command…'; }}
+            try {{
+                const resp = await fetch(`/api/protect-listener/${{id}}/reboot`, {{ method: 'POST' }});
+                const data = await resp.json();
+                if (detail) {{
+                    if (data.ok) {{
+                        detail.style.color = '#b9770e';
+                        detail.textContent = 'Reboot command sent. The NVR will be offline for a few minutes.';
+                    }} else {{
+                        detail.style.color = '#c0392b';
+                        detail.textContent = 'Reboot failed: ' + (data.error || 'Unknown');
+                    }}
+                }}
+            }} catch (e) {{
+                if (detail) {{ detail.style.color = '#c0392b'; detail.textContent = 'Reboot failed: ' + e.message; }}
+            }}
+        }}
+
+        async function checkNvr(id) {{
+            const detail = document.getElementById('nvrDetail-' + id);
+            if (detail) detail.textContent = 'Checking…';
+            try {{
+                const resp = await fetch(`/api/protect-listener/${{id}}/status`);
+                const data = await resp.json();
+                await loadProtectListener();
+            }} catch (e) {{
+                if (detail) detail.textContent = 'Check failed: ' + e.message;
+            }}
+        }}
+
+        async function testNvr(id) {{
+            const detail = document.getElementById('nvrDetail-' + id);
+            if (detail) detail.textContent = 'Testing SSH…';
+            try {{
+                const resp = await fetch(`/api/protect-listener/${{id}}/test`, {{ method: 'POST' }});
+                const data = await resp.json();
+                if (detail) {{
+                    if (data.ok) {{
+                        detail.style.color = '#1a7f40';
+                        detail.textContent = 'SSH OK. Host key: ' + (data.fingerprint || 'n/a');
+                    }} else {{
+                        detail.style.color = '#c0392b';
+                        detail.textContent = 'SSH failed: ' + (data.error || 'Unknown');
+                    }}
+                }}
+            }} catch (e) {{
+                if (detail) detail.textContent = 'Test failed: ' + e.message;
+            }}
+        }}
+
+        async function installNvr(id, name) {{
+            if (!confirm('Run the ONVIF listener installer on "' + name + '" over SSH?\\n\\nThis executes the upstream install.sh from danielwoz.github.io on the NVR.')) return;
+            const panel = document.getElementById('nvrInstallPanel');
+            const title = document.getElementById('nvrInstallTitle');
+            const spinner = document.getElementById('nvrInstallSpinner');
+            const logs = document.getElementById('nvrInstallLogs');
+            logs.textContent = '';
+            title.textContent = 'Installing on ' + name + '…';
+            title.style.color = '#3182ce';
+            spinner.style.display = 'inline';
+            panel.style.display = 'block';
+            try {{
+                const resp = await fetch(`/api/protect-listener/${{id}}/install`, {{ method: 'POST' }});
+                if (!resp.ok) {{
+                    const err = await resp.json();
+                    title.textContent = 'Could not start: ' + (err.error || 'Unknown');
+                    title.style.color = '#c0392b';
+                    spinner.style.display = 'none';
+                    return;
+                }}
+                if (nvrInstallInterval) clearInterval(nvrInstallInterval);
+                nvrInstallInterval = setInterval(() => pollNvrInstall(id, name, 'Install'), 1000);
+                pollNvrInstall(id, name, 'Install');
+            }} catch (e) {{
+                title.textContent = 'Error: ' + e.message;
+                title.style.color = '#c0392b';
+                spinner.style.display = 'none';
+            }}
+        }}
+
+        async function uninstallNvr(id, name) {{
+            if (!confirm('Uninstall onvif-event-recorder from "' + name + '" over SSH?\\n\\nThis stops the service and rolls back its UniFi Protect database changes.')) return;
+            const purge = confirm('Also PURGE configuration and state?\\n\\nOK = purge (also removes /etc/onvif-recorder and saved state)\\nCancel = standard remove (keeps configuration)');
+            const verb = purge ? 'Purge' : 'Uninstall';
+            const panel = document.getElementById('nvrInstallPanel');
+            const title = document.getElementById('nvrInstallTitle');
+            const spinner = document.getElementById('nvrInstallSpinner');
+            const logs = document.getElementById('nvrInstallLogs');
+            logs.textContent = '';
+            title.textContent = verb + ' on ' + name + '…';
+            title.style.color = '#3182ce';
+            spinner.style.display = 'inline';
+            panel.style.display = 'block';
+            try {{
+                const resp = await fetch(`/api/protect-listener/${{id}}/uninstall`, {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{ purge: purge }})
+                }});
+                if (!resp.ok) {{
+                    const err = await resp.json();
+                    title.textContent = 'Could not start: ' + (err.error || 'Unknown');
+                    title.style.color = '#c0392b';
+                    spinner.style.display = 'none';
+                    return;
+                }}
+                if (nvrInstallInterval) clearInterval(nvrInstallInterval);
+                nvrInstallInterval = setInterval(() => pollNvrInstall(id, name, verb), 1000);
+                pollNvrInstall(id, name, verb);
+            }} catch (e) {{
+                title.textContent = 'Error: ' + e.message;
+                title.style.color = '#c0392b';
+                spinner.style.display = 'none';
+            }}
+        }}
+
+        async function pollNvrInstall(id, name, verb) {{
+            verb = verb || 'Install';
+            try {{
+                const resp = await fetch(`/api/protect-listener/${{id}}/install/progress`);
+                const data = await resp.json();
+                const logs = document.getElementById('nvrInstallLogs');
+                const title = document.getElementById('nvrInstallTitle');
+                const spinner = document.getElementById('nvrInstallSpinner');
+                logs.textContent = (data.log || []).join('\\n');
+                logs.scrollTop = logs.scrollHeight;
+                if (data.status === 'success') {{
+                    clearInterval(nvrInstallInterval); nvrInstallInterval = null;
+                    title.textContent = verb + ' complete on ' + name;
+                    title.style.color = '#1a7f40';
+                    spinner.style.display = 'none';
+                    loadProtectListener();
+                }} else if (data.status === 'failed') {{
+                    clearInterval(nvrInstallInterval); nvrInstallInterval = null;
+                    title.textContent = verb + ' failed on ' + name;
+                    title.style.color = '#c0392b';
+                    spinner.style.display = 'none';
+                    loadProtectListener();
+                }}
+            }} catch (e) {{
+                console.error('NVR action poll error:', e);
+            }}
         }}
 
         function toggleProviderFields(provider) {{

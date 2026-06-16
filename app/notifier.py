@@ -40,6 +40,7 @@ NOTIFICATION_EVENTS = {
     'config_restored':          'Configuration Restored',
     'mediamtx_restarted':       'MediaMTX Restarted',
     'watchdog_triggered':       'Watchdog Auto-Recovery',
+    'onvif_listener_down':      'ONVIF Listener Offline',
 }
 
 # Default events that are enabled out of the box
@@ -48,6 +49,7 @@ DEFAULT_ENABLED_EVENTS = [
     'server_stopping',
     'camera_stream_error',
     'update_available',
+    'onvif_listener_down',
 ]
 
 

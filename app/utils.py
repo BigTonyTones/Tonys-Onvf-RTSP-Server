@@ -131,6 +131,25 @@ def check_and_install_requirements():
     else:
         print("Core dependencies are already installed.")
 
+    # Feature packages for the UniFi Protect ONVIF listener (SSH health checks +
+    # encrypted credential storage). Non-fatal: the feature degrades gracefully
+    # if these can't be installed, so a failure here must not stop startup.
+    feature_packages = {
+        'paramiko': 'paramiko',
+        'cryptography': 'cryptography',
+    }
+    missing_feature = [pkg for mod, pkg in feature_packages.items()
+                       if importlib.util.find_spec(mod) is None]
+    if missing_feature:
+        print(f"Installing feature packages (Protect ONVIF listener): {', '.join(missing_feature)}")
+        for package in missing_feature:
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                print(f"Installed {package}")
+            except subprocess.CalledProcessError:
+                print(f"Warning: Could not install {package}. "
+                      f"The UniFi Protect ONVIF listener feature will be unavailable until it is installed.")
+
     # Check optional packages
     for package in optional_packages:
         module_name = 'psutil' # Currently only one, but we can expand this
