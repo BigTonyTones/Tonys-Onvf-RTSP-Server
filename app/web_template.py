@@ -1085,6 +1085,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.hide-info .camera-info-badges {{
             display: none !important;
         }}
+        body.hide-links .info-section {{
+            display: none !important;
+        }}
         .icon-btn i {{ font-size: 14px; }}
         .icon-btn:hover {{ 
             transform: translateY(-2px);
@@ -2721,10 +2724,19 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
+                    </div>
+                    <div class="toggle-stack">
                         <div class="toggle-group" title="Show the info tags on each camera card (IP, MAC, UUID, ONVIF, Audio, AI, etc.)">
                             <span>Info</span>
                             <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.55); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="infoToggle" onchange="toggleInfo(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-group" title="Show stream links and credentials on each camera card">
+                            <span>Links</span>
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.55); transform-origin: right center; flex-shrink: 0;">
+                                <input type="checkbox" id="linksToggle" onchange="toggleLinks(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
@@ -5798,6 +5810,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         const storedInfo = localStorage.getItem('showInfo');
         let showInfo = storedInfo === null ? true : storedInfo === 'true'; // Default is ON
 
+        const storedLinks = localStorage.getItem('showLinks');
+        let showLinks = storedLinks === null ? true : storedLinks === 'true'; // Default is ON
+
         window.addEventListener('DOMContentLoaded', () => {{
             const toggle = document.getElementById('latencyToggle');
             if (toggle) toggle.checked = useLowLatency;
@@ -5810,6 +5825,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             const infoToggleEl = document.getElementById('infoToggle');
             if (infoToggleEl) infoToggleEl.checked = showInfo;
             if (!showInfo) document.body.classList.add('hide-info');
+
+            const linksToggleEl = document.getElementById('linksToggle');
+            if (linksToggleEl) linksToggleEl.checked = showLinks;
+            if (!showLinks) document.body.classList.add('hide-links');
         }});
 
         function toggleLatencyMode(enabled) {{
@@ -5835,6 +5854,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 document.body.classList.remove('hide-info');
             }} else {{
                 document.body.classList.add('hide-info');
+            }}
+        }}
+
+        function toggleLinks(enabled) {{
+            showLinks = enabled;
+            localStorage.setItem('showLinks', enabled);
+            if (enabled) {{
+                document.body.classList.remove('hide-links');
+            }} else {{
+                document.body.classList.add('hide-links');
             }}
         }}
 
