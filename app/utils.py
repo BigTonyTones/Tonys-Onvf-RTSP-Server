@@ -205,23 +205,33 @@ def check_and_install_system_dependencies():
 def cleanup_stale_processes():
     """Kill any existing MediaMTX instances and old server instances to prevent port conflicts"""
     import os
+    from .config import WEB_UI_PORT, CONFIG_FILE
     try:
         import psutil
-        from .config import WEB_UI_PORT
     except ImportError:
         psutil = None
 
+    # Resolve the configured web port (falls back to the default). The manager
+    # isn't loaded yet at this point, so read it straight from the config file.
+    web_port = WEB_UI_PORT
+    try:
+        import json
+        with open(CONFIG_FILE, 'r') as f:
+            web_port = json.load(f).get('settings', {}).get('webPort', WEB_UI_PORT)
+    except Exception:
+        pass
+
     print("Checking for stale processes...")
-    
+
     if psutil:
         try:
             current_pid = os.getpid()
             for conn in psutil.net_connections(kind='inet'):
-                if conn.laddr.port == WEB_UI_PORT and conn.status == 'LISTEN':
+                if conn.laddr.port == web_port and conn.status == 'LISTEN':
                     if conn.pid and conn.pid != current_pid:
                         try:
                             p = psutil.Process(conn.pid)
-                            print(f"  Found stale app process (PID: {conn.pid}) using port {WEB_UI_PORT}, terminating...")
+                            print(f"  Found stale app process (PID: {conn.pid}) using port {web_port}, terminating...")
                             p.terminate()
                             p.wait(timeout=3)
                             print("  Stale app process terminated")
@@ -231,7 +241,7 @@ def cleanup_stale_processes():
                             except:
                                 pass
         except Exception as e:
-            print(f"  Warning: Could not check port {WEB_UI_PORT}: {e}")
+            print(f"  Warning: Could not check port {web_port}: {e}")
 
     try:
         if platform.system() == "Windows":

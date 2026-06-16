@@ -201,10 +201,12 @@ class MediaMTXManager:
             traceback.print_exc()
             return False
     
-    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
+    def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         """Create MediaMTX configuration optimized for multiple cameras and viewers"""
         if rtsp_port is None:
             rtsp_port = MEDIAMTX_PORT
+        if web_port is None:
+            web_port = WEB_UI_PORT
         
         print(f"DEBUG: create_config called with user='{rtsp_username}', pass={'*' * len(rtsp_password) if rtsp_password else 'None'}")
             
@@ -235,7 +237,7 @@ class MediaMTXManager:
             
             # ===== AUTHENTICATION =====
             'authMethod': 'http',
-            'authHTTPAddress': f'http://localhost:{WEB_UI_PORT}/api/auth',
+            'authHTTPAddress': f'http://localhost:{web_port}/api/auth',
             
             # ===== PROTOCOL SETTINGS =====
             'rtspTransports': ['tcp'],  # TCP only for reliability
@@ -740,13 +742,13 @@ class MediaMTXManager:
             traceback.print_exc()
             return None
 
-    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
+    def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         """Start MediaMTX server"""
         self.debug_mode = debug_mode
         if not self.download_mediamtx():
             return False
-        
-        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings)
+
+        self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings, web_port=web_port)
         
         print("\nStarting MediaMTX RTSP Server...")
         
@@ -824,9 +826,9 @@ class MediaMTXManager:
             self.process = None
             print("MediaMTX stopped")
     
-    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None):
+    def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         """Restart MediaMTX with new configuration"""
         print("\nRestarting MediaMTX...")
         self.stop()
         time.sleep(3)
-        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings)
+        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings, web_port=web_port)

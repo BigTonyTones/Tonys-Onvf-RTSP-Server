@@ -237,7 +237,7 @@ def create_web_app(manager):
             
             # Fire restart notification
             try:
-                manager.notifier.send('server_restarted', '🔄 Server Restarted',
+                manager.notifier.send('server_restarted', 'Server Restarted',
                                       'Tony\'s ONVIF Server has been restarted.')
             except Exception:
                 pass
@@ -255,7 +255,7 @@ def create_web_app(manager):
         """Stop the entire server"""
         # Fire notification before stopping
         try:
-            manager.notifier.send('server_stopping', '\U0001f534 Server Stopping',
+            manager.notifier.send('server_stopping', 'Server Stopping',
                                   'Tony\'s ONVIF Server is shutting down.')
         except Exception:
             pass
@@ -308,7 +308,7 @@ def create_web_app(manager):
         
         # Fire notification before reboot
         try:
-            manager.notifier.send('server_rebooting', '🔴 Server Rebooting',
+            manager.notifier.send('server_rebooting', 'Server Rebooting',
                                   'Tony\'s ONVIF Server is rebooting.')
         except Exception:
             pass
@@ -411,41 +411,8 @@ def create_web_app(manager):
     @app.route('/ai')
     @login_required
     def index():
-        # /matrix and /onvif (alias /ai) serve the same dashboard; the front-end
-        # reads the path on load and opens the matching full-screen overlay.
-        #
-        # Phones are sent to the lightweight standalone viewer (/m) unless the
-        # visitor explicitly asked for the desktop dashboard (?desktop=1, which
-        # we remember via a cookie so the choice sticks).
-        if request.path == '/':
-            force_desktop = (request.args.get('desktop') == '1'
-                             or request.cookies.get('view_pref') == 'desktop')
-            ua = (request.headers.get('User-Agent') or '').lower()
-            is_phone = any(tok in ua for tok in (
-                'android', 'iphone', 'ipod', 'blackberry',
-                'iemobile', 'opera mini', 'windows phone'))
-            if is_phone and not force_desktop:
-                return redirect('/m')
-
         settings = manager.load_settings()
         response = app.make_response(get_web_ui_html(settings))
-        if request.args.get('desktop') == '1':
-            # Remember the desktop preference for a year on this device.
-            response.set_cookie('view_pref', 'desktop', max_age=60 * 60 * 24 * 365)
-        # Add headers to prevent caching
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        return response
-
-    @app.route('/m')
-    @app.route('/mobile')
-    @login_required
-    def mobile_view():
-        # Standalone touch/kiosk camera viewer (swipe + tap-to-enlarge).
-        from .mobile_template import get_mobile_html
-        settings = manager.load_settings()
-        response = app.make_response(get_mobile_html(settings))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -1083,6 +1050,24 @@ def create_web_app(manager):
             return jsonify({'error': str(e)}), 500
     
 
+
+    @app.route('/api/check-port', methods=['GET'])
+    @login_required
+    def check_port():
+        import socket
+        try:
+            port = int(request.args.get('port', 0))
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid port'}), 400
+        if not (1 <= port <= 65535):
+            return jsonify({'error': 'Port must be between 1 and 65535'}), 400
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(('0.0.0.0', port))
+            return jsonify({'available': True})
+        except OSError:
+            return jsonify({'available': False})
 
     @app.route('/api/settings', methods=['GET'])
     @login_required

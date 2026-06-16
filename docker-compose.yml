@@ -9,6 +9,12 @@ services:
       - NET_ADMIN
     # Optional: If your system restricts certain sysctl modifications, uncomment privileged mode
     # privileged: true
+    environment:
+      # Default Web UI port used on first run. After the app starts you can also
+      # change the port in the Settings UI (it persists in ./data and overrides
+      # this value). Because this uses host networking, the app binds this port
+      # directly on the host — no port mapping is required.
+      - WEB_UI_PORT=5552
     volumes:
       - ./data:/app/data
     restart: unless-stopped

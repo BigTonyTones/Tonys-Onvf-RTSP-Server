@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 from werkzeug.security import generate_password_hash, check_password_hash
 import ipaddress
-from .config import CONFIG_FILE, MEDIAMTX_PORT, MEDIAMTX_API_PORT, AI_DEFAULT_MODEL
+from .config import CONFIG_FILE, MEDIAMTX_PORT, MEDIAMTX_API_PORT, AI_DEFAULT_MODEL, WEB_UI_PORT
 from .camera import VirtualONVIFCamera
 from .onvif_service import ONVIFService
 from .mediamtx_manager import MediaMTXManager
@@ -118,6 +118,7 @@ class CameraManager:
             self.theme = config.get('settings', {}).get('theme', 'dracula')
             self.grid_columns = config.get('settings', {}).get('gridColumns', 3)
             self.rtsp_port = config.get('settings', {}).get('rtspPort', 8554)
+            self.web_port = config.get('settings', {}).get('webPort', 5552)
             self.auto_boot = config.get('settings', {}).get('autoBoot', False)
             self.global_username = config.get('settings', {}).get('globalUsername', 'admin')
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
@@ -195,6 +196,7 @@ class CameraManager:
             self.theme = 'dracula'
             self.grid_columns = 3
             self.rtsp_port = 8554
+            self.web_port = 5552
             self.auto_boot = False
             self.global_username = 'admin'
             self.global_password = 'admin'
@@ -285,6 +287,8 @@ class CameraManager:
                 'globalPassword': self.global_password,
                 'rtspAuthEnabled': self.rtsp_auth_enabled,
                 'rtspPort': self.rtsp_port,
+                'webPort': getattr(self, 'web_port', 5552),
+                'autoBoot': getattr(self, 'auto_boot', False),
                 'openBrowser': getattr(self, 'open_browser', False),
                 'theme': getattr(self, 'theme', 'classic'),
                 'gridColumns': getattr(self, 'grid_columns', 3),
@@ -363,6 +367,7 @@ class CameraManager:
                 self.theme = settings.get('theme', 'dracula')
                 self.grid_columns = settings.get('gridColumns', 3)
                 self.rtsp_port = settings.get('rtspPort', 8554)
+                self.web_port = settings.get('webPort', 5552)
                 self.auto_boot = settings.get('autoBoot', False)
                 self.global_username = settings.get('globalUsername', 'admin')
                 self.global_password = settings.get('globalPassword', 'admin')
@@ -425,6 +430,7 @@ class CameraManager:
         self.theme = settings.get('theme', self.theme)
         self.grid_columns = int(settings.get('gridColumns', self.grid_columns))
         self.rtsp_port = int(settings.get('rtspPort', self.rtsp_port))
+        self.web_port = int(settings.get('webPort', self.web_port))
         self.auto_boot = settings.get('autoBoot', self.auto_boot)
         self.global_username = settings.get('globalUsername', self.global_username)
         self.global_password = settings.get('globalPassword', self.global_password)
@@ -968,7 +974,7 @@ class CameraManager:
                 self.restart_mediamtx()
                 # Fire notification
                 try:
-                    self.notifier.send('cameras_all_started', '📷 All Cameras Started',
+                    self.notifier.send('cameras_all_started', 'All Cameras Started',
                                       f'All {len(self.cameras)} cameras have been started.')
                 except Exception:
                     pass
@@ -980,7 +986,7 @@ class CameraManager:
     def stop_all(self):
         """Stop all cameras"""
         try:
-            self.notifier.send('cameras_all_stopped', '📷 All Cameras Stopped',
+            self.notifier.send('cameras_all_stopped', 'All Cameras Stopped',
                               f'All cameras have been stopped.')
         except Exception:
             pass
@@ -996,17 +1002,18 @@ class CameraManager:
             try:
                 print("  [Manager] Background MediaMTX restart initiated...")
                 self.mediamtx.restart(
-                    self.cameras, 
-                    self.rtsp_port, 
-                    rtsp_user, 
-                    rtsp_pass, 
-                    self.get_grid_fusion(), 
-                    debug_mode=self.debug_mode, 
-                    advanced_settings=self.advanced_settings
+                    self.cameras,
+                    self.rtsp_port,
+                    rtsp_user,
+                    rtsp_pass,
+                    self.get_grid_fusion(),
+                    debug_mode=self.debug_mode,
+                    advanced_settings=self.advanced_settings,
+                    web_port=getattr(self, 'web_port', WEB_UI_PORT)
                 )
                 print("  [Manager] Background MediaMTX restart complete.")
                 try:
-                    self.notifier.send('mediamtx_restarted', '🔄 MediaMTX Restarted',
+                    self.notifier.send('mediamtx_restarted', 'MediaMTX Restarted',
                                       'The MediaMTX stream server has been restarted.')
                 except Exception:
                     pass

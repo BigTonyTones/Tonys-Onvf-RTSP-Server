@@ -223,7 +223,7 @@ class NotificationManager:
 
         results = {}
         providers_cfg = cfg.get('providers', {})
-        title = '🔔 Test Notification'
+        title = 'Test Notification'
         message = 'Your Tonys ONVIF-RTSP-AI Server notification system is working correctly!'
 
         targets = [provider] if provider else list(providers_cfg.keys())

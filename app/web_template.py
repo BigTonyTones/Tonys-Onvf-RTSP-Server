@@ -1760,26 +1760,12 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
-            height: 100dvh; /* track the visible viewport (mobile address bar) */
             background: var(--body-bg, #000);
             z-index: 3000;
             padding: 10px;
             overflow: hidden;
-            overscroll-behavior: contain; /* don't chain scroll to the page behind */
         }}
         .matrix-overlay.active {{ display: flex; flex-direction: column-reverse; }}
-
-        /* Solid backdrop so the matrix viewer is fully self-contained — the
-           dashboard never shows through, even on themes where --body-bg is
-           transparent or when the page rubber-bands on mobile. */
-        #matrix-overlay {{
-            background: #000;
-        }}
-        /* Lock the page behind a full-screen overlay so background scrolling /
-           mobile overscroll can't reveal the dashboard underneath. */
-        body.overlay-open {{
-            overflow: hidden;
-        }}
         
         .matrix-grid {{
             display: grid;
@@ -1990,61 +1976,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             background: #48bb78;
             color: #fff;
             border-color: #48bb78;
-        }}
-
-        /* Mobile Matrix View
-           Applied via the .mobile class (added by JS when a phone/tablet or a
-           narrow viewport is detected). Optimised for portrait scrolling and
-           touch instead of the desktop hover + drag layout. */
-        .matrix-overlay.mobile {{
-            padding: 6px;
-        }}
-        .matrix-overlay.mobile .matrix-grid {{
-            height: 100%;
-            overflow-y: auto;
-            overflow-x: hidden;
-            overscroll-behavior: contain;
-            grid-auto-rows: minmax(30vh, 1fr);
-            gap: 6px;
-            -webkit-overflow-scrolling: touch;
-        }}
-        /* Controls become a single horizontally-swipeable row so every option
-           stays reachable without eating the vertical space the feeds need. */
-        .matrix-overlay.mobile .matrix-controls {{
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            justify-content: flex-start;
-            gap: 12px;
-            padding: 10px 12px;
-            -webkit-overflow-scrolling: touch;
-        }}
-        .matrix-overlay.mobile .matrix-controls > * {{
-            flex: 0 0 auto;
-        }}
-        /* The "F11 / ESC" desktop hint is meaningless on touch devices. */
-        .matrix-overlay.mobile .matrix-controls > span:first-child {{
-            display: none;
-        }}
-        /* No hover on touch, so keep per-camera tools/badges always visible. */
-        .matrix-overlay.mobile .matrix-item-overlay {{
-            opacity: 1;
-        }}
-        .matrix-overlay.mobile .matrix-item-btn,
-        .matrix-overlay.mobile .matrix-item-badge {{
-            font-size: 12px;
-            padding: 5px 9px;
-        }}
-        .matrix-overlay.mobile .matrix-item {{
-            cursor: default;
-        }}
-        /* Keep the control bar reachable even when Stretch Fill is enabled
-           (the desktop hide-until-hover behaviour can't be triggered by touch). */
-        .matrix-overlay.mobile.stretch-fill .matrix-controls {{
-            position: static !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-            margin: 6px 0 0 0 !important;
-            bottom: auto; right: auto; left: auto;
         }}
 
         /* ONVIF Event Table Styles */
@@ -3982,14 +3913,31 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </small>
                     </div>
                     
-                    <div class="form-group">
-                        <label class="form-label">RTSP Server Port</label>
-                        <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554">
-                        <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
-                            The main port for the RTSP broadcast (Default: 8554). Requires restart to take effect.
-                        </small>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label class="form-label">RTSP Server Port</label>
+                                <input type="number" class="form-input" id="rtspPortSettings" placeholder="8554" oninput="checkPort(this.value, 'rtspPortStatus')">
+                                <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+                                    Port for the RTSP broadcast (Default: 8554). Requires restart.
+                                </small>
+                                <small id="rtspPortStatus" style="font-size: 12px; margin-top: 2px; display: none;"></small>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
+                                <label class="form-label">Web UI Port</label>
+                                <input type="number" class="form-input" id="webUiPort" placeholder="5552" min="1" max="65535" oninput="checkPort(this.value, 'webUiPortStatus')">
+                                <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">
+                                    Port for the web dashboard (Default: 5552).
+                                </small>
+                                <small style="color: #c0392b; font-size: 12px; margin-top: 2px; display: block; font-weight: 600;">
+                                    ⚠ Changing this requires a full reboot of the host to take effect.
+                                </small>
+                                <small id="webUiPortStatus" style="font-size: 12px; margin-top: 2px; display: none;"></small>
+                            </div>
+                        </div>
                     </div>
-
 
                     <div class="form-group">
                         <label class="form-label">Dashboard Layout</label>
@@ -4978,21 +4926,11 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         let carouselPage = 0;
         let cachedAnalytics = {{}};
 
-        // Detect phones/tablets (or a narrow viewport) so the matrix view can
-        // switch to its touch-friendly mobile layout.
-        function isMobileDevice() {{
-            const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const narrow = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-            return uaMobile || narrow;
-        }}
-
         function toggleMatrixView(active) {{
             matrixActive = active;
             const overlay = document.getElementById('matrix-overlay');
             if (active) {{
                 overlay.classList.add('active');
-                overlay.classList.toggle('mobile', isMobileDevice());
-                document.body.classList.add('overlay-open');
 
                 // Update URL to support bookmarking/direct link
                 window.history.replaceState({{}}, '', '/matrix');
@@ -5022,7 +4960,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 renderMatrix();
             }} else {{
                 overlay.classList.remove('active');
-                document.body.classList.remove('overlay-open');
 
                 // Return to the dashboard URL
                 window.history.replaceState({{}}, '', '/');
@@ -5414,15 +5351,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
             
             const count = runningCameras.length;
-            const isMobile = isMobileDevice();
             let cols = 1;
             if (focusedCameraId) {{
                 cols = 1;
-            }} else if (isMobile) {{
-                // Keep feeds large on phones: 1 column in portrait, 2 in landscape.
-                // The grid scrolls vertically (see .matrix-overlay.mobile CSS).
-                const landscape = window.innerWidth > window.innerHeight;
-                cols = (landscape && count > 1) ? 2 : 1;
             }} else if (count > 9) cols = 4;
             else if (count > 4) cols = 3;
             else if (count > 1) cols = 2;
@@ -5551,19 +5482,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             if (e.key === 'Escape' && onvifViewActive) {{
                 toggleONVIFView(false);
             }}
-        }});
-
-        // Re-flow the matrix grid when a device rotates or the viewport resizes
-        // (e.g. portrait <-> landscape on a phone changes the column count).
-        let matrixResizeTimer = null;
-        window.addEventListener('resize', () => {{
-            if (!matrixActive) return;
-            clearTimeout(matrixResizeTimer);
-            matrixResizeTimer = setTimeout(() => {{
-                const overlay = document.getElementById('matrix-overlay');
-                if (overlay) overlay.classList.toggle('mobile', isMobileDevice());
-                renderMatrix();
-            }}, 200);
         }});
 
         function getCameraCardContent(cam, serverIp) {{
@@ -7629,7 +7547,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             const overlay = document.getElementById('onvif-overlay');
             if (active) {{
                 overlay.classList.add('active');
-                document.body.classList.add('overlay-open');
                 // Update URL to support bookmarking/direct link
                 window.history.replaceState({{}}, '', '/onvif');
                 populateCameraFilter();
@@ -7639,7 +7556,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 onvifPollInterval = setInterval(refreshONVIFEvents, 2000);
             }} else {{
                 overlay.classList.remove('active');
-                document.body.classList.remove('overlay-open');
                 // Return to the dashboard URL
                 if (window.location.pathname === '/onvif' || window.location.pathname === '/ai') {{
                     window.history.replaceState({{}}, '', '/');
@@ -8391,6 +8307,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     const rtspPortField = document.getElementById('rtspPortSettings');
                     if (rtspPortField) rtspPortField.value = settings.rtspPort || 8554;
 
+                    const webUiPortField = document.getElementById('webUiPort');
+                    if (webUiPortField) webUiPortField.value = settings.webPort || 5552;
+
                     const autoBootField = document.getElementById('autoBoot');
                     if (autoBootField) autoBootField.checked = settings.autoBoot === true;
                     
@@ -8521,6 +8440,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
         
         function openSettingsModal() {{
+            ['webUiPortStatus', 'rtspPortStatus'].forEach(id => {{
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            }});
             loadSettings();
             
             // Auto-detect server IP if not set
@@ -8615,6 +8538,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 theme: settings.theme,
                 gridColumns: parseInt(document.getElementById('gridColumnsSelect').value),
                 rtspPort: parseInt(document.getElementById('rtspPortSettings').value || 8554),
+                webPort: parseInt(document.getElementById('webUiPort').value || 5552),
                 autoBoot: document.getElementById('autoBoot') ? document.getElementById('autoBoot').checked : false,
                 globalUsername: document.getElementById('globalUsername').value,
                 globalPassword: document.getElementById('globalPassword').value,
@@ -8736,6 +8660,43 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
         
+        const _portCheckTimers = {{}};
+        async function checkPort(value, statusElId) {{
+            const statusEl = document.getElementById(statusElId);
+            if (!statusEl) return;
+            const port = parseInt(value);
+            if (!value || isNaN(port)) {{
+                statusEl.style.display = 'none';
+                return;
+            }}
+            if (port < 1 || port > 65535) {{
+                statusEl.style.display = 'block';
+                statusEl.style.color = '#c0392b';
+                statusEl.textContent = '⚠ Port must be between 1 and 65535';
+                return;
+            }}
+            clearTimeout(_portCheckTimers[statusElId]);
+            statusEl.style.display = 'block';
+            statusEl.style.color = 'var(--text-muted)';
+            statusEl.textContent = 'Checking…';
+            _portCheckTimers[statusElId] = setTimeout(async () => {{
+                try {{
+                    const resp = await fetch(`/api/check-port?port=${{port}}`);
+                    if (!resp.ok) {{ statusEl.style.display = 'none'; return; }}
+                    const data = await resp.json();
+                    if (data.available) {{
+                        statusEl.style.color = '#1a7f40';
+                        statusEl.textContent = '✓ Port ' + port + ' is available';
+                    }} else {{
+                        statusEl.style.color = '#c0392b';
+                        statusEl.textContent = '⚠ Port ' + port + ' is already in use';
+                    }}
+                }} catch (e) {{
+                    statusEl.style.display = 'none';
+                }}
+            }}, 500);
+        }}
+
         function toggleProviderFields(provider) {{
             const enabled = document.getElementById(`notify_${{provider}}_enabled`).checked;
             const fieldsEl = document.getElementById(`fields_${{provider}}`);
@@ -10169,9 +10130,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }} else if (path === '/onvif' || path === '/ai') {{
                 toggleONVIFView(true);
             }}
-            // Note: phones are routed to the standalone mobile viewer (/m) by
-            // the server, so the dashboard no longer auto-opens the overlay.
-            
+
             // Auto-refresh data and stats
             setInterval(loadData, 5000);
             setInterval(updateStats, 3000);

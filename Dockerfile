@@ -58,8 +58,10 @@ RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
 # Copy the rest of the application
 COPY . .
 
-# Expose default Web UI port
-EXPOSE 5552
+# Default Web UI port. Override at build/run time with the WEB_UI_PORT env var.
+# (With network_mode: host this is informational; the app binds this port on the host.)
+ENV WEB_UI_PORT=5552
+EXPOSE ${WEB_UI_PORT}
 
 # Run the app
 CMD ["python", "run.py"]

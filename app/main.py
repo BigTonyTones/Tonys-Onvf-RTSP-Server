@@ -67,9 +67,10 @@ def main():
     except ImportError:
         pass  # AI not installed — individual camera threads will handle gracefully
 
-    # Load settings to get RTSP port
+    # Load settings to get RTSP port and Web UI port
     settings = manager.load_settings()
     rtsp_port = settings.get('rtspPort', MEDIAMTX_PORT)
+    web_ui_port = settings.get('webPort', WEB_UI_PORT)
     debug_mode = settings.get('debugMode', False)
     advanced_settings = settings.get('advancedSettings', {})
     
@@ -97,43 +98,43 @@ def main():
     # Pass manager.cameras so it can generate config
     print("\nInitializing MediaMTX RTSP Server...")
     # Pass authentication details to start()
-    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=manager.get_grid_fusion(), debug_mode=debug_mode, advanced_settings=advanced_settings):
+    if not manager.mediamtx.start(manager.cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=manager.get_grid_fusion(), debug_mode=debug_mode, advanced_settings=advanced_settings, web_port=web_ui_port):
         print("\nFailed to start MediaMTX. Exiting...")
         sys.exit(1)
     
     web_app = create_web_app(manager)
     
-    print(f"\nStarting Web UI on http://localhost:{WEB_UI_PORT}")
+    print(f"\nStarting Web UI on http://localhost:{web_ui_port}")
     web_thread = threading.Thread(
         target=lambda: web_app.run(
-            host='0.0.0.0', 
-            port=WEB_UI_PORT, 
-            debug=False, 
+            host='0.0.0.0',
+            port=web_ui_port,
+            debug=False,
             use_reloader=False,
             threaded=True  # Enable threading for better concurrency
         ),
         daemon=True
     )
     web_thread.start()
-    
+
     time.sleep(2)
-    
+
     print(f"Web UI started!")
-    
+
     # Check settings to see if we should open the browser (default to False)
     settings = manager.load_settings()
     if settings.get('openBrowser', False) is True:
         print(f"Opening browser...\n")
         try:
-            webbrowser.open(f'http://localhost:{WEB_UI_PORT}')
+            webbrowser.open(f'http://localhost:{web_ui_port}')
         except:
             pass
-    
+
     local_ip = get_local_ip()
     print("=" * 60)
     print("SERVER RUNNING")
     print("=" * 60)
-    print(f"Web Interface: http://{local_ip}:{WEB_UI_PORT}")
+    print(f"Web Interface: http://{local_ip}:{web_ui_port}")
     print(f"RTSP Server: rtsp://{local_ip}:{rtsp_port}")
     print("Press Ctrl+C to stop the server")
     print("=" * 60 + "\n")

@@ -25,7 +25,13 @@ if os.path.exists(legacy_mediamtx) and not os.path.exists(new_mediamtx):
         print(f"  [Migration] Moved legacy mediamtx.yml to {new_mediamtx}")
     except Exception as e:
         print(f"  [Migration] Error moving mediamtx.yml: {e}")
-WEB_UI_PORT = 5552
+# Default Web UI port. Can be overridden via the WEB_UI_PORT environment
+# variable (useful for Docker). A port saved in the Settings UI takes
+# precedence over this default at runtime.
+try:
+    WEB_UI_PORT = int(os.environ.get("WEB_UI_PORT", "5552"))
+except (ValueError, TypeError):
+    WEB_UI_PORT = 5552
 MEDIAMTX_PORT = 8554
 MEDIAMTX_API_PORT = 9997
 
