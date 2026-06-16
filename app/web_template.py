@@ -482,23 +482,23 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         .header {{
             background: var(--header-bg);
             border-radius: 12px;
-            padding: 20px 24px;
-            margin-bottom: 24px;
+            padding: 10px 18px;
+            margin-bottom: 14px;
             box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 10px;
             width: 100%;
         }}
-        
+
         .header-top {{
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 16px;
-            padding-bottom: 14px;
+            padding-bottom: 8px;
             border-bottom: 1px solid var(--border-color);
         }}
         
@@ -765,20 +765,17 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         .toggle-stack {{
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            align-items: flex-end;
+            gap: 5px;
         }}
-        
+
         .toggle-group {{
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            background: var(--body-bg);
-            padding: 2px 8px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            height: 22px;
-            min-width: 155px;
-            gap: 8px;
+            justify-content: flex-start;
+            padding: 0;
+            height: 14px;
+            gap: 2px;
         }}
         
         .toggle-group span {{
@@ -2712,21 +2709,21 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div class="toggle-stack">
                         <div class="toggle-group" title="Use WebRTC for sub-second latency (recommended for PTZ and real-time viewing)">
                             <span>Low Latency</span>
-                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.55); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="latencyToggle" onchange="toggleLatencyMode(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
                         <div class="toggle-group" title="Display real-time bitrate, stream status, and active viewer count on camera previews">
                             <span>Bandwidth</span>
-                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.55); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="bandwidthToggle" onchange="toggleBandwidth(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
                         <div class="toggle-group" title="Show the info tags on each camera card (IP, MAC, UUID, ONVIF, Audio, AI, etc.)">
                             <span>Info</span>
-                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.65); transform-origin: right center; flex-shrink: 0;">
+                            <label class="toggle-switch" style="margin: 0; margin-left: -16px; transform: scale(0.55); transform-origin: right center; flex-shrink: 0;">
                                 <input type="checkbox" id="infoToggle" onchange="toggleInfo(this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
