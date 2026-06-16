@@ -312,7 +312,7 @@ def get_web_ui_html(current_settings=None):
             --text-code: #ffffff;
         }}
 
-body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.theme-emerald, body.theme-matrix, body.theme-slate, body.theme-cyberpunk, body.theme-amoled {{
+body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.theme-emerald, body.theme-matrix, body.theme-slate, body.theme-cyberpunk, body.theme-amoled, body.theme-protect-dark {{
             --alert-warning-bg: rgba(245, 158, 11, 0.1);
             --alert-warning-border: rgba(245, 158, 11, 0.3);
             --alert-warning-text: #f6ad55;
@@ -371,6 +371,93 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             border-bottom: 1px solid var(--border-color);
         }}
         body.theme-ui .diagnostics-table tr:hover {{
+            background: rgba(0, 0, 0, 0.02);
+        }}
+
+        /* UniFi Protect (dark) */
+        body.theme-protect-dark {{
+            --primary-bg: #101214;
+            --body-bg: #101214;
+            --card-bg: #1b1e21;
+            --header-bg: #1b1e21;
+            --text-title: #f9fafa;
+            --text-body: #aeb4ba;
+            --text-muted: #697077;
+            --btn-primary: #006fff;
+            --btn-primary-hover: #2284ff;
+            --btn-success: #38cc65;
+            --btn-success-hover: #2eb558;
+            --btn-danger: #f0383b;
+            --btn-danger-hover: #ff5b5e;
+            --border-color: #2c3035;
+            --card-border: #2c3035;
+            --shadow: 0 0 0 1px #24272b;
+            --input-bg: #26292c;
+            --input-text: #f9fafa;
+            --input-border: #383d42;
+            --alert-info-bg: #16181a;
+            --alert-info-text: #4093ff;
+            --toggle-bg: #383d42;
+            --toggle-active: #006fff;
+            --modal-bg: #1b1e21;
+            --text-code: #4093ff;
+        }}
+
+        /* UniFi Protect (light) */
+        body.theme-protect-light {{
+            --primary-bg: #f6f7f9;
+            --body-bg: #f6f7f9;
+            --card-bg: #ffffff;
+            --header-bg: #ffffff;
+            --text-title: #212327;
+            --text-body: #50565e;
+            --text-muted: #858b93;
+            --btn-primary: #006fff;
+            --btn-primary-hover: #005ad1;
+            --btn-success: #38cc65;
+            --btn-success-hover: #2eb558;
+            --btn-danger: #f0383b;
+            --btn-danger-hover: #d92b2e;
+            --border-color: #e2e5e9;
+            --card-border: #e2e5e9;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+            --input-bg: #f6f7f9;
+            --input-text: #212327;
+            --input-border: #e2e5e9;
+            --alert-info-bg: #eef5ff;
+            --alert-info-text: #006fff;
+            --alert-warning-bg: #fffbeb;
+            --alert-warning-text: #b45309;
+            --alert-warning-border: #fcd34d;
+            --yellow-text: #b45309;
+            --toggle-bg: #d4d8dc;
+            --toggle-active: #006fff;
+            --modal-bg: #ffffff;
+            --text-code: #006fff;
+            --zone-title-color: #006fff;
+            --rules-title-color: #28a960;
+            --accent-green: #28a960;
+        }}
+
+        body.theme-protect-dark .version-badge {{
+            background: rgba(0, 111, 255, 0.18);
+            color: #4093ff;
+            border-color: rgba(0, 111, 255, 0.35);
+        }}
+        body.theme-protect-light .version-badge {{
+            background: rgba(0, 111, 255, 0.1);
+            color: #006fff;
+            border-color: rgba(0, 111, 255, 0.25);
+        }}
+
+        body.theme-protect-light .diagnostics-table th {{
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-muted);
+        }}
+        body.theme-protect-light .diagnostics-table td {{
+            border-bottom: 1px solid var(--border-color);
+        }}
+        body.theme-protect-light .diagnostics-table tr:hover {{
             background: rgba(0, 0, 0, 0.02);
         }}
 
@@ -525,7 +612,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
         
         /* Light theme adjustments */
-        body:not(.theme-dark):not(.theme-dracula):not(.theme-nord):not(.theme-slate):not(.theme-midnight):not(.theme-emerald):not(.theme-sunset):not(.theme-matrix):not(.theme-cyberpunk):not(.theme-amoled) .stats-popover {{
+        body:not(.theme-dark):not(.theme-dracula):not(.theme-nord):not(.theme-slate):not(.theme-midnight):not(.theme-emerald):not(.theme-sunset):not(.theme-matrix):not(.theme-cyberpunk):not(.theme-amoled):not(.theme-protect-dark) .stats-popover {{
             background: rgba(255, 255, 255, 0.98);
             border: 1px solid rgba(0, 0, 0, 0.15);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
@@ -602,7 +689,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             height: 60px;
         }}
         
-        body:not(.theme-dark):not(.theme-dracula):not(.theme-nord):not(.theme-slate):not(.theme-midnight):not(.theme-emerald):not(.theme-sunset):not(.theme-matrix):not(.theme-cyberpunk):not(.theme-amoled) .popover-canvas-wrapper {{
+        body:not(.theme-dark):not(.theme-dracula):not(.theme-nord):not(.theme-slate):not(.theme-midnight):not(.theme-emerald):not(.theme-sunset):not(.theme-matrix):not(.theme-cyberpunk):not(.theme-amoled):not(.theme-protect-dark) .popover-canvas-wrapper {{
             background: rgba(0, 0, 0, 0.03);
             border: 1px solid rgba(0, 0, 0, 0.05);
         }}
@@ -751,7 +838,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             border-color: #fca5a5;
         }}
         body.theme-dark .btn-danger:hover,
-        body.theme-dracula .btn-danger:hover {{
+        body.theme-dracula .btn-danger:hover,
+        body.theme-protect-dark .btn-danger:hover {{
             background: #450a0a;
             color: #f87171;
             border-color: #991b1b;
@@ -823,7 +911,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .info-badge,
         body.theme-matrix .info-badge,
         body.theme-cyberpunk .info-badge,
-        body.theme-amoled .info-badge {{
+        body.theme-amoled .info-badge,
+        body.theme-protect-dark .info-badge {{
             background: rgba(255, 255, 255, 0.04);
             border-color: rgba(255, 255, 255, 0.08);
         }}
@@ -842,7 +931,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .info-badge-green,
         body.theme-matrix .info-badge-green,
         body.theme-cyberpunk .info-badge-green,
-        body.theme-amoled .info-badge-green {{
+        body.theme-amoled .info-badge-green,
+        body.theme-protect-dark .info-badge-green {{
             background: rgba(72, 187, 120, 0.1);
             border-color: rgba(72, 187, 120, 0.25);
             color: #48bb78;
@@ -862,7 +952,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .info-badge-red,
         body.theme-matrix .info-badge-red,
         body.theme-cyberpunk .info-badge-red,
-        body.theme-amoled .info-badge-red {{
+        body.theme-amoled .info-badge-red,
+        body.theme-protect-dark .info-badge-red {{
             background: rgba(229, 62, 62, 0.1);
             border-color: rgba(229, 62, 62, 0.25);
             color: #f56565;
@@ -882,7 +973,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .info-badge-purple,
         body.theme-matrix .info-badge-purple,
         body.theme-cyberpunk .info-badge-purple,
-        body.theme-amoled .info-badge-purple {{
+        body.theme-amoled .info-badge-purple,
+        body.theme-protect-dark .info-badge-purple {{
             background: rgba(128, 90, 213, 0.1);
             border-color: rgba(128, 90, 213, 0.25);
             color: #a78bfa;
@@ -902,7 +994,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .info-badge-blue,
         body.theme-matrix .info-badge-blue,
         body.theme-cyberpunk .info-badge-blue,
-        body.theme-amoled .info-badge-blue {{
+        body.theme-amoled .info-badge-blue,
+        body.theme-protect-dark .info-badge-blue {{
             background: rgba(66, 153, 225, 0.1);
             border-color: rgba(66, 153, 225, 0.25);
             color: #63b3ed;
@@ -922,7 +1015,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .info-badge-yellow,
         body.theme-matrix .info-badge-yellow,
         body.theme-cyberpunk .info-badge-yellow,
-        body.theme-amoled .info-badge-yellow {{
+        body.theme-amoled .info-badge-yellow,
+        body.theme-protect-dark .info-badge-yellow {{
             background: rgba(236, 201, 75, 0.1);
             border-color: rgba(236, 201, 75, 0.25);
             color: #ecc94b;
@@ -1159,7 +1253,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-midnight .dropdown-sysinfo,
         body.theme-slate .dropdown-sysinfo,
         body.theme-matrix .dropdown-sysinfo,
-        body.theme-amoled .dropdown-sysinfo {{
+        body.theme-amoled .dropdown-sysinfo,
+        body.theme-protect-dark .dropdown-sysinfo {{
             background: rgba(255, 255, 255, 0.02);
         }}
         .sysinfo-content {{
@@ -1218,7 +1313,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-midnight .metric-progress-bg,
         body.theme-slate .metric-progress-bg,
         body.theme-matrix .metric-progress-bg,
-        body.theme-amoled .metric-progress-bg {{
+        body.theme-amoled .metric-progress-bg,
+        body.theme-protect-dark .metric-progress-bg {{
             background: rgba(255, 255, 255, 0.1);
         }}
         .metric-progress-bar {{
@@ -1258,7 +1354,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-dracula .dropdown-group-header,
         body.theme-nord .dropdown-group-header,
         body.theme-slate .dropdown-group-header,
-        body.theme-midnight .dropdown-group-header {{
+        body.theme-midnight .dropdown-group-header,
+        body.theme-protect-dark .dropdown-group-header {{
             background: rgba(255, 255, 255, 0.03);
         }}
         .dropdown-group-header:first-child {{
@@ -1333,7 +1430,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-slate .info-value,
         body.theme-cyberpunk .info-value,
         body.theme-amoled .info-value,
-        body.theme-emerald .info-value {{
+        body.theme-emerald .info-value,
+        body.theme-protect-dark .info-value {{
             background: rgba(255,255,255,0.05);
         }}
         .copy-btn {{
@@ -1356,7 +1454,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.theme-sunset .copy-btn,
         body.theme-matrix .copy-btn,
         body.theme-cyberpunk .copy-btn,
-        body.theme-amoled .copy-btn {{
+        body.theme-amoled .copy-btn,
+        body.theme-protect-dark .copy-btn {{
             background: rgba(255, 255, 255, 0.05);
         }}
         .copy-btn:hover {{
@@ -1597,7 +1696,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             background: var(--alert-warning-bg);
             border: 1px solid var(--alert-warning-border, #fcd34d);
         }}
-        body.theme-ui .unifi-protect-warning, body.theme-solar-light .unifi-protect-warning {{
+        body.theme-ui .unifi-protect-warning, body.theme-solar-light .unifi-protect-warning, body.theme-protect-light .unifi-protect-warning {{
             background: #ffffff !important;
             border-color: #f6ad55 !important;
         }}
@@ -1659,14 +1758,28 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         .matrix-overlay {{
             display: none;
             position: fixed;
-            top: 0; left: 0; 
+            top: 0; left: 0;
             width: 100vw; height: 100vh;
+            height: 100dvh; /* track the visible viewport (mobile address bar) */
             background: var(--body-bg, #000);
             z-index: 3000;
             padding: 10px;
             overflow: hidden;
+            overscroll-behavior: contain; /* don't chain scroll to the page behind */
         }}
         .matrix-overlay.active {{ display: flex; flex-direction: column-reverse; }}
+
+        /* Solid backdrop so the matrix viewer is fully self-contained — the
+           dashboard never shows through, even on themes where --body-bg is
+           transparent or when the page rubber-bands on mobile. */
+        #matrix-overlay {{
+            background: #000;
+        }}
+        /* Lock the page behind a full-screen overlay so background scrolling /
+           mobile overscroll can't reveal the dashboard underneath. */
+        body.overlay-open {{
+            overflow: hidden;
+        }}
         
         .matrix-grid {{
             display: grid;
@@ -1878,7 +1991,62 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             color: #fff;
             border-color: #48bb78;
         }}
-        
+
+        /* Mobile Matrix View
+           Applied via the .mobile class (added by JS when a phone/tablet or a
+           narrow viewport is detected). Optimised for portrait scrolling and
+           touch instead of the desktop hover + drag layout. */
+        .matrix-overlay.mobile {{
+            padding: 6px;
+        }}
+        .matrix-overlay.mobile .matrix-grid {{
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            grid-auto-rows: minmax(30vh, 1fr);
+            gap: 6px;
+            -webkit-overflow-scrolling: touch;
+        }}
+        /* Controls become a single horizontally-swipeable row so every option
+           stays reachable without eating the vertical space the feeds need. */
+        .matrix-overlay.mobile .matrix-controls {{
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            justify-content: flex-start;
+            gap: 12px;
+            padding: 10px 12px;
+            -webkit-overflow-scrolling: touch;
+        }}
+        .matrix-overlay.mobile .matrix-controls > * {{
+            flex: 0 0 auto;
+        }}
+        /* The "F11 / ESC" desktop hint is meaningless on touch devices. */
+        .matrix-overlay.mobile .matrix-controls > span:first-child {{
+            display: none;
+        }}
+        /* No hover on touch, so keep per-camera tools/badges always visible. */
+        .matrix-overlay.mobile .matrix-item-overlay {{
+            opacity: 1;
+        }}
+        .matrix-overlay.mobile .matrix-item-btn,
+        .matrix-overlay.mobile .matrix-item-badge {{
+            font-size: 12px;
+            padding: 5px 9px;
+        }}
+        .matrix-overlay.mobile .matrix-item {{
+            cursor: default;
+        }}
+        /* Keep the control bar reachable even when Stretch Fill is enabled
+           (the desktop hide-until-hover behaviour can't be triggered by touch). */
+        .matrix-overlay.mobile.stretch-fill .matrix-controls {{
+            position: static !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            margin: 6px 0 0 0 !important;
+            bottom: auto; right: auto; left: auto;
+        }}
+
         /* ONVIF Event Table Styles */
         .diagnostics-table th {{
             font-weight: 600;
@@ -4810,11 +4978,21 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         let carouselPage = 0;
         let cachedAnalytics = {{}};
 
+        // Detect phones/tablets (or a narrow viewport) so the matrix view can
+        // switch to its touch-friendly mobile layout.
+        function isMobileDevice() {{
+            const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const narrow = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+            return uaMobile || narrow;
+        }}
+
         function toggleMatrixView(active) {{
             matrixActive = active;
             const overlay = document.getElementById('matrix-overlay');
             if (active) {{
                 overlay.classList.add('active');
+                overlay.classList.toggle('mobile', isMobileDevice());
+                document.body.classList.add('overlay-open');
 
                 // Update URL to support bookmarking/direct link
                 window.history.replaceState({{}}, '', '/matrix');
@@ -4844,6 +5022,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 renderMatrix();
             }} else {{
                 overlay.classList.remove('active');
+                document.body.classList.remove('overlay-open');
 
                 // Return to the dashboard URL
                 window.history.replaceState({{}}, '', '/');
@@ -5235,12 +5414,19 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
             
             const count = runningCameras.length;
+            const isMobile = isMobileDevice();
             let cols = 1;
-            if (focusedCameraId) cols = 1;
-            else if (count > 9) cols = 4;
+            if (focusedCameraId) {{
+                cols = 1;
+            }} else if (isMobile) {{
+                // Keep feeds large on phones: 1 column in portrait, 2 in landscape.
+                // The grid scrolls vertically (see .matrix-overlay.mobile CSS).
+                const landscape = window.innerWidth > window.innerHeight;
+                cols = (landscape && count > 1) ? 2 : 1;
+            }} else if (count > 9) cols = 4;
             else if (count > 4) cols = 3;
             else if (count > 1) cols = 2;
-            
+
             grid.style.gridTemplateColumns = `repeat(${{cols}}, 1fr)`;
             
             // Toggle focus-active class
@@ -5365,6 +5551,19 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             if (e.key === 'Escape' && onvifViewActive) {{
                 toggleONVIFView(false);
             }}
+        }});
+
+        // Re-flow the matrix grid when a device rotates or the viewport resizes
+        // (e.g. portrait <-> landscape on a phone changes the column count).
+        let matrixResizeTimer = null;
+        window.addEventListener('resize', () => {{
+            if (!matrixActive) return;
+            clearTimeout(matrixResizeTimer);
+            matrixResizeTimer = setTimeout(() => {{
+                const overlay = document.getElementById('matrix-overlay');
+                if (overlay) overlay.classList.toggle('mobile', isMobileDevice());
+                renderMatrix();
+            }}, 200);
         }});
 
         function getCameraCardContent(cam, serverIp) {{
@@ -7430,6 +7629,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             const overlay = document.getElementById('onvif-overlay');
             if (active) {{
                 overlay.classList.add('active');
+                document.body.classList.add('overlay-open');
                 // Update URL to support bookmarking/direct link
                 window.history.replaceState({{}}, '', '/onvif');
                 populateCameraFilter();
@@ -7439,6 +7639,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 onvifPollInterval = setInterval(refreshONVIFEvents, 2000);
             }} else {{
                 overlay.classList.remove('active');
+                document.body.classList.remove('overlay-open');
                 // Return to the dashboard URL
                 if (window.location.pathname === '/onvif' || window.location.pathname === '/ai') {{
                     window.history.replaceState({{}}, '', '/');
@@ -9571,7 +9772,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                            document.body.classList.contains('theme-sunset') ||
                            document.body.classList.contains('theme-matrix') ||
                            document.body.classList.contains('theme-cyberpunk') ||
-                           document.body.classList.contains('theme-amoled');
+                           document.body.classList.contains('theme-amoled') ||
+                           document.body.classList.contains('theme-protect-dark');
             
             const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
             
@@ -9870,7 +10072,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         
         function applyTheme(theme) {{
             // Remove all possible theme classes
-            const themes = ['dark', 'nord', 'dracula', 'solar-light', 'midnight', 'emerald', 'sunset', 'matrix', 'slate', 'cyberpunk', 'amoled', 'ui'];
+            const themes = ['dark', 'nord', 'dracula', 'solar-light', 'midnight', 'emerald', 'sunset', 'matrix', 'slate', 'cyberpunk', 'amoled', 'ui', 'protect-dark', 'protect-light'];
             themes.forEach(t => document.body.classList.remove(`theme-${{t}}`));
             
             // Map dark/light to our actual CSS classes
@@ -9889,6 +10091,12 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 if (theme === 'light') {{
                     icon.className = 'fas fa-sun';
                     icon.style.color = '#ed8936';
+                }} else if (theme === 'protect-dark') {{
+                    icon.className = 'fas fa-shield-alt';
+                    icon.style.color = '#4093ff';
+                }} else if (theme === 'protect-light') {{
+                    icon.className = 'fas fa-shield-alt';
+                    icon.style.color = '#ed8936';
                 }} else {{
                     icon.className = 'fas fa-moon';
                     icon.style.color = '#cbd5e0';
@@ -9897,9 +10105,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
 
         function toggleSimpleTheme() {{
-            // We use settings.theme which is 'dark' or 'light'
+            // Cycle: dark -> light -> protect-dark -> protect-light -> dark
+            const order = ['dark', 'light', 'protect-dark', 'protect-light'];
             const current = settings.theme || 'dark';
-            const nextTheme = current === 'dark' ? 'light' : 'dark';
+            const nextTheme = order[(order.indexOf(current) + 1) % order.length];
             changeTheme(nextTheme);
         }}
 
@@ -9960,6 +10169,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }} else if (path === '/onvif' || path === '/ai') {{
                 toggleONVIFView(true);
             }}
+            // Note: phones are routed to the standalone mobile viewer (/m) by
+            // the server, so the dashboard no longer auto-opens the overlay.
             
             // Auto-refresh data and stats
             setInterval(loadData, 5000);

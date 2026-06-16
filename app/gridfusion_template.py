@@ -781,12 +781,14 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
            solid fills there only; dark themes keep the original look. */
         body.theme-ui .btn-xs-primary,
         body.theme-solar-light .btn-xs-primary,
-        body.theme-sunset .btn-xs-primary {{
+        body.theme-sunset .btn-xs-primary,
+        body.theme-protect-light .btn-xs-primary {{
             background: var(--success); color: #fff; font-weight: 600;
         }}
         body.theme-ui .btn-xs-danger,
         body.theme-solar-light .btn-xs-danger,
-        body.theme-sunset .btn-xs-danger {{
+        body.theme-sunset .btn-xs-danger,
+        body.theme-protect-light .btn-xs-danger {{
             background: var(--danger); color: #fff; font-weight: 600;
         }}
     </style>

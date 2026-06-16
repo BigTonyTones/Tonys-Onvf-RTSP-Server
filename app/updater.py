@@ -13,6 +13,7 @@ import requests
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Callable
+from urllib.parse import urlparse
 
 from app.version import CURRENT_VERSION, is_newer_version
 
@@ -20,6 +21,25 @@ from app.version import CURRENT_VERSION, is_newer_version
 GITHUB_OWNER = "BigTonyTones"
 GITHUB_REPO = "Tonys-Onvf-RTSP-Server"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+
+# SECURITY (C1): updates may only be fetched from GitHub's own infrastructure over HTTPS.
+# Without this, a client-supplied download URL turns the self-updater into a remote
+# code-execution vector (the downloaded ZIP is extracted over app/ and executed on restart).
+ALLOWED_UPDATE_HOSTS = {
+    "api.github.com",
+    "github.com",
+    "codeload.github.com",
+    "objects.githubusercontent.com",
+}
+
+
+def is_trusted_update_url(url: Optional[str]) -> bool:
+    """Return True only for HTTPS URLs hosted on GitHub's release infrastructure."""
+    try:
+        parsed = urlparse(url or "")
+    except Exception:
+        return False
+    return parsed.scheme == "https" and (parsed.hostname or "").lower() in ALLOWED_UPDATE_HOSTS
 
 # Directories and files to exclude from updates
 EXCLUDE_FROM_UPDATE = [
@@ -101,6 +121,11 @@ class UpdateChecker:
         Returns:
             Path to downloaded ZIP file, or None on failure
         """
+        # SECURITY (C1): refuse any URL that is not GitHub-over-HTTPS, even if a caller
+        # passes one in directly. This is the last line of defense for the updater.
+        if not is_trusted_update_url(download_url):
+            print(f"Refusing to download update from untrusted URL: {download_url}")
+            return None
         try:
             # Create temporary file for download
             temp_dir = Path(tempfile.gettempdir())

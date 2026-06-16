@@ -21,7 +21,7 @@ from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
 from .linux_network import LinuxNetworkManager
 from .utils import get_captured_logs
-from .updater import UpdateChecker, check_for_updates, download_and_apply_update
+from .updater import UpdateChecker, check_for_updates, download_and_apply_update, is_trusted_update_url
 import subprocess
 import threading
 import tempfile
@@ -413,9 +413,39 @@ def create_web_app(manager):
     def index():
         # /matrix and /onvif (alias /ai) serve the same dashboard; the front-end
         # reads the path on load and opens the matching full-screen overlay.
+        #
+        # Phones are sent to the lightweight standalone viewer (/m) unless the
+        # visitor explicitly asked for the desktop dashboard (?desktop=1, which
+        # we remember via a cookie so the choice sticks).
+        if request.path == '/':
+            force_desktop = (request.args.get('desktop') == '1'
+                             or request.cookies.get('view_pref') == 'desktop')
+            ua = (request.headers.get('User-Agent') or '').lower()
+            is_phone = any(tok in ua for tok in (
+                'android', 'iphone', 'ipod', 'blackberry',
+                'iemobile', 'opera mini', 'windows phone'))
+            if is_phone and not force_desktop:
+                return redirect('/m')
+
         settings = manager.load_settings()
         response = app.make_response(get_web_ui_html(settings))
+        if request.args.get('desktop') == '1':
+            # Remember the desktop preference for a year on this device.
+            response.set_cookie('view_pref', 'desktop', max_age=60 * 60 * 24 * 365)
         # Add headers to prevent caching
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+    @app.route('/m')
+    @app.route('/mobile')
+    @login_required
+    def mobile_view():
+        # Standalone touch/kiosk camera viewer (swipe + tap-to-enlarge).
+        from .mobile_template import get_mobile_html
+        settings = manager.load_settings()
+        response = app.make_response(get_mobile_html(settings))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -1353,13 +1383,25 @@ def create_web_app(manager):
         """Download and apply update"""
         if os.path.exists('/.dockerenv'):
             return jsonify({'error': 'Self-updating is disabled in Docker. Please rebuild or pull the new image.'}), 400
-            
-        data = request.json
-        download_url = data.get('download_url')
-        
-        if not download_url:
-            return jsonify({'error': 'Download URL required'}), 400
-        
+
+        # SECURITY (C1): never trust a client-supplied download URL. An attacker on the LAN
+        # could otherwise point the updater at an arbitrary archive and gain code execution
+        # (the ZIP is extracted over app/ and run on restart, as root on Linux). Re-resolve
+        # the authoritative URL from the GitHub release check on the server side instead.
+        # check_for_updates() returns the latest release's zipball regardless of whether it
+        # is newer, so this also powers the "Reinstall Current Version" (repair) button.
+        try:
+            update_info = check_for_updates()
+        except Exception as e:
+            return jsonify({'error': f'Failed to contact update server: {e}'}), 502
+
+        if not update_info:
+            return jsonify({'error': 'Could not reach the update server. Please try again.'}), 502
+
+        download_url = update_info.get('download_url')
+        if not is_trusted_update_url(download_url):
+            return jsonify({'error': 'Could not resolve a trusted update URL from GitHub.'}), 400
+
         def progress_callback(status, progress):
             """Update progress for frontend polling"""
             update_progress['status'] = status
