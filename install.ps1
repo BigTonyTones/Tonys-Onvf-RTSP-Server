@@ -401,6 +401,58 @@ function Setup-PythonEnvironment {
     Write-Success "Python environment configured"
 }
 
+# Setup AI Object Detection Engine (Optional)
+function Setup-AiEngine {
+    Write-Step "STEP 4b: Setting Up AI Object Detection Engine (Optional)"
+    
+    Set-Location $INSTALL_DIR
+    
+    $venvPython = Join-Path $INSTALL_DIR "venv\Scripts\python.exe"
+    if (-not (Test-Path $venvPython)) {
+        Write-Error "Virtual environment Python executable not found. Skipping AI engine setup."
+        return
+    }
+    
+    Write-Host "Would you like to install the local AI Object Detection Engine (YOLO)?" -ForegroundColor Yellow
+    Write-Host "  This will install 'ultralytics' and 'opencv-python-headless'."
+    Write-Host "  If you skip this now, you can easily install it later via the Web UI."
+    Write-Host "Install AI Engine now? (y/n): " -NoNewline -ForegroundColor Yellow
+    $installAi = Read-Host
+    
+    if ($installAi -eq 'y' -or $installAi -eq 'Y' -or $installAi -eq 'yes' -or $installAi -eq 'Yes') {
+        Write-Host ""
+        Write-Host "Which PyTorch backend would you like to install?" -ForegroundColor Cyan
+        Write-Host "  1) CPU Only         (~200MB download, works on any PC)"
+        Write-Host "  2) NVIDIA CUDA GPU  (~2.5GB download, requires NVIDIA GPU + CUDA drivers)"
+        Write-Host "Select an option [1/2] (default: 1): " -NoNewline -ForegroundColor Cyan
+        $backendChoice = Read-Host
+        
+        Write-Info "Installing AI components... (This may take a while depending on your internet connection)"
+        
+        if ($backendChoice -eq '2') {
+            Write-Info "Installing PyTorch with NVIDIA CUDA support (~2.5GB)..."
+            & $venvPython -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+        }
+        else {
+            Write-Info "Installing PyTorch CPU-only (~200MB)..."
+            & $venvPython -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        }
+        
+        Write-Info "Installing ultralytics (YOLO framework)..."
+        & $venvPython -m pip install --no-cache-dir ultralytics
+        
+        Write-Info "Installing opencv-python-headless..."
+        # Uninstall standard opencv-python if present to avoid conflicts
+        & $venvPython -m pip uninstall -y opencv-python 2>&1 | Out-Null
+        & $venvPython -m pip install --no-cache-dir opencv-python-headless
+        
+        Write-Success "AI Object Detection Engine installed successfully"
+    }
+    else {
+        Write-Info "Skipped AI Engine installation. You can install it later via the Web UI."
+    }
+}
+
 # Detect architecture for downloads
 function Get-Architecture {
     $arch = $env:PROCESSOR_ARCHITECTURE
@@ -651,6 +703,7 @@ function Start-Installation {
     Install-Dependencies
     Get-Repository
     Setup-PythonEnvironment
+    Setup-AiEngine
     Install-MediaMTX
     Install-FFmpeg
     New-StartScript
