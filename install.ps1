@@ -12,12 +12,13 @@ else {
     "C:\Program Files\Tonys-Onvif-Server" 
 }
 $REPO_URL = "https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git"
+$VERSION = "3.0"
 
 # Color functions
 function Write-Banner {
     Write-Host ""
     Write-Host "==============================================================" -ForegroundColor Cyan
-    Write-Host "     Tonys Onvif-RTSP-AI Server - Automated Installer" -ForegroundColor Yellow
+    Write-Host "     Tonys Onvif-RTSP-AI Server - Automated Installer (v$VERSION)" -ForegroundColor Yellow
     Write-Host "==============================================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  Installation Directory: " -NoNewline -ForegroundColor Cyan
@@ -113,30 +114,154 @@ function Install-Chocolatey {
     }
 }
 
+# Helper function to download file with progress
+function Start-DownloadWithProgress {
+    param(
+        [string]$Url,
+        [string]$OutFile,
+        [string]$Description = "Downloading file"
+    )
+    
+    $webClient = New-Object System.Net.WebClient
+    $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+    
+    $responseStream = $null
+    $fileStream = $null
+    try {
+        $responseStream = $webClient.OpenRead($Url)
+        $totalBytesHeader = $webClient.ResponseHeaders["Content-Length"]
+        $totalBytes = 0
+        if ($totalBytesHeader -and $totalBytesHeader -match '^\d+$') {
+            $totalBytes = [int64]$totalBytesHeader
+        }
+        
+        $fileStream = [System.IO.File]::Create($OutFile)
+        $buffer = New-Object Byte[] 65536 # 64KB buffer
+        $totalBytesRead = 0
+        $lastUpdate = [DateTime]::MinValue
+        
+        while ($true) {
+            $bytesRead = $responseStream.Read($buffer, 0, $buffer.Length)
+            if ($bytesRead -eq 0) { break }
+            
+            $fileStream.Write($buffer, 0, $bytesRead)
+            $totalBytesRead += $bytesRead
+            
+            # Throttled progress update (every 200ms) to avoid performance lag
+            $now = [DateTime]::UtcNow
+            if (($now - $lastUpdate).TotalMilliseconds -gt 200) {
+                $lastUpdate = $now
+                if ($totalBytes -gt 0) {
+                    $percent = [int](($totalBytesRead / $totalBytes) * 100)
+                    $mbRead = [math]::Round($totalBytesRead / 1MB, 2)
+                    $mbTotal = [math]::Round($totalBytes / 1MB, 2)
+                    Write-Progress -Activity $Description -Status "$mbRead MB of $mbTotal MB completed ($percent%)" -PercentComplete $percent
+                } else {
+                    $mbRead = [math]::Round($totalBytesRead / 1MB, 1)
+                    Write-Progress -Activity $Description -Status "$mbRead MB completed" -PercentComplete -1
+                }
+            }
+        }
+        
+        $fileStream.Close()
+        $responseStream.Close()
+        
+        # Clear progress
+        Write-Progress -Activity $Description -Status "Completed" -PercentComplete 100 -Completed
+    }
+    catch {
+        if ($fileStream) { $fileStream.Close() }
+        if ($responseStream) { $responseStream.Close() }
+        $webClient.Dispose()
+        throw $_
+    }
+    $webClient.Dispose()
+}
+
+# Helper functions to detect real Python (not the Windows Store stub)
+function Test-ValidPython {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $false }
+    try {
+        $verOutput = & $Path --version 2>&1
+        $verString = Out-String -InputObject $verOutput
+        if ($verString -match "Python \d+\.\d+") {
+            return $true
+        }
+    }
+    catch {}
+    return $false
+}
+
+function Get-ValidPythonPath {
+    # 1. Try python in current PATH
+    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCmd) {
+        $path = $pythonCmd.Source
+        if (Test-ValidPython $path) {
+            return $path
+        }
+    }
+
+    # 2. Try common installation directories
+    $searchPaths = @(
+        "C:\Python*",
+        "C:\Program Files\Python*",
+        "C:\Program Files (x86)\Python*",
+        "$env:LocalAppData\Programs\Python\Python*"
+    )
+    
+    foreach ($pattern in $searchPaths) {
+        $dirs = Get-Item $pattern -ErrorAction SilentlyContinue
+        foreach ($dir in $dirs) {
+            $path = Join-Path $dir.FullName "python.exe"
+            if (Test-ValidPython $path) {
+                return $path
+            }
+        }
+    }
+    
+    return $null
+}
+
 # Install system dependencies
 function Install-Dependencies {
     Write-Step "STEP 2: Installing System Dependencies"
     
     # Check for Python
-    $pythonInstalled = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $pythonInstalled) {
-        Write-Info "Python not found. Installing Python..."
+    $script:pythonPath = Get-ValidPythonPath
+    if (-not $script:pythonPath) {
+        Write-Info "Python not found or invalid stub detected. Installing Python..."
         
         if (Install-Chocolatey) {
             choco install python -y --no-progress
             # Refresh PATH
             $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-            Write-Success "Python installed"
+            
+            # Re-check python path after install
+            $script:pythonPath = Get-ValidPythonPath
+            if (-not $script:pythonPath) {
+                Write-Error "Could not verify Python installation after Chocolatey install. Please install Python manually from https://www.python.org/"
+                exit 1
+            }
+            Write-Success "Python installed successfully"
         }
         else {
             Write-Error "Could not install Python. Please install manually from https://www.python.org/"
             exit 1
         }
     }
-    else {
-        $pythonVersion = & python --version 2>&1
-        Write-Success "Python already installed: $pythonVersion"
+    
+    # Prepend valid python path directory to local process PATH to be safe
+    $pythonDir = Split-Path $script:pythonPath
+    if ($env:Path -notlike "*$pythonDir*") {
+        $env:Path = "$pythonDir;$env:Path"
     }
+    
+    $pythonVersion = & $script:pythonPath --version 2>&1
+    # Trim to clean up output
+    $pythonVersion = (Out-String -InputObject $pythonVersion).Trim()
+    Write-Success "Python ready: $pythonVersion"
     
     # Check for Git
     $gitInstalled = Get-Command git -ErrorAction SilentlyContinue
@@ -226,21 +351,39 @@ function Setup-PythonEnvironment {
     
     Set-Location $INSTALL_DIR
     
+    # Ensure we have a valid python path
+    if (-not $script:pythonPath) {
+        $script:pythonPath = Get-ValidPythonPath
+        if (-not $script:pythonPath) {
+            Write-Error "Python executable not found. Cannot set up virtual environment."
+            exit 1
+        }
+    }
+    
     if (-not (Test-Path "venv")) {
         Write-Info "Creating Python virtual environment..."
-        python -m venv venv
-        Write-Info "Virtual environment created: $INSTALL_DIR\venv"
+        & $script:pythonPath -m venv venv
+        
+        # Verify it was actually created
+        $venvPython = Join-Path $INSTALL_DIR "venv\Scripts\python.exe"
+        if (-not (Test-Path $venvPython)) {
+            Write-Error "Failed to create Python virtual environment!"
+            exit 1
+        }
+        Write-Success "Virtual environment created: $INSTALL_DIR\venv"
     }
     else {
         Write-Info "Virtual environment already exists"
     }
     
-    # Activate virtual environment
-    $venvActivate = Join-Path $INSTALL_DIR "venv\Scripts\Activate.ps1"
-    & $venvActivate
+    $venvPython = Join-Path $INSTALL_DIR "venv\Scripts\python.exe"
+    if (-not (Test-Path $venvPython)) {
+        Write-Error "Virtual environment Python executable not found at $venvPython"
+        exit 1
+    }
     
     Write-Info "Upgrading pip..."
-    python -m pip install --quiet --upgrade pip 2>&1 | Out-Null
+    & $venvPython -m pip install --quiet --upgrade pip 2>&1 | Out-Null
     
     Write-Info "Installing Python packages:"
     Write-Info "  - flask (web framework)"
@@ -253,7 +396,7 @@ function Setup-PythonEnvironment {
     Write-Info "  - paramiko (SSH client for NVR listener checks)"
     Write-Info "  - cryptography (encrypts stored SSH passwords)"
 
-    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography 2>&1 | Out-Null
+    & $venvPython -m pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography 2>&1 | Out-Null
     
     Write-Success "Python environment configured"
 }
@@ -291,7 +434,7 @@ function Install-MediaMTX {
     
     try {
         $tempZip = Join-Path $env:TEMP "mediamtx.zip"
-        Invoke-WebRequest -Uri $url -OutFile $tempZip -UseBasicParsing
+        Start-DownloadWithProgress -Url $url -OutFile $tempZip -Description "Downloading MediaMTX v$version"
         
         Write-Info "Extracting MediaMTX..."
         Expand-Archive -Path $tempZip -DestinationPath $INSTALL_DIR -Force
@@ -374,8 +517,7 @@ function Install-FFmpeg {
     
     try {
         $tempZip = Join-Path $env:TEMP "ffmpeg.zip"
-        Write-Info "Downloading FFmpeg (this may take a moment)..."
-        Invoke-WebRequest -Uri $ffmpegUrl -OutFile $tempZip -UseBasicParsing
+        Start-DownloadWithProgress -Url $ffmpegUrl -OutFile $tempZip -Description "Downloading FFmpeg static build"
         
         Write-Info "Download complete. Extracting FFmpeg..."
         $tempExtract = Join-Path $env:TEMP "ffmpeg-extract"
