@@ -17,6 +17,13 @@ REM Display current directory
 echo Current directory: %CD%
 echo.
 
+REM Check if virtual environment Python exists
+if exist "venv\Scripts\python.exe" (
+    set "PYTHON_CMD=venv\Scripts\python.exe"
+    echo Using Python virtual environment...
+    goto :python_found
+)
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
