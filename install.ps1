@@ -13,6 +13,7 @@ else {
 }
 $REPO_URL = "https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git"
 $VERSION = "3.0"
+$script:shortcutCreated = $false
 
 # Color functions
 function Write-Banner {
@@ -656,48 +657,51 @@ pause
 function New-DesktopShortcut {
     Write-Step "Creating Desktop shortcut..."
     
-    $shortcutCreated = $false
+    $desktopPaths = @()
     
-    # 1. Try Current User's Desktop
-    try {
-        $desktopPath = [Environment]::GetFolderPath("Desktop")
-        if ($desktopPath) {
-            $shortcutPath = Join-Path $desktopPath "Tonys Onvif Server.lnk"
-            $WshShell = New-Object -ComObject WScript.Shell
-            $Shortcut = $WshShell.CreateShortcut($shortcutPath)
-            $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
-            $Shortcut.WorkingDirectory = $INSTALL_DIR
-            $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
-            $Shortcut.Save()
-            $shortcutCreated = $true
+    # Gather possible desktop folders
+    $sysDesktop = [Environment]::GetFolderPath("Desktop")
+    if ($sysDesktop) { $desktopPaths += $sysDesktop }
+    
+    $commonDesktop = [Environment]::GetFolderPath("CommonDesktopDirectory")
+    if ($commonDesktop) { $desktopPaths += $commonDesktop }
+    
+    # Fallbacks for elevated contexts
+    $fallbackUserDesktop = Join-Path $env:USERPROFILE "Desktop"
+    if ($desktopPaths -notcontains $fallbackUserDesktop) { $desktopPaths += $fallbackUserDesktop }
+    
+    $fallbackPublicDesktop = "C:\Users\Public\Desktop"
+    if ($desktopPaths -notcontains $fallbackPublicDesktop) { $desktopPaths += $fallbackPublicDesktop }
+    
+    $createdPaths = @()
+    foreach ($path in $desktopPaths) {
+        if (Test-Path $path) {
+            try {
+                $shortcutPath = Join-Path $path "Tonys Onvif Server.lnk"
+                $WshShell = New-Object -ComObject WScript.Shell
+                $Shortcut = $WshShell.CreateShortcut($shortcutPath)
+                $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
+                $Shortcut.WorkingDirectory = $INSTALL_DIR
+                $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
+                $Shortcut.Save()
+                
+                # Verify that it exists
+                if (Test-Path $shortcutPath) {
+                    $createdPaths += $shortcutPath
+                }
+            }
+            catch {
+                Write-Warning "Failed to save shortcut to $path: $_"
+            }
         }
     }
-    catch {
-        Write-Warning "Could not create shortcut on current user's desktop: $_"
-    }
     
-    # 2. Try Public Desktop (Common Desktop Directory)
-    try {
-        $commonDesktopPath = [Environment]::GetFolderPath("CommonDesktopDirectory")
-        if ($commonDesktopPath) {
-            $shortcutPath = Join-Path $commonDesktopPath "Tonys Onvif Server.lnk"
-            $WshShell = New-Object -ComObject WScript.Shell
-            $Shortcut = $WshShell.CreateShortcut($shortcutPath)
-            $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
-            $Shortcut.WorkingDirectory = $INSTALL_DIR
-            $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
-            $Shortcut.Save()
-            $shortcutCreated = $true
-        }
-    }
-    catch {
-        Write-Warning "Could not create shortcut on public desktop: $_"
-    }
-    
-    if ($shortcutCreated) {
-        Write-Success "Desktop shortcut created successfully"
+    if ($createdPaths.Count -gt 0) {
+        $script:shortcutCreated = $true
+        $displayPath = $createdPaths[0]
+        Write-Success "Desktop shortcut created successfully at: $displayPath"
     } else {
-        Write-Error "Failed to create Desktop shortcut"
+        Write-Error "Failed to create Desktop shortcut in any standard user or public locations."
     }
 }
 
@@ -728,8 +732,10 @@ function Write-Completion {
     Write-Host "  Installation Path: " -NoNewline -ForegroundColor Cyan
     Write-Host $INSTALL_DIR
     Write-Host ""
-    Write-Host "  A shortcut named 'Tonys Onvif Server' has been created on your Desktop." -ForegroundColor Green
-    Write-Host ""
+    if ($script:shortcutCreated) {
+        Write-Host "  A shortcut named 'Tonys Onvif Server' has been created on your Desktop." -ForegroundColor Green
+        Write-Host ""
+    }
     Write-Host "  To start the server:" -ForegroundColor Yellow
     Write-Host "    cd `"$INSTALL_DIR`""
     Write-Host "    .\start-server.bat"
