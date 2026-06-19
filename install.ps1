@@ -6,7 +6,7 @@
 
 # Installation directory - use current directory or default if running from remote
 $INSTALL_DIR = if (Test-Path "run.py") { 
-    Get-Location 
+    (Get-Location).Path 
 }
 else { 
     "C:\Program Files\Tonys-Onvif-Server" 
@@ -680,8 +680,8 @@ function New-DesktopShortcut {
                 $shortcutPath = Join-Path $path "Tonys Onvif Server.lnk"
                 $WshShell = New-Object -ComObject WScript.Shell
                 $Shortcut = $WshShell.CreateShortcut($shortcutPath)
-                $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
-                $Shortcut.WorkingDirectory = $INSTALL_DIR
+                $Shortcut.TargetPath = Join-Path ([string]$INSTALL_DIR) "start-server.bat"
+                $Shortcut.WorkingDirectory = [string]$INSTALL_DIR
                 $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
                 $Shortcut.Save()
                 
