@@ -656,21 +656,48 @@ pause
 function New-DesktopShortcut {
     Write-Step "Creating Desktop shortcut..."
     
+    $shortcutCreated = $false
+    
+    # 1. Try Current User's Desktop
     try {
         $desktopPath = [Environment]::GetFolderPath("Desktop")
-        $shortcutPath = Join-Path $desktopPath "Tonys Onvif Server.lnk"
-        
-        $WshShell = New-Object -ComObject WScript.Shell
-        $Shortcut = $WshShell.CreateShortcut($shortcutPath)
-        $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
-        $Shortcut.WorkingDirectory = $INSTALL_DIR
-        $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
-        $Shortcut.Save()
-        
-        Write-Success "Desktop shortcut created: Tonys Onvif Server"
+        if ($desktopPath) {
+            $shortcutPath = Join-Path $desktopPath "Tonys Onvif Server.lnk"
+            $WshShell = New-Object -ComObject WScript.Shell
+            $Shortcut = $WshShell.CreateShortcut($shortcutPath)
+            $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
+            $Shortcut.WorkingDirectory = $INSTALL_DIR
+            $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
+            $Shortcut.Save()
+            $shortcutCreated = $true
+        }
     }
     catch {
-        Write-Warning "Could not create Desktop shortcut: $_"
+        Write-Warning "Could not create shortcut on current user's desktop: $_"
+    }
+    
+    # 2. Try Public Desktop (Common Desktop Directory)
+    try {
+        $commonDesktopPath = [Environment]::GetFolderPath("CommonDesktopDirectory")
+        if ($commonDesktopPath) {
+            $shortcutPath = Join-Path $commonDesktopPath "Tonys Onvif Server.lnk"
+            $WshShell = New-Object -ComObject WScript.Shell
+            $Shortcut = $WshShell.CreateShortcut($shortcutPath)
+            $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
+            $Shortcut.WorkingDirectory = $INSTALL_DIR
+            $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
+            $Shortcut.Save()
+            $shortcutCreated = $true
+        }
+    }
+    catch {
+        Write-Warning "Could not create shortcut on public desktop: $_"
+    }
+    
+    if ($shortcutCreated) {
+        Write-Success "Desktop shortcut created successfully"
+    } else {
+        Write-Error "Failed to create Desktop shortcut"
     }
 }
 
@@ -700,6 +727,8 @@ function Write-Completion {
     Write-Host ""
     Write-Host "  Installation Path: " -NoNewline -ForegroundColor Cyan
     Write-Host $INSTALL_DIR
+    Write-Host ""
+    Write-Host "  A shortcut named 'Tonys Onvif Server' has been created on your Desktop." -ForegroundColor Green
     Write-Host ""
     Write-Host "  To start the server:" -ForegroundColor Yellow
     Write-Host "    cd `"$INSTALL_DIR`""
