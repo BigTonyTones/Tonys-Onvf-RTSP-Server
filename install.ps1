@@ -691,7 +691,7 @@ function New-DesktopShortcut {
                 }
             }
             catch {
-                Write-Warning "Failed to save shortcut to $path: $_"
+                Write-Warning "Failed to save shortcut to ${path}: $_"
             }
         }
     }
