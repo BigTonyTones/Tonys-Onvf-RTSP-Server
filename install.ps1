@@ -592,8 +592,11 @@ function New-StartScript {
 @echo off
 cd /d "%~dp0"
 echo Starting Tonys Onvif-RTSP-AI Server...
-call venv\Scripts\activate.bat
-python run.py
+if exist "venv\Scripts\python.exe" (
+    "venv\Scripts\python.exe" run.py
+) else (
+    python run.py
+)
 pause
 "@
     
