@@ -652,6 +652,28 @@ pause
     Write-Success "Start script created: start-server.bat"
 }
 
+# Create Desktop shortcut
+function New-DesktopShortcut {
+    Write-Step "Creating Desktop shortcut..."
+    
+    try {
+        $desktopPath = [Environment]::GetFolderPath("Desktop")
+        $shortcutPath = Join-Path $desktopPath "Tonys Onvif Server.lnk"
+        
+        $WshShell = New-Object -ComObject WScript.Shell
+        $Shortcut = $WshShell.CreateShortcut($shortcutPath)
+        $Shortcut.TargetPath = Join-Path $INSTALL_DIR "start-server.bat"
+        $Shortcut.WorkingDirectory = $INSTALL_DIR
+        $Shortcut.Description = "Start Tonys Onvif-RTSP-AI Server"
+        $Shortcut.Save()
+        
+        Write-Success "Desktop shortcut created: Tonys Onvif Server"
+    }
+    catch {
+        Write-Warning "Could not create Desktop shortcut: $_"
+    }
+}
+
 # Create Windows service (optional)
 function New-WindowsService {
     Write-Step "Creating Windows service (optional)..."
@@ -707,6 +729,7 @@ function Start-Installation {
     Install-MediaMTX
     Install-FFmpeg
     New-StartScript
+    New-DesktopShortcut
     New-WindowsService
     Write-Completion
     
