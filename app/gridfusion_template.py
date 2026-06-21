@@ -1396,14 +1396,21 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             }}
         }}
 
+        // Debounce helper for resize
+        let resizeTimer = null;
+        function debounceResize() {{
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(updateCanvasSize, 300);
+        }}
+
         // Initialize
         async function init() {{
             await fetchCameras();
             populateGridOptions();
             syncUI();
-            
-            // Re-run canvas update on window resize
-            window.addEventListener('resize', updateCanvasSize);
+
+            // Re-run canvas update on window resize (debounced to prevent excessive redraws)
+            window.addEventListener('resize', debounceResize);
             
             // Keyboard controls for fine-tuning
             window.addEventListener('keydown', handleGlobalKeydown);
@@ -1411,32 +1418,36 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             // Auto refresh snapshots after short delay
             setTimeout(refreshSnapshots, 1000);
 
-            // Stats polling
+            // Stats polling (increased from 3000 to 6000ms to reduce API load with multiple cameras)
             updateStats();
-            setInterval(updateStats, 3000);
+            setInterval(updateStats, 6000);
         }}
 
         function handleGlobalKeydown(e) {{
-            if (selectedIdx === -1) return;
-            
+            if (selectedIdx === -1 || selectedIdx >= gfConfig.cameras.length) return;
+
             // Don't move if typing in an input
             if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-            
+
             const cam = gfConfig.cameras[selectedIdx];
             const step = e.shiftKey ? 10 : 1;
-            
+
             // Canvas boundaries
             const canvas = document.getElementById('canvas');
+            if (!canvas) return;
             const maxW = parseInt(canvas.getAttribute('data-w'));
             const maxH = parseInt(canvas.getAttribute('data-h'));
             const scale = parseFloat(canvas.getAttribute('data-scale')) || 1;
-            
+
+            // Validate parsed values
+            if (isNaN(maxW) || isNaN(maxH) || maxW <= 0 || maxH <= 0) return;
+
             let moved = false;
             if (e.key === 'ArrowLeft') {{ cam.x -= step; moved = true; }}
             else if (e.key === 'ArrowRight') {{ cam.x += step; moved = true; }}
             else if (e.key === 'ArrowUp') {{ cam.y -= step; moved = true; }}
             else if (e.key === 'ArrowDown') {{ cam.y += step; moved = true; }}
-            
+
             if (moved) {{
                 e.preventDefault();
                 cam.x = Math.max(0, Math.min(cam.x, maxW - cam.w));
@@ -1689,12 +1700,13 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         function applyCustomRes() {{
             const w = parseInt(document.getElementById('custom-w').value);
             const h = parseInt(document.getElementById('custom-h').value);
-            if (w > 0 && h > 0) {{
-                gfConfig.resolution = `${{w}}x${{h}}`;
-                updateCanvasSize();
-            }} else {{
-                alert("Please enter valid width and height");
+            if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {{
+                alert("Please enter valid width and height (numbers only, greater than 0)");
+                document.getElementById('custom-w').focus();
+                return;
             }}
+            gfConfig.resolution = `${{w}}x${{h}}`;
+            updateCanvasSize();
         }}
 
         function handleFpsChange(val) {{
@@ -1767,7 +1779,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         function handleInteraction(e) {{
             if (!dragTarget) return;
-            
+            if (selectedIdx < 0 || selectedIdx >= gfConfig.cameras.length) return;
+
             const canvas = document.getElementById('canvas');
             const scale = parseFloat(canvas.getAttribute('data-scale')) || 1;
             const canvasRect = canvas.getBoundingClientRect();
@@ -1819,11 +1832,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         function updatePropsPanel() {{
             const panel = document.getElementById('props-panel');
-            if (selectedIdx === -1) {{
+            if (selectedIdx === -1 || selectedIdx >= gfConfig.cameras.length) {{
                 panel.style.display = 'none';
                 return;
             }}
-            
+
             const cam = gfConfig.cameras[selectedIdx];
             const camInfo = cameras.find(c => c.id === cam.id);
             
@@ -1876,7 +1889,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             isResizing = false;
             window.removeEventListener('pointermove', handleInteraction);
             window.removeEventListener('pointerup', endInteraction);
-            renderGrid();
+            // Performance: Don't rebuild entire grid after drag — just ensure element position is saved
+            if (selectedIdx !== -1) {{
+                const el = document.querySelector('[data-idx="' + selectedIdx + '"]');
+                if (el) el.style.zIndex = gfConfig.cameras[selectedIdx].always_on_top ? 8 : 5;
+            }}
         }}
 
         function toggleGridOverlay() {{
@@ -1899,7 +1916,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
 
         async function refreshSnapshots() {{
             if (cameras.length === 0) return;
-            
+
             const btn = document.querySelector('.sidebar button');
             const originalText = btn.textContent;
             btn.disabled = true;
@@ -1912,15 +1929,19 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                         const blob = await resp.blob();
                         if (snapshots[cam.id]) URL.revokeObjectURL(snapshots[cam.id]);
                         snapshots[cam.id] = URL.createObjectURL(blob);
+                    }} else {{
+                        console.warn(`Snapshot fetch failed for camera ${{cam.id}}: HTTP ${{resp.status}}`);
                     }}
-                }} catch(e) {{}}
+                }} catch(e) {{
+                    console.error(`Snapshot fetch error for camera ${{cam.id}}:`, e);
+                }}
             }});
-            
+
             await Promise.all(ps);
-            
+
             btn.disabled = false;
             btn.textContent = originalText;
-            
+
             populateSidebar();
             renderGrid();
         }}
@@ -2024,11 +2045,20 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }}
 
         function applyPreset(count) {{
+            if (count <= 0) {{
+                alert('Invalid camera count');
+                return;
+            }}
             if (gfConfig.cameras.length > 0 && !confirm(`Replace current layout with ${{count}} camera preset?`)) return;
-            
+
             const res = gfConfig.resolution || '1920x1080';
             const [maxW, maxH] = res.split('x').map(Number);
-            
+
+            if (isNaN(maxW) || isNaN(maxH) || maxW <= 0 || maxH <= 0) {{
+                alert('Invalid resolution configuration');
+                return;
+            }}
+
             const newLayout = [];
             const availableCams = cameras.length > 0 ? cameras : Array.from({{length: 26}}, (_, i) => ({{id: i+1}}));
 
@@ -2112,7 +2142,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 const cols = 6, rows = 5;
                 const unitW = maxW/cols, unitH = maxH/rows;
                 for (let i=0; i<count; i++) {{
-                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub' }});
+                    newLayout.push({{ id: availableCams[i % availableCams.length].id, x: (i%cols)*unitW, y: Math.floor(i/cols)*unitH, w: unitW, h: unitH, stream_type: 'sub', always_on_top: false }});
                 }}
             }}
             
@@ -2140,7 +2170,8 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 y: y - 56,
                 w: 200,
                 h: 112,
-                stream_type: 'sub'
+                stream_type: 'sub',
+                always_on_top: false
             }});
             renderGrid();
         }};
