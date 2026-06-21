@@ -3,7 +3,7 @@ Version management for Tonys Onvif-RTSP-AI Server
 Single source of truth for version information
 """
 
-CURRENT_VERSION = "9.1"
+CURRENT_VERSION = "9.1.1"
 
 def parse_version(version_str):
     """

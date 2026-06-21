@@ -101,7 +101,7 @@ class ProtectListenerManager:
                     "sshHost": n.get("sshHost", ""),
                     "sshPort": n.get("sshPort", 22),
                     "sshUser": n.get("sshUser", "root"),
-                    "intervalMinutes": int(n.get("intervalMinutes", self.monitor_interval_minutes)),
+                    "intervalMinutes": int(n.get("intervalMinutes") or self.monitor_interval_minutes),
                     "passwordSet": bool(n.get("sshPasswordEnc")),
                     "status": st.get("status", "unknown"),
                     "detail": st.get("detail", ""),
@@ -340,7 +340,7 @@ class ProtectListenerManager:
                 host = nvr.get("sshHost", "")
                 self.manager.notifier.send(
                     "onvif_listener_down",
-                    "ONVIF Listener Offline",
+                    "Ubiquiti Protect NVR - ONVIF Listener Project Offline",
                     f'The onvif-recorder service is not running on "{name}" ({host}). '
                     f"Detail: {result.get('detail', '')}.",
                 )
@@ -530,7 +530,7 @@ class ProtectListenerManager:
                 valid_ids.add(nid)
                 interval = max(
                     MIN_INTERVAL_MINUTES,
-                    int(n.get("intervalMinutes", self.monitor_interval_minutes)),
+                    int(n.get("intervalMinutes") or self.monitor_interval_minutes),
                 ) * 60
                 if now >= next_check.get(nid, 0):
                     try:

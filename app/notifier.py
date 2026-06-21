@@ -40,7 +40,7 @@ NOTIFICATION_EVENTS = {
     'config_restored':          'Configuration Restored',
     'mediamtx_restarted':       'MediaMTX Restarted',
     'watchdog_triggered':       'Watchdog Auto-Recovery',
-    'onvif_listener_down':      'ONVIF Listener Offline',
+    'onvif_listener_down':      'Ubiquiti Protect NVR - ONVIF Listener Project Offline',
 }
 
 # Default events that are enabled out of the box
