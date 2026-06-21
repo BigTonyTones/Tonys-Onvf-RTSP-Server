@@ -1082,6 +1082,20 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         body.show-bandwidth .metrics-overlay {{
             display: flex;
         }}
+        .stream-info-overlay {{
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex; /* Visible by default — follows the Info toggle */
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            z-index: 5;
+            pointer-events: none;
+        }}
+        body.hide-info .stream-info-overlay {{
+            display: none !important;
+        }}
         body.hide-info .camera-info-badges {{
             display: none !important;
         }}
@@ -4997,7 +5011,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         
                         // Update info section
                         card.querySelector('.info-section').innerHTML = tempDiv.querySelector('.info-section').innerHTML;
-                        
+
                         // Restore warning
                         if (warningHtml) {{
                             const newWarning = card.querySelector(`#codec-warning-${{cam.id}}`);
@@ -5605,6 +5619,42 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }});
 
+        function _effectiveStreamInfo(cam, which) {{
+            // Returns {{width, height, framerate, codec, transcoded}} for a stream, or null to skip.
+            // Probed (actual source) values win; transcoded streams fall back to the forced
+            // configured output values (always H264).
+            const sp = (cam.streamProbe || {{}})[which];
+            const transcoded = which === 'main' ? cam.transcodeMain : cam.transcodeSub;
+            if (sp && sp.width) {{
+                return {{ width: sp.width, height: sp.height, framerate: sp.framerate, codec: sp.codec, transcoded: false }};
+            }}
+            if (transcoded) {{
+                // Transcoded output is forced to configured values in H264
+                if (which === 'main') {{
+                    return {{ width: cam.mainWidth, height: cam.mainHeight, framerate: cam.mainFramerate, codec: 'h264', transcoded: true }};
+                }}
+                return {{ width: cam.subWidth, height: cam.subHeight, framerate: cam.subFramerate, codec: 'h264', transcoded: true }};
+            }}
+            // Not transcoded and no probe yet
+            return null;
+        }}
+
+        function _streamInfoChip(label, info, accent) {{
+            // Builds a compact dark overlay chip (matches the bandwidth metric badges)
+            const labelColor = accent || '#cbd5e1';
+            const base = 'display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; background: #0f172a; color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2), 0 2px 4px -1px rgba(0,0,0,0.1); white-space: nowrap;';
+            if (!info) {{
+                return `<span style="${{base}}"><strong style="color: ${{labelColor}};">${{label}}</strong> <span style="opacity: 0.6; font-weight: 600;">probing…</span></span>`;
+            }}
+            const res = (info.width && info.height) ? `${{info.width}}×${{info.height}}` : '';
+            const fps = info.framerate ? `${{info.framerate}} FPS` : '';
+            const codec = info.codec ? info.codec.toUpperCase() : '';
+            const parts = [res, fps, codec].filter(Boolean).join('  ·  ');
+            const tcTag = info.transcoded ? ' <span style="font-size: 8px; opacity: 0.7; font-weight: 600;">(TC)</span>' : '';
+            const titleSuffix = info.transcoded ? 'transcoded output' : 'actual received from source';
+            return `<span style="${{base}}" title="${{label}} stream — ${{titleSuffix}}: ${{res}} ${{fps}} ${{codec}}"><strong style="color: ${{labelColor}};">${{label}}</strong> ${{parts}}${{tcTag}}</span>`;
+        }}
+
         function getCameraCardContent(cam, serverIp) {{
             const displayIp = cam.assignedIp || serverIp;
             return `
@@ -5672,6 +5722,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 
                 <div class="video-preview" id="video-${{cam.id}}">
                     <div id="metrics-${{cam.id}}" class="metrics-overlay"></div>
+                    <div id="streaminfo-${{cam.id}}" class="stream-info-overlay"></div>
                     ${{cam.status === 'running' 
                         ? (cam.disableSubstream 
                             ? `<div class="video-placeholder" style="background: #1a202c; display: flex; flex-direction: column; justify-content: center; align-items: center;">
@@ -5688,7 +5739,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     }}
 
                 </div>
-                
+
                 <div class="info-section">
                     <div id="codec-warning-${{cam.id}}"></div>
                     <div class="info-label">
@@ -10453,9 +10504,21 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 
                 // Update per-camera metrics
                 cameras.forEach(cam => {{
+                    // Stream info overlay (resolution/fps/codec, bottom-right)
+                    const streamInfoEl = document.getElementById(`streaminfo-${{cam.id}}`);
+                    if (streamInfoEl) {{
+                        if (cam.status !== 'running') {{
+                            streamInfoEl.innerHTML = '';
+                        }} else {{
+                            let siHtml = _streamInfoChip('Main', _effectiveStreamInfo(cam, 'main'), '#a5b4fc');
+                            if (!cam.disableSubstream) siHtml += _streamInfoChip('Sub', _effectiveStreamInfo(cam, 'sub'), '#7dd3fc');
+                            streamInfoEl.innerHTML = siHtml;
+                        }}
+                    }}
+
                     const metricsEl = document.getElementById(`metrics-${{cam.id}}`);
                     if (!metricsEl) return;
-                    
+
                     if (cam.status !== 'running') {{
                         metricsEl.innerHTML = '';
                         return;
