@@ -3607,14 +3607,14 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </div>
 
                         <!-- Right: Hardware + model info -->
-                        <div id="aiSettingsInfoBox" style="display: none; flex: 1.1; padding: 14px 16px; border-radius: 10px; background-color: var(--alert-info-bg); color: var(--alert-info-text); font-size: 11.5px; line-height: 1.55; flex-direction: column; gap: 8px; justify-content: center;">
+                        <div id="aiSettingsInfoBox" style="display: none; flex: 1.1; padding: 14px 16px; border-radius: 10px; background-color: var(--alert-info-bg); color: var(--alert-info-text); font-size: 13px; line-height: 1.6; flex-direction: column; gap: 10px; justify-content: center;">
                             <div id="aiHardwareInfoGroup" style="display: none;">
-                                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 7px; background: color-mix(in srgb, var(--accent-green) 15%, transparent); border: 1px solid color-mix(in srgb, var(--accent-green) 40%, transparent); margin-bottom: 6px; align-self: flex-start;">
+                                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 7px; background: color-mix(in srgb, var(--accent-green) 15%, transparent); border: 1px solid color-mix(in srgb, var(--accent-green) 40%, transparent); margin-bottom: 8px; align-self: flex-start;">
                                     <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); display: inline-block; flex-shrink: 0; box-shadow: 0 0 6px var(--accent-green);"></span>
-                                    <span style="font-size: 11px; font-weight: 600; color: var(--accent-green); letter-spacing: 0.02em;">Current Active Hardware:</span>
-                                    <span id="settings-ai-device" style="font-size: 11px; font-weight: 700; color: var(--accent-green);">Loading...</span>
+                                    <span style="font-size: 12px; font-weight: 600; color: var(--accent-green); letter-spacing: 0.02em;">Current Active Hardware:</span>
+                                    <span id="settings-ai-device" style="font-size: 12px; font-weight: 700; color: var(--accent-green);">Loading...</span>
                                 </div>
-                                <div style="color: var(--alert-info-text); opacity: 0.8;"><strong>Hardware Acceleration:</strong> NVIDIA (CUDA) and Apple Silicon (MPS/CoreML) supported.</div>
+                                <div style="color: var(--alert-info-text); opacity: 0.85; font-size: 13px;"><strong>Hardware Acceleration:</strong> NVIDIA (CUDA) and Apple Silicon (MPS/CoreML) supported.</div>
                             </div>
                             <hr id="aiInfoBoxDivider" style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 0; display: none;">
                             <div id="aiModelDescription" style="display: none;">
@@ -3715,14 +3715,14 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
                             <div id="aiZoneGroup" style="display: none;">
                                 <button type="button" onclick="openZoneModal()" style="width: 100%; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.45); border-radius: 10px; padding: 14px 16px; cursor: pointer; color: var(--text-title); text-align: left;">
-                                    <div style="font-size: 12.5px; font-weight: 600; color: var(--zone-title-color, #a5b4fc);">Detection Zones</div>
-                                    <div id="zoneProfileSummary" class="ai-hint" style="margin-top: 4px;">No zones configured — full frame monitored</div>
+                                    <div style="font-size: 13px; font-weight: 600; color: var(--zone-title-color, #a5b4fc);">Detection Zones</div>
+                                    <div id="zoneProfileSummary" class="ai-hint" style="margin-top: 4px; font-size: 12px;">No zones configured — full frame monitored</div>
                                 </button>
                             </div>
                             <div id="aiNotificationsGroup" style="display: none;">
                                 <button type="button" onclick="openNotifyModal()" style="width: 100%; background: rgba(72,187,120,0.07); border: 1px solid rgba(72,187,120,0.45); border-radius: 10px; padding: 14px 16px; cursor: pointer; color: var(--text-title); text-align: left;">
-                                    <div style="font-size: 12.5px; font-weight: 600; color: var(--rules-title-color, #9ae6b4);">Notification Rules</div>
-                                    <div id="notifySummary" class="ai-hint" style="margin-top: 4px;">Notifications disabled</div>
+                                    <div style="font-size: 13px; font-weight: 600; color: var(--rules-title-color, #9ae6b4);">Notification Rules</div>
+                                    <div id="notifySummary" class="ai-hint" style="margin-top: 4px; font-size: 12px;">Notifications disabled</div>
                                 </button>
                                 <!-- Hidden inputs carry values into the save payload -->
                                 <input type="hidden" id="notifyAiEnabled" value="false">
@@ -3813,11 +3813,11 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </div>
                                 </div>
 
-                                <div id="aiUninstallGroup" style="display: none;">
-                                    <div class="ai-field-label">Maintenance</div>
-                                    <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
-                                        Uninstall AI Dependencies
-                                    </button>
+                            <div id="aiUninstallGroup">
+                                <div class="ai-field-label">Maintenance</div>
+                                <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                    Uninstall AI Dependencies
+                                </button>
                                 <div class="ai-hint" style="margin-top: 6px;">
                                     Removes the YOLO framework, PyTorch, and related components from the server.
                                 </div>
@@ -6568,7 +6568,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     if (aiUninstallGroup) aiUninstallGroup.style.display = 'block';
                 }} else {{
                     if (colWrapper) colWrapper.style.display = 'none';
-                    if (actionsWrapper) actionsWrapper.style.display = 'none';
+                    if (actionsWrapper) actionsWrapper.style.display = 'grid';
                     if (aiTargetGroup) aiTargetGroup.style.display = 'none';
                     if (aiModelGroup) aiModelGroup.style.display = 'none';
                     if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
@@ -6577,11 +6577,11 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     if (infoBox) infoBox.style.display = 'none';
                     if (smartGroup) smartGroup.style.display = 'none';
                     if (aiInstallGroup) aiInstallGroup.style.display = 'block';
-                    if (aiUninstallGroup) aiUninstallGroup.style.display = 'none';
+                    if (aiUninstallGroup) aiUninstallGroup.style.display = 'block';
                 }}
             }} else {{
                 if (colWrapper) colWrapper.style.display = 'none';
-                if (actionsWrapper) actionsWrapper.style.display = 'none';
+                if (actionsWrapper) actionsWrapper.style.display = 'grid';
                 if (aiModelGroup) aiModelGroup.style.display = 'none';
                 if (aiHwInfoGroup) aiHwInfoGroup.style.display = 'none';
                 if (aiModelDesc) aiModelDesc.style.display = 'none';
@@ -6589,7 +6589,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 if (infoBox) infoBox.style.display = 'none';
                 if (smartGroup) smartGroup.style.display = 'none';
                 if (aiInstallGroup) aiInstallGroup.style.display = 'none';
-                if (aiUninstallGroup) aiUninstallGroup.style.display = 'none';
+                if (aiUninstallGroup) aiUninstallGroup.style.display = 'block';
             }}
         }}
 
@@ -6645,7 +6645,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                        "• <strong>Accuracy:</strong> Outstanding.<br>" +
                        "• <strong>Drawbacks:</strong> Very resource intensive.";
             }}
-            desc.innerHTML = html;
+            desc.innerHTML = `<div style="font-size: 13px; line-height: 1.6; color: var(--alert-info-text);">` + html + `</div>`;
         }}
 
         async function startAiInstallation() {{
@@ -7318,6 +7318,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             _selectZoneTab(_zCurrentTab);
             document.getElementById('zone-editor-modal').classList.add('active');
             requestAnimationFrame(() => _drawZoneEditor());
+            // Auto-load the snapshot so the user sees the camera view immediately
+            zoneLoadSnapshot();
         }}
 
         function closeZoneModal() {{
