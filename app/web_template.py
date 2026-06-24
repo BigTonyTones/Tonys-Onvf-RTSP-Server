@@ -4624,10 +4624,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
                         <!-- System Information -->
                         <div style="background: rgba(102, 126, 234, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
-                            <div style="font-size: 12.5px; font-weight: 600; color: var(--text-title); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-info-circle" style="color: #667eea;"></i>
-                                <span>System Information</span>
-                            </div>
                             <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11.5px;">
                                 <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                                     <span style="color: var(--text-muted);">App Version</span>
@@ -4676,10 +4672,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
                         <!-- Updates -->
                         <div style="background: rgba(102, 126, 234, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
-                            <div style="font-size: 12.5px; font-weight: 600; color: var(--text-title); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-cloud-download-alt" style="color: #667eea;"></i>
-                                <span>Updates</span>
-                            </div>
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 <button type="button" class="btn btn-secondary" onclick="closeAboutModal(); checkForUpdates();" style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600; font-size: 12.5px; height: 38px;">
                                     <i class="fas fa-sync-alt"></i> Check for Program Updates
@@ -4694,9 +4686,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     <span id="aiAboutSpinner"><i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i></span>
                                 </div>
                                 <pre id="aiAboutLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 150px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">
-                                <strong>Program Updates</strong> pulls the latest server release. <strong>AI Updates</strong> upgrades the local AI Python modules (PyTorch, YOLO, OpenCV, EasyOCR) and refreshes model weights — only relevant if AI detection is installed.
                             </div>
                         </div>
                     </div>
