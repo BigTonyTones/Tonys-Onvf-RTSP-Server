@@ -3797,27 +3797,29 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     </div>
 
                     <div id="aiBottomActionsWrapper" style="display: none; grid-template-columns: 1fr; margin-bottom: 25px;">
-                        <div class="ai-card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px;">
-                            <div id="aiTestEventGroup" style="display: none; grid-column: 1 / -1;">
-                                <div class="ai-field-label">Test Event Delivery</div>
-                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                    <button type="button" class="btn btn-teal" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
-                                        Send Test Event
-                                    </button>
-                                    <button type="button" class="btn btn-indigo" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
-                                        Person
-                                    </button>
-                                    <button type="button" class="btn btn-violet" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
-                                        Vehicle
-                                    </button>
-                                    <span id="aiTestEventFeedback" class="ai-hint"></span>
+                        <div class="ai-card" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; align-items: start;">
+                            <!-- LEFT COLUMN: Test Event Delivery + Copy AI Settings -->
+                            <div style="display: flex; flex-direction: column; gap: 18px; min-width: 0;">
+                                <div id="aiTestEventGroup" style="display: none;">
+                                    <div class="ai-field-label">Test Event Delivery</div>
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <button type="button" class="btn btn-teal" id="btnTestOnvifEvent" onclick="sendTestOnvifEvent()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                            Send Test Event
+                                        </button>
+                                        <button type="button" class="btn btn-indigo" id="btnTestPersonEvent" onclick="sendTestOnvifEvent('person')" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                            Person
+                                        </button>
+                                        <button type="button" class="btn btn-violet" id="btnTestVehicleEvent" onclick="sendTestOnvifEvent('vehicle')" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                            Vehicle
+                                        </button>
+                                        <span id="aiTestEventFeedback" class="ai-hint"></span>
+                                    </div>
+                                    <div class="ai-hint" style="margin-top: 6px;">
+                                        Sends a 3-second motion event to all ONVIF clients (e.g. UniFi Protect) subscribed to this camera.
+                                    </div>
                                 </div>
-                                <div class="ai-hint" style="margin-top: 6px;">
-                                    Sends a 3-second motion event to all ONVIF clients (e.g. UniFi Protect) subscribed to this camera.
-                                </div>
-                            </div>
 
-                            <div id="aiCopySettingsGroup" style="display: none;">
+                                <div id="aiCopySettingsGroup" style="display: none;">
                                     <div class="ai-field-label">Copy AI Settings</div>
                                     <button type="button" class="btn btn-indigo" onclick="openCopyAiSettingsModal()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
                                         Copy to Cameras...
@@ -3826,15 +3828,31 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                         Copies event source, AI model, targets, and sensitivity to other cameras.
                                     </div>
                                 </div>
+                            </div>
 
-                            <div id="aiUninstallGroup">
+                            <!-- RIGHT COLUMN: Maintenance -->
+                            <div id="aiUninstallGroup" style="min-width: 0;">
                                 <div class="ai-field-label">Maintenance</div>
-                                <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
+                                <button type="button" class="btn btn-primary" id="updateAiBtn" onclick="startAiUpdate()" style="width: 100%; padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box; margin-bottom: 10px;">
+                                    <i class="fas fa-sync-alt"></i> Check &amp; Install AI Updates
+                                </button>
+                                <div class="ai-hint" style="margin: -4px 0 14px 0;">
+                                    Upgrades all AI Python modules (PyTorch, YOLO framework, OpenCV, EasyOCR) to their latest versions and refreshes YOLO model weights if newer ones are available.
+                                </div>
+                                <button type="button" class="btn btn-danger" id="uninstallAiBtn" onclick="startAiUninstall()" style="width: 100%; padding: 8px 16px; font-size: 13.5px; font-weight: 600; border-radius: 6px; height: 38px; box-sizing: border-box;">
                                     Uninstall AI Dependencies
                                 </button>
                                 <div class="ai-hint" style="margin-top: 6px;">
                                     Removes the YOLO framework, PyTorch, and related components from the server.
                                 </div>
+                            </div>
+
+                            <div id="aiMaintProgressContainer" style="display: none; grid-column: 1 / -1; margin-top: 4px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                    <span id="aiMaintStatusText" style="font-size: 12px; font-weight: 600; color: #3182ce;">Working...</span>
+                                    <span id="aiMaintSpinner"><i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i></span>
+                                </div>
+                                <pre id="aiMaintLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 180px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
                             </div>
                         </div>
                     </div>
@@ -4562,61 +4580,126 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
     
     <!-- About Modal -->
     <div id="about-modal" class="modal">
-        <div class="modal-content" style="max-width: 850px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding: 24px;">
-            <div class="modal-header" style="flex-shrink: 0; margin-bottom: 20px;">
-                <div class="modal-title">About Tonys Onvif-RTSP-AI Server</div>
+        <div class="modal-content" style="max-width: 920px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; padding: 18px;">
+            <div class="modal-header" style="flex-shrink: 0; margin-bottom: 12px;">
+                <div class="modal-title" style="font-size: 16px;">About Tonys Onvif-RTSP-AI Server</div>
                 <button class="close-btn" onclick="closeAboutModal()">×</button>
             </div>
-            <div style="flex: 1; overflow-y: auto; line-height: 1.6; color: var(--text-body); font-size: 15px; padding-right: 8px;">
-                <p style="margin-bottom: 15px;">Hello, my name is <strong style="color: var(--text-title);">Tony</strong>. This program was developed to address two primary needs:</p>
-                <div style="background: rgba(102, 126, 234, 0.08); padding: 20px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3); margin-bottom: 20px;">
-                    <p style="margin-bottom: 15px;"><strong style="color: var(--text-title);">Ubiquiti Protect NVR Compatibility:</strong><br>
-                    The Ubiquiti Protect NVR platform has limited compatibility with many generic ONVIF cameras. This tool bridges that gap by allowing incompatible RTSP streams to be imported and presented as fully compliant virtual ONVIF cameras, ensuring seamless integration and reliable operation within the Protect ecosystem.</p>
+            <div style="flex: 1; overflow-y: auto; padding-right: 8px;">
+                <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; align-items: start;">
+                    <!-- LEFT COLUMN: Description -->
+                    <div style="line-height: 1.45; color: var(--text-body); font-size: 12.5px; min-width: 0;">
+                        <p style="margin-bottom: 8px;">Hello, my name is <strong style="color: var(--text-title);">Tony</strong>. This program was developed to address two primary needs:</p>
+                        <div style="background: rgba(102, 126, 234, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                            <p style="margin-bottom: 8px;"><strong style="color: var(--text-title);">Ubiquiti Protect NVR Compatibility:</strong><br>
+                            The Ubiquiti Protect NVR platform has limited compatibility with many generic ONVIF cameras. This tool bridges that gap by allowing incompatible RTSP streams to be imported and presented as fully compliant virtual ONVIF cameras, ensuring seamless integration and reliable operation within the Protect ecosystem.</p>
 
-                    <p style="margin-bottom: 10px;">Additionally, Ubiquiti Protect requires a <strong>unique MAC address</strong> for each camera. This can be achieved in several ways:</p>
-                    <ul style="margin-bottom: 20px; padding-left: 20px;">
-                        <li>Running the application in a virtualized environment and assigning multiple virtual network interfaces</li>
-                        <li>Physically installing additional network interface cards (NICs) on the host system</li>
-                        <li>Using Linux macvlan networking. The program fully supports macvlan and has been tested on Ubuntu 25 for compatibility and stable operation.</li>
-                    </ul>
-                    
-                    <p><strong style="color: var(--text-title);">Stream Rebroadcasting and Performance Optimization:</strong><br>
-                    The application also enables reliable rebroadcasting of a single RTSP stream. Many physical cameras struggle to handle multiple concurrent connections, often resulting in lag or instability. This server functions as a high-performance proxy, efficiently managing multiple viewers while minimizing load on the original camera hardware.</p>
-                </div>
-                
-                <!-- System Information -->
-                <div style="background: rgba(102, 126, 234, 0.08); padding: 15px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3); margin-bottom: 20px;">
-                    <div style="font-size: 13px; font-weight: 600; color: var(--text-title); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-info-circle" style="color: #667eea;"></i>
-                        <span>System Information</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; font-size: 12px;">
-                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
-                            <div style="color: var(--text-muted); margin-bottom: 4px;">MediaMTX Version</div>
-                            <div id="about-mediamtx-version" style="color: var(--text-title); font-weight: 600; font-family: monospace;">Loading...</div>
+                            <p style="margin-bottom: 6px;">Additionally, Ubiquiti Protect requires a <strong>unique MAC address</strong> for each camera. This can be achieved in several ways:</p>
+                            <ul style="margin-bottom: 10px; padding-left: 18px;">
+                                <li>Running the application in a virtualized environment and assigning multiple virtual network interfaces</li>
+                                <li>Physically installing additional network interface cards (NICs) on the host system</li>
+                                <li>Using Linux macvlan networking. The program fully supports macvlan and has been tested on Ubuntu 25 for compatibility and stable operation.</li>
+                            </ul>
+
+                            <p style="margin: 0;"><strong style="color: var(--text-title);">Stream Rebroadcasting and Performance Optimization:</strong><br>
+                            The application also enables reliable rebroadcasting of a single RTSP stream. Many physical cameras struggle to handle multiple concurrent connections, often resulting in lag or instability. This server functions as a high-performance proxy, efficiently managing multiple viewers while minimizing load on the original camera hardware.</p>
                         </div>
-                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
-                            <div style="color: var(--text-muted); margin-bottom: 4px;">FFmpeg Version</div>
-                            <div id="about-ffmpeg-version" style="color: var(--text-title); font-weight: 600; font-family: monospace;">Loading...</div>
-                        </div>
-                        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px;">
-                            <div style="color: var(--text-muted); margin-bottom: 4px;">AI Acceleration</div>
-                            <div id="about-ai-device" style="color: var(--text-title); font-weight: 600; font-family: monospace; font-size: 11px;">Loading...</div>
+
+                        <!-- Links -->
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 14px;">
+                            <div style="display: flex; gap: 12px;">
+                                <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" class="coffee-link" style="background: #24292e; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); padding: 8px 16px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
+                                    <i class="fab fa-github" style="font-size: 20px; color: white;"></i>
+                                    <span style="color: white; font-weight: 600;">View on GitHub</span>
+                                </a>
+                                <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link">
+                                    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
+                                </a>
+                            </div>
+                            <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 0;">Built with ❤️ for the surveillance community.</p>
                         </div>
                     </div>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-                    <div style="display: flex; gap: 15px;">
-                        <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" class="coffee-link" style="background: #24292e; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;">
-                            <i class="fab fa-github" style="font-size: 24px; color: white;"></i>
-                            <span style="color: white; font-weight: 600;">View on GitHub</span>
-                        </a>
-                        <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link">
-                            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee">
-                        </a>
+
+                    <!-- RIGHT COLUMN: System Information + Updates -->
+                    <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+                        <!-- System Information -->
+                        <div style="background: rgba(102, 126, 234, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                            <div style="font-size: 12.5px; font-weight: 600; color: var(--text-title); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-info-circle" style="color: #667eea;"></i>
+                                <span>System Information</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11.5px;">
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">App Version</span>
+                                    <span id="about-app-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">Python</span>
+                                    <span id="about-python-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">MediaMTX</span>
+                                    <span id="about-mediamtx-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">FFmpeg</span>
+                                    <span id="about-ffmpeg-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">AI Acceleration</span>
+                                    <span id="about-ai-device" style="color: var(--text-title); font-weight: 600; font-family: monospace; font-size: 11px; text-align: right;">Loading...</span>
+                                </div>
+
+                                <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 0 2px;">AI Modules</div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">PyTorch</span>
+                                    <span id="about-torch-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">Ultralytics (YOLO)</span>
+                                    <span id="about-yolo-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">OpenCV</span>
+                                    <span id="about-opencv-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">EasyOCR</span>
+                                    <span id="about-easyocr-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 8px 11px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-muted);">NumPy</span>
+                                    <span id="about-numpy-version" style="color: var(--text-title); font-weight: 600; font-family: monospace; text-align: right;">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Updates -->
+                        <div style="background: rgba(102, 126, 234, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                            <div style="font-size: 12.5px; font-weight: 600; color: var(--text-title); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-cloud-download-alt" style="color: #667eea;"></i>
+                                <span>Updates</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <button type="button" class="btn btn-secondary" onclick="closeAboutModal(); checkForUpdates();" style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600; font-size: 12.5px; height: 38px;">
+                                    <i class="fas fa-sync-alt"></i> Check for Program Updates
+                                </button>
+                                <button type="button" class="btn btn-primary" id="aboutUpdateAiBtn" onclick="startAiUpdate('about')" style="width: 100%; font-weight: 600; font-size: 12.5px; height: 38px;">
+                                    <i class="fas fa-sync-alt"></i> Check AI Updates
+                                </button>
+                            </div>
+                            <div id="aiAboutProgressContainer" style="display: none; margin-top: 12px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                    <span id="aiAboutStatusText" style="font-size: 12px; font-weight: 600; color: #3182ce;">Working...</span>
+                                    <span id="aiAboutSpinner"><i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i></span>
+                                </div>
+                                <pre id="aiAboutLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 150px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">
+                                <strong>Program Updates</strong> pulls the latest server release. <strong>AI Updates</strong> upgrades the local AI Python modules (PyTorch, YOLO, OpenCV, EasyOCR) and refreshes model weights — only relevant if AI detection is installed.
+                            </div>
+                        </div>
                     </div>
-                    <p style="font-size: 13px; color: var(--text-muted); text-align: center; margin: 0;">Built with ❤️ for the surveillance community.</p>
                 </div>
             </div>
         </div>
@@ -6572,6 +6655,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         
         let isAiInstalled = false;
         let aiInstallInterval = null;
+        // Which progress terminal to drive: 'install' (top install panel) or 'maint'
+        // (the Maintenance card, used by update/uninstall — the install panel is hidden
+        // once AI is installed, so maintenance ops need their own visible terminal).
+        let aiProgressScope = 'install';
 
         async function checkAiStatus() {{
             try {{
@@ -6705,7 +6792,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             const mode = selectedBackend ? selectedBackend.value : 'cpu';
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Initializing Installer...';
-            
+
             try {{
                 const response = await fetch('/api/ai/install', {{
                     method: 'POST',
@@ -6713,7 +6800,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     body: JSON.stringify({{mode: mode}})
                 }});
                 const data = await response.json();
-                
+
+                aiProgressScope = 'install';
                 document.getElementById('aiInstallProgressContainer').style.display = 'block';
                 pollAiInstallProgress();
                 aiInstallInterval = setInterval(pollAiInstallProgress, 1000);
@@ -6733,8 +6821,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             try {{
                 const response = await fetch('/api/ai/uninstall', {{ method: 'POST' }});
                 const data = await response.json();
-                
-                document.getElementById('aiInstallProgressContainer').style.display = 'block';
+
+                aiProgressScope = 'maint';
+                document.getElementById('aiMaintProgressContainer').style.display = 'block';
                 pollAiInstallProgress();
                 aiInstallInterval = setInterval(pollAiInstallProgress, 1000);
             }} catch (err) {{
@@ -6744,22 +6833,64 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
 
+        // Maps the AI-update scope to its button + progress terminal. 'maint' is the
+        // camera-settings Maintenance card; 'about' is the About modal.
+        function aiUpdateCfg(scope) {{
+            return (scope === 'about')
+                ? {{ btn: 'aboutUpdateAiBtn', container: 'aiAboutProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check AI Updates' }}
+                : {{ btn: 'updateAiBtn', container: 'aiMaintProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check &amp; Install AI Updates' }};
+        }}
+
+        async function startAiUpdate(scope) {{
+            scope = (scope === 'about') ? 'about' : 'maint';
+            const cfg = aiUpdateCfg(scope);
+            const btn = document.getElementById(cfg.btn);
+            if (btn) {{
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking for Updates...';
+            }}
+
+            try {{
+                const response = await fetch('/api/ai/update', {{ method: 'POST' }});
+                const data = await response.json();
+
+                aiProgressScope = scope;
+                const c = document.getElementById(cfg.container);
+                if (c) c.style.display = 'block';
+                pollAiInstallProgress();
+                aiInstallInterval = setInterval(pollAiInstallProgress, 1000);
+            }} catch (err) {{
+                if (btn) {{
+                    btn.disabled = false;
+                    btn.innerHTML = cfg.label;
+                }}
+                alert("Failed to start update: " + err);
+            }}
+        }}
+
         async function pollAiInstallProgress() {{
             try {{
                 const response = await fetch('/api/ai/install/progress');
                 const data = await response.json();
-                
-                const logBox = document.getElementById('aiInstallLogs');
+
+                // Drive whichever terminal the active operation opened.
+                let pfx = 'aiInstall';
+                if (aiProgressScope === 'maint') pfx = 'aiMaint';
+                else if (aiProgressScope === 'about') pfx = 'aiAbout';
+
+                const logBox = document.getElementById(pfx + 'Logs');
                 if (logBox && data.log) {{
                     logBox.textContent = data.log.join('\\n');
                     logBox.scrollTop = logBox.scrollHeight;
                 }}
-                
-                const statusText = document.getElementById('aiInstallStatusText');
-                const spinner = document.getElementById('aiInstallSpinner');
+
+                const statusText = document.getElementById(pfx + 'StatusText');
+                const spinner = document.getElementById(pfx + 'Spinner');
                 const installBtn = document.getElementById('installAiBtn');
                 const uninstallBtn = document.getElementById('uninstallAiBtn');
-                
+                const updateCfg = aiUpdateCfg(aiProgressScope);
+                const updateBtn = document.getElementById(updateCfg.btn);
+
                 if (data.status === 'success') {{
                     clearInterval(aiInstallInterval);
                     statusText.textContent = "Installation Completed Successfully!";
@@ -6769,6 +6900,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     setTimeout(() => {{
                         updateAiUiState();
                     }}, 2000);
+                }} else if (data.status === 'update_success') {{
+                    clearInterval(aiInstallInterval);
+                    statusText.textContent = "AI Update Completed Successfully!";
+                    statusText.style.color = "#48bb78";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-check-circle" style="color: #48bb78;"></i>';
+                    isAiInstalled = true;
+                    if (updateBtn) {{
+                        updateBtn.disabled = false;
+                        updateBtn.innerHTML = updateCfg.label;
+                    }}
                 }} else if (data.status === 'failed') {{
                     clearInterval(aiInstallInterval);
                     statusText.textContent = "Operation Failed!";
@@ -6782,6 +6923,14 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         uninstallBtn.disabled = false;
                         uninstallBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Uninstall AI Dependencies';
                     }}
+                    if (updateBtn) {{
+                        updateBtn.disabled = false;
+                        updateBtn.innerHTML = updateCfg.label;
+                    }}
+                }} else if (data.status === 'updating') {{
+                    statusText.textContent = "Updating AI Modules (this may take a few minutes)...";
+                    statusText.style.color = "#3182ce";
+                    if (spinner) spinner.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i>';
                 }} else if (data.status === 'uninstalling') {{
                     statusText.textContent = "Uninstalling AI Dependencies (this may take a minute)...";
                     statusText.style.color = "#3182ce";
@@ -6898,6 +7047,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             if (progress) progress.style.display = 'none';
             const logs = document.getElementById('aiInstallLogs');
             if (logs) logs.textContent = '';
+            const maintProgress = document.getElementById('aiMaintProgressContainer');
+            if (maintProgress) maintProgress.style.display = 'none';
+            const maintLogs = document.getElementById('aiMaintLogs');
+            if (maintLogs) maintLogs.textContent = '';
+            const updateBtn = document.getElementById('updateAiBtn');
+            if (updateBtn) {{
+                updateBtn.disabled = false;
+                updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Check &amp; Install AI Updates';
+            }}
+            aiProgressScope = 'install';
             const btn = document.getElementById('installAiBtn');
             if (btn) {{
                 btn.disabled = false;
@@ -8686,6 +8845,19 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         function openAboutModal() {{
             // Fetch system versions
             fetchSystemVersions();
+            // Reset the AI-update terminal to a clean state, unless an update is
+            // actively polling (don't yank a run in progress).
+            if (!aiInstallInterval) {{
+                const c = document.getElementById('aiAboutProgressContainer');
+                if (c) c.style.display = 'none';
+                const logs = document.getElementById('aiAboutLogs');
+                if (logs) logs.textContent = '';
+                const btn = document.getElementById('aboutUpdateAiBtn');
+                if (btn) {{
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Check AI Updates';
+                }}
+            }}
             document.getElementById('about-modal').classList.add('active');
         }}
         
@@ -8717,27 +8889,38 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
         
         async function fetchSystemVersions() {{
+            const setVer = (id, val) => {{
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            }};
             try {{
                 const response = await fetch('/api/system/versions');
                 if (response.ok) {{
                     const data = await response.json();
-                    document.getElementById('about-mediamtx-version').textContent = data.mediamtx || 'Unknown';
-                    document.getElementById('about-ffmpeg-version').textContent = data.ffmpeg || 'Not installed';
-                    
+                    setVer('about-app-version', data.app_version ? ('v' + data.app_version) : 'Unknown');
+                    setVer('about-python-version', data.python || 'Unknown');
+                    setVer('about-mediamtx-version', data.mediamtx || 'Unknown');
+                    setVer('about-ffmpeg-version', data.ffmpeg || 'Not installed');
+
                     const aiDev = data.ai_device || 'Unknown';
-                    document.getElementById('about-ai-device').textContent = aiDev;
+                    setVer('about-ai-device', aiDev);
                     const settingsAi = document.getElementById('settings-ai-device');
                     if (settingsAi) settingsAi.textContent = aiDev;
+
+                    // AI module versions ('Not installed' when the package is absent)
+                    const mods = data.ai_modules || {{}};
+                    const fmt = v => v ? ('v' + v) : 'Not installed';
+                    setVer('about-torch-version', fmt(mods.torch));
+                    setVer('about-yolo-version', fmt(mods.ultralytics));
+                    setVer('about-opencv-version', fmt(mods.opencv));
+                    setVer('about-easyocr-version', fmt(mods.easyocr));
+                    setVer('about-numpy-version', fmt(mods.numpy));
                 }} else {{
-                    document.getElementById('about-mediamtx-version').textContent = 'Error';
-                    document.getElementById('about-ffmpeg-version').textContent = 'Error';
-                    document.getElementById('about-ai-device').textContent = 'Error';
+                    ['about-app-version','about-python-version','about-mediamtx-version','about-ffmpeg-version','about-ai-device','about-torch-version','about-yolo-version','about-opencv-version','about-easyocr-version','about-numpy-version'].forEach(id => setVer(id, 'Error'));
                 }}
             }} catch (error) {{
                 console.error('Failed to fetch system versions:', error);
-                document.getElementById('about-mediamtx-version').textContent = 'Error';
-                document.getElementById('about-ffmpeg-version').textContent = 'Error';
-                document.getElementById('about-ai-device').textContent = 'Error';
+                ['about-app-version','about-python-version','about-mediamtx-version','about-ffmpeg-version','about-ai-device','about-torch-version','about-yolo-version','about-opencv-version','about-easyocr-version','about-numpy-version'].forEach(id => setVer(id, 'Error'));
             }}
         }}
         

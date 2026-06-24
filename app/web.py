@@ -1254,10 +1254,40 @@ def create_web_app(manager):
             else:
                 ai_device_str = "CPU (No acceleration)"
 
+            # Collect AI module versions without importing the heavy packages.
+            def _pkg_version(dist_name):
+                try:
+                    from importlib.metadata import version, PackageNotFoundError
+                    try:
+                        return version(dist_name)
+                    except PackageNotFoundError:
+                        return None
+                except Exception:
+                    return None
+
+            ai_modules = {
+                'torch': _pkg_version('torch'),
+                'ultralytics': _pkg_version('ultralytics'),
+                'opencv': _pkg_version('opencv-python-headless') or _pkg_version('opencv-python'),
+                'easyocr': _pkg_version('easyocr'),
+                'numpy': _pkg_version('numpy'),
+            }
+
+            import sys as _sys
+            python_version = f"{_sys.version_info.major}.{_sys.version_info.minor}.{_sys.version_info.micro}"
+
+            try:
+                from .version import CURRENT_VERSION as app_version
+            except Exception:
+                app_version = None
+
             return jsonify({
                 'mediamtx': mediamtx_version,
                 'ffmpeg': ffmpeg_version,
-                'ai_device': ai_device_str
+                'ai_device': ai_device_str,
+                'ai_modules': ai_modules,
+                'python': python_version,
+                'app_version': app_version
             })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
@@ -2509,7 +2539,7 @@ def create_web_app(manager):
 
         def start_install(self, mode="cpu"):
             with self.lock:
-                if self.status in ("installing", "uninstalling"):
+                if self.status in ("installing", "uninstalling", "updating"):
                     return False
                 self.status = "installing"
                 self.log = ["Starting installation..."]
@@ -2520,12 +2550,23 @@ def create_web_app(manager):
 
         def start_uninstall(self):
             with self.lock:
-                if self.status in ("installing", "uninstalling"):
+                if self.status in ("installing", "uninstalling", "updating"):
                     return False
                 self.status = "uninstalling"
                 self.log = ["Starting uninstallation..."]
                 import threading
                 self._thread = threading.Thread(target=self._run_uninstall, daemon=True)
+                self._thread.start()
+                return True
+
+        def start_update(self):
+            with self.lock:
+                if self.status in ("installing", "uninstalling", "updating"):
+                    return False
+                self.status = "updating"
+                self.log = ["Starting AI update check..."]
+                import threading
+                self._thread = threading.Thread(target=self._run_update, daemon=True)
                 self._thread.start()
                 return True
 
@@ -2713,6 +2754,185 @@ def create_web_app(manager):
                     self.status = "failed"
                     self.log.append(f"Uninstall error: {str(e)}")
 
+        def _run_update(self):
+            import shutil
+            local_tmp = None
+            try:
+                import sys
+                import os
+
+                app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                local_tmp = os.path.join(app_dir, "tmp")
+                os.makedirs(local_tmp, exist_ok=True)
+                try:
+                    os.chmod(local_tmp, 0o777)
+                except Exception:
+                    pass
+
+                # Redirect pip's temp dir to the local workspace (more free space).
+                custom_env = os.environ.copy()
+                custom_env["TMPDIR"] = local_tmp
+                custom_env["TEMP"] = local_tmp
+                custom_env["TMP"] = local_tmp
+
+                # Detect the currently-installed PyTorch backend so the upgrade
+                # preserves it (upgrading off the default index could swap a CUDA
+                # build for a CPU build).
+                mode = "cpu"
+                try:
+                    import torch
+                    if getattr(torch.version, "cuda", None):
+                        mode = "cuda"
+                    elif sys.platform == "darwin":
+                        try:
+                            if torch.backends.mps.is_available():
+                                mode = "mps"
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+                with self.lock:
+                    self.log.append(f"Detected PyTorch backend: {mode}")
+                    self.log.append("Checking for updates to AI Python modules...")
+
+                # Step 1: Upgrade PyTorch on the matching index URL.
+                if mode == "cuda":
+                    torch_index = "https://download.pytorch.org/whl/cu121"
+                    try:
+                        import subprocess as _sp
+                        import re
+                        nv = _sp.run(["nvidia-smi"], capture_output=True, text=True, timeout=10)
+                        if nv.returncode == 0:
+                            m = re.search(r'CUDA Version:\s+([\d]+)', nv.stdout)
+                            if m and int(m.group(1)) >= 13:
+                                torch_index = "https://download.pytorch.org/whl/cu130"
+                    except Exception:
+                        pass
+                    cmd_torch = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir",
+                                 "torch", "torchvision", "torchaudio", "--index-url", torch_index]
+                elif mode == "mps":
+                    cmd_torch = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir",
+                                 "torch", "torchvision", "torchaudio"]
+                else:
+                    cmd_torch = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir",
+                                 "torch", "torchvision", "torchaudio",
+                                 "--index-url", "https://download.pytorch.org/whl/cpu"]
+
+                with self.lock:
+                    self.log.append("Updating PyTorch (torch, torchvision, torchaudio)...")
+                rc = self._run_cmd(cmd_torch, custom_env)
+                if rc != 0:
+                    with self.lock:
+                        self.status = "failed"
+                        self.log.append(f"Failed to update PyTorch (exit code {rc})")
+                    return
+
+                # Step 2: Upgrade the remaining AI packages.
+                with self.lock:
+                    self.log.append("Updating ultralytics (YOLO), OpenCV Headless, and EasyOCR...")
+                cmd_rest = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir",
+                            "ultralytics", "opencv-python-headless", "easyocr"]
+                rc = self._run_cmd(cmd_rest, custom_env)
+                if rc != 0:
+                    with self.lock:
+                        self.status = "failed"
+                        self.log.append(f"Failed to update AI packages (exit code {rc})")
+                    return
+
+                # Step 3: Refresh YOLO model weight files if newer assets exist.
+                self._update_models()
+
+                with self.lock:
+                    try:
+                        import importlib
+                        importlib.invalidate_caches()
+                    except Exception:
+                        pass
+                    self.status = "update_success"
+                    self.log.append("AI update check completed successfully!")
+            except Exception as e:
+                with self.lock:
+                    self.status = "failed"
+                    self.log.append(f"Update error: {str(e)}")
+            finally:
+                if local_tmp and os.path.exists(local_tmp):
+                    try:
+                        shutil.rmtree(local_tmp, ignore_errors=True)
+                    except Exception:
+                        pass
+
+        def _update_models(self):
+            """Re-download any locally cached YOLO model weights whose remote
+            release asset differs in size (a cheap 'is there a newer build' check).
+            Models that don't exist locally are skipped — they download on first use.
+            """
+            import os
+            import glob
+            try:
+                with self.lock:
+                    self.log.append("Checking YOLO model weights for updates...")
+
+                app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                search_dirs = [app_dir, os.getcwd()]
+                try:
+                    from ultralytics.utils import SETTINGS
+                    wdir = SETTINGS.get("weights_dir")
+                    if wdir:
+                        search_dirs.append(str(wdir))
+                except Exception:
+                    pass
+
+                seen = set()
+                model_files = []
+                for d in search_dirs:
+                    try:
+                        for f in glob.glob(os.path.join(d, "yolo*.pt")):
+                            rp = os.path.realpath(f)
+                            if rp not in seen and os.path.isfile(rp):
+                                seen.add(rp)
+                                model_files.append(rp)
+                    except Exception:
+                        pass
+
+                if not model_files:
+                    with self.lock:
+                        self.log.append("No local YOLO model files found — models download automatically on first use.")
+                    return
+
+                import urllib.request
+                updated = 0
+                for path in model_files:
+                    name = os.path.basename(path)
+                    url = f"https://github.com/ultralytics/assets/releases/latest/download/{name}"
+                    try:
+                        req = urllib.request.Request(url, method="HEAD")
+                        with urllib.request.urlopen(req, timeout=20) as resp:
+                            remote_size = int(resp.headers.get("Content-Length", 0) or 0)
+                        local_size = os.path.getsize(path)
+                        if remote_size and remote_size != local_size:
+                            with self.lock:
+                                self.log.append(f"Updating model {name} ({local_size} -> {remote_size} bytes)...")
+                            tmp_path = path + ".new"
+                            urllib.request.urlretrieve(url, tmp_path)
+                            os.replace(tmp_path, path)
+                            updated += 1
+                        else:
+                            with self.lock:
+                                self.log.append(f"Model {name} is up to date.")
+                    except Exception as e:
+                        with self.lock:
+                            self.log.append(f"Could not check model {name}: {e}")
+
+                with self.lock:
+                    if updated:
+                        self.log.append(f"Updated {updated} model file(s).")
+                    else:
+                        self.log.append("All model files are up to date.")
+            except Exception as e:
+                with self.lock:
+                    self.log.append(f"Model update check skipped: {e}")
+
     ai_installer = AIInstaller()
 
     @app.route('/api/ai/status', methods=['GET'])
@@ -2745,6 +2965,12 @@ def create_web_app(manager):
     @login_required
     def start_ai_uninstall():
         success = ai_installer.start_uninstall()
+        return jsonify({'success': success, 'status': ai_installer.status})
+
+    @app.route('/api/ai/update', methods=['POST'])
+    @login_required
+    def start_ai_update():
+        success = ai_installer.start_update()
         return jsonify({'success': success, 'status': ai_installer.status})
 
     @app.route('/api/ai/install/progress', methods=['GET'])

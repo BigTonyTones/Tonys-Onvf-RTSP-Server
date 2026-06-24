@@ -593,9 +593,12 @@ class MediaMTXManager:
                         else:
                             safe_src = shlex.quote(src_url)
                         
-                        # Balanced configuration: low latency but high enough buffer to detect video headers
-                        # probesize/analyzeduration 1M: Prevents "unspecified size" / "could not find codec parameters" errors
-                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -probesize 1M -analyzeduration 1M -thread_queue_size 16 -use_wallclock_as_timestamps 1 -i {safe_src}')
+                        # Low-latency startup: analyzeduration 0 drops the time-based
+                        # probe wait so FFmpeg opens the stream as soon as it sees data.
+                        # probesize 500k keeps enough byte budget to reliably find the
+                        # H.264 SPS/PPS headers (going lower, e.g. 32, causes intermittent
+                        # "could not find codec parameters" failures on RTSP substreams).
+                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -analyzeduration 0 -probesize 500k -thread_queue_size 16 -use_wallclock_as_timestamps 1 -i {safe_src}')
                         
                         # Scale and normalize timestamps only. 
                         # Removing the per-input 'fps' filter as it adds unnecessary CPU overhead and latency.
@@ -606,22 +609,86 @@ class MediaMTXManager:
                         input_idx += 1
                     
                     if inputs:
-                        # Construct overlay chain
-                        # The [base] color source provides the master clock for the entire matrix
-                        overlay_chain_parts = [f'color=black:s={res_w}x{res_h}:r={fps}[base]']
+                        # ===== Hybrid compositor =====
+                        # Base (grid) cameras are composited in a single parallel xstack
+                        # pass — lower CPU and tighter frame sync than a long overlay chain.
+                        # Cameras flagged always_on_top (PiP), and any base cameras that
+                        # overlap each other, fall back to sequential overlay so that
+                        # arbitrary / overlapping layouts still render correctly (xstack
+                        # cannot represent overlapping or z-ordered tiles).
+                        # The [base] color source provides the master clock for the matrix.
+                        def _rect(gc):
+                            return (
+                                int(round(float(gc.get('x', 0)))), int(round(float(gc.get('y', 0)))),
+                                int(round(float(gc.get('w', 640)))), int(round(float(gc.get('h', 480)))),
+                            )
+
+                        base_idxs = [i for i, gc in enumerate(active_gf_cams)
+                                     if not bool(gc.get('always_on_top', False))]
+                        top_idxs = [i for i, gc in enumerate(active_gf_cams)
+                                    if bool(gc.get('always_on_top', False))]
+
+                        # Detect overlap among base cameras; if present, xstack can't be
+                        # used for them (it has no z-order), so fall back to overlay.
+                        base_overlap = False
+                        for a in range(len(base_idxs)):
+                            ax, ay, aw, ah = _rect(active_gf_cams[base_idxs[a]])
+                            for b in range(a + 1, len(base_idxs)):
+                                bx, by, bw, bh = _rect(active_gf_cams[base_idxs[b]])
+                                if ax < bx + bw and bx < ax + aw and ay < by + bh and by < ay + ah:
+                                    base_overlap = True
+                                    break
+                            if base_overlap:
+                                break
+
+                        # xstack requires at least 2 inputs.
+                        use_xstack = len(base_idxs) >= 2 and not base_overlap
+
+                        chain_parts = [f'color=black:s={res_w}x{res_h}:r={fps}[base]']
                         last_label = '[base]'
-                        for i in range(len(active_gf_cams)):
-                            gf_cam = active_gf_cams[i]
-                            x = int(round(float(gf_cam.get('x', 0))))
-                            y = int(round(float(gf_cam.get('y', 0))))
-                            
-                            next_label = f'[tmp{i}]' if i < len(active_gf_cams) - 1 else '[outv]'
-                            # eof_action=pass + repeatlast=1: if an input dies/EOFs, keep the matrix running
-                            overlay_chain_parts.append(f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{next_label}')
-                            last_label = next_label
-                        
-                        overlay_chain = ";".join(overlay_chain_parts)
-                        filter_complex = ";".join(filters) + ";" + overlay_chain
+
+                        if use_xstack:
+                            xs_inputs = ''.join(f'[v{i}]' for i in base_idxs)
+                            # Absolute pixel coordinates per tile; fill=black so any gaps
+                            # match the canvas. Composited in one parallel pass.
+                            layout = '|'.join(
+                                f'{int(round(float(active_gf_cams[i].get("x", 0))))}_'
+                                f'{int(round(float(active_gf_cams[i].get("y", 0))))}'
+                                for i in base_idxs
+                            )
+                            chain_parts.append(
+                                f'{xs_inputs}xstack=inputs={len(base_idxs)}:layout={layout}:fill=black[grid]'
+                            )
+                            # Overlay the composited grid onto the full-size canvas at origin.
+                            grid_label = '[tmp_base]' if top_idxs else '[outv]'
+                            chain_parts.append(
+                                f'[base][grid]overlay=0:0:eof_action=pass:repeatlast=1{grid_label}'
+                            )
+                            last_label = grid_label
+                        else:
+                            # 0/1 base camera, or overlapping base tiles: sequential overlay.
+                            for n, i in enumerate(base_idxs):
+                                x, y, _, _ = _rect(active_gf_cams[i])
+                                is_last = (n == len(base_idxs) - 1) and not top_idxs
+                                nxt = '[outv]' if is_last else f'[b{n}]'
+                                # eof_action=pass + repeatlast=1: keep the matrix running
+                                # if an input dies/EOFs.
+                                chain_parts.append(
+                                    f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{nxt}'
+                                )
+                                last_label = nxt
+
+                        # Always-on-top PiP cameras, layered last so they sit on top.
+                        for n, i in enumerate(top_idxs):
+                            x, y, _, _ = _rect(active_gf_cams[i])
+                            is_last = (n == len(top_idxs) - 1)
+                            nxt = '[outv]' if is_last else f'[t{n}]'
+                            chain_parts.append(
+                                f'{last_label}[v{i}]overlay={x}:{y}:eof_action=pass:repeatlast=1{nxt}'
+                            )
+                            last_label = nxt
+
+                        filter_complex = ";".join(filters) + ";" + ";".join(chain_parts)
                         
                         if enable_global_auth:
                             dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{layout_id}"
