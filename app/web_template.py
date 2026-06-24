@@ -3606,17 +3606,30 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
                             <div class="form-group" id="aiModelGroup" style="display: none; margin-bottom: 0;">
                                 <label class="ai-field-label">Detection Model</label>
-                                <select class="form-input" id="aiModel" onchange="updateModelDescription()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); max-width: 100%;">
-                                    <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt) - Default</option>
-                                    <option value="yolo11n.pt">YOLO11 Nano (yolo11n.pt) - Newest & Recommended</option>
-                                    <option value="yolo11s.pt">YOLO11 Small (yolo11s.pt)</option>
-                                    <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt)</option>
-                                    <option value="yolov8m.pt">YOLOv8 Medium (yolov8m.pt)</option>
-                                    <option value="yolo11l.pt">YOLO11 Large (yolo11l.pt)</option>
-                                    <option value="yolo11x.pt">YOLO11 Extra-Large (yolo11x.pt)</option>
-                                    <option value="yolov8l.pt">YOLOv8 Large (yolov8l.pt)</option>
-                                    <option value="yolov8x.pt">YOLOv8 Extra-Large (yolov8x.pt)</option>
-                                </select>
+                                <!-- Hidden field carries the canonical weight filename (e.g. yolo11n.pt) into the save payload -->
+                                <input type="hidden" id="aiModel" value="yolov8n.pt">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Version</div>
+                                        <select class="form-input" id="aiModelVersion" onchange="syncAiModelFromSelectors()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); max-width: 100%;">
+                                            <option value="yolo26">YOLO26 (Latest*)</option>
+                                            <option value="yolo12">YOLO12</option>
+                                            <option value="yolo11">YOLO11 (Recommended)</option>
+                                            <option value="yolov8">YOLOv8</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Size</div>
+                                        <select class="form-input" id="aiModelSize" onchange="syncAiModelFromSelectors()" style="background-color: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border); max-width: 100%;">
+                                            <option value="n">Nano (fastest)</option>
+                                            <option value="s">Small</option>
+                                            <option value="m">Medium</option>
+                                            <option value="l">Large</option>
+                                            <option value="x">Extra-Large (most accurate)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">Selected weight: <span id="aiModelFilename" style="font-family: monospace; color: var(--text-title);">yolov8n.pt</span> &nbsp;·&nbsp; * YOLO26 requires up-to-date AI modules — run <strong>Check AI Updates</strong> first. Weights download automatically on first use.</div>
                             </div>
                         </div>
 
@@ -6263,7 +6276,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 
                 const eventSource = camera.eventSource || 'onvif';
                 document.getElementById('eventSource').value = eventSource;
-                document.getElementById('aiModel').value = camera.aiModel || 'yolov8n.pt';
+                setAiModel(camera.aiModel || 'yolov8n.pt');
                 const aiTargets = camera.aiTargets || ['person', 'vehicle'];
                 document.getElementById('aiTargetPerson').checked = aiTargets.includes('person');
                 document.getElementById('aiTargetVehicle').checked = aiTargets.includes('vehicle');
@@ -6429,7 +6442,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             document.getElementById('onvifForwardingPassword').value = '';
             
             document.getElementById('eventSource').value = 'onvif';
-            document.getElementById('aiModel').value = 'yolov8n.pt';
+            setAiModel('yolov8n.pt');
             document.getElementById('aiTargetPerson').checked = true;
             document.getElementById('aiTargetVehicle').checked = true;
             document.getElementById('aiTargetAnimal').checked = false;
@@ -6539,7 +6552,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             
             const eventSource = camera.eventSource || 'onvif';
             document.getElementById('eventSource').value = eventSource;
-            document.getElementById('aiModel').value = camera.aiModel || 'yolov8n.pt';
+            setAiModel(camera.aiModel || 'yolov8n.pt');
             const aiTargets = camera.aiTargets || ['person', 'vehicle'];
             document.getElementById('aiTargetPerson').checked = aiTargets.includes('person');
             document.getElementById('aiTargetVehicle').checked = aiTargets.includes('vehicle');
@@ -6730,11 +6743,48 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
 
+        // Known YOLO weight-file prefixes (note YOLOv8 keeps the "v").
+        const AI_MODEL_PREFIXES = ['yolo26', 'yolo12', 'yolo11', 'yolov8'];
+
+        // Build the canonical weight filename from the two selectors and push it into
+        // the hidden #aiModel field that the save payload reads.
+        function syncAiModelFromSelectors() {{
+            const ver = document.getElementById('aiModelVersion');
+            const size = document.getElementById('aiModelSize');
+            if (!ver || !size) return;
+            const filename = ver.value + size.value + '.pt';
+            const hidden = document.getElementById('aiModel');
+            if (hidden) hidden.value = filename;
+            const fnSpan = document.getElementById('aiModelFilename');
+            if (fnSpan) fnSpan.textContent = filename;
+            updateModelDescription();
+        }}
+
+        // Parse a weight filename (e.g. yolo11n.pt) back into the two selectors.
+        function setAiModel(filename) {{
+            filename = filename || 'yolov8n.pt';
+            const hidden = document.getElementById('aiModel');
+            if (hidden) hidden.value = filename;
+
+            const prefix = AI_MODEL_PREFIXES.find(p => filename.startsWith(p)) || 'yolov8';
+            const sizeMatch = filename.slice(prefix.length).replace('.pt', '');
+            const sizeLetter = ['n', 's', 'm', 'l', 'x'].includes(sizeMatch) ? sizeMatch : 'n';
+
+            const ver = document.getElementById('aiModelVersion');
+            const size = document.getElementById('aiModelSize');
+            if (ver) ver.value = prefix;
+            if (size) size.value = sizeLetter;
+
+            const fnSpan = document.getElementById('aiModelFilename');
+            if (fnSpan) fnSpan.textContent = filename;
+            updateModelDescription();
+        }}
+
         function updateModelDescription() {{
             const model = document.getElementById('aiModel').value;
             const desc = document.getElementById('aiModelDescription');
             if (!desc) return;
-            
+
             let html = "";
             if (model === "yolov8n.pt") {{
                 html = "<strong>YOLOv8 Nano (6.2 MB)</strong><br>" +
@@ -6751,6 +6801,18 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                        "• <strong>CPU Cost:</strong> Medium (requires multi-core CPU).<br>" +
                        "• <strong>Accuracy:</strong> Very High (detects smaller/farther details).<br>" +
                        "• <strong>Drawbacks:</strong> Higher steady CPU usage; might cause framerate lag on slow systems.";
+            }} else if (model === "yolo26n.pt" || model === "yolo26s.pt" || model === "yolo26m.pt" || model === "yolo26l.pt" || model === "yolo26x.pt") {{
+                const size = {{ "yolo26n.pt": "Nano", "yolo26s.pt": "Small", "yolo26m.pt": "Medium", "yolo26l.pt": "Large", "yolo26x.pt": "Extra-Large" }}[model];
+                html = "<strong>YOLO26 " + size + " (latest architecture)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Scales with size (Nano lowest, Extra-Large highest — GPU recommended for larger variants).<br>" +
+                       "• <strong>Accuracy:</strong> Highest available — newest YOLO generation.<br>" +
+                       "• <strong>Requires:</strong> An up-to-date <code>ultralytics</code> package. If detection fails to start, run <strong>Check AI Updates</strong> first. Weights download automatically on first use.";
+            }} else if (model === "yolo12n.pt" || model === "yolo12s.pt" || model === "yolo12m.pt" || model === "yolo12l.pt" || model === "yolo12x.pt") {{
+                const size = {{ "yolo12n.pt": "Nano", "yolo12s.pt": "Small", "yolo12m.pt": "Medium", "yolo12l.pt": "Large", "yolo12x.pt": "Extra-Large" }}[model];
+                html = "<strong>YOLO12 " + size + " (attention-centric architecture)</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Scales with size (Nano lowest, Extra-Large highest — GPU recommended for larger variants).<br>" +
+                       "• <strong>Accuracy:</strong> Excellent — improved detection over YOLO11 at comparable sizes.<br>" +
+                       "• <strong>Note:</strong> Weights download automatically on first use. Requires a recent <code>ultralytics</code> package.";
             }} else if (model === "yolov8s.pt") {{
                 html = "<strong>YOLOv8 Small (22.5 MB)</strong><br>" +
                        "• <strong>CPU Cost:</strong> Medium (requires multi-core CPU).<br>" +
@@ -6781,6 +6843,19 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                        "• <strong>CPU Cost:</strong> Maximum (GPU required).<br>" +
                        "• <strong>Accuracy:</strong> Outstanding.<br>" +
                        "• <strong>Drawbacks:</strong> Very resource intensive.";
+            }}
+            if (!html) {{
+                // Generic fallback for any version/size combo without a curated blurb.
+                const sizeNames = {{ n: "Nano", s: "Small", m: "Medium", l: "Large", x: "Extra-Large" }};
+                const verNames = {{ yolo26: "YOLO26", yolo12: "YOLO12", yolo11: "YOLO11", yolov8: "YOLOv8" }};
+                const prefix = AI_MODEL_PREFIXES.find(p => model.startsWith(p)) || "";
+                const sizeLetter = model.slice(prefix.length).replace('.pt', '');
+                const verLabel = verNames[prefix] || model;
+                const sizeLabel = sizeNames[sizeLetter] || "";
+                html = "<strong>" + verLabel + " " + sizeLabel + "</strong><br>" +
+                       "• <strong>CPU Cost:</strong> Scales with size — Nano lowest, Extra-Large highest (GPU recommended for larger variants).<br>" +
+                       "• <strong>Accuracy:</strong> Increases with size.<br>" +
+                       "• <strong>Note:</strong> Weights download automatically on first use; newer versions require an up-to-date <code>ultralytics</code> package.";
             }}
             desc.innerHTML = `<div style="font-size: 13px; line-height: 1.6; color: var(--alert-info-text);">` + html + `</div>`;
         }}
