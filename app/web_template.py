@@ -4568,6 +4568,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
                         <i class="fas fa-sync-alt"></i> Check for Updates
                     </button>
+                    <button type="button" class="btn btn-primary" id="settingsUpdateAiBtn" onclick="startAiUpdate('settings')" style="width:100%; margin-top: 10px; font-weight: 600;">
+                        <i class="fas fa-sync-alt"></i> Check AI Updates
+                    </button>
+                    <div id="aiSettingsProgressContainer" style="display: none; margin-top: 12px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <span id="aiSettingsStatusText" style="font-size: 12px; font-weight: 600; color: #3182ce;">Working...</span>
+                            <span id="aiSettingsSpinner"><i class="fas fa-spinner fa-spin" style="color: #3182ce;"></i></span>
+                        </div>
+                        <pre id="aiSettingsLogs" style="background-color: #0f172a; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 12px; border-radius: 8px; max-height: 160px; overflow-y: auto; white-space: pre-wrap; margin: 0; border: 1px solid #1e293b;"></pre>
+                    </div>
                 </div>
                 
                 <!-- Reboot Server Button (Linux Only) -->
@@ -6823,15 +6833,18 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
 
         // Maps the AI-update scope to its button + progress terminal. 'maint' is the
-        // camera-settings Maintenance card; 'about' is the About modal.
+        // camera-settings Maintenance card; 'about' is the About modal; 'settings' is
+        // the Settings > Maintenance tab.
         function aiUpdateCfg(scope) {{
-            return (scope === 'about')
-                ? {{ btn: 'aboutUpdateAiBtn', container: 'aiAboutProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check AI Updates' }}
-                : {{ btn: 'updateAiBtn', container: 'aiMaintProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check &amp; Install AI Updates' }};
+            if (scope === 'about')
+                return {{ btn: 'aboutUpdateAiBtn', container: 'aiAboutProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check AI Updates' }};
+            if (scope === 'settings')
+                return {{ btn: 'settingsUpdateAiBtn', container: 'aiSettingsProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check AI Updates' }};
+            return {{ btn: 'updateAiBtn', container: 'aiMaintProgressContainer', label: '<i class="fas fa-sync-alt"></i> Check &amp; Install AI Updates' }};
         }}
 
         async function startAiUpdate(scope) {{
-            scope = (scope === 'about') ? 'about' : 'maint';
+            if (scope !== 'about' && scope !== 'settings') scope = 'maint';
             const cfg = aiUpdateCfg(scope);
             const btn = document.getElementById(cfg.btn);
             if (btn) {{
@@ -6866,6 +6879,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 let pfx = 'aiInstall';
                 if (aiProgressScope === 'maint') pfx = 'aiMaint';
                 else if (aiProgressScope === 'about') pfx = 'aiAbout';
+                else if (aiProgressScope === 'settings') pfx = 'aiSettings';
 
                 const logBox = document.getElementById(pfx + 'Logs');
                 if (logBox && data.log) {{
@@ -8449,6 +8463,20 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     saveBtn.style.display = 'none';
                 }} else {{
                     saveBtn.style.display = 'block';
+                }}
+            }}
+
+            // Reset the AI-update terminal on the Maintenance tab to a clean state,
+            // unless an update is actively polling (don't yank a run in progress).
+            if (tabId === 'settings-maintenance' && !aiInstallInterval) {{
+                const c = document.getElementById('aiSettingsProgressContainer');
+                if (c) c.style.display = 'none';
+                const logs = document.getElementById('aiSettingsLogs');
+                if (logs) logs.textContent = '';
+                const aiBtn = document.getElementById('settingsUpdateAiBtn');
+                if (aiBtn) {{
+                    aiBtn.disabled = false;
+                    aiBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Check AI Updates';
                 }}
             }}
         }}
