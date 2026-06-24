@@ -728,7 +728,7 @@ main() {
     install_dependencies
     clone_repository
     setup_venv
-    setup_ai_engine
+    # setup_ai_engine
     install_mediamtx
     install_ffmpeg
     set_permissions
