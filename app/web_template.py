@@ -10865,7 +10865,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         isH265 = checkTracksForH265(mainStats) || checkTracksForH265(subStats);
                         
                         if (isH265) {{
-                            warningEl.innerHTML = '<div style="background: rgba(237, 137, 54, 0.1); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; color: #ed8936; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;"><i class="fas fa-exclamation-triangle" style="margin-top: 2px;"></i><span><strong>Performance Warning:</strong> H.265 / HEVC stream detected. For optimal performance and compatibility, it is recommended to set your camera to use <strong>H.264</strong> encoding instead.</span></div>';
+                            warningEl.innerHTML = '<div style="background: rgba(237, 137, 54, 0.1); padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size: 13px; color: #ed8936; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;"><i class="fas fa-info-circle" style="margin-top: 2px;"></i><span><strong>H.265 / HEVC source detected.</strong> The sub-stream is being auto-transcoded to H.264 so it plays in your browser; the main stream stays H.265 for your NVR. To avoid the extra transcoding CPU load, set the camera to <strong>H.264</strong> directly.</span></div>';
                         }} else {{
                             warningEl.innerHTML = '';
                         }}

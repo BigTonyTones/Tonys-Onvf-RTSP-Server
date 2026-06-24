@@ -23,6 +23,10 @@ class MediaMTXManager:
         self.log_buffer = [] # Store last 100 lines for debug
         self._log_lock = threading.Lock()
         self.debug_mode = False
+        # Cache of probed source video codecs, keyed by stream URL -> (codec, expiry_ts).
+        # Used to auto-transcode H.265/HEVC substreams to H.264 for browser playback.
+        self._codec_cache = {}
+        self._codec_cache_lock = threading.Lock()
         
     def _get_executable_name(self):
         """Get the correct executable name for the platform"""
@@ -201,6 +205,32 @@ class MediaMTXManager:
             traceback.print_exc()
             return False
     
+    def _get_source_codec(self, stream_url):
+        """Return the source video codec (e.g. 'h264', 'hevc') for a stream URL,
+        caching results so repeated config rebuilds don't re-probe every camera.
+
+        Returns the lowercased codec string, or None if it could not be probed.
+        Successful probes are cached for 10 minutes; failures for 30 seconds so a
+        camera that comes online later is re-checked soon.
+        """
+        if not stream_url:
+            return None
+        now = time.time()
+        with self._codec_cache_lock:
+            cached = self._codec_cache.get(stream_url)
+            if cached and cached[1] > now:
+                return cached[0]
+        try:
+            from .ffmpeg_manager import FFmpegManager
+            info = FFmpegManager().probe_stream(stream_url, timeout=8)
+            codec = (info or {}).get('codec') or None
+        except Exception:
+            codec = None
+        ttl = 600 if codec else 30
+        with self._codec_cache_lock:
+            self._codec_cache[stream_url] = (codec, now + ttl)
+        return codec
+
     def create_config(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         """Create MediaMTX configuration optimized for multiple cameras and viewers"""
         if rtsp_port is None:
@@ -433,8 +463,19 @@ class MediaMTXManager:
                     sub_source = camera.main_stream_url
                 else:
                     sub_source = camera.sub_stream_url
-                
-                if transcode_sub or (enable_audio and transcode_sub_audio):
+
+                # Auto-transcode H.265/HEVC substreams to H.264 so the web dashboard
+                # (WebRTC and HLS) can play them — browsers can't decode HEVC. The main
+                # stream is left untouched so the NVR keeps the original H.265 feed.
+                auto_h264_sub = False
+                if not transcode_sub:
+                    src_codec = self._get_source_codec(sub_source)
+                    if src_codec in ('hevc', 'h265'):
+                        auto_h264_sub = True
+                        print(f"    Auto-transcoding {camera.name} sub-stream H.265 -> H.264 for browser playback")
+                transcode_sub_video = transcode_sub or auto_h264_sub
+
+                if transcode_sub_video or (enable_audio and transcode_sub_audio):
                     print(f"    Transcoding enabled for {camera.name} sub-stream")
                     
                     # Target resolution and frame rate
@@ -481,7 +522,7 @@ class MediaMTXManager:
                     else:
                         audio_args = '-an'
                     
-                    if transcode_sub:
+                    if transcode_sub_video:
                         video_args = (
                             f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
                             f'{ff_process} '
