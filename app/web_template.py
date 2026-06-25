@@ -4,9 +4,9 @@ import platform
 from .version import CURRENT_VERSION
 
 # HTML for Web UI (generated dynamically with timezone data)
-def get_web_ui_html(current_settings=None):
+def get_web_ui_html(current_settings=None, boot_id='', is_linux=False):
     """Generate Web UI HTML"""
-    
+
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -14,6 +14,12 @@ def get_web_ui_html(current_settings=None):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tonys Onvif-RTSP-AI Server</title>
+    <script>
+        // Identifies the server process that served this page. The restart overlay
+        // waits until a DIFFERENT boot id answers before reloading (Linux full restart).
+        window.SERVER_BOOT_ID = "{boot_id}";
+        window.SERVER_IS_LINUX = {'true' if is_linux else 'false'};
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -8622,18 +8628,76 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
         
+        // Full-screen overlay that polls /api/health until the server is back, then reloads.
+        // Handles both Linux (process exits and is respawned) and Windows (only MediaMTX
+        // restarts, web server stays up) restart flows.
+        function waitForServerReady(opts) {{
+            opts = opts || {{}};
+            const message = opts.message || 'Server is restarting…';
+            // Server sleeps ~2s before exiting, so don't poll immediately or we'd catch
+            // the old, dying process and reload into an error.
+            const initialDelay = opts.initialDelay != null ? opts.initialDelay : 4000;
+            const pollInterval = opts.pollInterval || 2000;
+            // On Linux every restart flow replaces the whole process, so we wait until a
+            // DIFFERENT boot id answers — proof the new instance (with cameras + MediaMTX
+            // already started) is up, not the old one still shutting down. On Windows the
+            // web process stays up (only MediaMTX restarts), so reload on first response.
+            const expectNewInstance = opts.expectNewInstance != null
+                ? opts.expectNewInstance : (window.SERVER_IS_LINUX === true);
+            const currentBootId = window.SERVER_BOOT_ID || '';
+
+            let overlay = document.getElementById('server-restart-overlay');
+            if (!overlay) {{
+                overlay = document.createElement('div');
+                overlay.id = 'server-restart-overlay';
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,14,20,0.92);backdrop-filter:blur(4px);color:#e2e8f0;text-align:center;padding:20px;';
+                overlay.innerHTML =
+                    '<div style="border:4px solid rgba(255,183,77,0.25);border-top-color:#ffb74d;border-radius:50%;width:54px;height:54px;animation:srvspin 1s linear infinite;"></div>' +
+                    '<div style="margin-top:22px;font-size:18px;font-weight:600;">' + message + '</div>' +
+                    '<div id="server-restart-sub" style="margin-top:8px;font-size:14px;color:#94a3b8;">Waiting for the server to come back online…</div>';
+                document.body.appendChild(overlay);
+                if (!document.getElementById('srvspin-style')) {{
+                    const st = document.createElement('style');
+                    st.id = 'srvspin-style';
+                    st.textContent = '@keyframes srvspin{{to{{transform:rotate(360deg)}}}}';
+                    document.head.appendChild(st);
+                }}
+            }}
+            const sub = document.getElementById('server-restart-sub');
+            const start = Date.now();
+
+            async function poll() {{
+                const secs = Math.floor((Date.now() - start) / 1000);
+                try {{
+                    const res = await fetch('/api/health', {{cache: 'no-store'}});
+                    if (res.ok) {{
+                        const data = await res.json().catch(() => ({{}}));
+                        const isNewInstance = data.boot_id && data.boot_id !== currentBootId;
+                        // Reload only once the new instance is up (Linux), or immediately
+                        // for a same-process restart (Windows).
+                        if (!expectNewInstance || isNewInstance) {{
+                            if (sub) sub.textContent = 'Reconnected! Reloading…';
+                            setTimeout(() => window.location.reload(), 800);
+                            return;
+                        }}
+                        // Old process still answering — keep waiting for the new one.
+                    }}
+                }} catch (e) {{
+                    // Still down — keep waiting.
+                }}
+                if (sub) sub.textContent = 'Waiting for the server to come back online… (' + secs + 's)';
+                setTimeout(poll, pollInterval);
+            }}
+
+            setTimeout(poll, initialDelay);
+        }}
+
         async function restartServer() {{
             if (!confirm('Are you sure you want to restart the server application?')) return;
             try {{
                 const response = await fetch('/api/server/restart', {{method: 'POST'}});
                 if (response.ok) {{
-                    if (typeof showToast === 'function') {{
-                        showToast('Server is restarting...', 'info');
-                    }} else {{
-                        alert('Server is restarting... Please wait a few seconds.');
-                    }}
-                    // Reload page after 5 seconds to reconnect
-                    setTimeout(() => window.location.reload(), 5000);
+                    waitForServerReady({{message: 'Server is restarting…'}});
                 }} else {{
                     alert('Failed to restart server');
                 }}
@@ -10448,10 +10512,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         if (status.status === 'complete') {{
                             clearInterval(updateProgressInterval);
                             document.getElementById('progress-message').textContent = 'Update complete! Server restarting...';
-                            // Server will restart, page will disconnect
-                            setTimeout(() => {{
-                                window.location.reload();
-                            }}, 5000);
+                            // Server will restart, page will disconnect — wait for it to come back.
+                            waitForServerReady({{message: 'Update complete — server is restarting…'}});
                         }} else if (status.status === 'error') {{
                             clearInterval(updateProgressInterval);
                             showUpdateState('error');
@@ -11165,8 +11227,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     const result = await response.json();
                     
                     if (response.ok) {{
-                        alert(result.message);
-                        window.location.reload();
+                        // Config restore triggers a server restart — wait for it to come back.
+                        waitForServerReady({{message: 'Configuration restored — server is restarting…'}});
                     }} else {{
                         alert('Restore failed: ' + result.error);
                         btn.textContent = originalText;

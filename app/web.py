@@ -26,6 +26,12 @@ import subprocess
 import threading
 import tempfile
 import shutil
+import uuid
+
+# Unique per-process identifier. Regenerated every time the process starts
+# (and therefore every full restart). The restart waiting overlay uses this to
+# tell a freshly-started server apart from the old, still-shutting-down one.
+SERVER_BOOT_ID = uuid.uuid4().hex
 
 
 _cached_sys_info = None
@@ -200,6 +206,18 @@ def create_web_app(manager):
             return jsonify(result)
         else:
             return jsonify(result), 400
+
+    @app.route('/api/health')
+    def health_check():
+        """Lightweight liveness probe.
+
+        Intentionally public (no login_required) and dependency-free so the
+        restart waiting overlay can poll it to detect when the server is back
+        online, regardless of session/auth state during a restart.
+
+        Returns this process's boot_id so the client can detect when a genuinely
+        new instance has come up (vs. the old one still answering mid-shutdown)."""
+        return jsonify({'status': 'ok', 'boot_id': SERVER_BOOT_ID})
 
     @app.route('/api/server/restart', methods=['POST'])
     @login_required
@@ -412,7 +430,8 @@ def create_web_app(manager):
     @login_required
     def index():
         settings = manager.load_settings()
-        response = app.make_response(get_web_ui_html(settings))
+        response = app.make_response(get_web_ui_html(settings, boot_id=SERVER_BOOT_ID,
+                                                     is_linux=sys.platform.startswith('linux')))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
