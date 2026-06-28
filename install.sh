@@ -640,6 +640,12 @@ create_system_service() {
 </plist>
 EOF
         mkdir -p "$INSTALL_DIR/logs" 2>/dev/null || true
+
+        # LaunchDaemons require the plist to be owned by root:wheel and not be
+        # group/world-writable, otherwise launchd refuses to load it.
+        chown root:wheel /Library/LaunchDaemons/com.tonys.onvif-server.plist 2>/dev/null || true
+        chmod 644 /Library/LaunchDaemons/com.tonys.onvif-server.plist 2>/dev/null || true
+
         print_success "Launchd service created (com.tonys.onvif-server)"
     else
         print_step "Creating systemd service..."
@@ -702,11 +708,11 @@ print_completion() {
     echo ""
     
     if [ "$OS" == "macos" ]; then
-        echo -e "  ${YELLOW}To enable auto-start on boot:${NC}"
-        echo "    sudo launchctl load /Library/LaunchDaemons/com.tonys.onvif-server.plist"
+        echo -e "  ${YELLOW}To enable auto-start on boot (and run it now):${NC}"
+        echo "    sudo launchctl bootstrap system /Library/LaunchDaemons/com.tonys.onvif-server.plist"
         echo ""
         echo -e "  ${YELLOW}To stop the service:${NC}"
-        echo "    sudo launchctl unload /Library/LaunchDaemons/com.tonys.onvif-server.plist"
+        echo "    sudo launchctl bootout system /Library/LaunchDaemons/com.tonys.onvif-server.plist"
     else
         echo -e "  ${YELLOW}To enable auto-start on boot:${NC}"
         echo "    sudo systemctl enable tonys-onvif"
@@ -751,7 +757,23 @@ main() {
         echo -e "${GREEN}Starting Tonys Onvif-RTSP-AI Server...${NC}"
         echo ""
         cd "$INSTALL_DIR"
-        exec ./start_ubuntu_25.sh
+
+        if [ "$OS" == "macos" ]; then
+            # On macOS, start via launchd so the server runs detached from this
+            # terminal session (survives quitting Terminal) and restarts on boot.
+            # Clear any stale registration first, then bootstrap into the system domain.
+            launchctl bootout system /Library/LaunchDaemons/com.tonys.onvif-server.plist 2>/dev/null || true
+            if launchctl bootstrap system /Library/LaunchDaemons/com.tonys.onvif-server.plist 2>/dev/null; then
+                launchctl enable system/com.tonys.onvif-server 2>/dev/null || true
+                print_success "Server started via launchd and enabled on boot."
+                echo -e "  ${CYAN}Web UI:${NC} http://localhost:5552"
+            else
+                print_error "Failed to start the launchd service."
+                echo -e "  ${YELLOW}Try manually:${NC} sudo launchctl bootstrap system /Library/LaunchDaemons/com.tonys.onvif-server.plist"
+            fi
+        else
+            exec ./start_ubuntu_25.sh
+        fi
     else
         echo ""
         echo -e "${CYAN}Server not started. You can start it later with:${NC}"

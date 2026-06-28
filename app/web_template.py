@@ -5777,9 +5777,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     </div>
                     
                     <div class="camera-info-badges" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
-                        <div class="info-badge ${{cam.assignedIp ? 'info-badge-green' : ''}}" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}}">IP: ${{displayIp}}</div>
-                        <div class="info-badge" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}}">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
-                        ${{cam.uuid ? `<div class="info-badge info-badge-purple" title="UUID: ${{cam.uuid}}">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
+                        <div class="info-badge ${{cam.assignedIp ? 'info-badge-green' : ''}}" style="cursor: pointer;" onclick="event.stopPropagation(); copyValue('${{displayIp}}', 'IP address');" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}} (Click to copy)">IP: ${{displayIp}}</div>
+                        <div class="info-badge" style="cursor: pointer;" onclick="event.stopPropagation(); copyValue('${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}', 'MAC address');" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}} (Click to copy)">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
+                        ${{cam.uuid ? `<div class="info-badge info-badge-purple" style="cursor: pointer;" onclick="event.stopPropagation(); copyValue('${{cam.uuid}}', 'UUID');" title="UUID: ${{cam.uuid}} (Click to copy)">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
                         ${{(() => {{
                             let onvifText = 'ONVIF: Offline';
                             let onvifClass = '';
@@ -5947,7 +5947,27 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 document.body.removeChild(textArea);
             }}
         }}
-        
+
+        // Copy a value to clipboard and show a toast (used by info badges that shouldn't have their label clobbered)
+        async function copyValue(text, label) {{
+            if (!text) return;
+            try {{
+                await navigator.clipboard.writeText(text);
+            }} catch (err) {{
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {{ document.execCommand('copy'); }} catch (e) {{}}
+                document.body.removeChild(textArea);
+            }}
+            if (typeof showToast === 'function') {{
+                showToast((label ? label + ' copied: ' : 'Copied: ') + text, 'success');
+            }}
+        }}
+
         // Global HLS/WebRTC player management
         const hlsPlayers = new Map();
         const webrtcConnections = new Map();
