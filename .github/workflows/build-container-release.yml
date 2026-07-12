@@ -20,6 +20,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Convert repository name to lowercase
+        id: repo
+        run: |
+          echo "name=$(echo ${{ github.event.repository.name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
@@ -27,7 +33,7 @@ jobs:
           file: ./Dockerfile
           push: true
           load: true
-          tags: ${{ github.repository }}:${{ github.event.release.tag_name }}
+          tags: ${{ steps.repo.outputs.owner }}/${{ steps.repo.outputs.name }}:${{ github.event.release.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
