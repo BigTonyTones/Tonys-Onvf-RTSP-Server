@@ -1973,9 +1973,15 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             50% {{ box-shadow: inset 0 0 0 8px #e53e3e; border-color: #e53e3e; }}
             100% {{ box-shadow: inset 0 0 0 4px #f56565; border-color: #f56565; }}
         }}
-        .matrix-item.ai-alert {{
+        .matrix-item.ai-alert::after {{
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             animation: alert-pulse 1.2s infinite !important;
             border: 2px solid #f56565 !important;
+            pointer-events: none;
+            z-index: 100;
+            border-radius: inherit;
         }}
         
         /* Hover details overlay inside matrix-item */
@@ -6067,10 +6073,17 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 }}
                 const whepUrl = `http://${{serverIp}}:8889/${{pathName}}${{suffix}}/whep`;
                 
+                let fetchHeaders = {{ 'Content-Type': 'application/sdp' }};
+                const gUserW = settings.globalUsername || 'admin';
+                const gPassW = settings.globalPassword || 'admin';
+                if (settings.rtspAuthEnabled && gUserW && gPassW) {{
+                    fetchHeaders['Authorization'] = 'Basic ' + btoa(gUserW + ':' + gPassW);
+                }}
+                
                 const response = await fetch(whepUrl, {{
                     method: 'POST',
                     body: offer.sdp,
-                    headers: {{ 'Content-Type': 'application/sdp' }}
+                    headers: fetchHeaders
                 }});
                 
                 if (!response.ok) throw new Error(`WHEP server responded with ${{response.status}}`);
@@ -6127,10 +6140,12 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
             // Get credentials if RTSP auth is enabled
             let credentials = '';
-            if (settings.rtspAuthEnabled && settings.globalUsername && settings.globalPassword) {{
+            const gUserC = settings.globalUsername || 'admin';
+            const gPassC = settings.globalPassword || 'admin';
+            if (settings.rtspAuthEnabled && gUserC && gPassC) {{
                 // Ensure credentials are URL encoded
-                const u = encodeURIComponent(settings.globalUsername);
-                const p = encodeURIComponent(settings.globalPassword);
+                const u = encodeURIComponent(gUserC);
+                const p = encodeURIComponent(gPassC);
                 credentials = `?user=${{u}}&pass=${{p}}`;
             }}
             
@@ -6157,14 +6172,11 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 }};
 
                 // Hook to inject credentials into every segment request
-                if (settings.rtspAuthEnabled && settings.globalUsername && settings.globalPassword) {{
+                const gUser = settings.globalUsername || 'admin';
+                const gPass = settings.globalPassword || 'admin';
+                if (settings.rtspAuthEnabled && gUser && gPass) {{
                     hlsConfig.xhrSetup = function(xhr, url) {{
-                        let accessUrl = url;
-                        if (url.indexOf('user=') === -1) {{
-                            const separator = url.indexOf('?') === -1 ? '?' : '&';
-                            accessUrl = url + separator + `user=${{encodeURIComponent(settings.globalUsername)}}&pass=${{encodeURIComponent(settings.globalPassword)}}`;
-                        }}
-                        xhr.open('GET', accessUrl, true);
+                        xhr.setRequestHeader("Authorization", "Basic " + btoa(gUser + ":" + gPass));
                     }};
                 }}
 

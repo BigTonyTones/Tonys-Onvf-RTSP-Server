@@ -190,6 +190,7 @@ class VirtualONVIFCamera:
         
         # Network settings (Linux only)
         self.use_virtual_nic = config.get('useVirtualNic', False)
+        self.vnic_keepalive = config.get('vnicKeepalive', False)
         self.parent_interface = config.get('parentInterface', '')
         self.nic_mac = config.get('nicMac', '')
         self.ip_mode = config.get('ipMode', 'dhcp') # 'dhcp' or 'static'
@@ -553,6 +554,7 @@ class VirtualONVIFCamera:
             'audioSampleRateSub': self.audio_sample_rate_sub,
             'audioBitrateSub': self.audio_bitrate_sub,
             'useVirtualNic': self.use_virtual_nic,
+            'vnicKeepalive': getattr(self, 'vnic_keepalive', False),
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,
             'ipMode': self.ip_mode,
@@ -634,6 +636,7 @@ class VirtualONVIFCamera:
             'transcodeMainAudio': self.transcode_main_audio,
             'transcodeSubAudio': self.transcode_sub_audio,
             'useVirtualNic': self.use_virtual_nic,
+            'vnicKeepalive': getattr(self, 'vnic_keepalive', False),
             'parentInterface': self.parent_interface,
             'nicMac': self.nic_mac,
             'ipMode': self.ip_mode,
