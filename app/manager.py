@@ -18,6 +18,8 @@ from .linux_service import LinuxServiceManager
 from .analytics import AnalyticsManager
 from .notifier import NotificationManager, NOTIFICATION_EVENTS, DEFAULT_ENABLED_EVENTS
 from .protect_listener import ProtectListenerManager
+from . import stream_source
+from .stream_health import StreamHealthMonitor
 import requests
 
 class CameraManager:
@@ -32,6 +34,10 @@ class CameraManager:
         self.service_mgr = LinuxServiceManager()
         self.analytics = AnalyticsManager()
         self._lock = threading.Lock()
+        # MediaMTX restart coalescing (see restart_mediamtx)
+        self._restart_state_lock = threading.Lock()
+        self._restart_pending = False
+        self._restart_worker = None
         
         # Start analytics polling
         self.analytics.start()
@@ -99,6 +105,10 @@ class CameraManager:
         # Start watchdog only if enabled in settings
         if getattr(self, 'watchdog_enabled', False):
             self.start_watchdog()
+
+        # Per-camera stream health (status shown on the dashboard)
+        self.health_monitor = StreamHealthMonitor(self)
+        self.health_monitor.start()
         
     def load_config(self):
         """Load camera configuration"""
@@ -701,12 +711,11 @@ class CameraManager:
                     static_ip='', netmask='24', gateway='', uuid=None,
                     enable_event_forwarding=False, physical_onvif_port=80,
                     onvif_forwarding_username='', onvif_forwarding_password='',
-                    event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True):
+                    event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True,
+                    source_protocol='rtsp', tls_mode=None, tls_fingerprint='', substream_fallback=True):
         """Add a new camera"""
-        if not main_path.startswith('/'):
-            main_path = '/' + main_path
-        if not sub_path.startswith('/'):
-            sub_path = '/' + sub_path
+        source = self._build_source_settings(host, rtsp_port, username, password, main_path, sub_path,
+                                             source_protocol, tls_mode, tls_fingerprint)
             
         # Check for duplicate UUID or MAC Address (UniFi Protect requires uniqueness)
         if uuid:
@@ -720,8 +729,6 @@ class CameraManager:
                 if getattr(c, 'nic_mac', None) and str(c.nic_mac).strip().lower().replace(':', '') == mac_str:
                     raise ValueError(f"MAC Address '{nic_mac}' is already in use by camera '{c.name}'")
         
-        rtsp_port = str(rtsp_port)
-        
         # Handle ONVIF port assignment
         if onvif_port is not None:
             onvif_port = int(onvif_port)
@@ -731,20 +738,8 @@ class CameraManager:
             # Auto-assign port
             onvif_port = self.next_onvif_port
         
-        # URL-encode credentials
-        username_encoded = quote(username, safe='') if username else ''
-        password_encoded = quote(password, safe='') if password else ''
-        
-        # Build RTSP URLs
-        if username_encoded and password_encoded:
-            main_url = f"rtsp://{username_encoded}:{password_encoded}@{host}:{rtsp_port}{main_path}"
-            sub_url = f"rtsp://{username_encoded}:{password_encoded}@{host}:{rtsp_port}{sub_path}"
-        elif username_encoded:
-            main_url = f"rtsp://{username_encoded}@{host}:{rtsp_port}{main_path}"
-            sub_url = f"rtsp://{username_encoded}@{host}:{rtsp_port}{sub_path}"
-        else:
-            main_url = f"rtsp://{host}:{rtsp_port}{main_path}"
-            sub_url = f"rtsp://{host}:{rtsp_port}{sub_path}"
+        main_url = source['main_url']
+        sub_url = source['sub_url']
         
         # Create safe path name
         path_name = name.lower().replace(' ', '_').replace('-', '_')
@@ -760,6 +755,10 @@ class CameraManager:
             'name': name,
             'mainStreamUrl': main_url,
             'subStreamUrl': sub_url,
+            'sourceProtocol': source['protocol'],
+            'tlsMode': source['tls_mode'],
+            'tlsFingerprint': source['tls_fingerprint'],
+            'substreamFallback': bool(substream_fallback),
             'rtspPort': MEDIAMTX_PORT,
             'onvifPort': onvif_port,
             'pathName': path_name,
@@ -843,11 +842,16 @@ class CameraManager:
                       static_ip='', netmask='24', gateway='', uuid=None,
                       enable_event_forwarding=False, physical_onvif_port=80,
                       onvif_forwarding_username='', onvif_forwarding_password='',
-                      event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True):
+                      event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True,
+                      source_protocol='rtsp', tls_mode=None, tls_fingerprint='', substream_fallback=True):
         """Update an existing camera"""
         camera = self.get_camera(camera_id)
         if not camera:
             return None
+
+        # Validate before touching the running camera
+        source = self._build_source_settings(host, rtsp_port, username, password, main_path, sub_path,
+                                             source_protocol, tls_mode, tls_fingerprint)
         
         # Check if camera is running
         was_running = camera.status == "running"
@@ -865,12 +869,6 @@ class CameraManager:
             # Keep existing port if not specified
             onvif_port = camera.onvif_port
         
-        # Ensure paths start with /
-        if not main_path.startswith('/'):
-            main_path = '/' + main_path
-        if not sub_path.startswith('/'):
-            sub_path = '/' + sub_path
-            
         # Check for duplicate UUID or MAC Address (UniFi Protect requires uniqueness)
         if uuid:
             uuid_str = str(uuid).strip().lower()
@@ -883,22 +881,8 @@ class CameraManager:
                 if c.id != camera_id and getattr(c, 'nic_mac', None) and str(c.nic_mac).strip().lower().replace(':', '') == mac_str:
                     raise ValueError(f"MAC Address '{nic_mac}' is already in use by camera '{c.name}'")
         
-        rtsp_port = str(rtsp_port)
-        
-        # URL-encode credentials
-        username_encoded = quote(username, safe='') if username else ''
-        password_encoded = quote(password, safe='') if password else ''
-        
-        # Build RTSP URLs
-        if username_encoded and password_encoded:
-            main_url = f"rtsp://{username_encoded}:{password_encoded}@{host}:{rtsp_port}{main_path}"
-            sub_url = f"rtsp://{username_encoded}:{password_encoded}@{host}:{rtsp_port}{sub_path}"
-        elif username_encoded:
-            main_url = f"rtsp://{username_encoded}@{host}:{rtsp_port}{main_path}"
-            sub_url = f"rtsp://{username_encoded}@{host}:{rtsp_port}{sub_path}"
-        else:
-            main_url = f"rtsp://{host}:{rtsp_port}{main_path}"
-            sub_url = f"rtsp://{host}:{rtsp_port}{sub_path}"
+        main_url = source['main_url']
+        sub_url = source['sub_url']
         
         # Create safe path name
         path_name = name.lower().replace(' ', '_').replace('-', '_')
@@ -908,6 +892,12 @@ class CameraManager:
         camera.name = name
         camera.main_stream_url = main_url
         camera.sub_stream_url = sub_url
+        camera.source_protocol = source['protocol']
+        camera.tls_mode = source['tls_mode']
+        camera.tls_fingerprint = source['tls_fingerprint']
+        camera.substream_fallback = bool(substream_fallback)
+        camera.substream_fallback_active = False
+        camera.stream_probe = {}
         camera.path_name = path_name
         camera.username = username
         camera.password = password
@@ -1022,25 +1012,81 @@ class CameraManager:
         for camera in self.cameras:
             camera.stop()
 
-    def restart_mediamtx(self):
-        """Restart MediaMTX to apply changes (Non-blocking)"""
-        rtsp_user = self.global_username if self.rtsp_auth_enabled else ''
-        rtsp_pass = self.global_password if self.rtsp_auth_enabled else ''
-        
-        def _do_restart():
+    def _build_source_settings(self, host, port, username, password, main_path, sub_path,
+                               protocol, tls_mode, tls_fingerprint):
+        """Validate camera source settings and build the source URLs.
+
+        Raises ValueError with an operator-facing message on bad input."""
+        protocol = stream_source.normalize_protocol(protocol)
+        tls_mode = stream_source.normalize_tls_mode(tls_mode)
+        fingerprint = stream_source.normalize_fingerprint(tls_fingerprint)
+        if protocol == stream_source.PROTOCOL_RTSPS and tls_mode == stream_source.TLS_PINNED and not fingerprint:
+            raise ValueError("Pinned certificate mode needs the camera's certificate fingerprint. "
+                             "Use 'Fetch certificate' to read it from the camera and confirm it.")
+        if not main_path or not str(main_path).strip():
+            raise ValueError("Main stream path is required")
+        main_url = stream_source.build_source_url(protocol, host, port, username, password, main_path)
+        sub_url = stream_source.build_source_url(protocol, host, port, username, password, sub_path or main_path)
+        stream_source.register_secret(password)
+        return {
+            'protocol': protocol,
+            'tls_mode': tls_mode,
+            'tls_fingerprint': fingerprint,
+            'main_url': main_url,
+            'sub_url': sub_url,
+        }
+
+    def _mediamtx_args(self):
+        rtsp_user = self.global_username if getattr(self, 'rtsp_auth_enabled', False) else ''
+        rtsp_pass = self.global_password if getattr(self, 'rtsp_auth_enabled', False) else ''
+        return dict(
+            rtsp_port=self.rtsp_port,
+            rtsp_username=rtsp_user,
+            rtsp_password=rtsp_pass,
+            grid_fusion=self.get_grid_fusion(),
+            debug_mode=self.debug_mode,
+            advanced_settings=self.advanced_settings,
+            web_port=getattr(self, 'web_port', WEB_UI_PORT),
+        )
+
+    def restart_mediamtx_now(self):
+        """Restart MediaMTX synchronously with the full current configuration."""
+        ok = self.mediamtx.restart(self.cameras, **self._mediamtx_args())
+        if getattr(self, 'health_monitor', None):
+            self.health_monitor.notify_restart()
+        return ok
+
+    def restart_mediamtx(self, wait=False):
+        """Restart MediaMTX to apply changes.
+
+        Requests are coalesced: if several arrive while a restart is running
+        (saving a camera, start-all, settings), one more restart runs after it
+        with the latest configuration instead of one per request. MediaMTX
+        itself serialises start/stop, so overlapping calls can't create a
+        second instance."""
+        with self._restart_state_lock:
+            self._restart_pending = True
+            worker = self._restart_worker
+            if worker is None or not worker.is_alive():
+                worker = threading.Thread(target=self._restart_worker_loop, daemon=True,
+                                          name='mediamtx-restart')
+                self._restart_worker = worker
+                worker.start()
+        if wait:
+            worker.join()
+
+    def _restart_worker_loop(self):
+        while True:
+            with self._restart_state_lock:
+                if not self._restart_pending:
+                    self._restart_worker = None
+                    return
+                self._restart_pending = False
             try:
                 print("  [Manager] Background MediaMTX restart initiated...")
-                self.mediamtx.restart(
-                    self.cameras,
-                    self.rtsp_port,
-                    rtsp_user,
-                    rtsp_pass,
-                    self.get_grid_fusion(),
-                    debug_mode=self.debug_mode,
-                    advanced_settings=self.advanced_settings,
-                    web_port=getattr(self, 'web_port', WEB_UI_PORT)
-                )
-                print("  [Manager] Background MediaMTX restart complete.")
+                ok = self.restart_mediamtx_now()
+                print("  [Manager] Background MediaMTX restart complete." if ok else
+                      "  [ERROR] MediaMTX did not start; see messages above.")
                 try:
                     self.notifier.send('mediamtx_restarted', 'MediaMTX Restarted',
                                       'The MediaMTX stream server has been restarted.')
@@ -1048,9 +1094,6 @@ class CameraManager:
                     pass
             except Exception as e:
                 print(f"  [ERROR] Background MediaMTX restart failed: {e}")
-                
-        # Run restart in a separate thread to prevent blocking the Web UI/API
-        threading.Thread(target=_do_restart, daemon=True).start()
 
     # --- Notification Config Methods ---
 
@@ -1230,17 +1273,7 @@ class CameraManager:
 
         if restart_needed:
             print(f"Watchdog: Recovery triggered for {', '.join(stale_reasons)}. Restarting MediaMTX...")
-            rtsp_user = self.global_username if getattr(self, 'rtsp_auth_enabled', False) else ''
-            rtsp_pass = self.global_password if getattr(self, 'rtsp_auth_enabled', False) else ''
-            self.mediamtx.restart(
-                self.cameras, 
-                self.rtsp_port, 
-                rtsp_user, 
-                rtsp_pass, 
-                self.get_grid_fusion(), 
-                debug_mode=self.debug_mode, 
-                advanced_settings=self.advanced_settings
-            )
+            self.restart_mediamtx(wait=True)
             # Clear all stale trackers after restart to give them time to come back
             self.stale_path_times.clear()
             time.sleep(30) # Grace period after restart

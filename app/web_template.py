@@ -891,6 +891,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             background: var(--btn-success);
             box-shadow: 0 0 0 4px rgba(35, 134, 54, 0.2);
         }}
+        .status-badge.running-degraded {{
+            background: #d69e2e;
+            box-shadow: 0 0 0 4px rgba(214, 158, 46, 0.2);
+        }}
         .info-badge {{
             display: inline-flex;
             align-items: center;
@@ -3289,14 +3293,47 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         <input type="text" class="form-input" id="name" placeholder="Front Door" required>
                     </div>
                     
-                    <div class="form-row">
+                    <div class="form-row" style="grid-template-columns: 1fr 2fr 1fr;">
+                        <div class="form-group">
+                            <label class="form-label">Protocol</label>
+                            <select class="form-input" id="sourceProtocol" onchange="onSourceProtocolChange()">
+                                <option value="rtsp" selected>RTSP</option>
+                                <option value="rtsps">RTSPS (TLS)</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label class="form-label">Camera IP/Host</label>
                             <input type="text" class="form-input" id="host" placeholder="192.168.1.100" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">RTSP Port</label>
-                            <input type="number" class="form-input" id="rtspPort" value="554" required>
+                            <label class="form-label" id="rtspPortLabel">RTSP Port</label>
+                            <input type="number" class="form-input" id="rtspPort" value="554" min="1" max="65535" required>
+                        </div>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 11px; display: block; margin: -8px 0 12px;">
+                        Enter only the IP or hostname (no rtsp:// or rtsps://). Wyze cameras with RTSPS use port 322, main path /stream0.
+                    </small>
+
+                    <div id="tls-settings" style="display: none; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 16px;">
+                        <div class="form-group">
+                            <label class="form-label"><i class="fas fa-lock"></i> TLS Certificate Verification</label>
+                            <select class="form-input" id="tlsMode" onchange="onTlsModeChange()">
+                                <option value="verify" selected>Verify with trusted CAs (default)</option>
+                                <option value="pinned">Pinned certificate (recommended for self-signed cameras, e.g. Wyze)</option>
+                                <option value="insecure">Do not verify (INSECURE, diagnostics only)</option>
+                            </select>
+                            <small id="tlsModeHelp" style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;"></small>
+                        </div>
+                        <div class="form-group" id="tlsFingerprintGroup" style="display: none;">
+                            <label class="form-label">Camera certificate SHA-256 fingerprint</label>
+                            <textarea class="form-input" id="tlsFingerprint" rows="2" style="font-family: monospace; font-size: 12px;" placeholder="AB:CD:... (64 hex characters) or paste the camera's PEM certificate"></textarea>
+                            <button type="button" class="btn btn-secondary" onclick="fetchCameraCertificate()" style="margin-top: 8px; font-size: 13px;">
+                                <i class="fas fa-certificate"></i> Fetch certificate from camera
+                            </button>
+                            <div id="tlsCertInfo" style="display: none; margin-top: 10px; font-size: 12px; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary);"></div>
+                        </div>
+                        <div id="tlsInsecureWarning" style="display: none; margin-top: 8px; padding: 10px; border-radius: 6px; background: rgba(245, 101, 101, 0.12); border: 1px solid #f56565; color: #f56565; font-size: 12px; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle"></i> Certificate verification is disabled. The stream stays encrypted, but the camera's identity is not checked, so another device on your network could impersonate it and capture its credentials. Use only to diagnose a trusted local camera, then switch to "Pinned certificate".
                         </div>
                     </div>
                     
@@ -3338,6 +3375,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 </label>
                                 <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
                             </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 16px; margin-bottom: 0; background: rgba(0,0,0,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                             <label class="auto-start-row" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                                <span class="auto-start-label" style="font-size: 13px; font-weight: 600;">Fall back to main stream if the sub stream fails</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="substreamFallback" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
+                            <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">If the sub stream path doesn't work but the main stream does, serve the main stream on the sub profile instead of leaving it dead. The camera stays online.</small>
                         </div>
                     </div>
 
@@ -5092,6 +5139,18 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         // Status same, only update text parts if needed (preserves video)
                         const nameEl = card.querySelector('.camera-name');
                         if (nameEl && nameEl.textContent !== cam.name) nameEl.textContent = cam.name;
+
+                        const healthSlot = card.querySelector('.stream-health-slot');
+                        if (healthSlot) {{
+                            const hb = getStreamHealthBadge(cam);
+                            if (healthSlot.innerHTML !== hb) healthSlot.innerHTML = hb;
+                        }}
+                        const dot = card.querySelector('.status-badge');
+                        if (dot && cam.status === 'running') {{
+                            const ok = (cam.streamHealth || {{}}).state === 'streaming';
+                            dot.classList.toggle('running', ok);
+                            dot.classList.toggle('running-degraded', !ok);
+                        }}
                         
                         const autoStartEl = card.querySelector('.toggle-switch input');
                         if (autoStartEl && autoStartEl.checked !== cam.autoStart) autoStartEl.checked = cam.autoStart;
@@ -5768,7 +5827,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 <div class="camera-header" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <div class="camera-title" style="display: flex; align-items: center; gap: 12px;">
-                            <div class="status-badge ${{cam.status === 'running' ? 'running' : ''}}"></div>
+                            <div class="status-badge ${{cam.status === 'running' ? ((cam.streamHealth || {{}}).state === 'streaming' ? 'running' : 'running-degraded') : ''}}" title="${{cam.status === 'running' ? 'Virtual ONVIF camera running. Video: ' + ((cam.streamHealth || {{}}).label || 'unknown') : 'Stopped'}}"></div>
                             <div class="camera-name">${{cam.name}}</div>
                         </div>
                         <div class="camera-actions">
@@ -5783,6 +5842,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     </div>
                     
                     <div class="camera-info-badges" style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px;">
+                        <span class="stream-health-slot" style="display: contents;">${{getStreamHealthBadge(cam)}}</span>
                         <div class="info-badge ${{cam.assignedIp ? 'info-badge-green' : ''}}" style="cursor: pointer;" onclick="event.stopPropagation(); copyValue('${{displayIp}}', 'IP address');" title="${{cam.assignedIp ? 'Virtual IP Address: Assigned to this camera\\\'s Virtual NIC interface.' : 'Server IP Address: Camera stream is served from the main server IP.'}} (Click to copy)">IP: ${{displayIp}}</div>
                         <div class="info-badge" style="cursor: pointer;" onclick="event.stopPropagation(); copyValue('${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}', 'MAC address');" title="${{cam.nicMac ? 'Virtual MAC: Custom MAC address assigned to this camera\\\'s Virtual NIC. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase() : 'MAC Address: Stable generated MAC address representing this virtual camera. Full MAC: ' + (cam.nicMac || cam.macAddress || '').toUpperCase()}} (Click to copy)">MAC: ${{ (cam.nicMac || cam.macAddress || '').toUpperCase() }}</div>
                         ${{cam.uuid ? `<div class="info-badge info-badge-purple" style="cursor: pointer;" onclick="event.stopPropagation(); copyValue('${{cam.uuid}}', 'UUID');" title="UUID: ${{cam.uuid}} (Click to copy)">UUID: ${{cam.uuid.split('-')[0]}}</div>` : ''}}
@@ -6292,8 +6352,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             
             // Parse the RTSP URL to extract credentials and paths
             try {{
-                const mainUrl = new URL(camera.mainStreamUrl.replace('rtsp://', 'http://'));
-                const subUrl = new URL(camera.subStreamUrl.replace('rtsp://', 'http://'));
+                const mainUrl = parseStreamUrl(camera.mainStreamUrl);
+                const subUrl = parseStreamUrl(camera.subStreamUrl);
                 
                 // Don't copy the name, let user choose a new one
                 // document.getElementById('name').value = camera.name + ' (Copy)';
@@ -6304,6 +6364,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 document.getElementById('password').value = decodeURIComponent(mainUrl.password || '');
                 document.getElementById('mainPath').value = mainUrl.pathname + mainUrl.search;
                 document.getElementById('subPath').value = subUrl.pathname + subUrl.search;
+                applySourceFields(camera);
                 document.getElementById('autoStart').checked = camera.autoStart || false;
                 document.getElementById('enableEventForwarding').checked = camera.enableEventForwarding || false;
                 document.getElementById('physicalOnvifPort').value = camera.physicalOnvifPort || '80';
@@ -6472,6 +6533,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             document.getElementById('modal-title').textContent = 'Add New Camera';
             document.getElementById('camera-id').value = '';
             document.getElementById('camera-form').reset();
+            applySourceFields(null);
             
             document.getElementById('enableEventForwarding').checked = false;
             document.getElementById('physicalOnvifPort').value = '80';
@@ -6570,8 +6632,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             document.getElementById('camera-id').value = camera.id;
             
             // Parse the RTSP URL to extract credentials and paths
-            const mainUrl = new URL(camera.mainStreamUrl.replace('rtsp://', 'http://'));
-            const subUrl = new URL(camera.subStreamUrl.replace('rtsp://', 'http://'));
+            const mainUrl = parseStreamUrl(camera.mainStreamUrl);
+            const subUrl = parseStreamUrl(camera.subStreamUrl);
             
             document.getElementById('name').value = camera.name;
             document.getElementById('host').value = mainUrl.hostname;
@@ -6580,6 +6642,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             document.getElementById('password').value = decodeURIComponent(mainUrl.password || '');
             document.getElementById('mainPath').value = mainUrl.pathname + mainUrl.search;
             document.getElementById('subPath').value = subUrl.pathname + subUrl.search;
+            applySourceFields(camera);
             document.getElementById('autoStart').checked = camera.autoStart || false;
             document.getElementById('enableEventForwarding').checked = camera.enableEventForwarding || false;
             document.getElementById('physicalOnvifPort').value = camera.physicalOnvifPort || '80';
@@ -8394,6 +8457,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 password: document.getElementById('password').value,
                 mainPath: document.getElementById('mainPath').value,
                 subPath: document.getElementById('subPath').value,
+                sourceProtocol: document.getElementById('sourceProtocol').value,
+                tlsMode: document.getElementById('tlsMode').value,
+                tlsFingerprint: document.getElementById('tlsFingerprint').value,
+                substreamFallback: document.getElementById('substreamFallback').checked,
                 autoStart: document.getElementById('autoStart').checked,
                 enableEventForwarding: document.getElementById('enableEventForwarding').checked,
                 physicalOnvifPort: parseInt(document.getElementById('physicalOnvifPort').value || '80'),
@@ -8773,6 +8840,119 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
         
+        // ---- Source protocol / RTSPS TLS settings ----
+        function onSourceProtocolChange() {{
+            const proto = document.getElementById('sourceProtocol').value;
+            const portEl = document.getElementById('rtspPort');
+            // Swap the port only while it still holds the other protocol's default
+            if (proto === 'rtsps' && (portEl.value === '' || portEl.value === '554')) portEl.value = '322';
+            if (proto === 'rtsp' && (portEl.value === '' || portEl.value === '322')) portEl.value = '554';
+            document.getElementById('rtspPortLabel').textContent = proto === 'rtsps' ? 'RTSPS Port' : 'RTSP Port';
+            document.getElementById('tls-settings').style.display = proto === 'rtsps' ? 'block' : 'none';
+            onTlsModeChange();
+        }}
+
+        function onTlsModeChange() {{
+            const mode = document.getElementById('tlsMode').value;
+            const help = {{
+                verify: 'The camera certificate must be signed by a trusted CA and match the host. Add your own CA as a PEM file in data/tls/ca/. Self-signed cameras (Wyze) will fail this check; use Pinned certificate.',
+                pinned: 'Only the certificate with this exact SHA-256 fingerprint is accepted. Fetch it from the camera, compare it if you can, then save.',
+                insecure: ''
+            }};
+            document.getElementById('tlsModeHelp').textContent = help[mode] || '';
+            document.getElementById('tlsFingerprintGroup').style.display = mode === 'pinned' ? 'block' : 'none';
+            document.getElementById('tlsInsecureWarning').style.display = mode === 'insecure' ? 'block' : 'none';
+        }}
+
+        function applySourceFields(camera) {{
+            const proto = (camera && camera.sourceProtocol) || 'rtsp';
+            document.getElementById('sourceProtocol').value = proto;
+            document.getElementById('tlsMode').value = (camera && camera.tlsMode) || 'verify';
+            const fp = (camera && camera.tlsFingerprint) || '';
+            document.getElementById('tlsFingerprint').value = fp ? fp.toUpperCase().match(/.{{2}}/g).join(':') : '';
+            document.getElementById('tlsCertInfo').style.display = 'none';
+            document.getElementById('substreamFallback').checked = !camera || camera.substreamFallback !== false;
+            if (camera && camera.sourceHost) {{
+                document.getElementById('host').value = camera.sourceHost;
+                document.getElementById('rtspPort').value = camera.sourcePort || (proto === 'rtsps' ? 322 : 554);
+                document.getElementById('mainPath').value = camera.mainPath || '';
+                document.getElementById('subPath').value = camera.subPath || '';
+            }}
+            document.getElementById('rtspPortLabel').textContent = proto === 'rtsps' ? 'RTSPS Port' : 'RTSP Port';
+            document.getElementById('tls-settings').style.display = proto === 'rtsps' ? 'block' : 'none';
+            onTlsModeChange();
+        }}
+
+        // Parse rtsp:// or rtsps:// URLs (the URL API only understands http)
+        function parseStreamUrl(url) {{
+            return new URL(String(url || '').replace(/^rtsps?:[/][/]/i, 'http://'));
+        }}
+
+        function escapeHtmlText(v) {{
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}})[c]);
+        }}
+
+        async function fetchCameraCertificate() {{
+            const host = document.getElementById('host').value.trim();
+            const port = document.getElementById('rtspPort').value || '322';
+            const box = document.getElementById('tlsCertInfo');
+            if (!host) {{ alert('Enter the camera IP/host first'); return; }}
+            box.style.display = 'block';
+            box.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reading certificate...';
+            try {{
+                const r = await fetch('/api/tls/fetch-certificate', {{
+                    method: 'POST', headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{ host, port }})
+                }});
+                const d = await r.json();
+                if (!r.ok) {{
+                    box.innerHTML = '<span style="color:#f56565;">' + escapeHtmlText(d.error || 'Failed') + '</span>';
+                    return;
+                }}
+                box.innerHTML =
+                    '<div><strong>Subject:</strong> ' + escapeHtmlText(d.subject || '?') + '</div>' +
+                    '<div><strong>Issuer:</strong> ' + escapeHtmlText(d.issuer || '?') + (d.selfSigned ? ' (self-signed)' : '') + '</div>' +
+                    '<div><strong>Valid:</strong> ' + escapeHtmlText(d.notBefore || '?') + ' to ' + escapeHtmlText(d.notAfter || '?') + '</div>' +
+                    '<div><strong>TLS:</strong> ' + escapeHtmlText(d.tlsVersion || '?') + '</div>' +
+                    '<div style="margin-top:6px;"><strong>SHA-256:</strong> <code style="word-break:break-all;">' + escapeHtmlText(d.sha256Formatted) + '</code></div>' +
+                    '<div style="margin-top:6px; color: var(--text-muted);">This was read without verification. Only trust it if this is your camera on your own network (compare with the camera if possible).</div>' +
+                    '<button type="button" class="btn btn-primary" style="margin-top:8px; font-size:12px;" id="tlsTrustBtn">Trust this certificate</button>';
+                document.getElementById('tlsTrustBtn').onclick = () => {{
+                    document.getElementById('tlsFingerprint').value = d.sha256Formatted;
+                    document.getElementById('tlsTrustBtn').outerHTML = '<div style="margin-top:8px; color: var(--btn-success); font-weight:600;"><i class="fas fa-check"></i> Fingerprint filled in. Save the camera to apply it.</div>';
+                }};
+            }} catch (e) {{
+                box.innerHTML = '<span style="color:#f56565;">' + escapeHtmlText(e.message) + '</span>';
+            }}
+        }}
+
+        function streamHealthStyle(state) {{
+            const map = {{
+                streaming: ['#38a169', 'fa-circle-check'],
+                starting: ['#718096', 'fa-hourglass-half'],
+                connecting: ['#d69e2e', 'fa-plug'],
+                reconnecting: ['#d69e2e', 'fa-rotate'],
+                auth_failed: ['#e53e3e', 'fa-user-lock'],
+                tls_failed: ['#e53e3e', 'fa-lock'],
+                unavailable: ['#e53e3e', 'fa-video-slash'],
+                error: ['#e53e3e', 'fa-triangle-exclamation'],
+                stopped: ['#718096', 'fa-stop']
+            }};
+            return map[state] || map.error;
+        }}
+
+        function getStreamHealthBadge(cam) {{
+            if (cam.status !== 'running') return '';
+            const h = cam.streamHealth || {{}};
+            const st = streamHealthStyle(h.state);
+            let tip = (h.label || 'Unknown') + (h.message ? ': ' + h.message : '');
+            if (h.sub && h.sub.state && h.sub.state !== 'disabled') tip += ' | Sub stream: ' + (h.sub.label || h.sub.state);
+            const proto = (cam.sourceProtocol || 'rtsp').toUpperCase() + (cam.tlsInsecure ? ' (NO VERIFY)' : '');
+            return '<div class="info-badge stream-health-badge" data-health="' + escapeHtmlText(h.state) + '" style="display:flex; align-items:center; gap:4px; color:#fff; background:' + st[0] + ';" title="' + escapeHtmlText(tip) + '">' +
+                   '<i class="fas ' + st[1] + '"></i> ' + escapeHtmlText(h.label || 'Unknown') + '</div>' +
+                   '<div class="info-badge' + (cam.tlsInsecure ? ' info-badge-red' : '') + '" title="Source protocol">' + proto + '</div>';
+        }}
+
         async function fetchStreamInfo(streamType) {{
             const cameraId = document.getElementById('camera-id').value;
             
@@ -10902,7 +11082,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     
                     if (mainStats) {{
                         const stats = mainStats;
-                        const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
+                        const statusClass = stats.stale ? 'warn' : ((stats.available !== undefined ? stats.available : (stats.online || stats.ready)) ? 'live' : (stats.readers ? 'error' : ''));
                         const viewers = stats.readers || 0;
                         const readerIps = stats.reader_ips || [];
                         const ipsTooltip = readerIps.length > 0 ? '\\nConnected IPs:\\n' + readerIps.join('\\n') : '';
@@ -10923,7 +11103,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     
                     if (subStats) {{
                         const stats = subStats;
-                        const statusClass = stats.stale ? 'warn' : (stats.online || stats.ready ? 'live' : 'error');
+                        const statusClass = stats.stale ? 'warn' : ((stats.available !== undefined ? stats.available : (stats.online || stats.ready)) ? 'live' : (stats.readers ? 'error' : ''));
                         const viewers = stats.readers || 0;
                         const readerIps = stats.reader_ips || [];
                         const ipsTooltip = readerIps.length > 0 ? '\\nConnected IPs:\\n' + readerIps.join('\\n') : '';

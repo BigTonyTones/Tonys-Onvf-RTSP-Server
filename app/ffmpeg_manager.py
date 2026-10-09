@@ -5,6 +5,35 @@ import zipfile
 import shutil
 import requests
 import re
+from .stream_source import redact_text
+
+_TLS_VERIFY_SUPPORT = {}
+
+
+def rtsp_tls_verify_supported(binary):
+    """True when this FFmpeg/FFprobe build exposes '-tls_verify' on its RTSP
+    demuxer. FFmpeg 7+ verifies RTSPS certificates by default and needs
+    '-tls_verify 0' for an explicitly-insecure camera; FFmpeg 6.x never
+    verifies over RTSPS and rejects the option ("Option tls_verify not found")."""
+    if not binary:
+        return False
+    if binary not in _TLS_VERIFY_SUPPORT:
+        try:
+            out = subprocess.run([binary, '-hide_banner', '-h', 'demuxer=rtsp'],
+                                 capture_output=True, text=True, timeout=10)
+            _TLS_VERIFY_SUPPORT[binary] = 'tls_verify' in (out.stdout + out.stderr)
+        except Exception:
+            _TLS_VERIFY_SUPPORT[binary] = False
+    return _TLS_VERIFY_SUPPORT[binary]
+
+
+def insecure_tls_input_args(binary=None):
+    """Input options that disable RTSPS certificate checks, for cameras the
+    operator explicitly set to insecure mode. Empty when the build has no such
+    check to disable."""
+    if binary is None:
+        binary = FFmpegManager().get_ffmpeg_path()
+    return ['-tls_verify', '0'] if rtsp_tls_verify_supported(binary) else []
 
 class FFmpegManager:
     """Manages FFmpeg/FFprobe installation"""
@@ -564,7 +593,7 @@ class FFmpegManager:
         
         return self.ffprobe_executable # Fallback
 
-    def capture_snapshot(self, stream_url, output_path, timeout=10):
+    def capture_snapshot(self, stream_url, output_path, timeout=10, input_args=None):
         """
         Capture a single frame from an RTSP stream using FFmpeg.
         
@@ -587,6 +616,7 @@ class FFmpegManager:
                 ffmpeg_exe, 
                 '-hide_banner', '-loglevel', 'error',
                 '-rtsp_transport', 'tcp',
+                *(input_args or []),
                 '-i', stream_url,
                 '-frames:v', '1',
                 '-q:v', '2',
@@ -601,23 +631,26 @@ class FFmpegManager:
                 return True, None
             else:
                 error = result.stderr if result.stderr else "Unknown FFmpeg error"
-                return False, error
+                return False, redact_text(error)
                 
         except subprocess.TimeoutExpired:
             return False, "Capture timed out (check if stream is accessible)"
         except Exception as e:
-            return False, str(e)
+            return False, redact_text(str(e))
 
-    def probe_stream(self, stream_url, timeout=20):
+    def probe_stream(self, stream_url, timeout=20, input_args=None, errors=None):
         """
         Probe an RTSP stream with FFprobe and return its actual video attributes.
+
+        input_args: extra input options placed before the URL (e.g. TLS options).
+        errors: optional list; on failure a redacted error string is appended.
 
         Returns:
             dict with 'width', 'height', 'framerate', 'codec' on success,
             or None if the stream could not be probed.
         """
         ffprobe_exe = self.get_ffprobe_path()
-        if not ffprobe_exe:
+        if not ffprobe_exe or not stream_url:
             return None
 
         try:
@@ -625,6 +658,7 @@ class FFmpegManager:
                 ffprobe_exe,
                 '-v', 'error',
                 '-rtsp_transport', 'tcp',
+                *(input_args or []),
                 '-select_streams', 'v:0',
                 '-show_entries', 'stream=width,height,r_frame_rate,codec_name',
                 '-of', 'json',
@@ -632,12 +666,16 @@ class FFmpegManager:
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             if result.returncode != 0:
+                if errors is not None:
+                    errors.append(redact_text((result.stderr or '').strip() or f"ffprobe exited {result.returncode}"))
                 return None
 
             import json
             data = json.loads(result.stdout)
             streams = data.get('streams') or []
             if not streams:
+                if errors is not None:
+                    errors.append("no video stream found")
                 return None
             info = streams[0]
 
@@ -657,6 +695,12 @@ class FFmpegManager:
                 'framerate': framerate,
                 'codec': (info.get('codec_name') or '').lower(),
             }
-        except Exception:
+        except subprocess.TimeoutExpired:
+            if errors is not None:
+                errors.append("timed out waiting for the stream")
+            return None
+        except Exception as e:
+            if errors is not None:
+                errors.append(redact_text(str(e)))
             return None
 

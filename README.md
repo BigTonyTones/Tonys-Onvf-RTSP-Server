@@ -56,6 +56,10 @@ After installation, access the web interface at **http://localhost:5552**
 
 ---
 
+## RTSPS / Wyze cameras
+
+Cameras that only offer RTSPS (for example Wyze, `rtsps://<ip>:322/stream0`) are supported natively, with certificate verification or pinning instead of disabling TLS. See [docs/RTSPS.md](docs/RTSPS.md) for setup, TLS modes, status states, and the Unraid upgrade, rollback, and test checklist.
+
 ## Docker Installation (Alternative Setup)
 
 Run the server inside a Docker container. No manual dependency setup or `touch` commands are required:

@@ -10,8 +10,12 @@ import tarfile
 import shlex
 import secrets
 import threading
+import re
 from pathlib import Path
+from urllib.parse import quote
 from .config import MEDIAMTX_PORT, MEDIAMTX_API_PORT, WEB_UI_PORT, DATA_DIR
+from . import stream_source
+from .ffmpeg_manager import insecure_tls_input_args
 
 class MediaMTXManager:
     """Manages MediaMTX RTSP server"""
@@ -27,6 +31,10 @@ class MediaMTXManager:
         # Used to auto-transcode H.265/HEVC substreams to H.264 for browser playback.
         self._codec_cache = {}
         self._codec_cache_lock = threading.Lock()
+        # Serialises start/stop/restart so only one MediaMTX instance exists.
+        self._lifecycle_lock = threading.RLock()
+        self.path_events = {}
+        self.last_start_error = None
         
     def _get_executable_name(self):
         """Get the correct executable name for the platform"""
@@ -238,7 +246,8 @@ class MediaMTXManager:
         if web_port is None:
             web_port = WEB_UI_PORT
         
-        print(f"DEBUG: create_config called with user='{rtsp_username}', pass={'*' * len(rtsp_password) if rtsp_password else 'None'}")
+        if debug_mode:
+            print(f"DEBUG: create_config called (RTSP auth {'enabled' if rtsp_username and rtsp_password else 'disabled'})")
             
         system = platform.system().lower()
 
@@ -347,228 +356,22 @@ class MediaMTXManager:
 
         # Only add paths for RUNNING cameras
         running_count = 0
+        stream_count = 0
+        loopback = lambda path: f"rtsp://127.0.0.1:{rtsp_port}/{path}"
         for camera in cameras:
-            if camera.status == "running":
-                running_count += 1
-                
-                enable_audio = getattr(camera, 'enable_audio', False)
-
-                # ===== MAIN STREAM - High Quality =====
-                
-                # Check for transcoding preference
-                transcode_main = getattr(camera, 'transcode_main', False)
-                transcode_main_audio = getattr(camera, 'transcode_main_audio', False)
-
-                main_source = camera.main_stream_url
-                if transcode_main or (enable_audio and transcode_main_audio):
-                    print(f"    Transcoding enabled for {camera.name} main-stream")
-                    tgt_w = getattr(camera, 'main_width', 1920)
-                    tgt_h = getattr(camera, 'main_height', 1080)
-                    tgt_fps = getattr(camera, 'main_framerate', 30)
-                    
-                    # Inject credentials if global auth is on
-                    if enable_global_auth:
-                        dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{camera.path_name}_main"
-                    else:
-                        dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}_main"
-                    
-                    # Command for main stream (Baseline profile, strict GOP, NAL-HRD)
-                    if system == "windows":
-                        safe_source = f'"{main_source}"'
-                        safe_dest = f'"{dest_url}"'
-                    else:
-                        safe_source = shlex.quote(main_source)
-                        safe_dest = shlex.quote(dest_url)
-                    
-                    if enable_audio:
-                        if transcode_main_audio:
-                            codec_map = {
-                                'aac': 'aac',
-                                'g711ulaw': 'pcm_mulaw',
-                                'g711alaw': 'pcm_alaw',
-                                'mp2l2': 'mp2',
-                                'g726': 'g726',
-                                'pcm': 'pcm_s16le',
-                                'mp3': 'libmp3lame',
-                                'g722.1': 'g722'
-                            }
-                            enc = getattr(camera, 'audio_encoding_main', 'aac').lower()
-                            ff_codec = codec_map.get(enc, 'aac')
-                            sr = str(getattr(camera, 'audio_sample_rate_main', '44100')).lower().replace('khz', '000')
-                            br = str(getattr(camera, 'audio_bitrate_main', '64k'))
-                            if br.isdigit(): br = f"{br}k"
-                            elif 'kbps' in br.lower(): br = br.lower().replace('kbps', 'k')
-                            audio_args = f'-c:a {ff_codec} -ar {sr} -ac 1 -b:a {br} -af "aresample=async=1"'
-                        else:
-                            audio_args = f'-c:a copy'
-                    else:
-                        audio_args = '-an'
-                    
-                    if transcode_main:
-                        video_args = (
-                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                            f'{ff_process} '
-                            f'-profile:v high -level 4.2 '
-                            f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
-                            f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
-                            f'-r {tgt_fps} '
-                        )
-                    else:
-                        video_args = '-c:v copy'
-                    
-                    cmd = (
-                        f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                        f'{ff_input} -use_wallclock_as_timestamps 1 '
-                        f'-i {safe_source} '
-                        f'{video_args} '
-                        f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
-                    )
-                    
-                    main_path_cfg = {
-                        'source': 'publisher',
-                        'runOnInit': cmd,
-                        'runOnInitRestart': True,  # Auto-restart enabled to recover from connection failures
-                        'rtspTransport': 'tcp',
-                        'overridePublisher': True,
-                    }
-                else:
-                    main_path_cfg = {
-                        'source': main_source,
-                        'rtspTransport': 'tcp',
-                        'sourceOnDemand': True,
-                        'sourceOnDemandStartTimeout': '10s',
-                        'sourceOnDemandCloseAfter': '10s',
-                        'record': False,
-                        'overridePublisher': True,
-                    }
-                
-
-                
-                config['paths'][f'{camera.path_name}_main'] = main_path_cfg
-                
-                # ===== SUB STREAM - Lower Quality, Optimized for Viewing =====
-                
-                # Check if sub-stream is disabled
-                if getattr(camera, 'disable_substream', False):
-                    print(f"    Sub-stream disabled for {camera.name}")
-                    continue
-                
-                # Check for transcoding preference
-                transcode_sub = getattr(camera, 'transcode_sub', False)
-                transcode_sub_audio = getattr(camera, 'transcode_sub_audio', False)
-                use_main_as_sub = getattr(camera, 'use_main_as_substream', False)
-                
-                # Use main stream URL as source if requested
-                if use_main_as_sub:
-                    sub_source = camera.main_stream_url
-                else:
-                    sub_source = camera.sub_stream_url
-
-                # Auto-transcode H.265/HEVC substreams to H.264 so the web dashboard
-                # (WebRTC and HLS) can play them — browsers can't decode HEVC. The main
-                # stream is left untouched so the NVR keeps the original H.265 feed.
-                auto_h264_sub = False
-                if not transcode_sub:
-                    src_codec = self._get_source_codec(sub_source)
-                    if src_codec in ('hevc', 'h265'):
-                        auto_h264_sub = True
-                        print(f"    Auto-transcoding {camera.name} sub-stream H.265 -> H.264 for browser playback")
-                transcode_sub_video = transcode_sub or auto_h264_sub
-
-                if transcode_sub_video or (enable_audio and transcode_sub_audio):
-                    print(f"    Transcoding enabled for {camera.name} sub-stream")
-                    
-                    # Target resolution and frame rate
-                    # Target resolution and frame rate
-                    tgt_w = getattr(camera, 'sub_width', 640)
-                    tgt_h = getattr(camera, 'sub_height', 480)
-                    tgt_fps = getattr(camera, 'sub_framerate', 15)
-                    
-                    # Destination URL (Local MediaMTX)
-                    if enable_global_auth:
-                        dest_url = f"rtsp://{sys_user}:{sys_pass}@127.0.0.1:{rtsp_port}/{camera.path_name}_sub"
-                    else:
-                        dest_url = f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}_sub"
-                    
-                    # Build FFmpeg command (Baseline profile, strict GOP, NAL-HRD)
-                    if system == "windows":
-                        safe_source = f'"{sub_source}"'
-                        safe_dest = f'"{dest_url}"'
-                    else:
-                        safe_source = shlex.quote(sub_source)
-                        safe_dest = shlex.quote(dest_url)
-                    
-                    if enable_audio:
-                        if transcode_sub_audio:
-                            codec_map = {
-                                'aac': 'aac',
-                                'g711ulaw': 'pcm_mulaw',
-                                'g711alaw': 'pcm_alaw',
-                                'mp2l2': 'mp2',
-                                'g726': 'g726',
-                                'pcm': 'pcm_s16le',
-                                'mp3': 'libmp3lame',
-                                'g722.1': 'g722'
-                            }
-                            enc = getattr(camera, 'audio_encoding_sub', 'aac').lower()
-                            ff_codec = codec_map.get(enc, 'aac')
-                            sr = str(getattr(camera, 'audio_sample_rate_sub', '44100')).lower().replace('khz', '000')
-                            br = str(getattr(camera, 'audio_bitrate_sub', '64k'))
-                            if br.isdigit(): br = f"{br}k"
-                            elif 'kbps' in br.lower(): br = br.lower().replace('kbps', 'k')
-                            audio_args = f'-c:a {ff_codec} -ar {sr} -ac 1 -b:a {br} -af "aresample=async=1"'
-                        else:
-                            audio_args = f'-c:a copy'
-                    else:
-                        audio_args = '-an'
-                    
-                    if transcode_sub_video:
-                        video_args = (
-                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                            f'{ff_process} '
-                            f'-profile:v baseline -level 4.1 '
-                            f'-b:v 800k -maxrate 800k -bufsize 1600k '
-                            f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
-                            f'-r {tgt_fps} '
-                        )
-                    else:
-                        video_args = '-c:v copy'
-                    
-                    cmd = (
-                        f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                        f'{ff_input} -use_wallclock_as_timestamps 1 '
-                        f'-i {safe_source} '
-                        f'{video_args} '
-                        f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
-                    )
-                    
-                    sub_path_cfg = {
-                        'source': 'publisher',
-                        'runOnInit': cmd,
-                        'runOnInitRestart': True,  # Auto-restart enabled to recover from connection failures
-                        'rtspTransport': 'tcp',
-                        'sourceOnDemand': False,
-                        'overridePublisher': True,
-                    }
-                else:
-                    # Standard Proxy Mode
-                    sub_path_cfg = {
-                        'source': sub_source,
-                        'rtspTransport': 'tcp',
-                        'sourceOnDemand': True,
-                        'sourceOnDemandStartTimeout': '10s',
-                        'sourceOnDemandCloseAfter': '10s',
-                        'record': False,
-                        'disablePublisherOverride': False,
-                    }
-                
-                config['paths'][f'{camera.path_name}_sub'] = sub_path_cfg
-                
-                print(f"  Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
-        
+            if camera.status != "running":
+                continue
+            running_count += 1
+            added = self._add_camera_paths(
+                config, camera, rtsp_port=rtsp_port, ffmpeg_exe=ffmpeg_exe, system=system,
+                ff_global=ff_global, ff_input=ff_input, ff_process=ff_process,
+                enable_global_auth=enable_global_auth, sys_user=sys_user, sys_pass=sys_pass,
+                loopback=loopback)
+            stream_count += added
+            
         print("-" * 40)
         print(f"  Total running cameras: {running_count}")
-        print(f"  Total streams: {running_count * 2} (main + sub)")
+        print(f"  Total streams: {stream_count}")
         print("-" * 40)
 
         # ===== GRIDFUSION COMPOSITE STREAM =====
@@ -791,6 +594,246 @@ class MediaMTXManager:
         with open(self.config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
+    # ------------------------------------------------------------------
+    # Per-camera path generation
+    # ------------------------------------------------------------------
+
+    _AUDIO_CODEC_MAP = {
+        'aac': 'aac',
+        'g711ulaw': 'pcm_mulaw',
+        'g711alaw': 'pcm_alaw',
+        'mp2l2': 'mp2',
+        'g726': 'g726',
+        'pcm': 'pcm_s16le',
+        'mp3': 'libmp3lame',
+        'g722.1': 'g722'
+    }
+
+    def _audio_args(self, camera, which):
+        """FFmpeg audio arguments for a transcode/relay command."""
+        if not getattr(camera, 'enable_audio', False):
+            return '-an'
+        if not getattr(camera, f'transcode_{which}_audio', False):
+            return '-c:a copy'
+        enc = str(getattr(camera, f'audio_encoding_{which}', 'aac')).lower()
+        ff_codec = self._AUDIO_CODEC_MAP.get(enc, 'aac')
+        sr = str(getattr(camera, f'audio_sample_rate_{which}', '44100')).lower().replace('khz', '000')
+        br = str(getattr(camera, f'audio_bitrate_{which}', '64k'))
+        if br.isdigit(): br = f"{br}k"
+        elif 'kbps' in br.lower(): br = br.lower().replace('kbps', 'k')
+        return f'-c:a {ff_codec} -ar {sr} -ac 1 -b:a {br} -af "aresample=async=1"'
+
+    @staticmethod
+    def _quote(value, system):
+        return f'"{value}"' if system == "windows" else shlex.quote(value)
+
+    def _pull_path_cfg(self, camera, source_url, on_demand=True):
+        """MediaMTX path that pulls a source URL directly (codec passthrough).
+
+        For RTSPS the TLS policy is enforced here by MediaMTX: full CA +
+        hostname verification by default, or the pinned SHA-256 fingerprint."""
+        cfg = {
+            'source': source_url,
+            'rtspTransport': 'tcp',
+            'sourceOnDemand': on_demand,
+            'sourceOnDemandStartTimeout': '10s',
+            'sourceOnDemandCloseAfter': '10s',
+            'record': False,
+        }
+        if source_url.lower().startswith('rtsps://'):
+            cfg.update(camera.mediamtx_source_fields())
+        return cfg
+
+    def _insecure_relay_cfg(self, camera, source_url, dest_url, ffmpeg_exe, system, ff_global, which):
+        """Explicitly-insecure RTSPS: MediaMTX can't skip certificate checks
+        for a pulled source, so FFmpeg relays the camera (still over TLS, codec
+        passthrough) into MediaMTX on demand."""
+        audio = '-c:a copy' if getattr(camera, 'enable_audio', False) else '-an'
+        tls = ' '.join(insecure_tls_input_args(ffmpeg_exe))
+        cmd = (
+            f'"{ffmpeg_exe}" {ff_global} -nostdin '
+            f'-rtsp_transport tcp {tls + " " if tls else ""}-timeout 10000000 -fflags +genpts '
+            f'-i {self._quote(source_url, system)} '
+            f'-c:v copy {audio} -f rtsp -rtsp_transport tcp {self._quote(dest_url, system)}'
+        )
+        return {
+            'source': 'publisher',
+            'runOnDemand': cmd,
+            'runOnDemandRestart': True,
+            'runOnDemandStartTimeout': '15s',
+            'runOnDemandCloseAfter': '10s',
+            'overridePublisher': True,
+        }
+
+    def _transcode_input(self, camera, which, source_url, config, loopback, ffmpeg_exe=None):
+        """Return (input_url, extra_input_args) for a transcode command.
+
+        RTSPS cameras in a verified TLS mode are never read by FFmpeg directly
+        (FFmpeg's certificate checks vary by build); a hidden '<cam>_<which>_src'
+        path lets MediaMTX enforce the policy and FFmpeg reads it on loopback."""
+        if camera.ffmpeg_requires_relay():
+            src_path = f'{camera.path_name}_{which}_src'
+            config['paths'][src_path] = self._pull_path_cfg(camera, source_url)
+            return loopback(src_path), ''
+        if source_url.lower().startswith('rtsps://'):
+            tls = ' '.join(insecure_tls_input_args(ffmpeg_exe))
+            return source_url, f'{tls} ' if tls else ''
+        return source_url, ''
+
+    def _sub_codec(self, camera, sub_source):
+        """Source codec of the sub stream, for automatic HEVC->H.264."""
+        probe = getattr(camera, 'stream_probe', {}) or {}
+        cached = probe.get('sub') if isinstance(probe.get('sub'), dict) else None
+        if cached and cached.get('codec'):
+            return cached['codec']
+        if camera.ffmpeg_requires_relay():
+            # Can't probe safely before MediaMTX is serving the camera; the
+            # health monitor records the codec and the next restart uses it.
+            return None
+        return self._get_source_codec(sub_source)
+
+    def _add_camera_paths(self, config, camera, rtsp_port, ffmpeg_exe, system, ff_global,
+                          ff_input, ff_process, enable_global_auth, sys_user, sys_pass, loopback):
+        """Add the MediaMTX paths for one running camera. Returns the number of
+        served (non-hidden) streams."""
+        enable_audio = getattr(camera, 'enable_audio', False)
+        insecure_rtsps = camera.is_rtsps and camera.tls_mode == stream_source.TLS_INSECURE
+        if insecure_rtsps:
+            print(f"    WARNING: {camera.name}: RTSPS certificate verification is DISABLED "
+                  f"(insecure diagnostic mode)")
+
+        def dest(suffix):
+            if enable_global_auth:
+                return (f"rtsp://{quote(sys_user, safe='')}:{quote(sys_pass, safe='')}"
+                        f"@127.0.0.1:{rtsp_port}/{camera.path_name}{suffix}")
+            return f"rtsp://127.0.0.1:{rtsp_port}/{camera.path_name}{suffix}"
+
+        # ===== MAIN STREAM - High Quality =====
+        transcode_main = getattr(camera, 'transcode_main', False)
+        transcode_main_audio = getattr(camera, 'transcode_main_audio', False)
+        main_source = camera.main_stream_url
+
+        if transcode_main or (enable_audio and transcode_main_audio):
+            print(f"    Transcoding enabled for {camera.name} main-stream")
+            tgt_w = getattr(camera, 'main_width', 1920)
+            tgt_h = getattr(camera, 'main_height', 1080)
+            tgt_fps = getattr(camera, 'main_framerate', 30)
+            in_url, in_extra = self._transcode_input(camera, 'main', main_source, config, loopback, ffmpeg_exe)
+
+            if transcode_main:
+                video_args = (
+                    f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
+                    f'{ff_process} '
+                    f'-profile:v high -level 4.2 '
+                    f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
+                    f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
+                    f'-r {tgt_fps} '
+                )
+            else:
+                video_args = '-c:v copy'
+
+            cmd = (
+                f'"{ffmpeg_exe}" {ff_global} -nostdin '
+                f'{ff_input} {in_extra}-use_wallclock_as_timestamps 1 '
+                f'-i {self._quote(in_url, system)} '
+                f'{video_args} '
+                f'{self._audio_args(camera, "main")} -f rtsp -rtsp_transport tcp {self._quote(dest("_main"), system)}'
+            )
+            main_path_cfg = {
+                'source': 'publisher',
+                'runOnInit': cmd,
+                'runOnInitRestart': True,  # Auto-restart enabled to recover from connection failures
+                'rtspTransport': 'tcp',
+                'overridePublisher': True,
+            }
+        elif insecure_rtsps:
+            main_path_cfg = self._insecure_relay_cfg(camera, main_source, dest('_main'),
+                                                     ffmpeg_exe, system, ff_global, 'main')
+        else:
+            main_path_cfg = self._pull_path_cfg(camera, main_source)
+            main_path_cfg['overridePublisher'] = True
+
+        config['paths'][f'{camera.path_name}_main'] = main_path_cfg
+
+        # ===== SUB STREAM - Lower Quality, Optimized for Viewing =====
+        if getattr(camera, 'disable_substream', False):
+            print(f"    Sub-stream disabled for {camera.name}")
+            return 1
+
+        transcode_sub = getattr(camera, 'transcode_sub', False)
+        transcode_sub_audio = getattr(camera, 'transcode_sub_audio', False)
+        use_main_as_sub = camera.effective_use_main_as_substream
+        if getattr(camera, 'substream_fallback_active', False):
+            print(f"    {camera.name}: sub stream unavailable, serving main stream on the sub path")
+
+        # RTSPS cameras (and runtime fallback) take "main as sub" from our own
+        # main path on loopback, so the camera sees one connection and the TLS
+        # policy is applied once.
+        sub_from_loopback = use_main_as_sub and (camera.is_rtsps or getattr(camera, 'substream_fallback_active', False))
+        sub_source = camera.main_stream_url if use_main_as_sub else camera.sub_stream_url
+
+        # Auto-transcode H.265/HEVC substreams to H.264 so the web dashboard
+        # (WebRTC and HLS) can play them — browsers can't decode HEVC. The main
+        # stream is left untouched so the NVR keeps the original H.265 feed.
+        auto_h264_sub = False
+        if not transcode_sub:
+            src_codec = self._sub_codec(camera, sub_source)
+            if src_codec in ('hevc', 'h265'):
+                auto_h264_sub = True
+                print(f"    Auto-transcoding {camera.name} sub-stream H.265 -> H.264 for browser playback")
+        transcode_sub_video = transcode_sub or auto_h264_sub
+
+        if transcode_sub_video or (enable_audio and transcode_sub_audio):
+            print(f"    Transcoding enabled for {camera.name} sub-stream")
+            tgt_w = getattr(camera, 'sub_width', 640)
+            tgt_h = getattr(camera, 'sub_height', 480)
+            tgt_fps = getattr(camera, 'sub_framerate', 15)
+            if sub_from_loopback:
+                in_url, in_extra = loopback(f'{camera.path_name}_main'), ''
+            else:
+                in_url, in_extra = self._transcode_input(camera, 'sub', sub_source, config, loopback, ffmpeg_exe)
+
+            if transcode_sub_video:
+                video_args = (
+                    f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
+                    f'{ff_process} '
+                    f'-profile:v baseline -level 4.1 '
+                    f'-b:v 800k -maxrate 800k -bufsize 1600k '
+                    f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
+                    f'-r {tgt_fps} '
+                )
+            else:
+                video_args = '-c:v copy'
+
+            cmd = (
+                f'"{ffmpeg_exe}" {ff_global} -nostdin '
+                f'{ff_input} {in_extra}-use_wallclock_as_timestamps 1 '
+                f'-i {self._quote(in_url, system)} '
+                f'{video_args} '
+                f'{self._audio_args(camera, "sub")} -f rtsp -rtsp_transport tcp {self._quote(dest("_sub"), system)}'
+            )
+            sub_path_cfg = {
+                'source': 'publisher',
+                'runOnInit': cmd,
+                'runOnInitRestart': True,  # Auto-restart enabled to recover from connection failures
+                'rtspTransport': 'tcp',
+                'sourceOnDemand': False,
+                'overridePublisher': True,
+            }
+        elif sub_from_loopback:
+            sub_path_cfg = self._pull_path_cfg(camera, loopback(f'{camera.path_name}_main'))
+        elif insecure_rtsps:
+            sub_path_cfg = self._insecure_relay_cfg(camera, sub_source, dest('_sub'),
+                                                    ffmpeg_exe, system, ff_global, 'sub')
+        else:
+            # Standard Proxy Mode
+            sub_path_cfg = self._pull_path_cfg(camera, sub_source)
+            sub_path_cfg['disablePublisherOverride'] = False
+
+        config['paths'][f'{camera.path_name}_sub'] = sub_path_cfg
+        print(f"  Added {camera.name}: {camera.path_name}_main and {camera.path_name}_sub")
+        return 2
+
     def _detect_hardware_acceleration(self, ffmpeg_exe):
         """
         Detects available hardware acceleration methods supported by the FFmpeg binary.
@@ -850,24 +893,240 @@ class MediaMTXManager:
             traceback.print_exc()
             return None
 
+    # ------------------------------------------------------------------
+    # Process lifecycle
+    #
+    # Only one MediaMTX instance may own the RTSP/API ports. Every start,
+    # stop and restart runs under one lock, so overlapping requests from the
+    # web UI, the watchdog and camera start/stop can no longer spawn a second
+    # process (the old cause of "bind: address already in use"). Instances
+    # left behind by a previous run are identified by our PID file or by an
+    # exact command line match (our binary + our config file) and nothing
+    # else is ever killed.
+    # ------------------------------------------------------------------
+
+    _PATH_LOG_RE = re.compile(r'\b(ERR|WAR|INF)\b \[path ([^\]]+)\] (?:\[[^\]]+\] )?(.*)$')
+
+    @property
+    def pid_file(self):
+        return os.path.join(os.path.dirname(os.path.abspath(self.config_file)), "mediamtx.pid")
+
+    def _owned_cmdline(self):
+        return [os.path.abspath(self.executable), os.path.abspath(self.config_file)]
+
+    def _is_owned_process(self, proc):
+        """True if a psutil.Process is a MediaMTX started by this app with our config."""
+        try:
+            cmd = proc.cmdline()
+        except Exception:
+            return False
+        exe, cfg = self._owned_cmdline()
+        # "<our mediamtx binary> <our config file>" as consecutive arguments
+        # (cmd[0] normally; later if launched through an interpreter/wrapper).
+        for i in range(len(cmd) - 1):
+            try:
+                if os.path.abspath(cmd[i]) == exe and os.path.abspath(cmd[i + 1]) == cfg:
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def find_owned_processes(self):
+        """Running MediaMTX processes that belong to this app (excluding self.process)."""
+        try:
+            import psutil
+        except ImportError:
+            return []
+        current = self.process.pid if self.process and self.process.poll() is None else None
+        owned = {}
+        # 1. PID recorded by a previous run
+        try:
+            with open(self.pid_file) as f:
+                pid = int(f.read().strip() or 0)
+            if pid and pid != current and psutil.pid_exists(pid):
+                p = psutil.Process(pid)
+                if self._is_owned_process(p):
+                    owned[pid] = p
+        except (OSError, ValueError):
+            pass
+        except Exception:
+            pass
+        # 2. Exact command-line match (covers runs before the PID file existed)
+        try:
+            for p in psutil.process_iter():
+                if p.pid in owned or p.pid == current or p.pid == os.getpid():
+                    continue
+                if self._is_owned_process(p):
+                    owned[p.pid] = p
+        except Exception:
+            pass
+        return list(owned.values())
+
+    def cleanup_stale_instances(self):
+        """Terminate stale MediaMTX processes we own. Returns how many were stopped."""
+        stale = self.find_owned_processes()
+        for p in stale:
+            try:
+                print(f"  Stopping stale MediaMTX instance from a previous run (PID {p.pid})")
+                p.terminate()
+                p.wait(timeout=5)
+            except Exception:
+                try:
+                    p.kill()
+                except Exception:
+                    pass
+        if stale:
+            self._remove_pid_file()
+        return len(stale)
+
+    def port_holder(self, port):
+        """(pid, name) of the process listening on TCP port, (None, None) if free,
+        or ('unknown', None) if something listens but can't be identified."""
+        import socket
+        try:
+            import psutil
+            for conn in psutil.net_connections(kind='tcp'):
+                if conn.laddr and conn.laddr.port == int(port) and conn.status == 'LISTEN':
+                    if conn.pid:
+                        try:
+                            return conn.pid, psutil.Process(conn.pid).name()
+                        except Exception:
+                            return conn.pid, None
+                    return 'unknown', None
+            return None, None
+        except Exception:
+            pass
+        # psutil unavailable or not permitted: fall back to a bind test
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind(('0.0.0.0', int(port)))
+            return None, None
+        except OSError:
+            return 'unknown', None
+        finally:
+            s.close()
+
+    def _wait_port_free(self, port, timeout=6.0):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            holder, _ = self.port_holder(port)
+            if holder is None:
+                return True
+            time.sleep(0.25)
+        return False
+
+    def _write_pid_file(self):
+        try:
+            with open(self.pid_file, 'w') as f:
+                f.write(str(self.process.pid))
+        except OSError:
+            pass
+
+    def _remove_pid_file(self):
+        try:
+            os.remove(self.pid_file)
+        except OSError:
+            pass
+
+    def _process_env(self):
+        """Environment for MediaMTX. Custom CA certificates in data/tls/ca are
+        added to Go's trust store (used for RTSPS sources in 'verify' mode)."""
+        env = os.environ.copy()
+        if stream_source.list_custom_cas(DATA_DIR):
+            dirs = [d for d in ('/etc/ssl/certs', '/etc/pki/tls/certs') if os.path.isdir(d)]
+            dirs.append(stream_source.custom_ca_dir(DATA_DIR))
+            env['SSL_CERT_DIR'] = ':'.join(dirs)
+        return env
+
+    def is_running(self):
+        return bool(self.process and self.process.poll() is None)
+
+    # Per-path source events parsed from MediaMTX output, used by the health monitor.
+    def get_path_event(self, path):
+        with self._log_lock:
+            return dict(self.path_events.get(path, {}))
+
+    def clear_path_events(self):
+        with self._log_lock:
+            self.path_events = {}
+
+    def _handle_output_line(self, raw_line):
+        line = stream_source.redact_text(raw_line.rstrip('\n'))
+        if not line:
+            return
+        with self._log_lock:
+            self.log_buffer.append(line.strip())
+            if len(self.log_buffer) > 100:
+                self.log_buffer.pop(0)
+
+        m = self._PATH_LOG_RE.search(line)
+        suppress = False
+        if m:
+            level, path, msg = m.group(1), m.group(2), m.group(3)
+            now = time.time()
+            with self._log_lock:
+                ev = self.path_events.setdefault(path, {})
+                if level == 'ERR':
+                    # Errors repeat every few seconds while a source is down;
+                    # print each distinct error at most once a minute.
+                    suppress = (ev.get('error') == msg and now - ev.get('printedAt', 0) < 60)
+                    ev['error'] = msg
+                    ev['errorAt'] = now
+                    if not suppress:
+                        ev['printedAt'] = now
+                elif 'is available and online' in msg or ' is ready' in msg:
+                    ev['onlineAt'] = now
+                    ev.pop('error', None)
+
+        # ffmpeg status lines contain "frame=" and "fps="
+        is_ffmpeg_status = "frame=" in line and "fps=" in line
+        if suppress and not self.debug_mode:
+            return
+        if self.debug_mode or not is_ffmpeg_status:
+            sys.stdout.write(line + "\n")
+            sys.stdout.flush()
+
     def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
-        """Start MediaMTX server"""
+        """Start MediaMTX server (never starts a second instance)."""
+        with self._lifecycle_lock:
+            return self._start_locked(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username,
+                                      rtsp_password=rtsp_password, grid_fusion=grid_fusion,
+                                      debug_mode=debug_mode, advanced_settings=advanced_settings,
+                                      web_port=web_port)
+
+    def _start_locked(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         self.debug_mode = debug_mode
+        rtsp_port = rtsp_port or MEDIAMTX_PORT
+
+        if self.is_running():
+            print(f"MediaMTX is already running (PID {self.process.pid}); restarting it instead of starting a second instance.")
+            self._stop_locked()
+
         if not self.download_mediamtx():
             return False
 
+        # Stop leftovers we own (e.g. from a crashed previous run). Never touch others.
+        self.cleanup_stale_instances()
+
+        for port, label in ((rtsp_port, 'RTSP'), (MEDIAMTX_API_PORT, 'MediaMTX API')):
+            if not self._wait_port_free(port, timeout=6.0):
+                pid, name = self.port_holder(port)
+                who = f"PID {pid}" + (f" ({name})" if name else "") if pid not in (None, 'unknown') else "another process"
+                print(f"ERROR: {label} port {port} is already in use by {who}, which is not managed by this server.")
+                print(f"       Not starting MediaMTX. Stop that process or change the RTSP port in Settings.")
+                self.last_start_error = f"{label} port {port} is in use by {who}"
+                return False
+
         self.create_config(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings, web_port=web_port)
-        
+        self.clear_path_events()
+
         print("\nStarting MediaMTX RTSP Server...")
-        
+
         try:
-            # Use absolute path for executable
-            exe_path = os.path.abspath(self.executable)
-            config_path = os.path.abspath(self.config_file)
-            
+            exe_path, config_path = self._owned_cmdline()
             print(f"   Executable: {exe_path}")
             print(f"   Config: {config_path}")
-            
+
             import errno
             for attempt in range(5):
                 try:
@@ -876,7 +1135,8 @@ class MediaMTXManager:
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True,
-                        bufsize=1  # Line buffered
+                        bufsize=1,  # Line buffered
+                        env=self._process_env(),
                     )
                     break
                 except OSError as e:
@@ -885,39 +1145,33 @@ class MediaMTXManager:
                         time.sleep(0.2)
                         continue
                     raise
-            
-            # Start thread to capture output and send to our Logger
+            self._write_pid_file()
+
             def capture_output(process):
                 for line in process.stdout:
                     if line:
-                        # Update buffer
-                        with self._log_lock:
-                            self.log_buffer.append(line.strip())
-                            if len(self.log_buffer) > 100:
-                                self.log_buffer.pop(0)
-                        
-                        # Only write to console if debug mode is ON OR it's not a spammy ffmpeg status line
-                        # ffmpeg status lines contain "frame=" and "fps="
-                        is_ffmpeg_status = "frame=" in line and "fps=" in line
-                        
-                        if self.debug_mode or not is_ffmpeg_status:
-                            # Write to sys.stdout so our Logger captures it
-                            sys.stdout.write(line)
-                            sys.stdout.flush()
-            
+                        try:
+                            self._handle_output_line(line)
+                        except Exception:
+                            pass
+
             output_thread = threading.Thread(target=capture_output, args=(self.process,), daemon=True)
             output_thread.start()
-            
+
             time.sleep(3)
-            
+
             if self.process.poll() is None:
-                print(f"MediaMTX running on RTSP port {MEDIAMTX_PORT}")
+                self.last_start_error = None
+                print(f"MediaMTX running on RTSP port {rtsp_port} (PID {self.process.pid})")
                 return True
             else:
+                self.last_start_error = "MediaMTX exited during startup"
                 print("MediaMTX failed to start or was stopped. Check console output above.")
+                self._remove_pid_file()
                 return False
-                
+
         except Exception as e:
+            self.last_start_error = str(e)
             print(f"Error starting MediaMTX: {e}")
             import traceback
             traceback.print_exc()
@@ -925,18 +1179,82 @@ class MediaMTXManager:
 
     def stop(self):
         """Stop MediaMTX server"""
+        with self._lifecycle_lock:
+            self._stop_locked()
+
+    def _stop_locked(self):
         if self.process:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=5)
-            except:
-                self.process.kill()
+            proc = self.process
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except Exception:
+                    proc.kill()
+                    try:
+                        proc.wait(timeout=3)
+                    except Exception:
+                        pass
             self.process = None
+            self._remove_pid_file()
             print("MediaMTX stopped")
-    
+
     def restart(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         """Restart MediaMTX with new configuration"""
-        print("\nRestarting MediaMTX...")
-        self.stop()
-        time.sleep(3)
-        return self.start(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings, web_port=web_port)
+        with self._lifecycle_lock:
+            print("\nRestarting MediaMTX...")
+            self._stop_locked()
+            self._wait_port_free(rtsp_port or MEDIAMTX_PORT, timeout=6.0)
+            return self._start_locked(cameras, rtsp_port=rtsp_port, rtsp_username=rtsp_username, rtsp_password=rtsp_password, grid_fusion=grid_fusion, debug_mode=debug_mode, advanced_settings=advanced_settings, web_port=web_port)
+
+    # ------------------------------------------------------------------
+    # Policy-respecting source probe
+    # ------------------------------------------------------------------
+
+    def probe_source(self, camera, which, rtsp_port=None, timeout=20):
+        """Probe a camera's main/sub source and return (info, error).
+
+        RTSPS sources in a verified TLS mode are never probed by FFprobe
+        directly: a temporary MediaMTX path (added through the API, not the
+        config file) pulls the camera with the camera's TLS policy and FFprobe
+        reads it on loopback. Plain RTSP and explicit insecure RTSPS are probed
+        directly as before."""
+        from .ffmpeg_manager import FFmpegManager
+        ffm = FFmpegManager()
+        rtsp_port = rtsp_port or MEDIAMTX_PORT
+        errors = []
+
+        url, extra = camera.ffmpeg_direct_input(which)
+        if url:
+            info = ffm.probe_stream(url, timeout=timeout, input_args=extra, errors=errors)
+            return info, (errors[0] if errors else '')
+
+        source_url = camera.source_url(which)
+        if not source_url:
+            return None, "No source URL configured"
+        if not self.is_running():
+            return None, "The MediaMTX stream server is not running"
+
+        name = f"probe_{secrets.token_hex(4)}"
+        api = f"http://127.0.0.1:{MEDIAMTX_API_PORT}/v3/config/paths"
+        cfg = self._pull_path_cfg(camera, source_url, on_demand=True)
+        try:
+            r = requests.post(f"{api}/add/{name}", json=cfg, timeout=5)
+            if r.status_code >= 300:
+                return None, f"Could not create a temporary MediaMTX path (HTTP {r.status_code})"
+            info = ffm.probe_stream(f"rtsp://127.0.0.1:{rtsp_port}/{name}", timeout=timeout,
+                                    errors=errors)
+            if info:
+                return info, ''
+            time.sleep(0.5)
+            err = self.get_path_event(name).get('error') or (errors[0] if errors else '')
+            return None, err or "No video received from the source"
+        except Exception as e:
+            return None, stream_source.redact_text(str(e))
+        finally:
+            try:
+                requests.delete(f"{api}/delete/{name}", timeout=5)
+            except Exception:
+                pass
+            with self._log_lock:
+                self.path_events.pop(name, None)
