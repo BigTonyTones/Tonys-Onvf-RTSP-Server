@@ -275,7 +275,7 @@ def codecs(streams):
 def test_existing_rtsp_camera_still_works(lab, gateway):
     cam = cam_cfg(lab['cam'], protocol='rtsp', mode='verify', fp='')
     gateway.start([cam])
-    streams, err = gateway.probe('alex_room_main')
+    streams, err = gateway.probe('front_door_main')
     assert codecs(streams) == ['aac', 'h264'], err
     assert gateway.health_until(cam, {'streaming'})['state'] == 'streaming'
 
@@ -283,14 +283,14 @@ def test_existing_rtsp_camera_still_works(lab, gateway):
 def test_rtsps_pinned_relays_video_and_audio_without_transcoding(lab, gateway):
     cam = cam_cfg(lab['cam'])
     gateway.start([cam])
-    streams, err = gateway.probe('alex_room_main')
+    streams, err = gateway.probe('front_door_main')
     assert codecs(streams) == ['aac', 'h264'], err
     video = next(s for s in streams if s['codec_name'] == 'h264')
     audio = next(s for s in streams if s['codec_name'] == 'aac')
     assert (video['width'], video['height']) == (1280, 720)     # original resolution
     assert (audio['sample_rate'], audio['channels']) == ('16000', 1)
     # Passthrough: the path is a native RTSPS pull, no FFmpeg process involved
-    assert gateway.api('alex_room_main')['source']['type'] == 'rtspSource'
+    assert gateway.api('front_door_main')['source']['type'] == 'rtspSource'
     h = gateway.health_until(cam, {'streaming'})
     assert h['state'] == 'streaming'
     assert h['main']['info']['width'] == 1280
@@ -299,7 +299,7 @@ def test_rtsps_pinned_relays_video_and_audio_without_transcoding(lab, gateway):
 def test_rtsps_default_verify_rejects_self_signed_certificate(lab, gateway):
     cam = cam_cfg(lab['cam'], mode='verify', fp='')
     gateway.start([cam])
-    streams, _ = gateway.probe('alex_room_main')
+    streams, _ = gateway.probe('front_door_main')
     assert streams == []
     h = gateway.health_until(cam, {'tls_failed'})
     assert h['state'] == 'tls_failed', h
@@ -320,14 +320,14 @@ def test_rtsps_verify_with_custom_ca(lab, gateway):
     shutil.copy(lab['ca_crt'], ca_dir / 'homelab-ca.pem')
     cam = cam_cfg(lab['ca_cam'], mode='verify', fp='')
     gateway.start([cam])
-    streams, err = gateway.probe('alex_room_main')
+    streams, err = gateway.probe('front_door_main')
     assert 'h264' in codecs(streams), err
 
 
 def test_rtsps_insecure_mode_works_but_is_flagged(lab, gateway):
     cam = cam_cfg(lab['cam'], mode='insecure', fp='')
     gateway.start([cam])
-    streams, err = gateway.probe('alex_room_main')
+    streams, err = gateway.probe('front_door_main')
     assert codecs(streams) == ['aac', 'h264'], err
     h = gateway.health_until(cam, {'streaming'})
     assert 'verification is disabled' in h['message']
@@ -351,7 +351,7 @@ def test_missing_substream_falls_back_to_main(lab, gateway):
         time.sleep(1)
     assert cam.substream_fallback_active
     assert gateway.restarts == 1
-    streams, err = gateway.probe('alex_room_sub')
+    streams, err = gateway.probe('front_door_sub')
     assert 'h264' in codecs(streams), err
     assert gateway.health_until(cam, {'streaming'})['state'] == 'streaming'
 
@@ -360,7 +360,7 @@ def test_source_disconnect_and_automatic_recovery(lab, gateway):
     cam = cam_cfg(lab['cam'])
     gateway.start([cam])
     reader = subprocess.Popen([FFMPEG, '-v', 'quiet', '-rtsp_transport', 'tcp', '-i',
-                               f'rtsp://127.0.0.1:{gateway.rtsp_port}/alex_room_main', '-f', 'null', '-'])
+                               f'rtsp://127.0.0.1:{gateway.rtsp_port}/front_door_main', '-f', 'null', '-'])
     try:
         assert gateway.health_until(cam, {'streaming'})['state'] == 'streaming'
         lab['cam'].stop_publisher()                      # camera goes away
@@ -392,7 +392,7 @@ def test_optional_transcode_reads_camera_through_pinned_path(lab, gateway):
     deadline = time.time() + 40
     streams = []
     while time.time() < deadline:
-        streams, err = gateway.probe('alex_room_main')
+        streams, err = gateway.probe('front_door_main')
         if streams:
             break
         time.sleep(2)

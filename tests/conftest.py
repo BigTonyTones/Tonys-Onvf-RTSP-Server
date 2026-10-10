@@ -22,10 +22,10 @@ def make_camera(**overrides):
     from app.camera import VirtualONVIFCamera
     cfg = {
         'id': 1,
-        'name': 'Alex Room',
+        'name': 'Front Door',
         'mainStreamUrl': 'rtsp://admin:pw@10.0.0.50:554/stream1',
         'subStreamUrl': 'rtsp://admin:pw@10.0.0.50:554/stream2',
-        'pathName': 'alex_room',
+        'pathName': 'front_door',
         'username': 'admin',
         'password': 'pw',
     }

@@ -7,25 +7,25 @@ from app.ffmpeg_manager import FFmpegManager
 from app.mediamtx_manager import MediaMTXManager
 from app.utils import Logger
 
-SECRET_URL = 'rtsps://alex:Wyze%21Pass%40123@10.0.0.124:322/stream0'
+SECRET_URL = 'rtsps://user:Wyze%21Pass%40123@10.0.0.124:322/stream0'
 
 
 def test_app_logger_redacts_urls(capsys):
     log = Logger()
     log.write(f"Probing stream: {SECRET_URL}\n")
     text = log.get_logs()
-    assert 'Wyze' not in text and 'alex:' not in text
+    assert 'Wyze' not in text and 'user:' not in text
     assert 'rtsps://***@10.0.0.124:322/stream0' in text
     assert 'Wyze' not in capsys.readouterr().out
 
 
 def test_mediamtx_output_is_redacted_and_path_errors_recorded(capsys):
     m = MediaMTXManager()
-    m._handle_output_line(f"2026/10/09 22:14:48 ERR [path alex_room_main] [RTSP source] "
+    m._handle_output_line(f"2026/10/09 22:14:48 ERR [path front_door_main] [RTSP source] "
                           f"{SECRET_URL}: bad status code: 401 (Unauthorized)\n")
     out = capsys.readouterr().out
     assert 'Wyze' not in out and 'Wyze' not in ' '.join(m.log_buffer)
-    ev = m.get_path_event('alex_room_main')
+    ev = m.get_path_event('front_door_main')
     assert '401' in ev['error'] and 'Wyze' not in ev['error']
 
 

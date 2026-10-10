@@ -45,28 +45,28 @@ def all_commands(cfg):
 def test_existing_rtsp_camera_config_unchanged(mgr, camera_factory):
     cam = camera_factory()
     cfg = gen(mgr, [cam])
-    main = cfg['paths']['alex_room_main']
+    main = cfg['paths']['front_door_main']
     assert main['source'] == 'rtsp://admin:pw@10.0.0.50:554/stream1'
     assert main['sourceOnDemand'] is True
     assert main['rtspTransport'] == 'tcp'
     assert 'sourceFingerprint' not in main
-    assert cfg['paths']['alex_room_sub']['source'] == 'rtsp://admin:pw@10.0.0.50:554/stream2'
+    assert cfg['paths']['front_door_sub']['source'] == 'rtsp://admin:pw@10.0.0.50:554/stream2'
     assert cfg['rtspAddress'] == ':8554'
 
 
 def test_rtsps_pinned_is_pulled_natively_with_passthrough(mgr, camera_factory):
     cfg = gen(mgr, [rtsps(camera_factory)])
-    main = cfg['paths']['alex_room_main']
+    main = cfg['paths']['front_door_main']
     assert main['source'] == RTSPS_MAIN
     assert main['sourceFingerprint'] == FP
     assert 'runOnInit' not in main          # no FFmpeg, no transcoding
-    sub = cfg['paths']['alex_room_sub']
+    sub = cfg['paths']['front_door_sub']
     assert sub['source'] == RTSPS_SUB and sub['sourceFingerprint'] == FP
 
 
 def test_rtsps_verify_mode_has_no_fingerprint(mgr, camera_factory):
     cfg = gen(mgr, [rtsps(camera_factory, mode='verify', fp='')])
-    main = cfg['paths']['alex_room_main']
+    main = cfg['paths']['front_door_main']
     assert main['source'] == RTSPS_MAIN
     assert 'sourceFingerprint' not in main
 
@@ -76,7 +76,7 @@ def test_rtsps_insecure_mode_relays_with_ffmpeg_over_tls(mgr, camera_factory, mo
     from app import ffmpeg_manager
     monkeypatch.setattr(ffmpeg_manager, 'rtsp_tls_verify_supported', lambda b: supported)
     cfg = gen(mgr, [rtsps(camera_factory, mode='insecure', fp='', enableAudio=True)])
-    main = cfg['paths']['alex_room_main']
+    main = cfg['paths']['front_door_main']
     assert main['source'] == 'publisher'
     cmd = main['runOnDemand']
     # FFmpeg 7+ verifies RTSPS by default; 6.x has no such option and rejects it
@@ -89,10 +89,10 @@ def test_rtsps_insecure_mode_relays_with_ffmpeg_over_tls(mgr, camera_factory, mo
 def test_rtsps_transcode_reads_camera_through_pinned_hidden_path(mgr, camera_factory):
     cam = rtsps(camera_factory, transcodeMain=True)
     cfg = gen(mgr, [cam])
-    src = cfg['paths']['alex_room_main_src']
+    src = cfg['paths']['front_door_main_src']
     assert src['source'] == RTSPS_MAIN and src['sourceFingerprint'] == FP
-    cmd = cfg['paths']['alex_room_main']['runOnInit']
-    assert 'rtsp://127.0.0.1:8554/alex_room_main_src' in cmd
+    cmd = cfg['paths']['front_door_main']['runOnInit']
+    assert 'rtsp://127.0.0.1:8554/front_door_main_src' in cmd
     # FFmpeg never connects to the RTSPS camera itself in a verified mode
     for c in all_commands(cfg):
         assert 'rtsps://' not in c
@@ -100,28 +100,28 @@ def test_rtsps_transcode_reads_camera_through_pinned_hidden_path(mgr, camera_fac
 
 def test_audio_preserved_by_default_in_relay_paths(mgr, camera_factory):
     cam = rtsps(camera_factory, transcodeMain=True, enableAudio=True)
-    cmd = gen(mgr, [cam])['paths']['alex_room_main']['runOnInit']
+    cmd = gen(mgr, [cam])['paths']['front_door_main']['runOnInit']
     assert '-c:a copy' in cmd
 
 
 def test_main_as_sub_for_rtsps_uses_loopback_not_second_camera_connection(mgr, camera_factory):
     cam = rtsps(camera_factory, useMainAsSubstream=True)
-    sub = gen(mgr, [cam])['paths']['alex_room_sub']
-    assert sub['source'] == 'rtsp://127.0.0.1:8554/alex_room_main'
+    sub = gen(mgr, [cam])['paths']['front_door_sub']
+    assert sub['source'] == 'rtsp://127.0.0.1:8554/front_door_main'
 
 
 def test_runtime_substream_fallback(mgr, camera_factory):
     cam = rtsps(camera_factory)
     cam.substream_fallback_active = True
-    sub = gen(mgr, [cam])['paths']['alex_room_sub']
-    assert sub['source'] == 'rtsp://127.0.0.1:8554/alex_room_main'
+    sub = gen(mgr, [cam])['paths']['front_door_sub']
+    assert sub['source'] == 'rtsp://127.0.0.1:8554/front_door_main'
     # ONVIF sub profile reports the stream actually served
     assert (cam.sub_width, cam.sub_height) == (cam.main_width, cam.main_height)
 
 
 def test_disabled_substream_has_no_sub_path(mgr, camera_factory):
     cfg = gen(mgr, [rtsps(camera_factory, disableSubstream=True)])
-    assert 'alex_room_sub' not in cfg['paths']
+    assert 'front_door_sub' not in cfg['paths']
 
 
 def test_stopped_cameras_have_no_paths(mgr, camera_factory):
@@ -134,7 +134,7 @@ def test_stopped_cameras_have_no_paths(mgr, camera_factory):
 def test_loopback_publish_credentials_are_url_encoded(mgr, camera_factory):
     cam = camera_factory(transcodeMain=True)
     cfg = gen(mgr, [cam], rtsp_username='ad@min', rtsp_password='p:ss!')
-    cmd = cfg['paths']['alex_room_main']['runOnInit']
+    cmd = cfg['paths']['front_door_main']['runOnInit']
     assert 'ad%40min:p%3Ass%21@127.0.0.1:8554' in cmd
 
 
@@ -147,7 +147,7 @@ def test_rtsps_hevc_autodetect_does_not_probe_camera_directly(mgr, camera_factor
     # once the health monitor has seen HEVC through MediaMTX, it is used
     cam.stream_probe = {'sub': {'codec': 'hevc'}}
     cfg = gen(mgr, [cam])
-    assert 'libx264' in cfg['paths']['alex_room_sub']['runOnInit']
+    assert 'libx264' in cfg['paths']['front_door_sub']['runOnInit']
 
 
 def test_tls_verify_capability_is_detected_from_the_build(tmp_path):

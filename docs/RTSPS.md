@@ -134,14 +134,12 @@ MEDIAMTX_BIN=/path/to/mediamtx python -m pytest -q tests/integration   # lab, ne
 The lab tests generate throwaway self-signed and CA-signed certificates and
 fake cameras with dummy credentials. No real camera or Wyze account is needed.
 
-## Deploying on Unraid (Docker Compose)
+## Upgrading a Docker Compose install
 
 ```bash
-cd /mnt/user/appdata/Tonys-Onvf-RTSP-Server     # your checkout
+cd <your checkout>
 cp -a data "data.bak-$(date +%Y%m%d-%H%M)"         # 1. back up config + trust
-git fetch origin
 git rev-parse HEAD > data/.previous-commit          # 2. remember the current version
-git checkout <this-branch-or-main-after-merge>
 git pull
 docker compose build --pull                        # 3. rebuild the image
 docker compose up -d                               # 4. restart with the new image
@@ -154,7 +152,6 @@ is not required.
 ### Rollback
 
 ```bash
-cd /mnt/user/appdata/Tonys-Onvf-RTSP-Server
 docker compose down
 git checkout "$(cat data/.previous-commit)"
 rm -rf data && cp -a data.bak-<timestamp> data     # restore the config saved in step 1
@@ -164,35 +161,21 @@ docker compose build && docker compose up -d
 Restoring `data/` matters if you saved RTSPS cameras: older versions don't
 know the `rtsps` protocol fields.
 
-## Unraid test checklist
+## Hardware test checklist
 
-Tick these on the real system after deploying.
-
-- [ ] Container starts, and `docker compose logs` shows exactly one "MediaMTX running on RTSP port 8554".
-- [ ] `ps aux | grep mediamtx` inside the container shows one process. Restarting the container twice still leaves one.
-- [ ] Existing RTSP cameras still stream in the dashboard and in Protect.
+- [ ] Container starts, and the logs show exactly one "MediaMTX running on RTSP port 8554".
+- [ ] Existing RTSP cameras still stream in the dashboard and in the NVR.
 - [ ] A Wyze camera added as RTSPS + Pinned shows **Streaming**, with the right resolution and fps on the card.
-- [ ] Audio is present in the dashboard player or VLC (`rtsp://<server>:8554/<cam>_main`).
 - [ ] Sub stream `/stream1` works. If not, the card shows "Sub stream: …" and switches to main as sub, while the camera stays green.
 - [ ] A wrong password shows **Authentication failed**. Fix it and the camera recovers.
-- [ ] Changing the pin to a wrong value shows **TLS verification failed**.
-- [ ] TLS mode **Verify** (no pin) on a Wyze camera shows **TLS verification failed** (expected: self-signed, no IP SAN).
-- [ ] Unplugging the camera shows **Reconnecting** or **Source unavailable**. Plugging it back returns to **Streaming** without a restart.
-- [ ] `docker compose logs` and the dashboard log viewer show no camera passwords (search for part of the password).
-- [ ] Protect adopts the virtual camera, shows live video, records, and plays back.
+- [ ] A wrong pin shows **TLS verification failed**.
+- [ ] Unplugging the camera shows **Reconnecting** or **Source unavailable**, and plugging it back returns to **Streaming** without a restart.
+- [ ] Logs and the dashboard log viewer show no camera passwords.
+- [ ] The NVR adopts the virtual camera, shows live video, records, and plays back.
 - [ ] CPU stays low with passthrough (no `ffmpeg` processes per camera unless transcoding is on).
-- [ ] Virtual IPs/MACs are unchanged after the upgrade, and Protect does not re-adopt.
 
-## Still needs real hardware
+## Tested with
 
-The automated tests cover the logic above with real MediaMTX and simulated
-RTSPS cameras. They do **not** prove these items, which need the real setup:
-
-* A real Wyze camera's certificate, paths (`/stream0`, `/stream1`), codecs and
-  audio format, and its behaviour on reconnect or after a camera reboot.
-* UniFi Protect adoption, live view, recording and playback through the
-  virtual ONVIF cameras.
-* The FFmpeg version shipped in the rebuilt Docker image (detected at runtime;
-  only matters for insecure mode and the optional transcode).
-* Long-running stability (hours or days), and behaviour on Wyze firmware updates
-  that may regenerate the certificate.
+Three Wyze cameras (`rtsps://<ip>:322/stream0`, self-signed certificates, Pinned
+mode) adopted by UniFi Protect through the virtual ONVIF cameras, running in
+Docker with host networking and `NET_ADMIN`.

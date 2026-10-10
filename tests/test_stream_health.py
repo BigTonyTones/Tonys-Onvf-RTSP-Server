@@ -67,8 +67,8 @@ def env(camera_factory):
 
 def test_streaming_requires_video_and_growing_bytes(env):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = ready(1000)
-    api['alex_room_sub'] = ready(500, 640, 360)
+    api['front_door_main'] = ready(1000)
+    api['front_door_sub'] = ready(500, 640, 360)
     h = mon.check_camera(cam)
     assert h['state'] == ss.STATE_STREAMING
     assert h['main']['info']['width'] == 2560
@@ -76,17 +76,17 @@ def test_streaming_requires_video_and_growing_bytes(env):
 
 def test_audio_only_source_is_not_green(env):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = {'available': True, 'inboundBytes': 10,
+    api['front_door_main'] = {'available': True, 'inboundBytes': 10,
                              'tracks2': [{'codec': 'MPEG-4 Audio'}]}
-    api['alex_room_sub'] = ready(10)
+    api['front_door_sub'] = ready(10)
     assert mon.check_camera(cam)['state'] == ss.STATE_ERROR
 
 
 def test_online_flag_alone_is_not_streaming(env):
     """MediaMTX 1.18 says online:true for a failing source; that must not be green."""
     cam, mgr, api, mon, probe, _ = env
-    api['alex_room_main'] = dict(NOT_READY)
-    api['alex_room_sub'] = dict(NOT_READY)
+    api['front_door_main'] = dict(NOT_READY)
+    api['front_door_sub'] = dict(NOT_READY)
     h = mon.check_camera(cam)
     assert h['state'] != ss.STATE_STREAMING
 
@@ -100,10 +100,10 @@ def test_online_flag_alone_is_not_streaming(env):
 ])
 def test_source_errors_are_classified(env, err, state):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = dict(NOT_READY)
-    api['alex_room_sub'] = dict(NOT_READY)
-    mgr.mediamtx.error('alex_room_main', err)
-    mgr.mediamtx.error('alex_room_sub', err)
+    api['front_door_main'] = dict(NOT_READY)
+    api['front_door_sub'] = dict(NOT_READY)
+    mgr.mediamtx.error('front_door_main', err)
+    mgr.mediamtx.error('front_door_sub', err)
     h = mon.check_camera(cam)
     assert h['state'] == state
     assert h['message']
@@ -111,12 +111,12 @@ def test_source_errors_are_classified(env, err, state):
 
 def test_idle_on_demand_path_is_verified_by_loopback_probe(env):
     cam, mgr, api, mon, probe, probes = env
-    api['alex_room_main'] = dict(NOT_READY)
-    api['alex_room_sub'] = dict(NOT_READY)
+    api['front_door_main'] = dict(NOT_READY)
+    api['front_door_sub'] = dict(NOT_READY)
     probe.result = ({'width': 2560, 'height': 1440, 'codec': 'h264', 'framerate': 20}, '')
     h = mon.check_camera(cam)
     assert h['state'] == ss.STATE_STREAMING
-    assert probes[0] == 'rtsp://127.0.0.1:8554/alex_room_main'
+    assert probes[0] == 'rtsp://127.0.0.1:8554/front_door_main'
     # RTSPS camera in pinned mode: never probed directly
     assert not any(p.startswith('rtsps://') for p in probes)
     # Verified recently -> stays green without re-probing every cycle
@@ -127,39 +127,39 @@ def test_idle_on_demand_path_is_verified_by_loopback_probe(env):
 
 def test_disconnect_then_reconnect(env):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = ready(1000)
-    api['alex_room_sub'] = ready(1000)
+    api['front_door_main'] = ready(1000)
+    api['front_door_sub'] = ready(1000)
     assert mon.check_camera(cam)['state'] == ss.STATE_STREAMING
     # camera drops: MediaMTX path goes unavailable and logs the error
-    api['alex_room_main'] = dict(NOT_READY)
-    mgr.mediamtx.error('alex_room_main', 'read: connection reset by peer')
+    api['front_door_main'] = dict(NOT_READY)
+    mgr.mediamtx.error('front_door_main', 'read: connection reset by peer')
     h = mon.check_camera(cam)
     assert h['state'] == ss.STATE_RECONNECTING
     # MediaMTX reconnects on its own
     mgr.mediamtx.events.clear()
-    api['alex_room_main'] = ready(5000)
+    api['front_door_main'] = ready(5000)
     assert mon.check_camera(cam)['state'] == ss.STATE_STREAMING
 
 
 def test_stalled_stream_reports_reconnecting(env, monkeypatch):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = ready(1000)
-    api['alex_room_sub'] = ready(1000)
+    api['front_door_main'] = ready(1000)
+    api['front_door_sub'] = ready(1000)
     mon.check_camera(cam)
-    mon._tracker('alex_room_main')['lastBytesAt'] -= 60   # no new bytes for a minute
+    mon._tracker('front_door_main')['lastBytesAt'] -= 60   # no new bytes for a minute
     assert mon.check_camera(cam)['state'] == ss.STATE_RECONNECTING
 
 
 def test_missing_substream_falls_back_without_marking_camera_offline(env):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = ready(1000)
-    api['alex_room_sub'] = dict(NOT_READY)
-    mgr.mediamtx.error('alex_room_sub', 'bad status code: 404 (Not Found)')
+    api['front_door_main'] = ready(1000)
+    api['front_door_sub'] = dict(NOT_READY)
+    mgr.mediamtx.error('front_door_sub', 'bad status code: 404 (Not Found)')
     h = mon.check_camera(cam)
     assert h['state'] == ss.STATE_STREAMING           # camera still online
     assert h['sub']['state'] == ss.STATE_UNAVAILABLE
     assert 'Sub stream' in h['message']
-    api['alex_room_main'] = ready(2000)
+    api['front_door_main'] = ready(2000)
     h = mon.check_camera(cam)
     assert cam.substream_fallback_active is True
     assert mgr.restarts == 1
@@ -171,11 +171,11 @@ def test_missing_substream_falls_back_without_marking_camera_offline(env):
 def test_fallback_can_be_disabled(env):
     cam, mgr, api, mon, *_ = env
     cam.substream_fallback = False
-    api['alex_room_main'] = ready(1000)
-    api['alex_room_sub'] = dict(NOT_READY)
-    mgr.mediamtx.error('alex_room_sub', 'bad status code: 404 (Not Found)')
+    api['front_door_main'] = ready(1000)
+    api['front_door_sub'] = dict(NOT_READY)
+    mgr.mediamtx.error('front_door_sub', 'bad status code: 404 (Not Found)')
     for i in range(3):
-        api['alex_room_main'] = ready(1000 + i)
+        api['front_door_main'] = ready(1000 + i)
         h = mon.check_camera(cam)
     assert cam.substream_fallback_active is False and mgr.restarts == 0
     assert h['state'] == ss.STATE_STREAMING
@@ -199,15 +199,15 @@ def test_start_grace_period_shows_starting(env):
 def test_insecure_mode_is_flagged_in_status(env):
     cam, mgr, api, mon, *_ = env
     cam.tls_mode = ss.TLS_INSECURE
-    api['alex_room_main'] = ready(1)
-    api['alex_room_sub'] = ready(1)
+    api['front_door_main'] = ready(1)
+    api['front_door_sub'] = ready(1)
     assert 'verification is disabled' in mon.check_camera(cam)['message']
 
 
 def test_health_messages_are_redacted(env):
     cam, mgr, api, mon, *_ = env
-    api['alex_room_main'] = dict(NOT_READY)
-    api['alex_room_sub'] = dict(NOT_READY)
-    mgr.mediamtx.error('alex_room_main', 'rtsps://u:SECRETPW@10.0.0.124:322/stream0: 401 Unauthorized')
+    api['front_door_main'] = dict(NOT_READY)
+    api['front_door_sub'] = dict(NOT_READY)
+    mgr.mediamtx.error('front_door_main', 'rtsps://u:SECRETPW@10.0.0.124:322/stream0: 401 Unauthorized')
     h = mon.check_camera(cam)
     assert 'SECRETPW' not in h['message'] and 'SECRETPW' not in str(h)

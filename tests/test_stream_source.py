@@ -124,7 +124,7 @@ def test_registered_secrets_are_masked_outside_urls():
 
 
 def test_redaction_leaves_plain_urls_alone():
-    assert ss.redact_text('rtsp://127.0.0.1:8554/alex_room_main') == 'rtsp://127.0.0.1:8554/alex_room_main'
+    assert ss.redact_text('rtsp://127.0.0.1:8554/front_door_main') == 'rtsp://127.0.0.1:8554/front_door_main'
 
 
 # ---- Fingerprints / certificates -------------------------------------------
