@@ -15,6 +15,14 @@ services:
       # this value). Because this uses host networking, the app binds this port
       # directly on the host — no port mapping is required.
       - WEB_UI_PORT=5552
+    # Ports used on the host (host networking, no mapping needed):
+    #   5552 web UI, 8554 RTSP (MediaMTX), 9997 MediaMTX API (loopback use),
+    #   8888 HLS, 8889 WebRTC, 8001+ one ONVIF port per virtual camera.
     volumes:
+      # Camera config, settings and RTSPS trust live here and survive rebuilds.
+      # Extra CA certificates for RTSPS cameras go in ./data/tls/ca/*.pem|.crt
       - ./data:/app/data
+    # Reap FFmpeg/MediaMTX child processes and give them time to exit cleanly
+    init: true
+    stop_grace_period: 30s
     restart: unless-stopped

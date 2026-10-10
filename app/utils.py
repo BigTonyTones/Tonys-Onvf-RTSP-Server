@@ -44,6 +44,13 @@ class Logger:
                 message = message.decode('utf-8', errors='replace')
             except:
                 message = str(message)
+
+        # Never let credentials reach the console or the in-app log viewer
+        try:
+            from .stream_source import redact_text
+            message = redact_text(message)
+        except Exception:
+            pass
                 
         with self._lock:
             self._buffer.append(message)
@@ -262,26 +269,11 @@ def cleanup_stale_processes():
         except Exception as e:
             print(f"  Warning: Could not check port {web_port}: {e}")
 
+    # Stop only MediaMTX instances this app started (matched by PID file or
+    # by our exact binary + config path). Other MediaMTX installs on the host,
+    # and anything else listening on 8554, are left alone.
     try:
-        if platform.system() == "Windows":
-            # Check if mediamtx.exe is running
-            output = subprocess.check_output("tasklist /FI \"IMAGENAME eq mediamtx.exe\"", shell=True, text=True)
-            if "mediamtx.exe" in output:
-                print("  Found stale mediamtx.exe, terminating...")
-                subprocess.run("taskkill /F /IM mediamtx.exe", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print("  Stale mediamtx.exe terminated")
-        else:
-            # Linux/Mac
-            try:
-                # Check if running first to provide feedback
-                subprocess.check_call(["pgrep", "mediamtx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print("  Found stale mediamtx, terminating...")
-                subprocess.run(["pkill", "-9", "mediamtx"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                import time
-                time.sleep(0.5)  # Allow the kernel a moment to release the file handles
-                print("  Stale mediamtx terminated")
-            except subprocess.CalledProcessError:
-                pass  # Not running
-            
+        from .mediamtx_manager import MediaMTXManager
+        MediaMTXManager().cleanup_stale_instances()
     except Exception as e:
         print(f"  Warning: Could not check/clean stale processes: {e}")

@@ -18,6 +18,8 @@ from .ip_management_template import get_ip_management_html
 from .config import AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY
 
 from .ffmpeg_manager import FFmpegManager
+from . import stream_source
+from .config import DATA_DIR
 from .onvif_client import ONVIFProber
 from .linux_network import LinuxNetworkManager
 from .utils import get_captured_logs
@@ -247,10 +249,7 @@ def create_web_app(manager):
                 print("Stopping MediaMTX...")
                 manager.mediamtx.stop()
                 print("Restarting MediaMTX...")
-                # Use global credentials if RTSP auth is enabled
-                rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass)
+                manager.restart_mediamtx(wait=True)
                 print("Server restarted successfully!\n")
             
             # Fire restart notification
@@ -514,7 +513,11 @@ def create_web_app(manager):
                 event_source=data.get('eventSource', 'onvif'),
                 ai_targets=data.get('aiTargets'),
                 ai_model=data.get('aiModel', AI_DEFAULT_MODEL),
-                send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
+                send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True),
+                source_protocol=data.get('sourceProtocol', 'rtsp'),
+                tls_mode=data.get('tlsMode'),
+                tls_fingerprint=data.get('tlsFingerprint', ''),
+                substream_fallback=data.get('substreamFallback', True)
             )
             if camera:
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
@@ -587,7 +590,11 @@ def create_web_app(manager):
                 event_source=data.get('eventSource', 'onvif'),
                 ai_targets=data.get('aiTargets'),
                 ai_model=data.get('aiModel', AI_DEFAULT_MODEL),
-                send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
+                send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True),
+                source_protocol=data.get('sourceProtocol', 'rtsp'),
+                tls_mode=data.get('tlsMode'),
+                tls_fingerprint=data.get('tlsFingerprint', ''),
+                substream_fallback=data.get('substreamFallback', True)
             )
             if camera:
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
@@ -656,9 +663,7 @@ def create_web_app(manager):
             camera.stop()
             manager.save_config()
             if was_running:
-                rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                manager.mediamtx.restart(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
+                manager.restart_mediamtx()
             return jsonify(camera.to_dict())
         return jsonify({'error': 'Camera not found'}), 404
 
@@ -752,15 +757,18 @@ def create_web_app(manager):
                 stream_url = f"rtsp://{user}:{pw}@localhost:{rtsp_port}/{camera.path_name}_sub"
             else:
                 stream_url = f"rtsp://localhost:{rtsp_port}/{camera.path_name}_sub"
+            input_args = []
         else:
-            stream_url = camera.sub_stream_url or camera.main_stream_url
+            stream_url, input_args = camera.ffmpeg_direct_input('sub' if camera.sub_stream_url else 'main')
+            if not stream_url:
+                return jsonify({'error': 'Start the camera to take a snapshot (RTSPS cameras are read through the stream server so their TLS policy applies).'}), 409
         
         ffmpeg_mgr = FFmpegManager()
         fd, path = tempfile.mkstemp(suffix='.jpg')
         os.close(fd)
         
         try:
-            success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+            success, error = ffmpeg_mgr.capture_snapshot(stream_url, path, input_args=input_args)
             if success:
                 with open(path, 'rb') as f:
                     content = f.read()
@@ -894,112 +902,69 @@ def create_web_app(manager):
     @app.route('/api/cameras/<int:camera_id>/fetch-stream-info', methods=['POST'])
     @login_required
     def fetch_stream_info(camera_id):
-        """Fetch stream information using FFprobe"""
-        data = request.json
+        """Fetch stream information using FFprobe (respects the camera's TLS policy)"""
+        data = request.json or {}
         stream_type = data.get('streamType', 'main')  # 'main' or 'sub'
         
         camera = manager.get_camera(camera_id)
         if not camera:
             return jsonify({'error': 'Camera not found'}), 404
-        
-        # Get the appropriate stream URL
-        stream_url = camera.main_stream_url if stream_type == 'main' else camera.sub_stream_url
-        
-        try:
-            # Use ffprobe to get stream information
-            
-            # Get ffprobe path (will download if needed)
-            ffmpeg_manager = FFmpegManager()
-            ffprobe_path = ffmpeg_manager.get_ffprobe_path()
-            
-            if not ffprobe_path:
-                return jsonify({
-                    'error': 'FFprobe not available and could not be downloaded automatically.',
-                    'installUrl': 'https://ffmpeg.org/download.html'
-                }), 400
-            
-            print(f"  Using ffprobe: {ffprobe_path}")
-            print(f"  Probing stream: {stream_url}")
-            
-            # Run ffprobe to get stream info
-            # Use TCP for better compatibility with cameras
-            cmd = [
-                ffprobe_path,
-                '-v', 'error',
-                '-rtsp_transport', 'tcp',  # Use TCP instead of UDP for better compatibility
-                '-select_streams', 'v:0',
-                '-show_entries', 'stream=width,height,r_frame_rate',
-                '-of', 'json',
-                stream_url
-            ]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            
-            if result.returncode != 0:
-                # Log the error for debugging
-                print(f"  FFprobe failed with return code {result.returncode}")
-                print(f"  stderr: {result.stderr}")
-                print(f"  stdout: {result.stdout}")
-                
-                # Provide helpful error messages based on common issues
-                error_msg = 'Failed to probe stream.'
-                troubleshooting = []
-                
-                if '5XX Server Error' in result.stderr:
-                    troubleshooting.append('• Camera connection limit might be reached (too many concurrent streams)')
-                    troubleshooting.append('• Reboot the camera if it is unresponsive')
-                    troubleshooting.append('• Verify the stream path/URL is correct')
-                elif '401' in result.stderr or '403' in result.stderr:
-                    troubleshooting.append('• Check camera credentials (username/password)')
-                    troubleshooting.append('• verify the stream path is correct')
-                elif 'Connection refused' in result.stderr or 'Connection timed out' in result.stderr:
-                    troubleshooting.append('• Check if camera IP address is correct')
-                    troubleshooting.append('• Verify camera is powered on and accessible')
-                    troubleshooting.append('• Check network connectivity')
-                elif 'Invalid data found' in result.stderr:
-                    troubleshooting.append('• Stream path might be incorrect')
-                    troubleshooting.append('• Camera might not be streaming on this path')
-                else:
-                    troubleshooting.append('• Verify stream URL is accessible')
-                    troubleshooting.append('• Check camera is not overloaded with connections')
-                    troubleshooting.append('• Try accessing the stream in VLC to confirm it works')
-                
-                return jsonify({
-                    'error': error_msg,
-                    'details': result.stderr,
-                    'troubleshooting': troubleshooting,
-                    'returnCode': result.returncode
-                }), 400
-            
-            # Parse the JSON output
-            import json as json_module
-            probe_data = json_module.loads(result.stdout)
-            
-            if 'streams' not in probe_data or len(probe_data['streams']) == 0:
-                return jsonify({'error': 'No video stream found'}), 400
-            
-            stream_info = probe_data['streams'][0]
-            width = stream_info.get('width')
-            height = stream_info.get('height')
-            
-            # Parse frame rate (format: "30/1" or "30000/1001")
-            framerate = 30  # default
-            r_frame_rate = stream_info.get('r_frame_rate', '30/1')
-            if '/' in r_frame_rate:
-                num, den = r_frame_rate.split('/')
-                framerate = round(int(num) / int(den))
-            
+
+        ffmpeg_manager = FFmpegManager()
+        if not ffmpeg_manager.get_ffprobe_path():
             return jsonify({
-                'width': width,
-                'height': height,
-                'framerate': framerate,
-                'streamType': stream_type
-            })
-            
-        except subprocess.TimeoutExpired:
-            return jsonify({'error': 'Stream probe timeout. Check if the camera is accessible.'}), 400
+                'error': 'FFprobe not available and could not be downloaded automatically.',
+                'installUrl': 'https://ffmpeg.org/download.html'
+            }), 400
+
+        print(f"  Probing {stream_type} stream of {camera.name} "
+              f"({camera.source_protocol.upper()}, TLS mode: {camera.tls_mode if camera.is_rtsps else 'n/a'})")
+        info, err = manager.mediamtx.probe_source(camera, stream_type, rtsp_port=manager.rtsp_port, timeout=20)
+
+        if not info or not info.get('width'):
+            err = stream_source.redact_text(err or 'No video stream found')
+            state, hint = stream_source.classify_source_error(err)
+            print(f"  FFprobe failed: {err}")
+            return jsonify({
+                'error': f"Failed to probe stream: {stream_source.STATE_LABELS.get(state, 'Error')}.",
+                'state': state,
+                'details': err,
+                'troubleshooting': ['• ' + hint],
+            }), 400
+
+        return jsonify({
+            'width': info.get('width'),
+            'height': info.get('height'),
+            'framerate': info.get('framerate') or 30,
+            'codec': info.get('codec'),
+            'streamType': stream_type
+        })
+
+    @app.route('/api/tls/fetch-certificate', methods=['POST'])
+    @login_required
+    def tls_fetch_certificate():
+        """Read (do not trust) a camera's TLS certificate so the operator can
+        compare it and pin its fingerprint."""
+        data = request.json or {}
+        try:
+            info = stream_source.fetch_server_certificate(data.get('host', ''), data.get('port') or 322)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
         except Exception as e:
-            return jsonify({'error': f'Failed to fetch stream info: {str(e)}'}), 500
+            state, hint = stream_source.classify_source_error(str(e))
+            return jsonify({'error': f"Could not read the certificate: {stream_source.redact_text(str(e))}",
+                            'troubleshooting': [hint]}), 502
+        info['sha256Formatted'] = stream_source.format_fingerprint(info['sha256'])
+        return jsonify(info)
+
+    @app.route('/api/tls/status', methods=['GET'])
+    @login_required
+    def tls_status():
+        """Custom CA certificates available for 'verify' mode."""
+        return jsonify({
+            'customCaDir': stream_source.custom_ca_dir(DATA_DIR),
+            'customCas': stream_source.list_custom_cas(DATA_DIR),
+        })
 
     @app.route('/api/cameras/<int:camera_id>/sync-stream-info', methods=['POST'])
     @login_required
@@ -1360,11 +1325,7 @@ def create_web_app(manager):
                 def do_restart():
                     time.sleep(1)
                     print("\n\nWait... Config restored. Restarting system...")
-                    manager.mediamtx.stop()
-                    
-                    rtsp_user = manager.global_username if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                    rtsp_pass = manager.global_password if getattr(manager, 'rtsp_auth_enabled', False) else ''
-                    manager.mediamtx.start(manager.cameras, manager.rtsp_port, rtsp_user, rtsp_pass, manager.get_grid_fusion())
+                    manager.restart_mediamtx(wait=True)
                 
                 import threading
                 threading.Thread(target=do_restart, daemon=True).start()
@@ -1452,9 +1413,12 @@ def create_web_app(manager):
             else:
                 stream_url = f"rtsp://localhost:{rtsp_port}/{camera.path_name}_sub"
             print(f"  Capture: Using local stream for {camera.name}")
+            input_args = []
         else:
             # Fallback to direct camera URL (use sub stream for speed)
-            stream_url = camera.sub_stream_url
+            stream_url, input_args = camera.ffmpeg_direct_input('sub')
+            if not stream_url:
+                return jsonify({'error': 'Start the camera to take a snapshot (RTSPS cameras are read through the stream server so their TLS policy applies).'}), 409
             print(f"  Capture: Using direct stream for {camera.name}")
         
         ffmpeg_mgr = FFmpegManager()
@@ -1464,7 +1428,7 @@ def create_web_app(manager):
         os.close(fd)
         
         try:
-            success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+            success, error = ffmpeg_mgr.capture_snapshot(stream_url, path, input_args=input_args)
             
             if success:
                 # Send file content
@@ -1715,7 +1679,7 @@ def create_web_app(manager):
                 print(f"  [Stream Test] Stderr: {result.stderr}")
                 print(f"  [Stream Test] Stdout: {result.stdout}")
                 
-                return jsonify({'success': False, 'error': error_msg}), 400
+                return jsonify({'success': False, 'error': stream_source.redact_text(error_msg)}), 400
                 
             import json as json_mod
             try:
@@ -2139,10 +2103,16 @@ def create_web_app(manager):
             camera_id = data.get('camera_id')
             url = data.get('url')
             
+            input_args = []
             if camera_id is not None:
                 cam = manager.get_camera(int(camera_id))
                 if cam:
-                    url = cam.main_stream_url
+                    url, input_args = cam.ffmpeg_direct_input('main')
+                    if not url:
+                        # Verified RTSPS: measure through the stream server so the TLS policy applies
+                        if cam.status != 'running':
+                            return jsonify({'success': False, 'error': 'Start this RTSPS camera first; it is analysed through the stream server so its TLS policy applies.'}), 409
+                        url = cam.loopback_url(f"{cam.path_name}_main", manager.rtsp_port)
                     
             if not url:
                 return jsonify({'success': False, 'error': 'No camera_id or stream URL provided'}), 400
@@ -2157,6 +2127,7 @@ def create_web_app(manager):
                 ffmpeg_exe,
                 '-y',
                 '-rtsp_transport', 'tcp',
+                *input_args,
                 '-i', url,
                 '-t', '3',
                 '-f', 'null',
@@ -2213,12 +2184,12 @@ def create_web_app(manager):
                 'dropped_frames': dropped_frames,
                 'duplicated_frames': dup_frames,
                 'bitrate_kbps': bitrate_kbps,
-                'raw_stderr': stderr[-1500:]
+                'raw_stderr': stream_source.redact_text(stderr[-1500:])
             })
         except subprocess.TimeoutExpired:
             return jsonify({'success': False, 'error': 'Connection to RTSP stream timed out (10s limit)'}), 504
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            return jsonify({'success': False, 'error': stream_source.redact_text(str(e))}), 500
 
     @app.route('/api/diagnostics/bandwidth-monitor', methods=['GET'])
     @login_required

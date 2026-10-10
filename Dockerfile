@@ -1,8 +1,10 @@
 # Use a slim Python base image
 FROM python:3.11-slim
 
-# Install system dependencies needed for FFmpeg, macvlan creation, DHCP, and PyTorch (libgomp1)
+# Install system dependencies needed for FFmpeg, macvlan creation, DHCP, and PyTorch (libgomp1).
+# ca-certificates: system trust store MediaMTX uses to verify RTSPS cameras.
 RUN apt-get update && apt-get install -y \
+    ca-certificates \
     ffmpeg \
     iproute2 \
     isc-dhcp-client \

@@ -19,6 +19,7 @@ from .config import (
 from .onvif_service import ONVIFService
 from .linux_network import LinuxNetworkManager
 from .utils import get_local_ip
+from . import stream_source
 from .ai_device import get_shared_model as get_shared_ai_model, AI_INFERENCE_LOCK as _AI_INFERENCE_LOCK
 
 
@@ -151,6 +152,34 @@ class VirtualONVIFCamera:
         self.name = config['name']
         self.main_stream_url = config['mainStreamUrl']
         self.sub_stream_url = config['subStreamUrl']
+        # Source protocol / TLS policy. Configs saved before RTSPS support have
+        # no 'sourceProtocol'; derive it from the saved URL so they keep working.
+        self.source_protocol = config.get('sourceProtocol') or stream_source.protocol_of(self.main_stream_url)
+        if self.source_protocol not in stream_source.PROTOCOLS:
+            self.source_protocol = stream_source.PROTOCOL_RTSP
+        try:
+            self.tls_mode = stream_source.normalize_tls_mode(config.get('tlsMode'))
+        except ValueError:
+            self.tls_mode = stream_source.DEFAULT_TLS_MODE
+        try:
+            self.tls_fingerprint = stream_source.normalize_fingerprint(config.get('tlsFingerprint', ''))
+        except ValueError:
+            self.tls_fingerprint = ''
+        # When the sub stream fails but main works, serve main on the sub path
+        # instead of leaving the sub profile dead.
+        self.substream_fallback = config.get('substreamFallback', True)
+        # Runtime only: set by the health monitor when the sub stream is unusable
+        self.substream_fallback_active = False
+        stream_source.register_secret(config.get('password', ''))
+        # Runtime-only stream health (see app/stream_health.py)
+        self.health = {
+            'state': stream_source.STATE_STOPPED,
+            'label': stream_source.STATE_LABELS[stream_source.STATE_STOPPED],
+            'message': '',
+            'main': {},
+            'sub': {},
+            'updatedAt': 0,
+        }
         self.rtsp_port = config.get('rtspPort', MEDIAMTX_PORT)
         self.onvif_port = config.get('onvifPort', 8000 + self.id)
         self.path_name = config.get('pathName', f'camera{self.id}')
@@ -303,6 +332,8 @@ class VirtualONVIFCamera:
     def start(self):
         """Mark camera as running and start ONVIF service"""
         self.status = "running"
+        self.substream_fallback_active = False
+        self.set_health(stream_source.STATE_STARTING, "Starting the virtual camera...")
         
         # Setup Virtual NIC if requested (Linux only)
         if self.use_virtual_nic and self.network_mgr:
@@ -339,6 +370,38 @@ class VirtualONVIFCamera:
             self.onvif_subscription_active = False
             self.onvif_subscription_error = "Event forwarding is disabled in settings."
         
+    def set_health(self, state, message='', main=None, sub=None):
+        """Update the runtime stream health shown on the dashboard."""
+        h = dict(self.health)
+        h['state'] = state
+        h['label'] = stream_source.STATE_LABELS.get(state, state)
+        h['message'] = stream_source.redact_text(message or '')
+        if main is not None:
+            h['main'] = main
+        if sub is not None:
+            h['sub'] = sub
+        if state == stream_source.STATE_STOPPED:
+            h['main'] = {}
+            h['sub'] = {}
+        h['updatedAt'] = time.time()
+        self.health = h
+
+    def _probe_input(self, which, retries=1):
+        """Return (url, extra_args) an FFprobe can use for this stream.
+
+        RTSPS sources in a verified TLS mode are read through MediaMTX (which
+        enforces the policy), so this waits for the served path to exist."""
+        url, extra = self.ffmpeg_direct_input(which)
+        if url:
+            return url, extra
+        path = f"{self.path_name}_{'main' if which == 'main' else 'sub'}"
+        if which == 'main' and self.transcode_main:
+            path = f"{self.path_name}_main_src"
+        if which == 'sub' and self.transcode_sub and not self.effective_use_main_as_substream:
+            path = f"{self.path_name}_sub_src"
+        rtsp_port = getattr(self.manager, 'rtsp_port', None) if self.manager else None
+        return self.loopback_url(path, rtsp_port), []
+
     def _probe_source_streams(self):
         """Probe the real source streams and flag mismatches vs configured values.
 
@@ -352,8 +415,14 @@ class VirtualONVIFCamera:
             ffmpeg_mgr = FFmpegManager()
             probe = {}
 
+            if self.ffmpeg_requires_relay():
+                # Probed through MediaMTX on loopback; give the (re)started
+                # MediaMTX a moment to pick up this camera's paths.
+                time.sleep(8)
+
             if not self.transcode_main:
-                info = ffmpeg_mgr.probe_stream(self.main_stream_url)
+                url, extra = self._probe_input('main')
+                info = ffmpeg_mgr.probe_stream(url, input_args=extra)
                 if info and info.get('width'):
                     entry = dict(info)
                     entry['configuredWidth'] = self.main_width
@@ -365,9 +434,10 @@ class VirtualONVIFCamera:
                     )
                     probe['main'] = entry
 
-            sub_url = self.main_stream_url if self.use_main_as_substream else self.sub_stream_url
+            sub_url = self.source_url('sub')
             if sub_url and not self.disable_substream and not self.transcode_sub:
-                info = ffmpeg_mgr.probe_stream(sub_url)
+                url, extra = self._probe_input('sub')
+                info = ffmpeg_mgr.probe_stream(url, input_args=extra)
                 if info and info.get('width'):
                     entry = dict(info)
                     entry['configuredWidth'] = self.sub_width
@@ -397,6 +467,8 @@ class VirtualONVIFCamera:
     def stop(self):
         """Mark camera as stopped, shutdown ONVIF service, and cleanup networking"""
         self.status = "stopped"
+        self.substream_fallback_active = False
+        self.set_health(stream_source.STATE_STOPPED, "")
         if self.enable_event_forwarding:
             self.stop_event_forwarding()
             self.stop_ai_detection()
@@ -485,10 +557,78 @@ class VirtualONVIFCamera:
         print(f"  ONVIF service started on port {self.onvif_port}")
         print(f"  Add manually in ODM: {local_ip}:{self.onvif_port}\n")
         
+    # ---- Source / TLS helpers ------------------------------------------
+
+    @property
+    def is_rtsps(self):
+        return self.source_protocol == stream_source.PROTOCOL_RTSPS
+
+    @property
+    def effective_use_main_as_substream(self):
+        """True when the sub path should carry the main stream: either the user
+        asked for it, or the sub stream failed and fallback is enabled."""
+        return bool(getattr(self, 'use_main_as_substream', False) or
+                    getattr(self, 'substream_fallback_active', False))
+
+    def source_url(self, which):
+        """Upstream camera URL for 'main' or 'sub' (honours main-as-sub)."""
+        if which == 'sub' and not self.effective_use_main_as_substream:
+            return self.sub_stream_url
+        return self.main_stream_url
+
+    def ffmpeg_requires_relay(self):
+        """FFmpeg must not read an RTSPS camera directly unless the operator
+        chose insecure mode: FFmpeg's RTSPS certificate checks depend on the
+        build (FFmpeg 6.x never verifies), so verified modes are enforced by
+        MediaMTX and FFmpeg reads from MediaMTX on loopback instead."""
+        return self.is_rtsps and self.tls_mode != stream_source.TLS_INSECURE
+
+    def ffmpeg_direct_input(self, which):
+        """(url, extra_input_args) for an FFmpeg/FFprobe process reading the
+        camera directly, or (None, []) when that would bypass the TLS policy."""
+        url = self.source_url(which)
+        if not url:
+            return None, []
+        if self.ffmpeg_requires_relay():
+            return None, []
+        if self.is_rtsps:
+            from .ffmpeg_manager import insecure_tls_input_args
+            return url, insecure_tls_input_args()
+        return url, []
+
+    def mediamtx_source_fields(self):
+        """Extra MediaMTX path settings that enforce the TLS policy for a
+        directly-pulled RTSPS source."""
+        if not self.is_rtsps:
+            return {}
+        if self.tls_mode == stream_source.TLS_PINNED:
+            # An empty pin must never mean "trust anything": with no
+            # fingerprint MediaMTX falls back to full CA verification.
+            if self.tls_fingerprint:
+                return {'sourceFingerprint': self.tls_fingerprint}
+        return {}
+
+    def loopback_url(self, path, rtsp_port=None):
+        port = rtsp_port or self.rtsp_port
+        return f"rtsp://127.0.0.1:{port}/{path}"
+
+    def source_components(self):
+        """Parsed host/port/paths for the editor (credentials not included)."""
+        try:
+            m = stream_source.parse_source_url(self.main_stream_url)
+        except ValueError:
+            return {}
+        try:
+            sub_path = stream_source.parse_source_url(self.sub_stream_url)['path'] if self.sub_stream_url else ''
+        except ValueError:
+            sub_path = ''
+        return {'sourceHost': m['host'], 'sourcePort': m['port'],
+                'mainPath': m['path'], 'subPath': sub_path}
+
     @property
     def sub_width(self):
         # Override with main stream values only if "Use main as substream" is checked AND we are not transcoding the substream
-        if getattr(self, 'use_main_as_substream', False) and not getattr(self, 'transcode_sub', False):
+        if self.effective_use_main_as_substream and not getattr(self, 'transcode_sub', False):
             return self.main_width
         return self._sub_width
 
@@ -498,7 +638,7 @@ class VirtualONVIFCamera:
 
     @property
     def sub_height(self):
-        if getattr(self, 'use_main_as_substream', False) and not getattr(self, 'transcode_sub', False):
+        if self.effective_use_main_as_substream and not getattr(self, 'transcode_sub', False):
             return self.main_height
         return self._sub_height
 
@@ -508,7 +648,7 @@ class VirtualONVIFCamera:
 
     @property
     def sub_framerate(self):
-        if getattr(self, 'use_main_as_substream', False) and not getattr(self, 'transcode_sub', False):
+        if self.effective_use_main_as_substream and not getattr(self, 'transcode_sub', False):
             return self.main_framerate
         return self._sub_framerate
 
@@ -601,7 +741,15 @@ class VirtualONVIFCamera:
             'aiQueueTime': self.ai_queue_time,
             'aiFpsMeasurement': self.ai_fps_measurement,
             'aiLastDetection': self.ai_last_detection,
-            'streamProbe': self.stream_probe
+            'streamProbe': self.stream_probe,
+            'sourceProtocol': self.source_protocol,
+            'tlsMode': self.tls_mode,
+            'tlsFingerprint': self.tls_fingerprint,
+            'tlsInsecure': self.is_rtsps and self.tls_mode == stream_source.TLS_INSECURE,
+            'substreamFallback': self.substream_fallback,
+            'substreamFallbackActive': self.substream_fallback_active,
+            'streamHealth': self.health,
+            **self.source_components(),
         }
     
     def to_config_dict(self):
@@ -612,6 +760,10 @@ class VirtualONVIFCamera:
             'name': self.name,
             'mainStreamUrl': self.main_stream_url,
             'subStreamUrl': self.sub_stream_url,
+            'sourceProtocol': self.source_protocol,
+            'tlsMode': self.tls_mode,
+            'tlsFingerprint': self.tls_fingerprint,
+            'substreamFallback': self.substream_fallback,
             'rtspPort': self.rtsp_port,
             'onvifPort': self.onvif_port,
             'pathName': self.path_name,

@@ -223,12 +223,18 @@ class ONVIFService:
             
             try:
                 success, error = ffmpeg_mgr.capture_snapshot(stream_url, path)
+                # Fallbacks read the camera directly, which is only allowed when
+                # it doesn't bypass the camera's TLS policy (see camera.ffmpeg_direct_input).
                 if not success:
                     # Fallback to direct camera main URL if MediaMTX failed
-                    success, error = ffmpeg_mgr.capture_snapshot(self.camera.main_stream_url, path)
+                    url, extra = self.camera.ffmpeg_direct_input('main')
+                    if url:
+                        success, error = ffmpeg_mgr.capture_snapshot(url, path, input_args=extra)
                 if not success and self.camera.sub_stream_url and not getattr(self.camera, 'disable_substream', False):
                     # Last resort: sub stream (wrong resolution beats no snapshot)
-                    success, error = ffmpeg_mgr.capture_snapshot(self.camera.sub_stream_url, path)
+                    url, extra = self.camera.ffmpeg_direct_input('sub')
+                    if url:
+                        success, error = ffmpeg_mgr.capture_snapshot(url, path, input_args=extra)
                 
                 if success:
                     with open(path, 'rb') as f:

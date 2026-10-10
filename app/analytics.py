@@ -88,6 +88,9 @@ class AnalyticsManager:
             # Basic info — v1.17+ uses 'online' (replaces deprecated 'ready')
             # Keep 'ready' fallback for any older binary still present during upgrade
             is_online = item.get('online', item.get('ready', False))
+            # MediaMTX 1.18 reports 'online: true' for any configured source,
+            # even one failing to connect; 'available' says media is flowing.
+            is_available = bool(item.get('available', item.get('ready', is_online)))
             # v1.17 - readers renamed to outboundSessions
             sessions = item.get('outboundSessions') or item.get('readers') or []
             reader_ips = []
@@ -109,6 +112,7 @@ class AnalyticsManager:
             analytics = {
                 'online': is_online,
                 'ready': is_online,  # Backwards-compat alias
+                'available': is_available,
                 'tracks': item.get('tracks', []),
                 'readers': len(sessions),
                 'reader_ips': reader_ips,
