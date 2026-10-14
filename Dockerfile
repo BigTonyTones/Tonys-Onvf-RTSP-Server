@@ -1,5 +1,5 @@
 # Use a slim Python base image
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Install system dependencies needed for FFmpeg, macvlan creation, DHCP, and PyTorch (libgomp1)
 RUN apt-get update && apt-get install -y \
