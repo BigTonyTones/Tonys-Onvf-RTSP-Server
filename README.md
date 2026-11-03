@@ -4,18 +4,6 @@ Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a pr
 
 ![Dashboard Screenshot](assets/Main_Page_v10.png)
 
-## What's New in 10.0
-
-- New look with a side menu and light/dark themes
-- Live View to watch all your cameras full screen
-- AI Alerts page to look back through detections
-- IP Management page for your virtual camera IPs and MACs
-- Diagnostics page for when something isn't working
-- RTSP Lookup to help find your camera's stream URL
-- GridFusion can now crop and zoom tiles, and use GPU encoding on Intel/AMD
-- Optional addons like NVR Pro, HomeKit, MQTT, PTZ tracking, time-lapse and cloud backup
-- The one-line installer can now install with Docker
-
 ## ONVIF Event Forwarding & Local AI Object Detection (YOLO)
 
 Turn standard RTSP feeds into intelligent, AI-capable cameras inside your NVR:
