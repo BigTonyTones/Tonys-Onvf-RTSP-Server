@@ -85,7 +85,8 @@ curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server
 ```
 Running the normal one-line installer without options also asks whether you want a native install, a Docker install, or to update an existing Docker install. Add `--vaapi` to pass an Intel/AMD GPU through for GridFusion hardware encoding.
 
-**Or set it up by hand:**
+<details>
+<summary><b>Manual Docker setup</b> (click to expand)</summary>
 
 1. **Clone the Repository & Navigate to Folder:**
    ```bash
@@ -100,7 +101,11 @@ Running the normal one-line installer without options also asks whether you want
 
 Access the web interface at **http://localhost:5552**. All settings and database files are automatically initialized and persisted inside the `./data` directory.
 
-### Updating the Docker Container
+</details>
+
+<details>
+<summary><b>Updating the Docker container</b> (click to expand)</summary>
+
 To update the server to the latest version when running in Docker, navigate to your cloned repository and run:
 ```bash
 git pull && docker compose down && docker compose up -d --build
@@ -111,11 +116,17 @@ curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server
 ```
 This safely stops the running container, pulls the latest code, and rebuilds the image without losing your settings (which are safely persisted in the `./data` directory).
 
+</details>
+
 ---
 
 ## Manual Installation
 
-### Linux
+Prefer to set things up yourself? Pick your platform below.
+
+<details>
+<summary><b>Linux</b> (click to expand)</summary>
+
 This server is optimized for Ubuntu 25.04 but is compatible with most modern Linux builds. The **Virtual NIC** feature requires a Linux environment. This has been confirmed to work perfectly on the Raspberry Pi 5 running the latest Debian 13 (Trixie) build for those looking to run the server on Raspberry Pi hardware.
 
 1. **Clone and enter the folder:**
@@ -134,12 +145,16 @@ This server is optimized for Ubuntu 25.04 but is compatible with most modern Lin
 3. **Open the Web UI:**
    Navigate to `http://localhost:5552` to start adding cameras.
 
----
+</details>
 
-### Windows
+<details>
+<summary><b>Windows</b> (click to expand)</summary>
+
 1. Install Python 3.10 or newer (3.12 recommended). If Python is missing, `start_onvif_server.bat` offers to install 3.12 for you.
 2. Run `start_onvif_server.bat`.
    *Note: Virtual NICs (unique IP/MAC per camera) are not supported on Windows. All cameras will share the host IP.*
+
+</details>
 
 ---
 
