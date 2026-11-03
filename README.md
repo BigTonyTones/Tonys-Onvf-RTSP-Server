@@ -79,11 +79,7 @@ After installation, access the web interface at **http://localhost:5552**
 
 Run the server inside a Docker container. No manual dependency setup or `touch` commands are required.
 
-**One-line Docker install** (installs Docker and the Compose plugin if needed, clones the repo to `/opt/tonys-onvif-server` and starts the container):
-```bash
-curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash -s -- --docker
-```
-Running the normal one-line installer without options also asks whether you want a native install, a Docker install, or to update an existing Docker install. Add `--vaapi` to pass an Intel/AMD GPU through for GridFusion hardware encoding.
+The easiest way is the [Docker one-liner](#docker-linux) in Quick Install above. It installs Docker and the Compose plugin if needed, clones the repo to `/opt/tonys-onvif-server` and starts the container. Running the installer without options also asks whether you want a native install, a Docker install, or to update an existing Docker install. Add `--vaapi` to pass an Intel/AMD GPU through for GridFusion hardware encoding.
 
 <details>
 <summary><b>Manual Docker setup</b> (click to expand)</summary>
