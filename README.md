@@ -58,7 +58,15 @@ After installation, access the web interface at **http://localhost:5552**
 
 ## Docker Installation (Alternative Setup)
 
-Run the server inside a Docker container. No manual dependency setup or `touch` commands are required:
+Run the server inside a Docker container. No manual dependency setup or `touch` commands are required.
+
+**One-line Docker install** (installs Docker and the Compose plugin if needed, clones the repo to `/opt/tonys-onvif-server` and starts the container):
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash -s -- --docker
+```
+Running the normal one-line installer without options also asks whether you want a native install, a Docker install, or to update an existing Docker install. Add `--vaapi` to pass an Intel/AMD GPU through for GridFusion hardware encoding.
+
+**Or set it up by hand:**
 
 1. **Clone the Repository & Navigate to Folder:**
    ```bash
@@ -77,6 +85,10 @@ Access the web interface at **http://localhost:5552**. All settings and database
 To update the server to the latest version when running in Docker, navigate to your cloned repository and run:
 ```bash
 git pull && docker compose down && docker compose up -d --build
+```
+Or let the installer do it (it finds your Docker install automatically):
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash -s -- --docker-update
 ```
 This safely stops the running container, pulls the latest code, and rebuilds the image without losing your settings (which are safely persisted in the `./data` directory).
 

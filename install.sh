@@ -3,6 +3,17 @@
 # Tonys Onvif-RTSP-AI Server - One-Line Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash
 # Or:    wget -qO- https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash
+#
+# The installer asks whether to install natively (default), install with Docker,
+# or update an existing Docker install. To skip the question, pass an option:
+#   curl -fsSL .../install.sh | sudo bash -s -- --docker          # new Docker install
+#   curl -fsSL .../install.sh | sudo bash -s -- --docker-update   # update existing Docker install
+#   curl -fsSL .../install.sh | sudo bash -s -- --native          # native install (no question)
+# Other options:
+#   --dir <path>     Docker: folder to install into (Docker default: /opt/tonys-onvif-server)
+#   --vaapi          Docker: pass the GPU (/dev/dri) to the container for GridFusion VAAPI encoding
+#   --no-vaapi       Docker: do not pass the GPU through
+#   -y, --yes        Docker: accept the default answer for every question
 
 set -e
 
@@ -23,16 +34,47 @@ else
     # Piped from curl, use default directory
     INSTALL_DIR="/opt/tonys-onvif-server"
 fi
-INSTALLER_VERSION="2.0"
+INSTALLER_VERSION="2.1"
 REPO_URL="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server.git"
+DOCKER_DEFAULT_DIR="/opt/tonys-onvif-server"
+DOCKER_CONTAINER_NAME="onvif-rtsp-server"
+
+# Command line options (see the header above)
+INSTALL_MODE="${INSTALL_MODE:-}"   # native | docker | docker-update (empty = ask)
+CUSTOM_DIR=""
+VAAPI_CHOICE=""                    # yes | no (empty = ask)
+ASSUME_YES=false
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --docker)                         INSTALL_MODE="docker" ;;
+        --docker-update|--update-docker)  INSTALL_MODE="docker-update" ;;
+        --native)                         INSTALL_MODE="native" ;;
+        --dir)                            shift; CUSTOM_DIR="$1" ;;
+        --dir=*)                          CUSTOM_DIR="${1#--dir=}" ;;
+        --vaapi|--gpu)                    VAAPI_CHOICE="yes" ;;
+        --no-vaapi|--no-gpu)              VAAPI_CHOICE="no" ;;
+        -y|--yes)                         ASSUME_YES=true ;;
+        -h|--help)
+            echo "Usage: curl -fsSL <url>/install.sh | sudo bash -s -- [options]"
+            echo "  --native          Native install (Python, MediaMTX, FFmpeg, systemd service)"
+            echo "  --docker          New Docker install (docker compose up -d --build)"
+            echo "  --docker-update   Update an existing Docker install (git pull, compose down, up --build)"
+            echo "  --dir <path>      Docker: folder to install into (default: /opt/tonys-onvif-server)"
+            echo "  --vaapi           Docker: pass the GPU (/dev/dri) through for GridFusion VAAPI"
+            echo "  --no-vaapi        Docker: no GPU passthrough"
+            echo "  -y, --yes         Docker: accept default answers"
+            echo "With no option, the installer asks which one you want."
+            exit 0 ;;
+        *) echo "Unknown option: $1 (use --help)"; exit 1 ;;
+    esac
+    shift
+done
 
 print_banner() {
     echo ""
     echo -e "${CYAN}==============================================================${NC}"
     echo -e "${YELLOW}     Tonys Onvif-RTSP-AI Server - Automated Installer (v${INSTALLER_VERSION})${NC}"
     echo -e "${CYAN}==============================================================${NC}"
-    echo ""
-    echo -e "  ${CYAN}Installation Directory:${NC} $INSTALL_DIR"
     echo ""
 }
 
@@ -728,11 +770,357 @@ print_completion() {
     echo ""
 }
 
+# ==============================================================
+#  Docker install / update
+# ==============================================================
+
+# Ask a question on the terminal, even when the script is piped (curl | bash).
+# Usage: ask "Question" default_answer  -> sets ANSWER
+ask() {
+    local question="$1" default="$2"
+    ANSWER=""
+    if [ "$ASSUME_YES" = true ]; then
+        ANSWER="$default"
+        echo -e "  ${CYAN}${question}${NC} $default"
+        return 0
+    fi
+    echo -ne "  ${CYAN}${question}${NC} "
+    read -r ANSWER 2>/dev/null < /dev/tty || ANSWER=""
+    [ -z "$ANSWER" ] && ANSWER="$default"
+    return 0
+}
+
+is_yes() {
+    [[ "$1" == [yY] || "$1" == [yY][eE][sS] ]]
+}
+
+# Folder of an existing Docker install (from the running/stopped container), if any
+find_existing_docker_dir() {
+    EXISTING_DOCKER_DIR=""
+    command -v docker &> /dev/null || return 0
+    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$DOCKER_CONTAINER_NAME"; then
+        EXISTING_DOCKER_DIR=$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$DOCKER_CONTAINER_NAME" 2>/dev/null || true)
+        [ "$EXISTING_DOCKER_DIR" = "<no value>" ] && EXISTING_DOCKER_DIR=""
+    fi
+    return 0
+}
+
+# Ask how to install, unless an option already chose it
+choose_install_mode() {
+    [ -n "$INSTALL_MODE" ] && return
+
+    find_existing_docker_dir
+    local default="1"
+    echo ""
+    echo -e "${YELLOW}How would you like to install Tonys Onvif-RTSP-AI Server?${NC}"
+    echo ""
+    echo -e "    ${GREEN}1)${NC} Native install       (Python + MediaMTX + FFmpeg on this machine, systemd service)"
+    echo -e "    ${GREEN}2)${NC} Docker install       (runs in a container with docker compose)"
+    echo -e "    ${GREEN}3)${NC} Update my existing Docker install"
+    if [ -n "$EXISTING_DOCKER_DIR" ]; then
+        default="3"
+        echo ""
+        print_info "Found an existing Docker install in: $EXISTING_DOCKER_DIR"
+    fi
+    echo ""
+    ask "Select an option [1/2/3] (default: $default):" "$default"
+    case "$ANSWER" in
+        2) INSTALL_MODE="docker" ;;
+        3) INSTALL_MODE="docker-update" ;;
+        *) INSTALL_MODE="native" ;;
+    esac
+}
+
+# Work out which folder the Docker install lives in
+resolve_docker_dir() {
+    if [ -n "$CUSTOM_DIR" ]; then
+        INSTALL_DIR="$CUSTOM_DIR"
+        return 0
+    fi
+    find_existing_docker_dir
+    if [ -n "$EXISTING_DOCKER_DIR" ] && [ -f "$EXISTING_DOCKER_DIR/docker-compose.yml" ]; then
+        INSTALL_DIR="$EXISTING_DOCKER_DIR"
+    elif [ -f "$(pwd)/docker-compose.yml" ] && [ -f "$(pwd)/run.py" ]; then
+        INSTALL_DIR="$(pwd)"
+    else
+        INSTALL_DIR="$DOCKER_DEFAULT_DIR"
+    fi
+}
+
+# git and curl are all the Docker path needs on the host
+install_docker_prereqs() {
+    print_step "Installing git and curl"
+    case $OS in
+        ubuntu|debian|raspbian)
+            apt-get update -qq
+            apt-get install -y -qq git curl ca-certificates > /dev/null 2>&1 ;;
+        fedora)
+            dnf install -y -q git curl > /dev/null 2>&1 ;;
+        centos|rhel|rocky|alma)
+            yum install -y -q git curl > /dev/null 2>&1 ;;
+        arch|manjaro)
+            pacman -Sy --noconfirm --quiet git curl > /dev/null 2>&1 ;;
+        macos)
+            command -v git &> /dev/null || print_warning "git not found. Install it with: xcode-select --install" ;;
+    esac
+    if ! command -v git &> /dev/null; then
+        print_error "git is required but could not be installed"
+        exit 1
+    fi
+    print_success "git and curl ready"
+}
+
+# Install Docker Engine and the compose plugin if they are missing
+install_docker() {
+    print_step "Checking Docker"
+
+    if [ "$OS" == "macos" ]; then
+        if ! command -v docker &> /dev/null; then
+            print_error "Docker is not installed."
+            print_info "Install Docker Desktop for Mac first: https://www.docker.com/products/docker-desktop/"
+            print_info "Then run this installer again."
+            exit 1
+        fi
+        print_warning "On macOS, Docker Desktop must have host networking enabled"
+        print_info "(Settings > Resources > Network > Enable host networking)."
+    elif ! command -v docker &> /dev/null; then
+        print_info "Docker not found. Installing Docker Engine..."
+        case $OS in
+            arch|manjaro)
+                pacman -Sy --noconfirm --quiet docker docker-compose > /dev/null 2>&1 ;;
+            *)
+                # Docker's official convenience script (Ubuntu, Debian, Raspberry Pi OS, Fedora, CentOS, RHEL...)
+                curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+                sh /tmp/get-docker.sh
+                rm -f /tmp/get-docker.sh ;;
+        esac
+        if ! command -v docker &> /dev/null; then
+            print_error "Docker installation failed."
+            print_info "Install Docker manually (https://docs.docker.com/engine/install/) and run this installer again."
+            exit 1
+        fi
+        print_success "Docker installed"
+    else
+        print_success "Docker already installed ($(docker --version 2>/dev/null))"
+    fi
+
+    # Make sure the Docker service is running and starts on boot
+    if [ "$OS" != "macos" ] && command -v systemctl &> /dev/null; then
+        systemctl enable --now docker > /dev/null 2>&1 || true
+    fi
+    if ! docker info > /dev/null 2>&1; then
+        print_error "Docker is installed but not running. Start it and run this installer again."
+        exit 1
+    fi
+
+    # Compose plugin ("docker compose")
+    if docker compose version > /dev/null 2>&1; then
+        print_success "Docker Compose ready ($(docker compose version --short 2>/dev/null || echo 'plugin'))"
+        return 0
+    fi
+    print_info "Docker Compose plugin not found. Installing..."
+    case $OS in
+        ubuntu|debian|raspbian)
+            apt-get install -y -qq docker-compose-plugin > /dev/null 2>&1 || \
+            apt-get install -y -qq docker-compose-v2 > /dev/null 2>&1 || true ;;
+        fedora)
+            dnf install -y -q docker-compose-plugin > /dev/null 2>&1 || true ;;
+        centos|rhel|rocky|alma)
+            yum install -y -q docker-compose-plugin > /dev/null 2>&1 || true ;;
+        arch|manjaro)
+            pacman -Sy --noconfirm --quiet docker-compose > /dev/null 2>&1 || true ;;
+    esac
+    if ! docker compose version > /dev/null 2>&1; then
+        # Fallback: download the plugin binary straight from GitHub
+        local carch
+        case "$(uname -m)" in
+            x86_64|amd64)  carch="x86_64" ;;
+            aarch64|arm64) carch="aarch64" ;;
+            armv7l|armhf)  carch="armv7" ;;
+            armv6l)        carch="armv6" ;;
+            *)             carch="$(uname -m)" ;;
+        esac
+        mkdir -p /usr/local/lib/docker/cli-plugins
+        curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-${carch}" \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose 2>/dev/null && \
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-compose || true
+    fi
+    if docker compose version > /dev/null 2>&1; then
+        print_success "Docker Compose installed"
+    else
+        print_error "Could not install the Docker Compose plugin."
+        print_info "See https://docs.docker.com/compose/install/linux/ and run this installer again."
+        exit 1
+    fi
+}
+
+# Clone the repo (new install) or pull the latest code (update)
+docker_get_code() {
+    print_step "Getting the latest code"
+    print_info "Folder: $INSTALL_DIR"
+
+    if [ -d "$INSTALL_DIR/.git" ]; then
+        cd "$INSTALL_DIR"
+        print_info "Running: git pull"
+        if ! git pull; then
+            print_warning "git pull failed (local changes?). Continuing with the code already in this folder."
+        fi
+    elif [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
+        print_warning "Folder is not a git clone, so it can't be updated with git pull. Using it as-is."
+    elif [ ! -d "$INSTALL_DIR" ] || [ -z "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]; then
+        print_info "Running: git clone $REPO_URL"
+        mkdir -p "$(dirname "$INSTALL_DIR")"
+        git clone "$REPO_URL" "$INSTALL_DIR"
+    else
+        print_error "$INSTALL_DIR already exists and is not a copy of the server."
+        print_info "Pick another folder with: --dir /path/to/folder"
+        exit 1
+    fi
+    cd "$INSTALL_DIR"
+    mkdir -p data
+    print_success "Code ready"
+}
+
+# The native install uses the same port (host networking), so it can't run alongside Docker
+stop_native_service() {
+    command -v systemctl &> /dev/null || return 0
+    if systemctl is-active --quiet tonys-onvif 2>/dev/null || systemctl is-enabled --quiet tonys-onvif 2>/dev/null; then
+        print_step "Native install detected"
+        print_warning "The native 'tonys-onvif' service would clash with the container (same ports)."
+        ask "Stop and disable the native service? (Y/n):" "y"
+        if is_yes "$ANSWER"; then
+            systemctl stop tonys-onvif 2>/dev/null || true
+            systemctl disable tonys-onvif > /dev/null 2>&1 || true
+            print_success "Native service stopped and disabled (re-enable with: sudo systemctl enable --now tonys-onvif)"
+        else
+            print_warning "Leaving the native service alone. The container may fail to bind its ports."
+        fi
+    fi
+    return 0
+}
+
+# Optional GPU passthrough for GridFusion VAAPI encoding. Written to
+# docker-compose.override.yml so docker-compose.yml stays untouched and git pull keeps working.
+setup_docker_gpu() {
+    local override="$INSTALL_DIR/docker-compose.override.yml"
+    local marker="# Created by install.sh"
+
+    # Leave an override file the user wrote themselves alone
+    if [ -f "$override" ] && ! grep -q "$marker" "$override"; then
+        print_info "Keeping your own docker-compose.override.yml"
+        return 0
+    fi
+    if [ ! -e /dev/dri ]; then
+        [ "$VAAPI_CHOICE" = "yes" ] && print_warning "--vaapi was given but /dev/dri does not exist on this machine. Skipping."
+        return 0
+    fi
+
+    local enable="$VAAPI_CHOICE"
+    if [ -z "$enable" ]; then
+        if [ -f "$override" ]; then
+            enable="yes"   # keep what the user chose last time
+        else
+            print_step "GPU acceleration (optional)"
+            print_info "An Intel/AMD GPU was found (/dev/dri)."
+            print_info "Passing it to the container lets GridFusion use VAAPI hardware encoding."
+            ask "Enable GPU passthrough? (Y/n):" "y"
+            is_yes "$ANSWER" && enable="yes" || enable="no"
+        fi
+    fi
+
+    if [ "$enable" = "yes" ]; then
+        cat > "$override" << EOF
+$marker (GPU passthrough for GridFusion VAAPI encoding).
+# Delete this file to turn GPU passthrough off.
+services:
+  onvif-rtsp-server:
+    devices:
+      - /dev/dri:/dev/dri
+EOF
+        print_success "GPU passthrough on. Pick \"VAAPI\" under Settings > Engine after startup."
+    elif [ -f "$override" ]; then
+        rm -f "$override"
+        print_info "GPU passthrough off"
+    fi
+}
+
+docker_start() {
+    cd "$INSTALL_DIR"
+    if [ "$INSTALL_MODE" = "docker-update" ]; then
+        print_step "Rebuilding and restarting the container"
+        print_info "Running: docker compose down && docker compose up -d --build"
+        docker compose down
+    else
+        print_step "Building and starting the container"
+        print_info "Running: docker compose up -d --build (the first build can take several minutes)"
+    fi
+    docker compose up -d --build
+    print_success "Container is running"
+}
+
+print_docker_completion() {
+    local title="Docker Installation Complete!"
+    [ "$INSTALL_MODE" = "docker-update" ] && title="Docker Update Complete!     "
+    echo ""
+    echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║${NC}          ${GREEN}${title}${NC}                       ${GREEN}║${NC}"
+    echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${CYAN}Installation Path:${NC} $INSTALL_DIR"
+    echo -e "  ${CYAN}Settings & data:${NC}   $INSTALL_DIR/data"
+    echo ""
+    echo -e "  ${YELLOW}Web UI:${NC} http://localhost:5552"
+    echo ""
+    echo -e "  ${YELLOW}Useful commands${NC} (run inside $INSTALL_DIR):"
+    echo "    sudo docker compose logs -f      # view logs"
+    echo "    sudo docker compose restart      # restart"
+    echo "    sudo docker compose down         # stop"
+    echo ""
+    echo -e "  ${YELLOW}To update later:${NC}"
+    echo "    curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash -s -- --docker-update"
+    echo -e "  ${YELLOW}or:${NC}"
+    echo "    cd $INSTALL_DIR && sudo git pull && sudo docker compose down && sudo docker compose up -d --build"
+    echo ""
+    echo -e "  The container restarts automatically on boot (restart: unless-stopped)."
+    echo ""
+    echo -e "  ${CYAN}Thank you for using Tonys Onvif-RTSP-AI Server!${NC}"
+    echo ""
+}
+
+docker_main() {
+    resolve_docker_dir
+    if [ "$INSTALL_MODE" = "docker-update" ]; then
+        print_step "Updating Docker install"
+        if [ ! -f "$INSTALL_DIR/docker-compose.yml" ]; then
+            print_error "No Docker install found in $INSTALL_DIR"
+            print_info "Point to it with: --dir /path/to/Tonys-Onvf-RTSP-Server"
+            print_info "Or choose a new Docker install (option 2 / --docker)."
+            exit 1
+        fi
+    else
+        print_step "Docker install"
+    fi
+    print_info "Folder: $INSTALL_DIR"
+
+    install_docker_prereqs
+    install_docker
+    docker_get_code
+    stop_native_service
+    setup_docker_gpu
+    docker_start
+    print_docker_completion
+}
+
 # Main installation flow
 main() {
     print_banner
     check_root
     detect_os
+    choose_install_mode
+    if [ "$INSTALL_MODE" = "docker" ] || [ "$INSTALL_MODE" = "docker-update" ]; then
+        docker_main
+        return
+    fi
     install_dependencies
     clone_repository
     setup_venv
