@@ -15,13 +15,62 @@ import queue
 from urllib.parse import quote
 from .ffmpeg_manager import FFmpegManager
 
+
+def onvif_audio_encoding(codec):
+    """Map a codec name to the ONVIF tt:AudioEncoding enum (G711/G726/AAC).
+
+    Returns None for codecs ONVIF can't describe (e.g. Opus); callers should
+    then omit the AudioEncoderConfiguration. Issue #66: strict clients such as
+    ONVIF Device Manager reject the whole reply on an out-of-enum value.
+    """
+    c = str(codec or '').strip().upper().replace('-', '').replace('_', '')
+    if c in ('PCMU', 'PCMA', 'G711', 'G711U', 'G711A', 'ULAW', 'ALAW', 'MULAW'):
+        return 'G711'
+    if c.startswith('G726'):
+        return 'G726'
+    if c in ('AAC', 'MPEG4GENERIC', 'MP4A', 'MP4ALATM'):
+        return 'AAC'
+    return None
+
+
 class VirtualSubscription:
     def __init__(self, sub_id, client_ip=None):
         self.sub_id = sub_id
         self.client_ip = client_ip
         self.queue = queue.Queue(maxsize=100)
-        import time
-        self.last_active = time.time()
+        self.created = time.time()
+        self.last_active = self.created
+
+    def put(self, evt):
+        """Queue an event; if the queue is full, drop the oldest one."""
+        try:
+            self.queue.put_nowait(evt)
+        except queue.Full:
+            try:
+                self.queue.get_nowait()
+                self.queue.put_nowait(evt)
+            except Exception:
+                pass
+
+
+# A pull-point subscription that hasn't been pulled or renewed for this long is
+# treated as abandoned and removed (issue #71). Protect pulls every ~5s.
+SUBSCRIPTION_IDLE_TIMEOUT = 120
+SUBSCRIPTION_SWEEP_INTERVAL = 30
+
+
+def _subscription_sweeper(service_ref):
+    """Background loop that expires idle subscriptions while the service exists."""
+    while True:
+        time.sleep(SUBSCRIPTION_SWEEP_INTERVAL)
+        service = service_ref()
+        if service is None:
+            return
+        try:
+            service.expire_idle_subscriptions()
+        except Exception as e:
+            print(f"  [ONVIF Events] Subscription sweep error: {e}")
+        del service
 
 # Try to import zoneinfo
 if sys.version_info >= (3, 9):
@@ -47,6 +96,47 @@ class ONVIFService:
         # Prevents repetitive 401 challenges for recently authenticated clients (30 min TTL)
         self.auth_cache = {}
         self.subscriptions = {}
+        self._sub_lock = threading.Lock()
+        # Latest event per (topic, data_name), replayed as PropertyOperation="Initialized"
+        # to every new subscription so it starts from the current state (issue #71).
+        self._event_state = {}
+        import weakref
+        threading.Thread(target=_subscription_sweeper, args=(weakref.ref(self),),
+                         daemon=True, name=f"onvif-sub-sweep-{getattr(camera, 'id', '?')}").start()
+
+    # ------------------------------------------------------------------
+    # Event subscriptions
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _event_key(evt):
+        topic = str(evt.get('topic', ''))
+        if topic.startswith('tns1:'):
+            topic = topic[5:]
+        return (topic, evt.get('data_name') or '')
+
+    def broadcast_event(self, evt):
+        """Record the event as the current state of its topic and queue it for all subscribers."""
+        evt = dict(evt)
+        evt['property_op'] = 'Changed'
+        with self._sub_lock:
+            self._event_state[self._event_key(evt)] = evt
+            subs = list(self.subscriptions.values())
+        for sub in subs:
+            sub.put(evt)
+
+    def expire_idle_subscriptions(self, max_idle=SUBSCRIPTION_IDLE_TIMEOUT):
+        """Remove subscriptions that haven't pulled or renewed for max_idle seconds."""
+        now = time.time()
+        with self._sub_lock:
+            stale = [sid for sid, sub in self.subscriptions.items() if now - sub.last_active > max_idle]
+            for sid in stale:
+                sub = self.subscriptions.pop(sid)
+                print(f"  [ONVIF Events] Expired idle subscription {sid[:8]} from {sub.client_ip} "
+                      f"(camera {getattr(self.camera, 'name', '?')})")
+        return len(stale)
+
+    def _unknown_subscription_fault(self):
+        return self._soap_fault('ter:InvalidArgVal', 'Unknown or expired subscription')
         
     def create_app(self):
         """Create the Flask app for ONVIF service"""
@@ -717,60 +807,134 @@ class ONVIFService:
         
         return Response(soap_response, mimetype='application/soap+xml')
 
+    @staticmethod
+    def _sample_rate_khz(value, default_hz=8000):
+        """ONVIF tt:SampleRate is an integer in kHz (issue #68): 16000 Hz -> 16."""
+        try:
+            v = str(value or '').strip().lower().replace('khz', '').replace('hz', '').strip()
+            hz = float(v) if v else float(default_hz)
+            if hz < 1000:  # already kHz, e.g. "16" or "44.1"
+                hz *= 1000
+        except (TypeError, ValueError):
+            hz = float(default_hz)
+        return max(1, int(round(hz / 1000.0)))
+
+    @staticmethod
+    def _kbps(value, default):
+        try:
+            v = str(value or '').strip().lower().replace('kbps', '').replace('k', '').strip()
+            return max(1, int(round(float(v)))) if v else default
+        except (TypeError, ValueError):
+            return default
+
+    def _audio_advert(self, which):
+        """(encoding, bitrate kbps, sample rate kHz) to advertise for 'main'/'sub'.
+
+        Issue #68: when audio is copied we used to always claim G711/64/8000,
+        even for AAC 16 kHz cameras. Now the probed source track is used.
+        encoding is None when ONVIF can't describe the codec (see issue #66).
+        """
+        cam = self.camera
+        if getattr(cam, f'transcode_{which}_audio', False):
+            enc = onvif_audio_encoding(getattr(cam, f'audio_encoding_{which}', 'aac'))
+            return (enc,
+                    self._kbps(getattr(cam, f'audio_bitrate_{which}', '64k'), 64),
+                    self._sample_rate_khz(getattr(cam, f'audio_sample_rate_{which}', '8000')))
+        audio = ((getattr(cam, 'probed_media', None) or {}).get(which) or {}).get('audio')
+        if audio and audio.get('codec'):
+            codec = audio['codec']
+            ff_names = {'pcm_mulaw': 'PCMU', 'pcm_alaw': 'PCMA'}
+            if codec.startswith('adpcm_g726') or codec == 'g726':
+                codec = 'G726'
+            enc = onvif_audio_encoding(ff_names.get(codec, codec))
+            default_br = 64 if enc in ('G711', 'AAC') else 32
+            return (enc,
+                    audio.get('bitrate') or default_br,
+                    self._sample_rate_khz(audio.get('sample_rate') or 8000))
+        return ("G711", 64, 8)
+
+    def _video_advert(self, which):
+        """(bitrate kbps, H264 profile) to advertise for 'main'/'sub' (issue #68).
+
+        Transcoded streams report what our encoder produces (see
+        mediamtx_manager.py); copied streams report the probed source, falling
+        back to the old fixed values until the probe has run.
+        """
+        cam = self.camera
+        if which == 'main':
+            if getattr(cam, 'transcode_main', False):
+                return 2500, "High"
+            bitrate, profile = 4096, "Main"
+        else:
+            if getattr(cam, 'transcode_sub', False):
+                return 800, "Baseline"
+            bitrate, profile = 1024, "Baseline"
+        probed = (getattr(cam, 'probed_media', None) or {}).get(which) or {}
+        if probed.get('bitrate'):
+            bitrate = int(probed['bitrate'])
+        p = str(probed.get('profile') or '').lower()
+        if 'baseline' in p:
+            profile = "Baseline"
+        elif 'high' in p:
+            profile = "High"
+        elif 'extended' in p:
+            profile = "Extended"
+        elif 'main' in p:
+            profile = "Main"
+        return bitrate, profile
+
     def _handle_get_profiles(self):
         """Handle GetProfiles request with unique tokens"""
         cam_id = self.camera.id
         use_count = 2 if not getattr(self.camera, 'disable_substream', False) else 1
         
         # Determine actual audio encoding for ONVIF reporting
-        audio_enc = "PCMU" # Default
-        audio_rate = 8000
-        audio_bitrate = 64
-        
-        if getattr(self.camera, 'enable_audio', False):
-            # If transcoding, use the target codec
-            if getattr(self.camera, 'transcode_main_audio', False):
-                codec = getattr(self.camera, 'audio_encoding_main', 'aac').upper()
-                audio_enc = "AAC" if codec == "AAC" else codec
-                audio_rate = int(str(getattr(self.camera, 'audio_sample_rate_main', '8000')).replace('khz', '000').replace('Hz', ''))
-                audio_bitrate = int(str(getattr(self.camera, 'audio_bitrate_main', '64k')).replace('k', '').replace('kbps', ''))
-            # Note: If copying, we still report PCMU as a safe baseline, 
-            # but we should ideally probe the source.
+        # Transcoded: target codec. Copied: probed source track (issue #68).
+        audio_enc, audio_bitrate, audio_rate = self._audio_advert('main')
             
-        audio_main = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Main_{cam_id}">
+        audio_src_main = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Main_{cam_id}">
                     <tt:Name>Main Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:SourceToken>AudioSource_{cam_id}</tt:SourceToken>
-                </tt:AudioSourceConfiguration>
-                <tt:AudioEncoderConfiguration token="AudioEncoder_Main_{cam_id}">
+                </tt:AudioSourceConfiguration>"""
+        audio_encoder_main = "" if not audio_enc else f"""<tt:AudioEncoderConfiguration token="AudioEncoder_Main_{cam_id}">
                     <tt:Name>Main Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:Encoding>{audio_enc}</tt:Encoding>
                     <tt:Bitrate>{audio_bitrate}</tt:Bitrate>
                     <tt:SampleRate>{audio_rate}</tt:SampleRate>
+                    <tt:Multicast>
+                        <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                        <tt:Port>0</tt:Port>
+                        <tt:TTL>1</tt:TTL>
+                        <tt:AutoStart>false</tt:AutoStart>
+                    </tt:Multicast>
+                    <tt:SessionTimeout>PT60S</tt:SessionTimeout>
                 </tt:AudioEncoderConfiguration>"""
         
         # Audio for sub stream
-        audio_enc_sub = "PCMU"
-        audio_rate_sub = 8000
-        audio_bitrate_sub = 64
-        if getattr(self.camera, 'transcode_sub_audio', False):
-            codec = getattr(self.camera, 'audio_encoding_sub', 'aac').upper()
-            audio_enc_sub = "AAC" if codec == "AAC" else codec
-            audio_rate_sub = int(str(getattr(self.camera, 'audio_sample_rate_sub', '8000')).replace('khz', '000').replace('Hz', ''))
-            audio_bitrate_sub = int(str(getattr(self.camera, 'audio_bitrate_sub', '64k')).replace('k', '').replace('kbps', ''))
+        audio_enc_sub, audio_bitrate_sub, audio_rate_sub = self._audio_advert('sub')
+        main_bitrate, main_profile = self._video_advert('main')
+        sub_bitrate, sub_profile = self._video_advert('sub')
 
-        audio_sub = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub_{cam_id}">
+        audio_src_sub = f"""<tt:AudioSourceConfiguration token="AudioSourceConfig_Sub_{cam_id}">
                     <tt:Name>Sub Audio Source</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:SourceToken>AudioSource_{cam_id}</tt:SourceToken>
-                </tt:AudioSourceConfiguration>
-                <tt:AudioEncoderConfiguration token="AudioEncoder_Sub_{cam_id}">
+                </tt:AudioSourceConfiguration>"""
+        audio_encoder_sub = "" if not audio_enc_sub else f"""<tt:AudioEncoderConfiguration token="AudioEncoder_Sub_{cam_id}">
                     <tt:Name>Sub Audio Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
                     <tt:Encoding>{audio_enc_sub}</tt:Encoding>
                     <tt:Bitrate>{audio_bitrate_sub}</tt:Bitrate>
                     <tt:SampleRate>{audio_rate_sub}</tt:SampleRate>
+                    <tt:Multicast>
+                        <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                        <tt:Port>0</tt:Port>
+                        <tt:TTL>1</tt:TTL>
+                        <tt:AutoStart>false</tt:AutoStart>
+                    </tt:Multicast>
+                    <tt:SessionTimeout>PT60S</tt:SessionTimeout>
                 </tt:AudioEncoderConfiguration>"""
 
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -787,6 +951,7 @@ class ONVIFService:
                     <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
                     <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
                 </tt:VideoSourceConfiguration>
+                {audio_src_main if getattr(self.camera, 'enable_audio', False) else ""}
                 <tt:VideoEncoderConfiguration token="VideoEncoderMain_{cam_id}">
                     <tt:Name>Main Video Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
@@ -799,14 +964,21 @@ class ONVIFService:
                     <tt:RateControl>
                         <tt:FrameRateLimit>{self.camera.main_framerate}</tt:FrameRateLimit>
                         <tt:EncodingInterval>1</tt:EncodingInterval>
-                        <tt:BitrateLimit>4096</tt:BitrateLimit>
+                        <tt:BitrateLimit>{main_bitrate}</tt:BitrateLimit>
                     </tt:RateControl>
                     <tt:H264>
                         <tt:GovLength>{self.camera.main_framerate}</tt:GovLength>
-                        <tt:H264Profile>Main</tt:H264Profile>
+                        <tt:H264Profile>{main_profile}</tt:H264Profile>
                     </tt:H264>
+                    <tt:Multicast>
+                        <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                        <tt:Port>0</tt:Port>
+                        <tt:TTL>1</tt:TTL>
+                        <tt:AutoStart>false</tt:AutoStart>
+                    </tt:Multicast>
+                    <tt:SessionTimeout>PT60S</tt:SessionTimeout>
                 </tt:VideoEncoderConfiguration>
-                {audio_main if getattr(self.camera, 'enable_audio', False) else ""}
+                {audio_encoder_main if getattr(self.camera, 'enable_audio', False) else ""}
             </trt:Profiles>
         """
         
@@ -820,6 +992,7 @@ class ONVIFService:
                     <tt:SourceToken>VideoSource_{cam_id}</tt:SourceToken>
                     <tt:Bounds x="0" y="0" width="{self.camera.main_width}" height="{self.camera.main_height}"/>
                 </tt:VideoSourceConfiguration>
+                {audio_src_sub if getattr(self.camera, 'enable_audio', False) else ""}
                 <tt:VideoEncoderConfiguration token="VideoEncoderSub_{cam_id}">
                     <tt:Name>Sub Video Encoder</tt:Name>
                     <tt:UseCount>1</tt:UseCount>
@@ -832,14 +1005,21 @@ class ONVIFService:
                     <tt:RateControl>
                         <tt:FrameRateLimit>{self.camera.sub_framerate}</tt:FrameRateLimit>
                         <tt:EncodingInterval>1</tt:EncodingInterval>
-                        <tt:BitrateLimit>1024</tt:BitrateLimit>
+                        <tt:BitrateLimit>{sub_bitrate}</tt:BitrateLimit>
                     </tt:RateControl>
                     <tt:H264>
                         <tt:GovLength>{self.camera.sub_framerate}</tt:GovLength>
-                        <tt:H264Profile>Baseline</tt:H264Profile>
+                        <tt:H264Profile>{sub_profile}</tt:H264Profile>
                     </tt:H264>
+                    <tt:Multicast>
+                        <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                        <tt:Port>0</tt:Port>
+                        <tt:TTL>1</tt:TTL>
+                        <tt:AutoStart>false</tt:AutoStart>
+                    </tt:Multicast>
+                    <tt:SessionTimeout>PT60S</tt:SessionTimeout>
                 </tt:VideoEncoderConfiguration>
-                {audio_sub if getattr(self.camera, 'enable_audio', False) else ""}
+                {audio_encoder_sub if getattr(self.camera, 'enable_audio', False) else ""}
             </trt:Profiles>
             """
         
@@ -977,44 +1157,46 @@ class ONVIFService:
         cam_id = self.camera.id
         
         # Determine actual audio encoding for ONVIF reporting
-        audio_enc = "PCMU"
-        audio_rate = 8000
-        audio_bitrate = 64
-        if getattr(self.camera, 'transcode_main_audio', False):
-            codec = getattr(self.camera, 'audio_encoding_main', 'aac').upper()
-            audio_enc = "AAC" if codec == "AAC" else codec
-            audio_rate = int(str(getattr(self.camera, 'audio_sample_rate_main', '8000')).replace('khz', '000').replace('Hz', ''))
-            audio_bitrate = int(str(getattr(self.camera, 'audio_bitrate_main', '64k')).replace('k', '').replace('kbps', ''))
+        audio_enc, audio_bitrate, audio_rate = self._audio_advert('main')
+        audio_enc_sub, audio_bitrate_sub, audio_rate_sub = self._audio_advert('sub')
 
-        audio_enc_sub = "PCMU"
-        audio_rate_sub = 8000
-        audio_bitrate_sub = 64
-        if getattr(self.camera, 'transcode_sub_audio', False):
-            codec = getattr(self.camera, 'audio_encoding_sub', 'aac').upper()
-            audio_enc_sub = "AAC" if codec == "AAC" else codec
-            audio_rate_sub = int(str(getattr(self.camera, 'audio_sample_rate_sub', '8000')).replace('khz', '000').replace('Hz', ''))
-            audio_bitrate_sub = int(str(getattr(self.camera, 'audio_bitrate_sub', '64k')).replace('k', '').replace('kbps', ''))
-
-        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
-<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
-                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
-                   xmlns:tt="http://www.onvif.org/ver10/schema">
-    <SOAP-ENV:Body>
-        <trt:GetAudioEncoderConfigurationsResponse>
+        main_cfg = "" if not audio_enc else f"""
             <trt:Configurations token="AudioEncoder_Main_{cam_id}">
                 <tt:Name>Main Audio Encoder</tt:Name>
                 <tt:UseCount>1</tt:UseCount>
                 <tt:Encoding>{audio_enc}</tt:Encoding>
                 <tt:Bitrate>{audio_bitrate}</tt:Bitrate>
                 <tt:SampleRate>{audio_rate}</tt:SampleRate>
-            </trt:Configurations>
+                <tt:Multicast>
+                    <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                    <tt:Port>0</tt:Port>
+                    <tt:TTL>1</tt:TTL>
+                    <tt:AutoStart>false</tt:AutoStart>
+                </tt:Multicast>
+                <tt:SessionTimeout>PT60S</tt:SessionTimeout>
+            </trt:Configurations>"""
+        sub_cfg = "" if not audio_enc_sub else f"""
             <trt:Configurations token="AudioEncoder_Sub_{cam_id}">
                 <tt:Name>Sub Audio Encoder</tt:Name>
                 <tt:UseCount>1</tt:UseCount>
                 <tt:Encoding>{audio_enc_sub}</tt:Encoding>
                 <tt:Bitrate>{audio_bitrate_sub}</tt:Bitrate>
                 <tt:SampleRate>{audio_rate_sub}</tt:SampleRate>
-            </trt:Configurations>
+                <tt:Multicast>
+                    <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                    <tt:Port>0</tt:Port>
+                    <tt:TTL>1</tt:TTL>
+                    <tt:AutoStart>false</tt:AutoStart>
+                </tt:Multicast>
+                <tt:SessionTimeout>PT60S</tt:SessionTimeout>
+            </trt:Configurations>"""
+
+        soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+                   xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
+                   xmlns:tt="http://www.onvif.org/ver10/schema">
+    <SOAP-ENV:Body>
+        <trt:GetAudioEncoderConfigurationsResponse>{main_cfg}{sub_cfg}
         </trt:GetAudioEncoderConfigurationsResponse>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
@@ -1047,6 +1229,8 @@ class ONVIFService:
     def _handle_get_video_encoder_configs(self):
         """Handle GetVideoEncoderConfigurations request"""
         cam_id = self.camera.id
+        main_bitrate, main_profile = self._video_advert('main')
+        sub_bitrate, sub_profile = self._video_advert('sub')
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:trt="http://www.onvif.org/ver10/media/wsdl"
@@ -1065,12 +1249,19 @@ class ONVIFService:
                 <tt:RateControl>
                     <tt:FrameRateLimit>{self.camera.main_framerate}</tt:FrameRateLimit>
                     <tt:EncodingInterval>1</tt:EncodingInterval>
-                    <tt:BitrateLimit>4096</tt:BitrateLimit>
+                    <tt:BitrateLimit>{main_bitrate}</tt:BitrateLimit>
                 </tt:RateControl>
                 <tt:H264>
                     <tt:GovLength>{self.camera.main_framerate}</tt:GovLength>
-                    <tt:H264Profile>Main</tt:H264Profile>
+                    <tt:H264Profile>{main_profile}</tt:H264Profile>
                 </tt:H264>
+                <tt:Multicast>
+                    <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                    <tt:Port>0</tt:Port>
+                    <tt:TTL>1</tt:TTL>
+                    <tt:AutoStart>false</tt:AutoStart>
+                </tt:Multicast>
+                <tt:SessionTimeout>PT60S</tt:SessionTimeout>
             </trt:Configurations>
             <trt:Configurations token="VideoEncoderSub_{cam_id}">
                 <tt:Name>Sub Video Encoder</tt:Name>
@@ -1084,12 +1275,19 @@ class ONVIFService:
                 <tt:RateControl>
                     <tt:FrameRateLimit>{self.camera.sub_framerate}</tt:FrameRateLimit>
                     <tt:EncodingInterval>1</tt:EncodingInterval>
-                    <tt:BitrateLimit>1024</tt:BitrateLimit>
+                    <tt:BitrateLimit>{sub_bitrate}</tt:BitrateLimit>
                 </tt:RateControl>
                 <tt:H264>
                     <tt:GovLength>{self.camera.sub_framerate}</tt:GovLength>
-                    <tt:H264Profile>Baseline</tt:H264Profile>
+                    <tt:H264Profile>{sub_profile}</tt:H264Profile>
                 </tt:H264>
+                <tt:Multicast>
+                    <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                    <tt:Port>0</tt:Port>
+                    <tt:TTL>1</tt:TTL>
+                    <tt:AutoStart>false</tt:AutoStart>
+                </tt:Multicast>
+                <tt:SessionTimeout>PT60S</tt:SessionTimeout>
             </trt:Configurations>
         </trt:GetVideoEncoderConfigurationsResponse>
     </SOAP-ENV:Body>
@@ -1176,13 +1374,13 @@ class ONVIFService:
             enc_token, enc_name = f"VideoEncoderSub_{cam_id}", "Sub Video Encoder"
             width, height = self.camera.sub_width, self.camera.sub_height
             framerate = self.camera.sub_framerate
-            quality, bitrate, h264_profile = 3, 1024, "Baseline"
+            quality, (bitrate, h264_profile) = 3, self._video_advert('sub')
         else:
             token, name = f"mainStream_{cam_id}", "mainStream"
             enc_token, enc_name = f"VideoEncoderMain_{cam_id}", "Main Video Encoder"
             width, height = self.camera.main_width, self.camera.main_height
             framerate = self.camera.main_framerate
-            quality, bitrate, h264_profile = 5, 4096, "Main"
+            quality, (bitrate, h264_profile) = 5, self._video_advert('main')
 
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
@@ -1216,6 +1414,13 @@ class ONVIFService:
                         <tt:GovLength>{framerate}</tt:GovLength>
                         <tt:H264Profile>{h264_profile}</tt:H264Profile>
                     </tt:H264>
+                    <tt:Multicast>
+                        <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                        <tt:Port>0</tt:Port>
+                        <tt:TTL>1</tt:TTL>
+                        <tt:AutoStart>false</tt:AutoStart>
+                    </tt:Multicast>
+                    <tt:SessionTimeout>PT60S</tt:SessionTimeout>
                 </tt:VideoEncoderConfiguration>
             </trt:Profile>
         </trt:GetProfileResponse>
@@ -1231,12 +1436,12 @@ class ONVIFService:
             token, name = f"VideoEncoderSub_{cam_id}", "Sub Video Encoder"
             width, height = self.camera.sub_width, self.camera.sub_height
             framerate = self.camera.sub_framerate
-            quality, bitrate, h264_profile = 3, 1024, "Baseline"
+            quality, (bitrate, h264_profile) = 3, self._video_advert('sub')
         else:
             token, name = f"VideoEncoderMain_{cam_id}", "Main Video Encoder"
             width, height = self.camera.main_width, self.camera.main_height
             framerate = self.camera.main_framerate
-            quality, bitrate, h264_profile = 5, 4096, "Main"
+            quality, (bitrate, h264_profile) = 5, self._video_advert('main')
 
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
@@ -1262,6 +1467,13 @@ class ONVIFService:
                     <tt:GovLength>{framerate}</tt:GovLength>
                     <tt:H264Profile>{h264_profile}</tt:H264Profile>
                 </tt:H264>
+                <tt:Multicast>
+                    <tt:Address><tt:Type>IPv4</tt:Type><tt:IPv4Address>0.0.0.0</tt:IPv4Address></tt:Address>
+                    <tt:Port>0</tt:Port>
+                    <tt:TTL>1</tt:TTL>
+                    <tt:AutoStart>false</tt:AutoStart>
+                </tt:Multicast>
+                <tt:SessionTimeout>PT60S</tt:SessionTimeout>
             </trt:Configuration>
         </trt:GetVideoEncoderConfigurationResponse>
     </SOAP-ENV:Body>
@@ -1320,6 +1532,8 @@ class ONVIFService:
                     </tt:EncodingIntervalRange>
                     <tt:H264ProfilesSupported>Baseline</tt:H264ProfilesSupported>
                     <tt:H264ProfilesSupported>Main</tt:H264ProfilesSupported>
+                    <tt:H264ProfilesSupported>Extended</tt:H264ProfilesSupported>
+                    <tt:H264ProfilesSupported>High</tt:H264ProfilesSupported>
                 </tt:H264>
             </trt:Options>
         </trt:GetVideoEncoderConfigurationOptionsResponse>
@@ -1438,7 +1652,15 @@ class ONVIFService:
         import uuid
         sub_id = str(uuid.uuid4())
         client_ip = request.remote_addr
-        self.subscriptions[sub_id] = VirtualSubscription(sub_id, client_ip)
+        sub = VirtualSubscription(sub_id, client_ip)
+        with self._sub_lock:
+            # Start the new subscriber from the current state of every known topic,
+            # so a "motion cleared" sent just before a resubscribe isn't lost.
+            for evt in self._event_state.values():
+                init_evt = dict(evt)
+                init_evt['property_op'] = 'Initialized'
+                sub.put(init_evt)
+            self.subscriptions[sub_id] = sub
         
         # Build subscription reference URL
         sub_ref = f"http://{local_ip}:{self.camera.onvif_port}/onvif/subscription/{sub_id}"
@@ -1466,7 +1688,7 @@ class ONVIFService:
         import queue
         sub = self.subscriptions.get(sub_id)
         if not sub:
-            return Response("Subscription not found", status=404)
+            return self._unknown_subscription_fault()
         
         sub.last_active = time.time()
         
@@ -1523,12 +1745,15 @@ class ONVIFService:
                 else:
                     data_name = 'IsMotion'
                 
-            timestamp = escape(evt.get('timestamp', datetime.utcnow().isoformat() + 'Z'))
+            timestamp = escape(evt.get('timestamp') or (datetime.utcnow().isoformat() + 'Z'))
+            property_op = evt.get('property_op', 'Changed')
+            if property_op not in ('Initialized', 'Changed', 'Deleted'):
+                property_op = 'Changed'
             
             messages_xml += f"""<wsnt:NotificationMessage>
                 <wsnt:Topic Dialect="http://www.onvif.org/ver10/tev/topicExpression/ConcreteSet">{topic}</wsnt:Topic>
                 <wsnt:Message>
-                    <tt:Message UtcTime="{timestamp}">
+                    <tt:Message UtcTime="{timestamp}" PropertyOperation="{property_op}">
                         <tt:Source>
                             <tt:SimpleItem Name="VideoSourceConfigurationToken" Value="{source_token}"/>
                         </tt:Source>
@@ -1558,8 +1783,8 @@ class ONVIFService:
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_unsubscribe(self, sub_id):
-        if sub_id in self.subscriptions:
-            del self.subscriptions[sub_id]
+        with self._sub_lock:
+            self.subscriptions.pop(sub_id, None)
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:wsa="http://www.w3.org/2005/08/addressing"
@@ -1574,8 +1799,10 @@ class ONVIFService:
         return Response(soap_response, mimetype='application/soap+xml')
 
     def _handle_renew_subscription(self, sub_id):
-        if sub_id in self.subscriptions:
-            self.subscriptions[sub_id].last_active = time.time()
+        sub = self.subscriptions.get(sub_id)
+        if not sub:
+            return self._unknown_subscription_fault()
+        sub.last_active = time.time()
         soap_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
                    xmlns:wsa="http://www.w3.org/2005/08/addressing"

@@ -9,6 +9,7 @@ from .config import WEB_UI_PORT, MEDIAMTX_PORT
 from .web import create_web_app
 from .version import CURRENT_VERSION
 from .updater import check_for_updates
+from .module_manager import ModuleManager
 
 # Global events for signaling
 shutdown_event = threading.Event()
@@ -51,6 +52,10 @@ def main():
     from .ffmpeg_manager import FFmpegManager
     ffmpeg_mgr = FFmpegManager()
     ffmpeg_mgr.check_and_prompt_upgrade()
+    
+    # Initialize module manager (addon system)
+    module_manager = ModuleManager()
+    manager.module_manager = module_manager
     
     # Check for MediaMTX updates BEFORE starting cameras to ensure prompt is visible
     manager.mediamtx.download_mediamtx()
@@ -103,6 +108,9 @@ def main():
         sys.exit(1)
     
     web_app = create_web_app(manager)
+    
+    # Notify active modules that the server is starting
+    module_manager.on_startup(manager)
     
     print(f"\nStarting Web UI on http://localhost:{web_ui_port}")
     web_thread = threading.Thread(
@@ -175,4 +183,9 @@ def main():
         camera.stop()
         
     print("Server stopped successfully.")
+    
+    # Shutdown addon modules
+    if hasattr(manager, 'module_manager') and manager.module_manager:
+        manager.module_manager.on_shutdown(manager)
+    
     return 5 if restart_requested else 0

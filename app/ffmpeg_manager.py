@@ -626,7 +626,7 @@ class FFmpegManager:
                 '-v', 'error',
                 '-rtsp_transport', 'tcp',
                 '-select_streams', 'v:0',
-                '-show_entries', 'stream=width,height,r_frame_rate,codec_name',
+                '-show_entries', 'stream=width,height,r_frame_rate,avg_frame_rate,codec_name,profile',
                 '-of', 'json',
                 stream_url
             ]
@@ -641,22 +641,112 @@ class FFmpegManager:
                 return None
             info = streams[0]
 
-            framerate = None
-            r_frame_rate = info.get('r_frame_rate', '')
-            if '/' in r_frame_rate:
+            def _parse_rate(rate):
+                if not rate or '/' not in rate:
+                    return None
                 try:
-                    num, den = r_frame_rate.split('/')
-                    if int(den) != 0:
-                        framerate = round(int(num) / int(den))
+                    num, den = rate.split('/')
+                    if int(den) == 0:
+                        return None
+                    fps = round(int(num) / int(den))
+                    return fps if 1 <= fps <= 240 else None
                 except (ValueError, ZeroDivisionError):
-                    pass
+                    return None
+
+            # Prefer avg_frame_rate: some cameras (e.g. Reolink) carry SPS timing
+            # info that makes r_frame_rate report double the real rate (issue #69).
+            # Fall back to r_frame_rate when avg is missing or 0/0 on live streams.
+            framerate = _parse_rate(info.get('avg_frame_rate', '')) or _parse_rate(info.get('r_frame_rate', ''))
 
             return {
                 'width': info.get('width'),
                 'height': info.get('height'),
                 'framerate': framerate,
                 'codec': (info.get('codec_name') or '').lower(),
+                'profile': info.get('profile') or None,
             }
+        except Exception:
+            return None
+
+    def probe_stream_media(self, stream_url, seconds=5, timeout=25):
+        """
+        Measure a stream's real video bitrate and read its audio track (issue #68).
+
+        Reads `seconds` of packets so the bitrate can be computed even when the
+        RTSP source does not declare one. Separate from probe_stream() so a slow
+        or failed measurement never affects the resolution/fps check.
+
+        Returns:
+            dict with 'bitrate' (video kbps or None) and 'audio' (dict with
+            'codec', 'sample_rate' (Hz), 'channels', 'bitrate' (kbps or None),
+            or None when the stream has no audio), or None on failure.
+        """
+        ffprobe_exe = self.get_ffprobe_path()
+        if not ffprobe_exe:
+            return None
+
+        try:
+            cmd = [
+                ffprobe_exe,
+                '-v', 'error',
+                '-rtsp_transport', 'tcp',
+                '-read_intervals', f'%+{int(seconds)}',
+                '-show_entries',
+                'stream=index,codec_type,codec_name,sample_rate,channels,bit_rate:'
+                'packet=stream_index,size,pts_time',
+                '-of', 'json',
+                stream_url
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            if result.returncode != 0:
+                return None
+
+            import json
+            data = json.loads(result.stdout)
+            streams = data.get('streams') or []
+            packets = data.get('packets') or []
+
+            def _kbps(stream_index, declared=None):
+                # Prefer a measured rate; fall back to the declared one.
+                sizes, times = 0, []
+                for pkt in packets:
+                    if pkt.get('stream_index') != stream_index:
+                        continue
+                    try:
+                        sizes += int(pkt.get('size') or 0)
+                        if pkt.get('pts_time') not in (None, 'N/A'):
+                            times.append(float(pkt['pts_time']))
+                    except (TypeError, ValueError):
+                        continue
+                if len(times) >= 2:
+                    span = max(times) - min(times)
+                    if span >= 1.0 and sizes > 0:
+                        return max(1, int(round(sizes * 8 / span / 1000)))
+                try:
+                    if declared not in (None, '', 'N/A'):
+                        return max(1, int(round(int(declared) / 1000)))
+                except (TypeError, ValueError):
+                    pass
+                return None
+
+            video = next((st for st in streams if st.get('codec_type') == 'video'), None)
+            audio = next((st for st in streams if st.get('codec_type') == 'audio'), None)
+
+            out = {'bitrate': None, 'audio': None}
+            if video is not None:
+                out['bitrate'] = _kbps(video.get('index'), video.get('bit_rate'))
+            if audio is not None:
+                try:
+                    sample_rate = int(audio.get('sample_rate') or 0) or None
+                except (TypeError, ValueError):
+                    sample_rate = None
+                out['audio'] = {
+                    'codec': (audio.get('codec_name') or '').lower(),
+                    'sample_rate': sample_rate,
+                    'channels': audio.get('channels'),
+                    'bitrate': _kbps(audio.get('index'), audio.get('bit_rate')),
+                }
+            return out
         except Exception:
             return None
 

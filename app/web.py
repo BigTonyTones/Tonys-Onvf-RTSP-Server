@@ -15,6 +15,7 @@ from flask_cors import CORS
 from .web_template import get_web_ui_html
 from .diagnostics_template import get_diagnostics_html
 from .ip_management_template import get_ip_management_html
+from .addon_template import get_addon_html
 from .config import AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY
 
 from .ffmpeg_manager import FFmpegManager
@@ -34,6 +35,7 @@ import uuid
 SERVER_BOOT_ID = uuid.uuid4().hex
 
 
+_camera_db_cache = None
 _cached_sys_info = None
 
 def get_static_sys_info():
@@ -130,6 +132,15 @@ def create_web_app(manager):
                 return redirect(url_for('login'))
             return f(*args, **kwargs)
         return decorated_function
+
+    # --- Interface style (Refined / Classic) ---
+    # Adds the Refined look on top of every page; Settings -> General or
+    # /ui/classic switches back to the original look.
+    try:
+        from .ui_style import register_ui_style
+        register_ui_style(app, login_required)
+    except Exception as _ui_err:
+        print(f"Interface style switcher unavailable: {_ui_err}")
 
     # --- Auth Routes ---
     
@@ -430,8 +441,10 @@ def create_web_app(manager):
     @login_required
     def index():
         settings = manager.load_settings()
+        nvr_pro_enabled = hasattr(manager, 'nvr_pro') and manager.nvr_pro is not None
         response = app.make_response(get_web_ui_html(settings, boot_id=SERVER_BOOT_ID,
-                                                     is_linux=sys.platform.startswith('linux')))
+                                                     is_linux=sys.platform.startswith('linux'),
+                                                     nvr_pro_enabled=nvr_pro_enabled))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -464,6 +477,64 @@ def create_web_app(manager):
             return jsonify({'status': 'success'})
         except Exception as e:
             return jsonify({'error': str(e)}), 400
+
+    def get_camera_db():
+        global _camera_db_cache
+        if _camera_db_cache is None:
+            try:
+                # Lives in app/resources/ (see config.py). Fall back to the old
+                # root location in case the startup migration couldn't move it.
+                from .config import CAMERA_DB_FILE, LEGACY_CAMERA_DB_FILE
+                db_path = CAMERA_DB_FILE
+                if not os.path.exists(db_path) and os.path.exists(LEGACY_CAMERA_DB_FILE):
+                    db_path = LEGACY_CAMERA_DB_FILE
+                with open(db_path, 'r', encoding='utf-8') as f:
+                    _camera_db_cache = json.load(f)
+            except Exception as e:
+                print(f"Error loading cameras.json: {e}")
+                return []
+        return _camera_db_cache
+
+    @app.route('/api/cameras_db/brands', methods=['GET'])
+    @login_required
+    def get_camera_brands():
+        db = get_camera_db()
+        brands = set()
+        for cam in db:
+            if 'brand' in cam:
+                brands.add(cam['brand'])
+        return jsonify(sorted(list(brands)))
+
+    @app.route('/api/cameras_db/cameras/<brand>', methods=['GET'])
+    @login_required
+    def get_cameras_by_brand(brand):
+        db = get_camera_db()
+        cameras = []
+        for cam in db:
+            if cam.get('brand', '').lower() == brand.lower():
+                cameras.append(cam)
+        # Sort cameras by model name for easier lookup
+        cameras.sort(key=lambda x: x.get('model', ''))
+        return jsonify(cameras)
+
+    @app.route('/api/cameras_db/search', methods=['GET'])
+    @login_required
+    def search_cameras_db():
+        query = request.args.get('q', '').lower()
+        if not query or len(query) < 2:
+            return jsonify([])
+            
+        # Every word typed must appear in the brand, model or an alias,
+        # so "hikvision 2cd2143" works. Cameras with known RTSP paths come first.
+        tokens = query.split()
+        db = get_camera_db()
+        results = []
+        for cam in db:
+            hay = ' '.join([cam.get('brand', ''), cam.get('model', '')] + list(cam.get('aliases') or [])).lower()
+            if all(t in hay for t in tokens):
+                results.append(cam)
+        results.sort(key=lambda x: (0 if x.get('rtsp_main') else 1, x.get('brand', ''), x.get('model', '')))
+        return jsonify(results[:60])
 
     @app.route('/api/cameras', methods=['GET'])
     @login_required
@@ -507,6 +578,7 @@ def create_web_app(manager):
                 netmask=data.get('netmask', '24'),
                 gateway=data.get('gateway', ''),
                 uuid=data.get('uuid'),
+                enable_homekit=data.get('enableHomekit', False),
                 enable_event_forwarding=data.get('enableEventForwarding', False),
                 physical_onvif_port=data.get('physicalOnvifPort', 80),
                 onvif_forwarding_username=data.get('onvifForwardingUsername', ''),
@@ -517,6 +589,7 @@ def create_web_app(manager):
                 send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
             if camera:
+                camera.enable_homekit_audio = data.get('enableHomekitAudio', False)
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
                 camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
                 camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
@@ -535,6 +608,8 @@ def create_web_app(manager):
                 camera.notify_schedule_days = data.get('notifyScheduleDays', [0, 1, 2, 3, 4, 5, 6])
                 camera.notify_schedule_start = data.get('notifyScheduleStart', '00:00')
                 camera.notify_schedule_end = data.get('notifyScheduleEnd', '23:59')
+                if hasattr(manager, 'module_manager') and manager.module_manager:
+                    manager.module_manager.on_camera_save(camera, data)
                 manager.save_config()
             return jsonify(camera.to_dict()), 201
         except ValueError as e:
@@ -546,6 +621,12 @@ def create_web_app(manager):
     @login_required
     def update_camera(camera_id):
         data = request.json
+        # The main camera editor doesn't include addon (HomeKit) fields; keep the
+        # existing values instead of silently switching HomeKit off on every edit.
+        _existing_cam = manager.get_camera(camera_id)
+        if _existing_cam is not None:
+            data.setdefault('enableHomekit', getattr(_existing_cam, 'enable_homekit', False))
+            data.setdefault('enableHomekitAudio', getattr(_existing_cam, 'enable_homekit_audio', False))
         try:
             camera = manager.update_camera(
                 camera_id=camera_id,
@@ -580,6 +661,7 @@ def create_web_app(manager):
                 netmask=data.get('netmask', '24'),
                 gateway=data.get('gateway', ''),
                 uuid=data.get('uuid'),
+                enable_homekit=data.get('enableHomekit', False),
                 enable_event_forwarding=data.get('enableEventForwarding', False),
                 physical_onvif_port=data.get('physicalOnvifPort', 80),
                 onvif_forwarding_username=data.get('onvifForwardingUsername', ''),
@@ -590,6 +672,7 @@ def create_web_app(manager):
                 send_smart_onvif_topics=data.get('sendSmartOnvifTopics', True)
             )
             if camera:
+                camera.enable_homekit_audio = data.get('enableHomekitAudio', False)
                 camera.ai_motion_detection_enabled = data.get('aiMotionDetectionEnabled', True)
                 camera.ai_motion_sensitivity = data.get('aiMotionSensitivity', AI_MOTION_SENSITIVITY)
                 camera.ai_confidence_threshold = data.get('aiConfidenceThreshold', AI_CONFIDENCE_THRESHOLD)
@@ -608,6 +691,8 @@ def create_web_app(manager):
                 camera.notify_schedule_days = data.get('notifyScheduleDays', [0, 1, 2, 3, 4, 5, 6])
                 camera.notify_schedule_start = data.get('notifyScheduleStart', '00:00')
                 camera.notify_schedule_end = data.get('notifyScheduleEnd', '23:59')
+                if hasattr(manager, 'module_manager') and manager.module_manager:
+                    manager.module_manager.on_camera_save(camera, data)
                 manager.save_config()
                 return jsonify(camera.to_dict())
             return jsonify({'error': 'Camera not found'}), 404
@@ -620,6 +705,8 @@ def create_web_app(manager):
     @login_required
     def delete_camera(camera_id):
         if manager.delete_camera(camera_id):
+            if hasattr(manager, 'module_manager') and manager.module_manager:
+                manager.module_manager.on_camera_delete(camera_id)
             return '', 204
         return jsonify({'error': 'Camera not found'}), 404
     
@@ -707,6 +794,10 @@ def create_web_app(manager):
             return jsonify({'status': 'success', 'message': 'Test image notification sent successfully'})
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+    # NOTE: The HomeKit API route has been moved to the HomeKit addon module.
+    # It is now registered dynamically via module_manager.register_all_routes().
 
     @app.route('/api/cameras/<int:camera_id>/copy-ai-settings', methods=['POST'])
     @login_required
@@ -2258,6 +2349,46 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
 
+    @app.route('/api/hwaccel/test', methods=['POST'])
+    @login_required
+    def hwaccel_test():
+        """Test-encode with each hardware encoder for this OS (Settings > Engine)."""
+        try:
+            from . import hw_encoders
+            data = request.json or {}
+            ffmpeg_exe = FFmpegManager().get_ffmpeg_path()
+            if not ffmpeg_exe:
+                return jsonify({'success': False, 'error': 'FFmpeg executable not found'}), 404
+            dev = (data.get('vaapiDevice') or '').strip() or hw_encoders.DEFAULT_VAAPI_DEVICE
+            results = hw_encoders.probe_all(ffmpeg_exe, dev)
+            try:
+                diagnosis = hw_encoders.diagnose(results)
+            except Exception as de:
+                diagnosis = {'notes': [f'Could not check drivers: {de}'], 'missing': [], 'can_install': False}
+            return jsonify({'success': True, 'results': results, 'diagnosis': diagnosis})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/hwaccel/install', methods=['POST'])
+    @login_required
+    def hwaccel_install():
+        """Install missing GPU driver packages (whitelisted, apt only) in the background."""
+        try:
+            from . import hw_encoders
+            pkgs = (request.json or {}).get('packages') or []
+            if not isinstance(pkgs, list):
+                return jsonify({'success': False, 'error': 'packages must be a list'}), 400
+            ok, msg = hw_encoders.start_install([str(p) for p in pkgs])
+            return jsonify({'success': ok, 'message': msg, 'error': None if ok else msg}), (200 if ok else 400)
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/hwaccel/install-status', methods=['GET'])
+    @login_required
+    def hwaccel_install_status():
+        from . import hw_encoders
+        return jsonify({'success': True, **hw_encoders.install_status()})
+
     @app.route('/api/diagnostics/transcode-calculator', methods=['POST'])
     @login_required
     def diag_transcode_calculator():
@@ -2281,12 +2412,27 @@ def create_web_app(manager):
             if not ffmpeg_exe:
                 return jsonify({'success': False, 'error': 'FFmpeg executable not found'}), 404
                 
+            # VAAPI needs a render device and frames uploaded to the GPU (issue #73).
+            from . import hw_encoders
+            ff_adv = (getattr(manager, 'advanced_settings', {}) or {}).get('ffmpeg', {}) or {}
+            pre_input, vf = [], []
+            if encoder == 'h264_vaapi':
+                dev = hw_encoders.find_vaapi_device(ff_adv.get('vaapiDevice') or hw_encoders.DEFAULT_VAAPI_DEVICE)
+                if not dev:
+                    return jsonify({'success': False, 'error': 'No /dev/dri render device found. In Docker, add "devices: - /dev/dri:/dev/dri".'}), 400
+                pre_input = ['-vaapi_device', dev]
+                vf = ['-vf', 'format=nv12,hwupload']
+            elif encoder == 'h264_qsv':
+                vf = ['-vf', 'format=nv12']
+
             cmd = [
                 ffmpeg_exe,
                 '-y',
+            ] + pre_input + [
                 '-rtsp_transport', 'tcp',
                 '-i', url,
                 '-t', '4',
+            ] + vf + [
                 '-c:v', encoder
             ]
             
@@ -2467,6 +2613,17 @@ def create_web_app(manager):
         whitelist = manager.get_ip_whitelist()
         theme = (manager.load_settings() or {}).get('theme', '')
         return get_ip_management_html(whitelist, theme)
+
+    @app.route('/addon/<module_id>')
+    @login_required
+    def addon_page(module_id):
+        mm = getattr(manager, 'module_manager', None)
+        if not mm or module_id not in mm.modules:
+            return "Addon not found", 404
+        settings = manager.load_settings() or {}
+        cameras = [cam.to_dict() for cam in manager.cameras]
+        # Inactive addons still get a page: it shows the trial / license gate
+        return get_addon_html(module_id, mm, settings, cameras, SERVER_BOOT_ID, sys.platform.startswith('linux'))
 
     @app.route('/api/sessions', methods=['GET'])
     @login_required
@@ -3076,5 +3233,119 @@ def create_web_app(manager):
                 'status': apprise_installer.status,
                 'log': apprise_installer.log
             })
+
+    # NVR Pro blueprint registration is now handled by the module system.
+    @app.route('/protect', defaults={'path': 'index.html'})
+    @app.route('/protect/', defaults={'path': 'index.html'})
+    @app.route('/protect/<path:path>')
+    def serve_protect(path):
+        import os
+        from flask import send_from_directory
+        out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'out'))
+        # If the specific file doesn't exist (e.g. for client-side routing), fallback to index.html
+        if not os.path.exists(os.path.join(out_dir, path)):
+            path = "index.html"
+        return send_from_directory(out_dir, path)
+
+    # ------------------------------------------------------------------
+    # Addon Module System — API Routes
+    # ------------------------------------------------------------------
+
+    @app.route('/api/modules', methods=['GET'])
+    @login_required
+    def list_modules():
+        """Return all available modules with their current status."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify([])
+        return jsonify(mm.get_all_modules_info())
+
+    @app.route('/api/modules/<module_id>/activate-trial', methods=['POST'])
+    @login_required
+    def activate_module_trial(module_id):
+        """Start a free trial for an addon module."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify({'success': False, 'message': 'Module system not available'}), 500
+        success, message = mm.activate_trial(module_id)
+        return jsonify({'success': success, 'message': message}), 200 if success else 400
+
+    @app.route('/api/modules/<module_id>/activate', methods=['POST'])
+    @login_required
+    def activate_module_license(module_id):
+        """Activate a module with a license key."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify({'success': False, 'message': 'Module system not available'}), 500
+        data = request.json or {}
+        license_key = data.get('license_key', '')
+        if not license_key:
+            return jsonify({'success': False, 'message': 'License key is required'}), 400
+        success, message = mm.activate_license(module_id, license_key)
+        return jsonify({'success': success, 'message': message}), 200 if success else 400
+
+    @app.route('/api/modules/<module_id>/deactivate', methods=['POST'])
+    @login_required
+    def deactivate_module(module_id):
+        """Deactivate an addon module."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify({'success': False, 'message': 'Module system not available'}), 500
+        success, message = mm.deactivate_module(module_id)
+        return jsonify({'success': success, 'message': message}), 200 if success else 400
+
+    @app.route('/api/modules/<module_id>/toggle', methods=['POST'])
+    @login_required
+    def toggle_module(module_id):
+        """Toggle an addon module's enabled state."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify({'success': False, 'message': 'Module system not available'}), 500
+        success, message = mm.toggle_module(module_id)
+        return jsonify({'success': success, 'message': message}), 200 if success else 400
+
+    @app.route('/api/modules/<module_id>/status', methods=['GET'])
+    @login_required
+    def get_module_status(module_id):
+        """Check the current status of a module."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify({'status': 'unavailable'})
+        info = mm.get_all_modules_info()
+        for m in info:
+            if m['id'] == module_id:
+                return jsonify(m)
+        return jsonify({'error': 'Module not found'}), 404
+
+    @app.route('/api/modules/nav-items', methods=['GET'])
+    @login_required
+    def get_module_nav_items():
+        """Return nav items from all modules for dynamic menu injection."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify([])
+        return jsonify(mm.get_all_nav_items())
+
+    @app.route('/api/modules/camera-tabs', methods=['GET'])
+    @login_required
+    def get_module_camera_tabs():
+        """Return camera form tabs from active modules."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify([])
+        return jsonify(mm.get_all_camera_tabs())
+
+    @app.route('/api/modules/settings-sections', methods=['GET'])
+    @login_required
+    def get_module_settings_sections():
+        """Return settings sections from active modules."""
+        mm = getattr(manager, 'module_manager', None)
+        if not mm:
+            return jsonify([])
+        return jsonify(mm.get_all_settings_sections())
+
+    # Register addon module routes
+    if hasattr(manager, 'module_manager') and manager.module_manager:
+        manager.module_manager.register_all_routes(app, manager, login_required)
 
     return app

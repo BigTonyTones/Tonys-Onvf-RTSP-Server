@@ -25,6 +25,29 @@ if os.path.exists(legacy_mediamtx) and not os.path.exists(new_mediamtx):
         print(f"  [Migration] Moved legacy mediamtx.yml to {new_mediamtx}")
     except Exception as e:
         print(f"  [Migration] Error moving mediamtx.yml: {e}")
+# Camera lookup database (brand/model -> RTSP paths) used by "Look up my camera".
+# It ships with the app, so it lives inside app/ (not data/): the GitHub updater
+# replaces app/, deploy_to_server.ps1 uploads app/, and Docker's ./data volume
+# would hide anything baked into /app/data.
+RESOURCES_DIR = os.path.join(ROOT_DIR, "app", "resources")
+CAMERA_DB_FILE = os.path.join(RESOURCES_DIR, "cameras.json")
+LEGACY_CAMERA_DB_FILE = os.path.join(ROOT_DIR, "cameras.json")
+
+# Migration: older installs kept cameras.json in the project root.
+if os.path.exists(LEGACY_CAMERA_DB_FILE):
+    try:
+        os.makedirs(RESOURCES_DIR, exist_ok=True)
+        if not os.path.exists(CAMERA_DB_FILE):
+            shutil.move(LEGACY_CAMERA_DB_FILE, CAMERA_DB_FILE)
+            print(f"  [Migration] Moved cameras.json to {CAMERA_DB_FILE}")
+        else:
+            import filecmp
+            if filecmp.cmp(LEGACY_CAMERA_DB_FILE, CAMERA_DB_FILE, shallow=False):
+                os.remove(LEGACY_CAMERA_DB_FILE)
+                print("  [Migration] Removed duplicate root cameras.json (now in app/resources)")
+    except Exception as e:
+        print(f"  [Migration] Error moving cameras.json: {e}")
+
 # Default Web UI port. Can be overridden via the WEB_UI_PORT environment
 # variable (useful for Docker). A port saved in the Settings UI takes
 # precedence over this default at runtime.

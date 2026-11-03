@@ -238,8 +238,10 @@ setup_venv() {
     print_info "  - apprise (Notifications)"
     print_info "  - paramiko (SSH client for NVR listener checks)"
     print_info "  - cryptography (encrypts stored SSH passwords)"
+    print_info "  - HAP-python[Camera] (Apple HomeKit support)"
+    print_info "  - qrcode (QR Code generation for UI)"
     echo "Installing Python dependencies..."
-    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography 2>/dev/null
+    pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography "HAP-python[Camera]" qrcode 2>/dev/null
     
     # Clean up local tmp directory
     rm -rf "$local_tmp"
@@ -402,7 +404,7 @@ install_mediamtx() {
     fi
     
     # MediaMTX version and download URL
-    MEDIAMTX_VERSION="1.18.1"
+    MEDIAMTX_VERSION="1.21.3"
     MEDIAMTX_URL="https://github.com/bluenviron/mediamtx/releases/download/v${MEDIAMTX_VERSION}/mediamtx_v${MEDIAMTX_VERSION}_${MEDIAMTX_OS}_${ARCH}.tar.gz"
     
     print_info "Downloading MediaMTX v${MEDIAMTX_VERSION}..."

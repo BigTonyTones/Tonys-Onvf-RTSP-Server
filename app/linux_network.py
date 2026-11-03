@@ -13,23 +13,41 @@ class LinuxNetworkManager:
         
     @staticmethod
     def get_physical_interfaces():
-        """Get a list of physical network interfaces"""
+        """Get a list of network interfaces usable as a MACVLAN parent.
+
+        Includes physical NICs plus VLAN sub-interfaces (e.g. enp2s0.50),
+        bonds and bridges. Skips loopback, our own vnic_* MACVLANs and
+        container plumbing (veth*, docker*).
+        """
         if not LinuxNetworkManager.is_linux():
             return []
-            
+
+        allowed_devtypes = {'vlan', 'bond', 'bridge'}
+        skip_prefixes = ('vnic_', 'veth', 'docker')
+
         try:
-            # Look in /sys/class/net
             interfaces = os.listdir('/sys/class/net')
-            # Filter out loopback and virtual ones (usually)
-            physical = []
+            usable = []
             for iface in interfaces:
-                if iface == 'lo':
+                if iface == 'lo' or iface.startswith(skip_prefixes):
                     continue
-                # Check if it's a physical device (has a 'device' link)
-                if os.path.exists(f'/sys/class/net/{iface}/device'):
-                    physical.append(iface)
-            return physical
-        except:
+                base = f'/sys/class/net/{iface}'
+                # Physical device (has a 'device' link)
+                if os.path.exists(f'{base}/device'):
+                    usable.append(iface)
+                    continue
+                # VLAN / bond / bridge (identified by DEVTYPE in uevent)
+                try:
+                    with open(f'{base}/uevent', 'r') as f:
+                        for line in f:
+                            if line.startswith('DEVTYPE='):
+                                if line.strip().split('=', 1)[1] in allowed_devtypes:
+                                    usable.append(iface)
+                                break
+                except OSError:
+                    pass
+            return sorted(usable)
+        except Exception:
             return []
 
     def create_macvlan(self, parent_if, name, mac):

@@ -35,11 +35,15 @@ class MediaMTXManager:
             return "mediamtx.exe"
         return "mediamtx"
     
-    def _get_latest_version(self):
-        """Required minimum version of MediaMTX"""
-        return "v1.18.2"
+    # MediaMTX version this server is built and tested against.
+    # On every boot the server makes sure EXACTLY this version is installed
+    # (upgrading or downgrading as needed). To revert, change this value back
+    # (e.g. "v1.18.2") and restart the server.
+    REQUIRED_VERSION = "v1.21.3"
 
-    REQUIRED_VERSION = "v1.18.2"
+    def _get_latest_version(self):
+        """Required (pinned) version of MediaMTX"""
+        return self.REQUIRED_VERSION
 
     def _parse_version(self, version_str):
         """Parse version string like 'v1.18.1' into a list of integers [1, 18, 1]"""
@@ -62,140 +66,162 @@ class MediaMTXManager:
             if late < curr: return False
         return False
 
-    def download_mediamtx(self):
-        """Download MediaMTX if not present or update if newer version available"""
-        latest_version = self._get_latest_version()
-        
-        if Path(self.executable).exists():
-            # Check current version
+    def _get_installed_version(self, exe_path=None):
+        """Return the version reported by a MediaMTX executable (e.g. 'v1.21.3'), or None."""
+        import errno
+        exe_path = os.path.abspath(exe_path or self.executable)
+        if not Path(exe_path).exists():
+            return None
+        result = None
+        # Retry loop in case the file is temporarily busy
+        for attempt in range(5):
             try:
-                exe_path = os.path.abspath(self.executable)
-                import errno
-                # Retry loop in case the text file is temporarily busy
-                for attempt in range(5):
-                    try:
-                        result = subprocess.run([exe_path, "--version"],
-                                               capture_output=True, text=True, check=False)
-                        break
-                    except OSError as e:
-                        if e.errno == getattr(errno, 'ETXTBSY', 26) and attempt < 4:
-                            time.sleep(0.2)
-                            continue
-                        raise
-                
-                current_version = result.stdout.strip()
-                if current_version and not current_version.startswith('v'):
-                    current_version = 'v' + current_version
+                result = subprocess.run([exe_path, "--version"], capture_output=True,
+                                        text=True, check=False, timeout=15)
+                break
+            except OSError as e:
+                if e.errno == getattr(errno, 'ETXTBSY', 26) and attempt < 4:
+                    time.sleep(0.2)
+                    continue
+                raise
+        version = (result.stdout or '').strip() if result else ''
+        if not version:
+            return None
+        version = version.splitlines()[0].strip()
+        if not version.startswith('v'):
+            version = 'v' + version
+        return version
 
-                if current_version == latest_version:
-                    print(f"MediaMTX is up to date ({current_version})")
-                    return True
-                elif self._version_is_newer(current_version, latest_version):
-                    print(f"MediaMTX {current_version} is outdated. v1.18.2 is required for compatibility.")
-                    print("Automatically upgrading MediaMTX...")
-                    # Fall through to download
-                else:
-                    # Current version is newer than required — that's fine
-                    print(f"MediaMTX {current_version} meets the v1.18.2 requirement.")
-                    return True
-            except Exception as e:
-                print(f"Could not check MediaMTX version: {e}")
-                return True
-        else:
-            print(f"MediaMTX not found. Downloading required version: {latest_version}")
-        
-        version = latest_version
-        print(f"Installing MediaMTX {version}...")
-        
+    def _get_download_info(self, version):
+        """Return (url, archive_name) for this platform, or (None, None) if unsupported."""
         system = platform.system().lower()
         machine = platform.machine().lower()
-        
-        # Determine download URL based on platform
-        base_url = f"https://github.com/bluenviron/mediamtx/releases/download/{version}/"
-        
         if system == "windows":
             if "64" in machine or "amd64" in machine or "x86_64" in machine:
-                url = base_url + f"mediamtx_{version}_windows_amd64.zip"
                 archive_name = f"mediamtx_{version}_windows_amd64.zip"
             else:
                 print("Unsupported Windows architecture:", machine)
-                return False
-                
+                return None, None
         elif system == "darwin":  # macOS
             if "arm" in machine or "aarch64" in machine:
-                url = base_url + f"mediamtx_{version}_darwin_arm64.tar.gz"
                 archive_name = f"mediamtx_{version}_darwin_arm64.tar.gz"
             else:
-                url = base_url + f"mediamtx_{version}_darwin_amd64.tar.gz"
                 archive_name = f"mediamtx_{version}_darwin_amd64.tar.gz"
-                
-        elif system == "linux" or True:  # Defaulting to linux logic for other unix
+        else:  # Linux and other unix
             if "aarch64" in machine or "arm64" in machine:
-                url = base_url + f"mediamtx_{version}_linux_arm64.tar.gz"
                 archive_name = f"mediamtx_{version}_linux_arm64.tar.gz"
             elif "arm" in machine:
-                url = base_url + f"mediamtx_{version}_linux_armv7.tar.gz"
                 archive_name = f"mediamtx_{version}_linux_armv7.tar.gz"
             elif "64" in machine or "x86_64" in machine or "amd64" in machine:
-                url = base_url + f"mediamtx_{version}_linux_amd64.tar.gz"
                 archive_name = f"mediamtx_{version}_linux_amd64.tar.gz"
             else:
-                url = base_url + f"mediamtx_{version}_linux_386.tar.gz"
                 archive_name = f"mediamtx_{version}_linux_386.tar.gz"
-        else:
-            print(f"Unsupported operating system: {system}")
-            return False
-        
         print(f"  Platform: {system} {machine}")
+        url = f"https://github.com/bluenviron/mediamtx/releases/download/{version}/{archive_name}"
+        return url, archive_name
+
+    def download_mediamtx(self):
+        """Make sure exactly REQUIRED_VERSION of MediaMTX is installed.
+
+        Runs on every boot. If a different version is installed (older OR newer),
+        the required one is downloaded and swapped in. The replaced executable is
+        kept as mediamtx_previous(.exe). If the download fails, the existing
+        executable is kept so the server still starts.
+        """
+        required = self.REQUIRED_VERSION
+        exe_exists = Path(self.executable).exists()
+
+        if exe_exists:
+            try:
+                current_version = self._get_installed_version()
+            except Exception as e:
+                print(f"Could not check MediaMTX version: {e}")
+                return True
+            if not current_version:
+                print("Could not read MediaMTX version - keeping existing executable.")
+                return True
+            if current_version == required:
+                print(f"MediaMTX is up to date ({current_version})")
+                return True
+            action = "Upgrading" if self._version_is_newer(current_version, required) else "Switching"
+            print(f"MediaMTX {current_version} is installed but {required} is required. {action} automatically...")
+        else:
+            print(f"MediaMTX not found. Downloading required version: {required}")
+
+        ok = self._install_version(required)
+        if not ok and exe_exists:
+            print(f"Could not install MediaMTX {required} - keeping the existing MediaMTX so the server can still start.")
+            return True
+        return ok
+
+    def _install_version(self, version):
+        """Download `version`, verify it, and swap it in place of the current executable."""
+        import shutil
+        import tempfile
+
+        print(f"Installing MediaMTX {version}...")
+        url, archive_name = self._get_download_info(version)
+        if not url:
+            return False
         print(f"  Downloading from: {url}")
-        # Auto-download without prompting — v1.18.1 is a required dependency
-        
+
+        system = platform.system().lower()
+        exe_name = self.executable
+        exe_path = os.path.abspath(exe_name)
+        root, ext = os.path.splitext(exe_name)
+        previous_path = os.path.abspath(f"{root}_previous{ext}")
+
+        tmp_dir = tempfile.mkdtemp(prefix="mediamtx_update_", dir=os.path.dirname(exe_path) or None)
         try:
-            # Download with progress
-            response = requests.get(url, stream=True)
+            archive_path = os.path.join(tmp_dir, archive_name)
+            response = requests.get(url, stream=True, timeout=60)
             response.raise_for_status()
-            
             total_size = int(response.headers.get('content-length', 0))
-            block_size = 8192
             downloaded = 0
-            
-            with open(archive_name, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=block_size):
+            with open(archive_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     downloaded += len(chunk)
                     if total_size > 0:
-                        percent = (downloaded / total_size) * 100
-                        print(f"\r  Progress: {percent:.1f}%", end='', flush=True)
-            
+                        print(f"\r  Progress: {(downloaded / total_size) * 100:.1f}%", end='', flush=True)
             print("\nDownloaded MediaMTX")
-            
-            # Extract
-            print("  Extracting...")
-            if archive_name.endswith('.zip'):
-                with zipfile.ZipFile(archive_name, 'r') as zip_ref:
-                    zip_ref.extractall('.')
+
+            # Extract only the executable (leave the bundled mediamtx.yml/LICENSE out)
+            new_exe = os.path.join(tmp_dir, exe_name)
+            if archive_path.endswith('.zip'):
+                with zipfile.ZipFile(archive_path, 'r') as zf:
+                    with zf.open(exe_name) as src, open(new_exe, 'wb') as dst:
+                        shutil.copyfileobj(src, dst)
             else:
-                with tarfile.open(archive_name, 'r:gz') as tar_ref:
-                    tar_ref.extractall('.')
-            
-            print("Extracted MediaMTX")
-            
-            # Make executable on Unix-like systems
+                with tarfile.open(archive_path, 'r:gz') as tf:
+                    src = tf.extractfile(exe_name)
+                    if src is None:
+                        raise RuntimeError(f"{exe_name} not found in archive")
+                    with src, open(new_exe, 'wb') as dst:
+                        shutil.copyfileobj(src, dst)
             if system in ["darwin", "linux"]:
-                os.chmod(self.executable, 0o755)
-                print("Set executable permissions")
-            
-            # Cleanup archive
-            os.remove(archive_name)
-            
-            # Verify extraction
-            if not Path(self.executable).exists():
-                print(f"Executable not found after extraction: {self.executable}")
+                os.chmod(new_exe, 0o755)
+
+            # Verify the new binary actually runs and reports the right version
+            got = self._get_installed_version(new_exe)
+            if got != version:
+                print(f"Downloaded MediaMTX reports version {got!r}, expected {version} - not installing it.")
                 return False
-            
-            print(f"MediaMTX ready: {self.executable}")
+
+            # Swap in: keep the old executable as *_previous so it can be restored
+            if os.path.exists(exe_path):
+                os.replace(exe_path, previous_path)
+                print(f"  Previous MediaMTX kept as {os.path.basename(previous_path)}")
+            try:
+                os.replace(new_exe, exe_path)
+            except Exception:
+                if os.path.exists(previous_path) and not os.path.exists(exe_path):
+                    os.replace(previous_path, exe_path)
+                raise
+
+            print(f"MediaMTX {version} ready: {exe_name}")
             return True
-            
+
         except requests.exceptions.RequestException as e:
             print(f"Download failed: {e}")
             return False
@@ -204,6 +230,8 @@ class MediaMTXManager:
             import traceback
             traceback.print_exc()
             return False
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
     
     def _get_source_codec(self, stream_url):
         """Return the source video codec (e.g. 'h264', 'hevc') for a stream URL,
@@ -338,6 +366,15 @@ class MediaMTXManager:
         # Timeout is in microseconds: 10000000 = 10 seconds
         ff_input = ff_advanced.get('inputArgs', '-rtsp_transport tcp -timeout 10000000 -fflags +genpts')
         ff_process = ff_advanced.get('processArgs', '-c:v libx264 -preset ultrafast -tune zerolatency -g 30')
+
+        # Issue #72: with "-tune zerolatency" plus multiple threads, libx264 uses
+        # sliced threads and splits every frame into one slice per thread. The
+        # UniFi Protect web console only draws the first slice (top half of the
+        # picture). Force one slice per frame whenever we encode with libx264.
+        def _single_slice(enc_args):
+            if 'libx264' in enc_args and 'sliced-threads' not in enc_args:
+                return f'{enc_args} -x264-params sliced-threads=0'
+            return enc_args
         
         
         # Auth handling is now external via the Python web app
@@ -407,7 +444,7 @@ class MediaMTXManager:
                     if transcode_main:
                         video_args = (
                             f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                            f'{ff_process} '
+                            f'{_single_slice(ff_process)} '
                             f'-profile:v high -level 4.2 '
                             f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
                             f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
@@ -525,7 +562,7 @@ class MediaMTXManager:
                     if transcode_sub_video:
                         video_args = (
                             f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                            f'{ff_process} '
+                            f'{_single_slice(ff_process)} '
                             f'-profile:v baseline -level 4.1 '
                             f'-b:v 800k -maxrate 800k -bufsize 1600k '
                             f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
@@ -601,6 +638,12 @@ class MediaMTXManager:
                 
                 gf_cams = layout.get('cameras', [])
                 if gf_cams:
+                    # Pick the GridFusion encoder once per layout (result is cached).
+                    # Issue #73: real test encode + VAAPI support, see hw_encoders.py.
+                    from . import hw_encoders
+                    gf_hw = hw_encoders.resolve(ffmpeg_exe, ff_advanced)
+                    if gf_hw['kind'] != 'software':
+                        print(f"      GridFusion hardware encoder: {gf_hw['name']}")
                     # Build FFmpeg command for composition
                     inputs = []
                     filters = []
@@ -639,13 +682,28 @@ class MediaMTXManager:
                         # probesize 500k keeps enough byte budget to reliably find the
                         # H.264 SPS/PPS headers (going lower, e.g. 32, causes intermittent
                         # "could not find codec parameters" failures on RTSP substreams).
-                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -analyzeduration 0 -probesize 500k -thread_queue_size 16 -use_wallclock_as_timestamps 1 -i {safe_src}')
+                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -analyzeduration 0 -probesize 500k -thread_queue_size 16 -use_wallclock_as_timestamps 1 {gf_hw["input_args"]} -i {safe_src}')
                         
                         # Scale and normalize timestamps only. 
                         # Removing the per-input 'fps' filter as it adds unnecessary CPU overhead and latency.
                         w = int(round(float(gf_cam.get('w', 640))))
                         h = int(round(float(gf_cam.get('h', 480))))
-                        filters.append(f'[{input_idx}:v]scale={w}:{h},setpts=PTS-STARTPTS[v{input_idx}]')
+                        # Optional per-tile crop / zoom: 'crop' holds fractions (0-1) of the
+                        # source picture. Width/height are kept even for the encoder.
+                        crop_vf = ''
+                        _c = gf_cam.get('crop')
+                        if isinstance(_c, dict):
+                            try:
+                                cx = min(max(float(_c.get('x', 0)), 0.0), 0.97)
+                                cy = min(max(float(_c.get('y', 0)), 0.0), 0.97)
+                                cw = min(max(float(_c.get('w', 1)), 0.03), 1.0 - cx)
+                                ch = min(max(float(_c.get('h', 1)), 0.03), 1.0 - cy)
+                                if cw < 0.999 or ch < 0.999:
+                                    crop_vf = (f'crop=trunc(iw*{cw:.5f}/2)*2:trunc(ih*{ch:.5f}/2)*2:'
+                                               f'trunc(iw*{cx:.5f}):trunc(ih*{cy:.5f}),')
+                            except (TypeError, ValueError):
+                                crop_vf = ''
+                        filters.append(f'[{input_idx}:v]{crop_vf}scale={w}:{h},setpts=PTS-STARTPTS[v{input_idx}]')
                         active_gf_cams.append(gf_cam)
                         input_idx += 1
                     
@@ -741,37 +799,25 @@ class MediaMTXManager:
                         else:
                             safe_dest = shlex.quote(dest_url)
                             
-                        # Check for hardware acceleration setting
-                        ff_advanced = advanced_settings.get('ffmpeg', {}) if advanced_settings else {}
-                        use_hw_accel = False
-                        hw_accel_info = None
-                        
-                        if ff_advanced.get('hardwareEncoding', False):
-                            hw_accel_info = self._detect_hardware_acceleration(ffmpeg_exe)
-                            if hw_accel_info:
-                                use_hw_accel = True
-                                print(f"      Hardware acceleration enabled and detected: {hw_accel_info['name']}")
-                            else:
-                                print(f"      Hardware acceleration enabled but not detected. Falling back to software.")
-                        
-                        # Determine encoder arguments
-                        if use_hw_accel and hw_accel_info:
-                             encoder_args = f'-c:v {hw_accel_info["encoder"]} {hw_accel_info["params"]}'
-                        else:
-                             # Software encoding with optimized preset
-                             # 'ultrafast' is used to minimize latency at the cost of bitrate efficiency
-                             encoder_args = '-c:v libx264 -preset ultrafast -tune zerolatency'
+                        # Encoder chosen above (hw_encoders.resolve). For VAAPI/QSV the
+                        # composited picture is converted (and for VAAPI uploaded to the
+                        # GPU) right before the encoder.
+                        encoder_args = gf_hw['encoder_args']
+                        out_label = '[outv]'
+                        if gf_hw['upload_filter']:
+                            filter_complex += f";[outv]{gf_hw['upload_filter']}[outenc]"
+                            out_label = '[outenc]'
 
                         # Final command - optimized for multi-core CPU utilization and stability
                         # -threads 0: Auto-detect and use all available CPU cores
                         # -filter_complex_threads 0: Parallelize filter graph processing across cores
                         gf_cmd = (
-                            f'"{ffmpeg_exe}" {ff_global} -nostdin -stats '
+                            f'"{ffmpeg_exe}" {ff_global} {gf_hw["global_args"]} -nostdin -stats '
                             f'{" ".join(inputs)} '
                             f'-filter_complex "{filter_complex}" '
                             f'-filter_complex_threads 0 '
-                            f'-map "[outv]" '
-                            f'{encoder_args} '
+                            f'-map "{out_label}" '
+                            f'{_single_slice(encoder_args)} '
                             f'-profile:v high -level 4.2 '
                             f'-threads 0 '
                             f'-b:v 2500k -maxrate 2500k -bufsize 5000k -g {fps} '
@@ -792,63 +838,15 @@ class MediaMTXManager:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
     def _detect_hardware_acceleration(self, ffmpeg_exe):
-        """
-        Detects available hardware acceleration methods supported by the FFmpeg binary.
-        Returns the best available encoder configuration or None.
-        """
-        try:
-            # Run ffmpeg -encoders to get list of supported encoders
-            process = subprocess.Popen(
-                [ffmpeg_exe, "-encoders"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-            stdout, _ = process.communicate()
-            
-            # Check for Apple Silicon VideoToolbox (macOS)
-            if "h264_videotoolbox" in stdout:
-                return {
-                    "name": "Apple VideoToolbox",
-                    "type": "videotoolbox",
-                    "encoder": "h264_videotoolbox",
-                    "params": "-realtime 1"
-                }
-                
-            # Check for NVIDIA NVENC
-            if "h264_nvenc" in stdout:
-                return {
-                    "name": "NVIDIA NVENC",
-                    "type": "nvenc",
-                    "encoder": "h264_nvenc",
-                    "params": "-preset p4 -tune ll -rc vbr"
-                }
-            
-            # Check for Intel QSV (Quick Sync Video)
-            if "h264_qsv" in stdout:
-                return {
-                    "name": "Intel QSV",
-                    "type": "qsv",
-                    "encoder": "h264_qsv",
-                    "params": "-preset veryfast -global_quality 25 -look_ahead 0"
-                }
-                
-            # Check for AMD AMF
-            if "h264_amf" in stdout:
-                return {
-                    "name": "AMD AMF",
-                    "type": "amf",
-                    "encoder": "h264_amf",
-                    "params": "-usage ultra_low_latency -quality speed -rc cqp"
-                }
-                
+        """Kept for compatibility. Returns the first hardware encoder that passes a
+        real test encode (see hw_encoders.py), or None."""
+        from . import hw_encoders
+        r = hw_encoders.resolve(ffmpeg_exe, {'hardwareEncoder': 'auto'})
+        if r['kind'] == 'software':
             return None
-            
-        except Exception as e:
-            print(f"Error detecting hardware acceleration: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+        return {"name": r['name'], "type": r['kind'],
+                "encoder": r['encoder_args'].split()[1],
+                "params": ' '.join(r['encoder_args'].split()[2:])}
 
     def start(self, cameras, rtsp_port=None, rtsp_username=None, rtsp_password=None, grid_fusion=None, debug_mode=False, advanced_settings=None, web_port=None):
         """Start MediaMTX server"""

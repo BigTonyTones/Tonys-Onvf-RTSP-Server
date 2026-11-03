@@ -52,11 +52,18 @@ data/.secret.key
 .DS_Store
 Thumbs.db
 
-# Documentation
-version_history.html
-debug_api.py
+# Addon modules: keep the package skeleton, exclude the actual addons
+app/modules/*
+!app/modules/__init__.py
+!app/modules/base_module.py
 
-# Deployment (contains sensitive credentials - NEVER commit)
+# MediaMTX 1.21+ auto-generated MoQ certificate, and the backup kept after an auto-update
+auto.crt
+auto.key
+mediamtx_previous*
+
+# AI library (Ultralytics) settings folder created by run.py
+/.ultralytics/
+
+# Deployment script (contains credentials - never commit)
 deploy_to_server.ps1
-scratch/
-force_accept.ps1

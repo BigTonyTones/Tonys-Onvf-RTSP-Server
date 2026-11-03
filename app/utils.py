@@ -137,11 +137,15 @@ def check_and_install_requirements():
     feature_packages = {
         'paramiko': 'paramiko',
         'cryptography': 'cryptography',
+        'pyhap': 'HAP-python[Camera]',
+        'qrcode': 'qrcode',
+        'base36': 'base36',
+        'pyqrcode': 'pyqrcode',
     }
     missing_feature = [pkg for mod, pkg in feature_packages.items()
                        if importlib.util.find_spec(mod) is None]
     if missing_feature:
-        print(f"Installing feature packages (Protect ONVIF listener): {', '.join(missing_feature)}")
+        print(f"Installing feature packages (HomeKit, Protect ONVIF): {', '.join(missing_feature)}")
         for package in missing_feature:
             try:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package])

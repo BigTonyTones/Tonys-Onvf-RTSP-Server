@@ -35,7 +35,7 @@ Turn standard RTSP feeds into intelligent, AI-capable cameras inside your NVR:
 - **Git** - for cloning the repository
 - **Python 3** - runtime environment
 - **Python packages** - Flask, Flask-CORS, Requests, PyYAML, psutil, onvif-zeep, paramiko, cryptography
-- **MediaMTX v1.18.1** - RTSP server for stream management
+- **MediaMTX v1.21.3** - RTSP server for stream management
 - **FFmpeg** - video processing and transcoding
 - **System configuration** - file descriptor limits, permissions, and PATH setup
 - **Systemd/Launchd service** - optional auto-start on boot (Linux/macOS)

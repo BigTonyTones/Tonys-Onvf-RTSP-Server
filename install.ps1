@@ -396,8 +396,10 @@ function Setup-PythonEnvironment {
     Write-Info "  - apprise (Notifications)"
     Write-Info "  - paramiko (SSH client for NVR listener checks)"
     Write-Info "  - cryptography (encrypts stored SSH passwords)"
+    Write-Info "  - HAP-python[Camera] (Apple HomeKit support)"
+    Write-Info "  - qrcode (QR Code generation for UI)"
 
-    & $venvPython -m pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography 2>&1 | Out-Null
+    & $venvPython -m pip install --quiet flask flask-cors requests pyyaml psutil onvif-zeep apprise paramiko cryptography "HAP-python[Camera]" qrcode 2>&1 | Out-Null
     
     Write-Success "Python environment configured"
 }
@@ -428,7 +430,7 @@ function Install-MediaMTX {
     }
     
     $arch = Get-Architecture
-    $version = "1.18.1"
+    $version = "1.21.3"
     $url = "https://github.com/bluenviron/mediamtx/releases/download/v$version/mediamtx_v${version}_windows_$arch.zip"
     
     Write-Info "Downloading MediaMTX v$version..."

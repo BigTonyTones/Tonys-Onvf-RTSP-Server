@@ -1,0 +1,1636 @@
+/* =====================================================================
+   Refined interface — a calm, dark, minimal skin for every page.
+   Loaded only when the interface style is "refined"; every rule is scoped
+   to html.ui-refined so Classic mode is byte-for-byte the original look.
+   ===================================================================== */
+
+@font-face {
+  font-family: 'RF Inter';
+  src: url('/ui/fonts/InterVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* ---------- Palette ---------- */
+html.ui-refined body {
+  --rf-bg: #111214;
+  --rf-rail-bg: #0d0e0f;
+  --rf-surface: #18191b;
+  --rf-surface-2: #1e1f22;
+  --rf-surface-3: #27282c;
+  --rf-hover: rgba(255, 255, 255, 0.045);
+  --rf-active: rgba(255, 255, 255, 0.07);
+  --rf-border: rgba(255, 255, 255, 0.065);
+  --rf-border-strong: rgba(255, 255, 255, 0.11);
+  --rf-text: #e4e5e7;
+  --rf-text-2: #9b9ea4;
+  --rf-text-3: #6b6e74;
+  --rf-accent: #2f6fd6;
+  --rf-accent-hover: #3d7ce0;
+  --rf-accent-soft: rgba(47, 111, 214, 0.16);
+  --rf-green: #3fb768;
+  --rf-red: #e5534b;
+  --rf-amber: #d9a441;
+  --rf-purple: #a78bfa;
+  --rf-shadow: none;
+  --rf-shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --rf-input: #141517;
+  --rf-radius: 6px;
+  --rf-radius-sm: 5px;
+  --rf-rail-w: 84px;
+  --rf-top-h: 60px;
+  --rf-font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --rf-mono: 'SF Mono', 'JetBrains Mono', Consolas, 'Liberation Mono', monospace;
+
+  /* Map the existing dashboard variables onto the refined palette */
+  --primary-bg: none;
+  --body-bg: var(--rf-bg);
+  --bg-primary: var(--rf-bg);
+  --bg-secondary: var(--rf-surface-2);
+  --card-bg: var(--rf-surface);
+  --header-bg: var(--rf-surface);
+  --text-title: var(--rf-text);
+  --text-main: var(--rf-text);
+  --text-body: var(--rf-text-2);
+  --text-muted: var(--rf-text-3);
+  --btn-primary: var(--rf-accent);
+  --btn-primary-hover: var(--rf-accent-hover);
+  --btn-success: var(--rf-accent);
+  --btn-success-hover: var(--rf-accent-hover);
+  --btn-danger: var(--rf-red);
+  --btn-danger-hover: #ff6b70;
+  --border-color: var(--rf-border);
+  --card-border: var(--rf-border);
+  --shadow: none;
+  --input-bg: var(--rf-input);
+  --input-text: var(--rf-text);
+  --input-border: var(--rf-border-strong);
+  --alert-info-bg: var(--rf-accent-soft);
+  --alert-info-text: #7ea6e6;
+  --alert-warning-bg: rgba(242, 178, 76, 0.1);
+  --alert-warning-text: var(--rf-amber);
+  --alert-warning-border: rgba(242, 178, 76, 0.3);
+  --yellow-text: var(--rf-amber);
+  --toggle-bg: #3a3c42;
+  --toggle-active: var(--rf-accent);
+  --modal-bg: var(--rf-surface);
+  --text-code: #9aa9bf;
+  --zone-title-color: #7ea6e6;
+  --rules-title-color: var(--rf-green);
+  --accent-green: var(--rf-green);
+
+  /* Bridge for the standalone pages (GridFusion, Diagnostics, IP, NVR…) */
+  --app-bg: var(--rf-bg);
+  --app-card: var(--rf-surface);
+  --app-header: var(--rf-surface);
+  --app-title: var(--rf-text);
+  --app-body: var(--rf-text-2);
+  --app-muted: var(--rf-text-3);
+  --app-accent: var(--rf-accent);
+  --app-accent2: var(--rf-accent-hover);
+  --app-success: var(--rf-green);
+  --app-danger: var(--rf-red);
+  --app-border: var(--rf-border-strong);
+  --app-input: var(--rf-input);
+}
+
+/* Light variant follows the existing light themes */
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) {
+  --rf-bg: #ffffff;
+  --rf-rail-bg: #ffffff;
+  --rf-surface: #ffffff;
+  --rf-surface-2: #ffffff;
+  --rf-surface-3: #f3f4f6;
+  --rf-hover: rgba(0, 0, 0, 0.04);
+  --rf-active: rgba(0, 0, 0, 0.06);
+  --rf-border: rgba(15, 23, 42, 0.15);
+  --rf-border-strong: rgba(15, 23, 42, 0.26);
+  --rf-text: #111318;
+  --rf-text-2: #3d424a;
+  --rf-text-3: #656b75;
+  --rf-accent: #2a62c9;
+  --rf-accent-hover: #2457b5;
+  --rf-accent-soft: rgba(42, 98, 201, 0.09);
+  --rf-shadow: none;
+  --rf-shadow-pop: 0 12px 40px rgba(16, 24, 40, 0.16);
+  --rf-input: #ffffff;
+  --toggle-bg: #cfd3d9;
+  --alert-info-text: #1d4fd8;
+  --text-code: #1d4fd8;
+  --zone-title-color: #1d4fd8;
+}
+
+/* ---------- Base ---------- */
+html.ui-refined,
+html.ui-refined body {
+  background: var(--rf-bg) !important;
+  background-image: none !important;
+}
+html.ui-refined body {
+  font-family: var(--rf-font) !important;
+  color: var(--rf-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0;
+}
+html.ui-refined body :is(button, input, select, textarea) { font-family: inherit; }
+html.ui-refined body :is(code, pre, .info-value, .stats-badge, kbd) { font-family: var(--rf-mono); }
+html.ui-refined ::selection { background: var(--rf-accent-soft); }
+html.ui-refined body * { scrollbar-width: thin; scrollbar-color: var(--rf-surface-3) transparent; }
+html.ui-refined ::-webkit-scrollbar { width: 10px; height: 10px; }
+html.ui-refined ::-webkit-scrollbar-thumb { background: var(--rf-surface-3); border-radius: 10px; border: 2px solid var(--rf-bg); }
+html.ui-refined ::-webkit-scrollbar-track { background: transparent; }
+
+/* Hide the old header until the layout script has rearranged it (no flash) */
+html.ui-refined:not(.rf-ready) .container > .header { visibility: hidden; }
+
+/* ---------- Left navigation rail (every signed-in page) ---------- */
+html.ui-refined #rf-rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--rf-rail-w);
+  background: var(--rf-rail-bg);
+  border-right: 1px solid var(--rf-border);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 14px 8px 12px;
+  gap: 4px;
+  z-index: 900;
+}
+html.ui-refined .rf-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  margin: 0 0 12px;
+  color: var(--rf-text);
+  text-decoration: none;
+}
+html.ui-refined .rf-brand svg { width: 30px; height: 30px; }
+html.ui-refined .rf-nav { display: flex; flex-direction: column; gap: 2px; }
+html.ui-refined .rf-rail-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
+
+/* Every rail entry, whether it's an original dashboard button or a link */
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) {
+  all: unset;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 54px;
+  padding: 7px 2px 6px;
+  border-radius: 9px;
+  color: var(--rf-text-3) !important;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  position: relative;
+}
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) i {
+  font-size: 17px;
+  width: auto;
+  margin: 0 !important;
+  color: inherit !important;
+}
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn):hover,
+html.ui-refined #rf-rail .rf-nav > .dropdown:hover > .btn {
+  background: var(--rf-hover);
+  color: var(--rf-text) !important;
+  transform: none;
+}
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-item, .rf-nav > .dropdown > .btn).rf-active {
+  color: var(--rf-text) !important;
+  background: var(--rf-active);
+}
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-item, .rf-nav > .dropdown > .btn).rf-active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--rf-accent);
+}
+/* The little chevrons on dropdown buttons are noise in the rail */
+html.ui-refined #rf-rail .rf-nav > .dropdown > .btn > i.fa-chevron-down { display: none; }
+html.ui-refined #rf-rail .rf-label { display: block; max-width: 74px; overflow-wrap: normal; word-break: normal; hyphens: none; }
+
+/* Rail flyouts (Addons / Server menus keep their original contents) */
+html.ui-refined #rf-rail .dropdown { position: relative; display: block; }
+html.ui-refined #rf-rail .dropdown-content {
+  position: absolute !important;
+  left: calc(100% + 14px) !important;
+  right: auto !important;
+  top: -6px !important;
+  margin: 0 !important;
+  transform: none !important;
+  z-index: 950;
+}
+html.ui-refined #rf-rail .dropdown-content::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 0;
+  width: 22px;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  transform: none;
+}
+html.ui-refined #rf-rail .rf-rail-bottom .dropdown-content { top: auto !important; bottom: -6px !important; }
+
+/* Popover menus everywhere */
+html.ui-refined .dropdown-content {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--rf-shadow-pop) !important;
+  padding: 6px !important;
+}
+html.ui-refined .dropdown-content button,
+html.ui-refined .dropdown-content .btn {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 7px !important;
+  color: var(--rf-text) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 8px 10px !important;
+  justify-content: flex-start !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+html.ui-refined .dropdown-content button:hover,
+html.ui-refined .dropdown-content .btn:hover { background: var(--rf-hover) !important; }
+html.ui-refined .dropdown-content button i { color: var(--rf-text-3) !important; }
+html.ui-refined .dropdown-group-header {
+  color: var(--rf-text-3) !important;
+  background: transparent !important;
+  border: 0 !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.06em !important;
+  padding: 10px 10px 4px !important;
+}
+html.ui-refined .dropdown-sysinfo { background: var(--rf-surface-2) !important; border-color: var(--rf-border) !important; border-radius: 9px; }
+html.ui-refined .metric-progress-bg { background: var(--rf-surface-3) !important; }
+html.ui-refined .metric-progress-bar { background: var(--rf-accent) !important; }
+
+/* ---------- Page frame (dashboard + addon pages) ---------- */
+html.ui-refined.rf-shell body { padding: 0 !important; }
+html.ui-refined.rf-shell .container {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: calc(var(--rf-top-h) + 4px) 28px 28px calc(var(--rf-rail-w) + 28px);
+  min-height: 100vh;
+}
+html.ui-refined.rf-shell .container > .header { display: none !important; }
+
+html.ui-refined #rf-topbar {
+  position: fixed;
+  top: 0;
+  left: var(--rf-rail-w);
+  right: 0;
+  height: var(--rf-top-h);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px 0 28px;
+  background: color-mix(in srgb, var(--rf-bg) 82%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--rf-border);
+  z-index: 800;
+}
+html.ui-refined .rf-top-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+html.ui-refined .rf-top-title h1,
+html.ui-refined #rf-topbar .header-title-area h1 {
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.015em;
+  color: var(--rf-text) !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+html.ui-refined #rf-topbar .header-title-area h1 a { font-size: 15px !important; margin-left: 2px !important; color: var(--rf-text-3) !important; }
+html.ui-refined .version-badge {
+  background: transparent !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  color: var(--rf-text-3) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 2px 7px !important;
+  border-radius: 20px !important;
+}
+html.ui-refined .rf-top-title { flex: 1 1 auto; overflow: hidden; }
+html.ui-refined .rf-count { color: var(--rf-text-3); font-size: 13px; font-weight: 500; white-space: nowrap; }
+html.ui-refined .rf-count b { color: var(--rf-green); font-weight: 600; }
+html.ui-refined .rf-top-tools { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* Display toggles become a compact segmented group */
+html.ui-refined .rf-pagehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+html.ui-refined .rf-pagehead-l { display: flex; align-items: baseline; gap: 12px; }
+html.ui-refined .rf-pagehead h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--rf-text); margin: 0; }
+html.ui-refined .rf-pagehead .control-toggles { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--rf-border); border-radius: 9px; background: var(--rf-surface); }
+html.ui-refined .rf-pagehead .toggle-stack { flex-direction: row !important; gap: 2px !important; align-items: center !important; }
+html.ui-refined .rf-pagehead .toggle-group {
+  height: 28px !important;
+  padding: 0 8px 0 10px !important;
+  gap: 0 !important;
+  border-radius: 6px;
+  cursor: pointer;
+}
+html.ui-refined .rf-pagehead .toggle-group:hover { background: var(--rf-hover); }
+html.ui-refined .rf-pagehead .toggle-group span { font-size: 12px !important; font-weight: 500 !important; color: var(--rf-text-2) !important; }
+html.ui-refined .rf-pagehead .toggle-group .toggle-switch { transform: scale(0.5) !important; margin-left: -14px !important; margin-right: 0 !important; }
+
+/* System stats pill */
+html.ui-refined .stats-badge {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border) !important;
+  color: var(--rf-text-2) !important;
+  border-radius: 9px !important;
+  font-size: 11.5px !important;
+  padding: 7px 12px !important;
+  box-shadow: none !important;
+  white-space: nowrap;
+}
+html.ui-refined .stats-badge i { color: var(--rf-text-3) !important; }
+html.ui-refined .stats-popover {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--rf-shadow-pop) !important;
+}
+html.ui-refined .stats-popover::before { display: none !important; }
+html.ui-refined .popover-canvas-wrapper { background: var(--rf-surface-2) !important; border-color: var(--rf-border) !important; }
+html.ui-refined .stats-range-pill { background: transparent !important; border-color: var(--rf-border) !important; color: var(--rf-text-2) !important; }
+html.ui-refined .stats-range-pill.active { background: var(--rf-accent-soft) !important; color: var(--rf-accent) !important; border-color: transparent !important; }
+
+/* Theme toggle + logout in the rail footer */
+html.ui-refined #rf-rail .theme-select-container { display: flex; justify-content: center; }
+html.ui-refined #rf-rail .theme-select-container > div {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+}
+html.ui-refined #rf-rail .theme-select-container > div:hover { background: var(--rf-hover) !important; }
+html.ui-refined #themeToggleIcon { color: var(--rf-text-3) !important; font-size: 16px !important; }
+html.ui-refined #rf-rail #logoutBtn { min-height: 46px !important; }
+
+/* ---------- Buttons ---------- */
+html.ui-refined .btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: var(--rf-radius-sm);
+  border: 1px solid var(--rf-border-strong);
+  background: var(--rf-surface-2);
+  color: var(--rf-text);
+  box-shadow: none;
+  transform: none !important;
+  letter-spacing: -0.003em;
+}
+html.ui-refined .btn:hover { background: var(--rf-surface-3); border-color: var(--rf-border-strong); color: var(--rf-text); }
+html.ui-refined .btn i { color: inherit; }
+html.ui-refined :is(.btn-primary, .btn-success) {
+  background: var(--rf-accent) !important;
+  border-color: var(--rf-accent) !important;
+  color: #fff !important;
+}
+html.ui-refined :is(.btn-primary, .btn-success):hover { background: var(--rf-accent-hover) !important; border-color: var(--rf-accent-hover) !important; }
+html.ui-refined .btn-danger { background: transparent; color: var(--rf-red); border-color: color-mix(in srgb, var(--rf-red) 35%, transparent); }
+html.ui-refined .btn-danger:hover { background: color-mix(in srgb, var(--rf-red) 12%, transparent) !important; color: var(--rf-red) !important; border-color: color-mix(in srgb, var(--rf-red) 45%, transparent) !important; }
+html.ui-refined :is(.btn-indigo, .btn-teal, .btn-pink, .btn-cyan, .btn-amber, .btn-grey, .btn-violet, .btn-slate, .btn-purple):hover i { color: inherit; }
+html.ui-refined #rf-topbar .rf-add-btn { padding: 0 14px 0 12px !important; height: 34px; white-space: nowrap; }
+html.ui-refined #rf-topbar .stats-badge { padding: 0 12px !important; height: 34px; display: inline-flex !important; align-items: center; gap: 4px; }
+html.ui-refined #rf-rail .theme-select-container { border: 0 !important; padding: 0 !important; margin: 0 !important; }
+
+/* ---------- Camera grid ---------- */
+html.ui-refined .camera-grid { gap: 18px !important; }
+html.ui-refined .camera-card {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border) !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+html.ui-refined .camera-card:hover { border-color: var(--rf-border-strong) !important; box-shadow: var(--rf-shadow) !important; transform: none !important; }
+html.ui-refined .camera-card .camera-header { gap: 6px !important; margin: 2px 2px 10px !important; }
+html.ui-refined .camera-card .camera-title { gap: 9px !important; min-width: 0; }
+html.ui-refined .camera-name {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--rf-text) !important;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html.ui-refined .status-badge {
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px;
+  background: var(--rf-text-3) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+html.ui-refined .status-badge.running { background: var(--rf-green) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--rf-green) 20%, transparent) !important; }
+
+/* Card actions: compact icon buttons (labels stay as tooltips) */
+html.ui-refined .camera-actions { display: flex; gap: 2px; flex-shrink: 0; }
+html.ui-refined .icon-btn {
+  font-size: 0 !important;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  color: var(--rf-text-3) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+html.ui-refined .icon-btn i { font-size: 14px !important; margin: 0 !important; color: inherit !important; }
+html.ui-refined .icon-btn:hover { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+html.ui-refined .icon-btn-delete:hover { color: var(--rf-red) !important; }
+html.ui-refined .icon-btn-start:hover { color: var(--rf-green) !important; }
+html.ui-refined .icon-btn-autostart i.fa-toggle-on { color: var(--rf-accent) !important; font-size: 16px !important; }
+html.ui-refined .icon-btn-autostart i.fa-toggle-off { font-size: 16px !important; }
+
+/* Info chips */
+html.ui-refined .camera-info-badges { padding-left: 17px !important; gap: 4px !important; }
+html.ui-refined .info-badge {
+  background: transparent !important;
+  border: 1px solid var(--rf-border) !important;
+  color: var(--rf-text-3) !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  padding: 2px 7px !important;
+  border-radius: 6px !important;
+  letter-spacing: 0;
+  box-shadow: none !important;
+}
+html.ui-refined .info-badge-green { color: var(--rf-green) !important; border-color: color-mix(in srgb, var(--rf-green) 28%, transparent) !important; }
+html.ui-refined .info-badge-red { color: var(--rf-red) !important; border-color: color-mix(in srgb, var(--rf-red) 28%, transparent) !important; }
+html.ui-refined .info-badge-yellow { color: var(--rf-amber) !important; border-color: color-mix(in srgb, var(--rf-amber) 28%, transparent) !important; }
+html.ui-refined :is(.info-badge-blue, .info-badge-purple) { color: var(--rf-text-2) !important; }
+
+/* Video tile */
+html.ui-refined .video-preview {
+  border-radius: 10px !important;
+  margin-bottom: 0 !important;
+  background: #050506 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+html.ui-refined .video-placeholder {
+  background: radial-gradient(120% 120% at 50% 0%, #1c1d21 0%, #0b0b0d 70%) !important;
+  color: #8a8f97 !important;
+  font-size: 13px !important;
+  font-weight: 500;
+  gap: 4px;
+}
+html.ui-refined .video-placeholder > div:first-child:empty { display: none; }
+html.ui-refined .fullscreen-btn {
+  background: rgba(10, 10, 12, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 500;
+  padding: 6px 10px !important;
+  transform: none !important;
+}
+
+/* Stream links */
+html.ui-refined .info-section {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid var(--rf-border) !important;
+  border-radius: 0 !important;
+  padding: 10px 2px 0 !important;
+  margin-top: 12px !important;
+}
+html.ui-refined .info-label {
+  color: var(--rf-text-3) !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em !important;
+  margin: 8px 0 4px !important;
+}
+html.ui-refined .info-value {
+  background: var(--rf-surface-2) !important;
+  border: 1px solid var(--rf-border) !important;
+  border-radius: 8px !important;
+  color: var(--rf-text-2) !important;
+  font-size: 12px !important;
+  padding: 6px 6px 6px 10px !important;
+}
+html.ui-refined .copy-btn {
+  background: transparent !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  color: var(--rf-text-2) !important;
+  border-radius: 6px !important;
+  font-family: var(--rf-font) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+html.ui-refined .copy-btn:hover { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+
+/* Overlays on live video */
+html.ui-refined :is(.metric-badge, .stream-info-overlay > *) { backdrop-filter: blur(6px); border-radius: 6px !important; }
+
+/* Empty state */
+html.ui-refined .empty-state {
+  background: var(--rf-surface) !important;
+  border: 1px dashed var(--rf-border-strong) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+html.ui-refined .empty-title { color: var(--rf-text) !important; font-weight: 600 !important; }
+
+/* Footer */
+html.ui-refined .footer { color: var(--rf-text-3) !important; font-size: 12px !important; opacity: 0.8; margin-top: 28px !important; }
+html.ui-refined .footer img { height: 26px !important; opacity: 0.85; }
+
+/* ---------- Modals ---------- */
+html.ui-refined .modal { background: rgba(5, 6, 8, 0.62) !important; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+html.ui-refined .modal-content {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--rf-shadow-pop) !important;
+  padding: 26px 28px !important;
+  color: var(--rf-text);
+}
+html.ui-refined .modal-header { margin-bottom: 18px !important; }
+html.ui-refined .modal-title { font-size: 19px !important; font-weight: 600 !important; letter-spacing: -0.015em; color: var(--rf-text) !important; }
+html.ui-refined .close-btn { color: var(--rf-text-3) !important; font-size: 20px !important; width: 32px; height: 32px; border-radius: 8px !important; }
+html.ui-refined .close-btn:hover { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+
+/* Tabs (settings, camera form, generic) — one quiet underline style */
+html.ui-refined :is(.settings-tabs, .form-tabs, .tabs) {
+  border-bottom: 1px solid var(--rf-border) !important;
+  gap: 4px !important;
+  padding-bottom: 0 !important;
+}
+html.ui-refined :is(.settings-tab-btn, .form-tab, .tab) {
+  background: transparent !important;
+  color: var(--rf-text-3) !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-bottom: -1px !important;
+  box-shadow: none !important;
+}
+html.ui-refined :is(.settings-tab-btn, .form-tab, .tab) :is(i, svg) { color: inherit !important; fill: currentColor; opacity: 0.85; }
+html.ui-refined :is(.settings-tab-btn, .form-tab, .tab):hover { color: var(--rf-text) !important; background: transparent !important; }
+html.ui-refined :is(.settings-tab-btn, .form-tab, .tab).active {
+  color: var(--rf-text) !important;
+  border-bottom-color: var(--rf-accent) !important;
+  background: transparent !important;
+}
+
+/* ---------- Forms ---------- */
+html.ui-refined :is(.form-label, label.form-label) {
+  color: var(--rf-text-2) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0;
+  text-transform: none;
+}
+html.ui-refined :is(.form-input, input[type=text], input[type=password], input[type=number], input[type=email], input[type=url], input[type=search], input[type=time], input[type=date], input[type=datetime-local], select, textarea):not(.rf-keep) {
+  background-color: var(--rf-input) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  color: var(--rf-text) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  font-size: 13px;
+}
+html.ui-refined :is(.form-input, input, select, textarea):focus {
+  outline: none !important;
+  border-color: var(--rf-accent) !important;
+  box-shadow: 0 0 0 3px var(--rf-accent-soft) !important;
+}
+html.ui-refined ::placeholder { color: var(--rf-text-3) !important; opacity: 1; }
+html.ui-refined input[type=checkbox], html.ui-refined input[type=radio] { accent-color: var(--rf-accent); }
+html.ui-refined .toggle-slider { background: var(--toggle-bg) !important; }
+html.ui-refined .toggle-switch input:checked + .toggle-slider { background: var(--rf-accent) !important; }
+
+/* Notices */
+html.ui-refined :is(.alert, .alert-info, .alert-success) { border-radius: 10px !important; border-color: var(--rf-border) !important; }
+html.ui-refined .alert-warning { border-radius: 10px !important; }
+
+/* Toasts */
+html.ui-refined .toast {
+  background: var(--rf-surface-3) !important;
+  border-left: 3px solid var(--rf-accent) !important;
+  color: var(--rf-text) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--rf-shadow-pop) !important;
+  font-size: 13px !important;
+}
+
+/* Tables */
+html.ui-refined .diagnostics-table th { color: var(--rf-text-3) !important; font-size: 11px !important; letter-spacing: 0.05em; border-bottom: 1px solid var(--rf-border) !important; }
+html.ui-refined .diagnostics-table td { border-bottom: 1px solid var(--rf-border) !important; }
+html.ui-refined .diagnostics-table tr:hover { background: var(--rf-hover) !important; }
+
+/* ---------- Live view (matrix) & AI/ONVIF overlays ---------- */
+html.ui-refined .matrix-overlay { background: #050506 !important; }
+html.ui-refined .matrix-controls {
+  background: rgba(20, 21, 23, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+  font-family: var(--rf-font);
+}
+html.ui-refined .matrix-controls :is(label, span) { color: #a3a8b0 !important; font-weight: 500 !important; font-size: 12.5px !important; }
+html.ui-refined .btn-matrix {
+  background: #212226 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #eceef1 !important;
+  border-radius: 7px !important;
+  font-weight: 500 !important;
+  font-size: 12.5px !important;
+}
+html.ui-refined .btn-matrix:hover { background: #2a2b30 !important; }
+html.ui-refined .matrix-grid { gap: 4px !important; background: #050506; }
+html.ui-refined .matrix-item { border-radius: 6px !important; border: 0 !important; background: #0b0b0d !important; }
+html.ui-refined .matrix-label {
+  background: transparent !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  border: 0 !important;
+}
+
+/* ---------- Addon pages (inside the dashboard frame) ---------- */
+html.ui-refined .addon-page .ad-card { background: var(--rf-surface) !important; border: 1px solid var(--rf-border) !important; border-radius: 14px !important; box-shadow: none !important; }
+html.ui-refined .addon-page .ad-head h1 { font-weight: 600 !important; letter-spacing: -0.015em; }
+html.ui-refined .addon-page .ad-badge { border-radius: 20px !important; font-weight: 500 !important; }
+
+/* =====================================================================
+   Standalone pages (Alerts, Diagnostics, IP Management, GridFusion, NVR)
+   ===================================================================== */
+html.ui-refined.rf-standalone body { padding-left: var(--rf-rail-w) !important; }
+html.ui-refined.rf-standalone body > :is(header, .header, .top-bar, .topbar) { border-bottom: 1px solid var(--rf-border) !important; }
+
+/* Generic headings on those pages */
+html.ui-refined.rf-standalone :is(h1, h2, h3) { letter-spacing: -0.012em; }
+
+/* Rail flyout on pages that don't ship their own dropdown rules */
+html.ui-refined.rf-standalone #rf-rail .dropdown .dropdown-content { display: none; flex-direction: column; }
+html.ui-refined.rf-standalone #rf-rail .dropdown:hover .dropdown-content { display: flex; }
+
+/* ---------- Sign-in & first-time setup ---------- */
+html.ui-refined.rf-auth body { background: radial-gradient(1200px 600px at 50% -10%, #1d1f24 0%, var(--rf-bg) 62%) !important; --btn-hover: var(--rf-accent-hover); --border: var(--rf-border-strong); }
+html.ui-refined.rf-auth :is(.login-shell, .setup-card) {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--rf-shadow-pop) !important;
+}
+html.ui-refined.rf-auth .brand-panel {
+  background: var(--rf-surface-2) !important;
+  color: var(--rf-text) !important;
+  border-right: 1px solid var(--rf-border) !important;
+}
+html.ui-refined.rf-auth .brand-panel::after,
+html.ui-refined.rf-auth .brand-panel::before { display: none !important; }
+html.ui-refined.rf-auth .brand-logo .mark { background: var(--rf-accent-soft) !important; color: var(--rf-accent) !important; }
+html.ui-refined.rf-auth .feature-list .tick { background: var(--rf-accent-soft) !important; color: var(--rf-accent) !important; }
+html.ui-refined.rf-auth :is(.gh-btn, .version-pill) { background: transparent !important; border: 1px solid var(--rf-border-strong) !important; color: var(--rf-text-2) !important; }
+html.ui-refined.rf-auth :is(h1, .form-panel h1) { color: var(--rf-text) !important; font-weight: 650 !important; letter-spacing: -0.02em; }
+html.ui-refined.rf-auth label { color: var(--rf-text-3) !important; font-weight: 600 !important; }
+html.ui-refined.rf-auth .btn {
+  background: var(--rf-accent);
+  color: #fff;
+  border: 1px solid var(--rf-accent);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 9px;
+}
+html.ui-refined.rf-auth .btn:hover { background: var(--rf-accent-hover); color: #fff; }
+html.ui-refined.rf-auth .btn[style*="transparent"] { color: var(--rf-text-2) !important; border-color: var(--rf-border-strong) !important; }
+html.ui-refined.rf-auth .btn[style*="transparent"]:hover { background: var(--rf-hover) !important; }
+html.ui-refined.rf-auth .info-box { background: var(--rf-accent-soft) !important; border-color: transparent !important; color: var(--rf-text-2) !important; }
+html.ui-refined.rf-auth .form-foot { border-color: var(--rf-border) !important; }
+
+/* Hover hints */
+html.ui-refined .custom-tooltip {
+  background: var(--rf-surface-3) !important;
+  color: var(--rf-text) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  border-radius: 7px !important;
+  font-family: var(--rf-font) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  box-shadow: var(--rf-shadow-pop) !important;
+}
+
+/* ---------- Smaller screens ---------- */
+@media (max-width: 1180px) {
+  html.ui-refined .camera-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important; }
+}
+@media (max-width: 760px) {
+  html.ui-refined body { --rf-rail-w: 0px; --rf-top-h: 54px; }
+  html.ui-refined #rf-rail {
+    inset: auto 0 0 0;
+    width: auto;
+    height: 64px;
+    flex-direction: row;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--rf-border);
+    overflow-x: auto;
+    overflow-y: visible;
+    gap: 2px;
+  }
+  html.ui-refined .rf-brand { display: none; }
+  html.ui-refined .rf-nav, html.ui-refined .rf-rail-bottom { flex-direction: row; margin: 0; gap: 2px; }
+  html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) { min-width: 64px; min-height: 54px; }
+  html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-item, .rf-nav > .dropdown > .btn).rf-active::before { left: 14px; right: 14px; top: -4px; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  html.ui-refined #rf-rail .dropdown-content { position: fixed !important; left: 8px !important; right: 8px !important; top: auto !important; bottom: 72px !important; max-height: 70vh; overflow: auto; flex-direction: column; }
+  html.ui-refined #rf-topbar { left: 0; padding: 0 12px; gap: 8px; }
+  html.ui-refined #rf-topbar .stats-container,
+  html.ui-refined #rf-topbar .header-title-area h1 > a,
+  html.ui-refined #rf-topbar .version-badge { display: none !important; }
+  html.ui-refined #rf-topbar .header-title-area h1 { font-size: 15px !important; }
+  html.ui-refined.rf-shell .container { padding: calc(var(--rf-top-h) + 14px) 12px 84px 12px; }
+  html.ui-refined .camera-grid { grid-template-columns: 1fr !important; }
+  html.ui-refined .rf-pagehead .control-toggles { width: 100%; overflow-x: auto; }
+  html.ui-refined .modal-content { width: calc(100% - 16px) !important; max-height: 88vh !important; padding: 18px !important; }
+  html.ui-refined.rf-standalone body { padding-left: 0 !important; padding-bottom: 70px !important; }
+}
+@media (max-height: 860px) and (min-width: 761px) {
+  html.ui-refined #rf-rail { padding-top: 10px; }
+  html.ui-refined .rf-brand { margin-bottom: 6px; }
+  html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) { min-height: 46px; gap: 3px; padding: 5px 2px 4px; }
+  html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) i { font-size: 15px; }
+}
+@media (max-height: 640px) and (min-width: 761px) {
+  html.ui-refined #rf-rail { overflow-y: auto; }
+  html.ui-refined #rf-rail .rf-label { font-size: 9.5px; }
+}
+
+/* GridFusion: keep the layouts panel at its designed width next to the rail */
+html.ui-refined.rf-page-gridfusion .main-container > .sidebar { flex-shrink: 0; }
+html.ui-refined.rf-page-gridfusion .editor-area { min-width: 0; }
+html.ui-refined.rf-page-gridfusion .toolbar { gap: 1.1rem 1.5rem; }
+html.ui-refined.rf-page-gridfusion .toolbar > .toolbar-group { flex-wrap: wrap; min-width: 0; row-gap: 0.75rem; }
+
+/* Tabs that carry per-tab colours by id — bring them to the same quiet style */
+html.ui-refined :is(#settings-tab-general, #settings-tab-security, #settings-tab-engine, #settings-tab-modules, #settings-tab-maintenance, #settings-tab-notifications, #settings-tab-protect, #form-tab-camera, #form-tab-audio, #form-tab-ai, #form-tab-networking) {
+  background: transparent !important;
+  color: var(--rf-text-3) !important;
+  border-bottom-color: transparent !important;
+  box-shadow: none !important;
+}
+html.ui-refined :is(#settings-tab-general, #settings-tab-security, #settings-tab-engine, #settings-tab-modules, #settings-tab-maintenance, #settings-tab-notifications, #settings-tab-protect, #form-tab-camera, #form-tab-audio, #form-tab-ai, #form-tab-networking):hover { color: var(--rf-text) !important; }
+html.ui-refined :is(#settings-tab-general, #settings-tab-security, #settings-tab-engine, #settings-tab-modules, #settings-tab-maintenance, #settings-tab-notifications, #settings-tab-protect, #form-tab-camera, #form-tab-audio, #form-tab-ai, #form-tab-networking).active {
+  color: var(--rf-text) !important;
+  border-bottom-color: var(--rf-accent) !important;
+}
+html.ui-refined :is(#settings-tab-general, #settings-tab-security, #settings-tab-engine, #settings-tab-modules, #settings-tab-maintenance, #settings-tab-notifications, #settings-tab-protect, #form-tab-camera, #form-tab-audio, #form-tab-ai, #form-tab-networking) :is(i, svg) { color: inherit !important; fill: currentColor !important; }
+
+/* Retire the purple/pink gradients */
+html.ui-refined :is(button, .btn)[style*="linear-gradient(135deg, #667eea"] {
+  background: var(--rf-surface-2) !important;
+  color: var(--rf-text) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+}
+html.ui-refined :is(button, .btn)[style*="linear-gradient(135deg, #e53e3e"] {
+  background: transparent !important;
+  color: var(--rf-red) !important;
+  border: 1px solid color-mix(in srgb, var(--rf-red) 40%, transparent) !important;
+}
+html.ui-refined span[style*="linear-gradient(135deg, #f093fb"] {
+  background: var(--rf-accent-soft) !important;
+  color: var(--rf-accent) !important;
+}
+html.ui-refined #progress-bar { background: var(--rf-accent) !important; }
+html.ui-refined .toast.toast-success { border-left-color: var(--rf-green) !important; }
+html.ui-refined .toast.toast-warning { border-left-color: var(--rf-amber) !important; }
+html.ui-refined .toast.toast-error { border-left-color: var(--rf-red) !important; }
+
+
+/* =====================================================================
+   v2 polish — flatter, squarer, quieter. Fewer pills, no glows, no blur,
+   sentence-case labels, one restrained accent.
+   ===================================================================== */
+html.ui-refined body * { letter-spacing: normal; }
+
+/* Rail: flat, square-ish selections, thin accent marker */
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) { border-radius: 6px; font-size: 11px; font-weight: 400; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-item, .rf-nav > .dropdown > .btn).rf-active::before { width: 2px; left: -8px; top: 10px; bottom: 10px; border-radius: 0; }
+html.ui-refined .rf-brand svg rect { opacity: 0; }
+
+/* Top bar: solid */
+html.ui-refined #rf-topbar { background: var(--rf-bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+html.ui-refined .rf-top-title h1, html.ui-refined #rf-topbar .header-title-area h1 { font-size: 15px !important; font-weight: 600 !important; letter-spacing: 0 !important; }
+html.ui-refined .version-badge { border-radius: 4px !important; border-color: var(--rf-border) !important; font-size: 11px !important; padding: 1px 6px !important; }
+html.ui-refined .stats-badge, html.ui-refined #rf-topbar .stats-badge { border-radius: 6px !important; font-family: var(--rf-font) !important; font-variant-numeric: tabular-nums; font-size: 12px !important; }
+
+/* Page heading */
+html.ui-refined .rf-pagehead h2 { font-size: 18px; font-weight: 600; letter-spacing: 0; }
+html.ui-refined .rf-count b { color: var(--rf-text-2); font-weight: 500; }
+html.ui-refined .rf-pagehead .control-toggles { border-radius: 6px; background: transparent; }
+html.ui-refined .rf-pagehead .toggle-group { border-radius: 4px; }
+
+/* Buttons */
+html.ui-refined .btn, html.ui-refined #rf-topbar .rf-add-btn { border-radius: 5px; font-weight: 500; }
+html.ui-refined #rf-topbar .rf-add-btn { height: 32px; font-size: 13px; }
+
+/* Camera cards: flat panels, tight corners */
+html.ui-refined .camera-grid { gap: 14px !important; }
+html.ui-refined .camera-card { border-radius: 8px !important; padding: 10px !important; }
+html.ui-refined .camera-card:hover { box-shadow: none !important; }
+html.ui-refined .camera-name { font-size: 14px !important; font-weight: 600 !important; letter-spacing: 0; }
+html.ui-refined .status-badge, html.ui-refined .status-badge.running { box-shadow: none !important; width: 7px !important; height: 7px !important; min-width: 7px; }
+html.ui-refined .icon-btn { border-radius: 4px !important; width: 28px; height: 28px; }
+html.ui-refined .icon-btn i { font-size: 13px !important; }
+html.ui-refined .icon-btn-autostart i.fa-toggle-on { color: var(--rf-text-2) !important; }
+
+/* Info tags read as plain metadata, not coloured pills */
+html.ui-refined .camera-info-badges { gap: 2px 10px !important; padding-left: 16px !important; }
+html.ui-refined .info-badge {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: 11.5px !important;
+  font-weight: 400 !important;
+  color: var(--rf-text-3) !important;
+}
+html.ui-refined :is(.info-badge-blue, .info-badge-purple) { color: var(--rf-text-3) !important; }
+html.ui-refined .info-badge-green { color: var(--rf-green) !important; }
+html.ui-refined .info-badge-red { color: var(--rf-red) !important; }
+html.ui-refined .info-badge-yellow { color: var(--rf-amber) !important; }
+html.ui-refined .info-badge:hover { color: var(--rf-text) !important; }
+
+/* Video: flat black, square-ish */
+html.ui-refined .video-preview { border-radius: 4px !important; background: #000 !important; box-shadow: none; }
+html.ui-refined .video-placeholder { background: #0a0a0b !important; color: #6b6e74 !important; font-size: 12.5px !important; font-weight: 400; }
+html.ui-refined .fullscreen-btn { border-radius: 4px !important; background: rgba(0,0,0,.65) !important; }
+
+/* Stream links: label/value rows */
+html.ui-refined .info-section { padding: 8px 2px 0 !important; margin-top: 10px !important; }
+html.ui-refined .info-label { text-transform: none !important; letter-spacing: 0 !important; font-size: 11.5px !important; font-weight: 500 !important; margin: 8px 0 3px !important; }
+html.ui-refined .info-value { border-radius: 4px !important; font-size: 12px !important; background: var(--rf-input) !important; }
+html.ui-refined .copy-btn { border-radius: 4px !important; }
+
+/* Popovers, modals, inputs */
+html.ui-refined .dropdown-content, html.ui-refined .stats-popover { border-radius: 8px !important; }
+html.ui-refined .dropdown-content button, html.ui-refined .dropdown-content .btn { border-radius: 4px !important; font-weight: 400 !important; }
+html.ui-refined .dropdown-group-header { text-transform: none !important; letter-spacing: 0 !important; font-size: 11.5px !important; font-weight: 500 !important; }
+html.ui-refined .modal { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0, 0, 0, 0.6) !important; }
+html.ui-refined .modal-content { border-radius: 10px !important; }
+html.ui-refined .modal-title { font-size: 17px !important; letter-spacing: 0; }
+html.ui-refined :is(.form-input, input[type=text], input[type=password], input[type=number], input[type=email], input[type=url], input[type=search], input[type=time], input[type=date], input[type=datetime-local], select, textarea):not(.rf-keep) { border-radius: 5px !important; }
+html.ui-refined :is(.form-input, input, select, textarea):focus { box-shadow: 0 0 0 2px var(--rf-accent-soft) !important; }
+html.ui-refined :is(.settings-tab-btn, .form-tab, .tab) { font-weight: 400 !important; }
+html.ui-refined :is(.settings-tab-btn, .form-tab, .tab).active { font-weight: 500 !important; }
+html.ui-refined .empty-state { border-radius: 8px !important; border-style: solid !important; }
+html.ui-refined .custom-tooltip { border-radius: 4px !important; }
+html.ui-refined .toast { border-radius: 6px !important; }
+
+/* Live view tiles flush, like a monitoring wall */
+html.ui-refined .matrix-grid { gap: 2px !important; }
+html.ui-refined .matrix-item { border-radius: 0 !important; }
+html.ui-refined :is(.btn-matrix) { border-radius: 4px !important; }
+
+/* Addon + standalone pages */
+html.ui-refined .addon-page .ad-card { border-radius: 8px !important; }
+html.ui-refined.rf-standalone :is(h1, h2, h3) { letter-spacing: 0; }
+
+/* Sign-in */
+html.ui-refined.rf-auth body { background: var(--rf-bg) !important; }
+html.ui-refined.rf-auth :is(.login-shell, .setup-card) { border-radius: 10px !important; box-shadow: 0 10px 30px rgba(0,0,0,.35) !important; }
+html.ui-refined.rf-auth .btn { border-radius: 5px; }
+html.ui-refined.rf-auth label { text-transform: none !important; letter-spacing: 0 !important; font-size: 12.5px !important; font-weight: 500 !important; color: var(--rf-text-2) !important; }
+html.ui-refined.rf-auth :is(h1, .form-panel h1) { font-weight: 600 !important; letter-spacing: 0; }
+html.ui-refined .info-value { border-color: transparent !important; }
+html.ui-refined .copy-btn { border-color: var(--rf-border) !important; color: var(--rf-text-3) !important; }
+html.ui-refined .toggle-switch input:checked + .toggle-slider { background: var(--rf-accent) !important; }
+
+/* =====================================================================
+   v3 — page-specific clean-up (stream labels, GridFusion, AI/ONVIF log,
+   IP Management, Diagnostics, Alerts). One accent, neutral metadata.
+   ===================================================================== */
+html.ui-refined body {
+  --accent-cyan: var(--rf-text);
+  --accent-purple: var(--rf-accent);
+  --accent-violet: var(--rf-accent);
+  --accent-pink: var(--rf-text-2);
+  --accent-green: var(--rf-green);
+  --accent-red: var(--rf-red);
+  --accent-orange: var(--rf-amber);
+}
+
+/* Small helper: SHOUTY CAPS -> Sentence case */
+html.ui-refined :is(.badge-event-active, .badge-event-inactive, .session-badge, .rf-chip) { text-transform: lowercase !important; display: inline-block; }
+html.ui-refined :is(.badge-event-active, .badge-event-inactive, .session-badge, .rf-chip)::first-letter { text-transform: uppercase; }
+
+/* Main/Sub stream labels and bandwidth chips on live video */
+html.ui-refined .stream-info-overlay > span,
+html.ui-refined .metric-badge {
+  background: rgba(0, 0, 0, 0.55) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 3px !important;
+  font-family: var(--rf-font) !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  font-variant-numeric: tabular-nums;
+}
+html.ui-refined .stream-info-overlay strong,
+html.ui-refined .metric-badge strong { color: rgba(255, 255, 255, 0.6) !important; font-weight: 500 !important; }
+
+/* ---------- AI/ONVIF event log ---------- */
+html.ui-refined #onvif-overlay { background: var(--rf-bg) !important; }
+html.ui-refined #onvif-overlay .matrix-controls {
+  background: var(--rf-surface) !important;
+  border: 1px solid var(--rf-border) !important;
+  border-radius: 8px;
+}
+html.ui-refined #onvif-overlay .matrix-controls :is(label, span) { color: var(--rf-text-2) !important; font-size: 13px !important; }
+html.ui-refined #onvif-overlay .matrix-controls > div:first-child span { color: var(--rf-text) !important; font-size: 15px !important; font-weight: 600 !important; }
+html.ui-refined #onvif-overlay .btn-matrix { background: var(--rf-surface-2) !important; color: var(--rf-text) !important; border: 1px solid var(--rf-border-strong) !important; }
+html.ui-refined #onvif-overlay .matrix-controls .btn-primary[onclick*="clearONVIFEvents"] { background: transparent !important; color: var(--rf-red) !important; border: 1px solid color-mix(in srgb, var(--rf-red) 40%, transparent) !important; }
+html.ui-refined :is(#onvif-events-body, #ai-diagnostics-body) { font-family: var(--rf-font) !important; font-variant-numeric: tabular-nums; }
+html.ui-refined :is(#onvif-events-body, #ai-diagnostics-body) tr { border-bottom: 1px solid var(--rf-border) !important; }
+html.ui-refined :is(#onvif-events-body, #ai-diagnostics-body) td { color: var(--rf-text-2) !important; font-weight: 400 !important; }
+html.ui-refined #onvif-events-body td:nth-child(2) { color: var(--rf-text) !important; font-weight: 500 !important; }
+html.ui-refined #onvif-events-body td span[style],
+html.ui-refined #ai-diagnostics-body td span[style] {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: var(--rf-text-2) !important;
+  text-transform: none !important;
+}
+html.ui-refined :is(.badge-event-active, .badge-event-inactive) {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 0 0 12px !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  position: relative;
+}
+html.ui-refined :is(.badge-event-active, .badge-event-inactive)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+html.ui-refined .badge-event-active { color: var(--rf-red) !important; }
+html.ui-refined .badge-event-inactive { color: var(--rf-text-3) !important; }
+html.ui-refined #ai-diagnostics-body td span[style*="74, 222, 128"] { color: var(--rf-green) !important; }
+html.ui-refined #ai-diagnostics-body td span[style*="239, 68, 68"] { color: var(--rf-red) !important; }
+html.ui-refined #ai-diagnostics-panel { background: var(--rf-surface) !important; border-color: var(--rf-border) !important; }
+html.ui-refined #ai-diagnostics-panel > div:first-child > div:first-child { color: var(--rf-text) !important; }
+html.ui-refined #ai-diagnostics-summary span { color: var(--rf-text-2) !important; }
+html.ui-refined #onvif-overlay table thead tr,
+html.ui-refined #onvif-overlay table th { background: transparent !important; color: var(--rf-text-3) !important; text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; font-size: 12px !important; }
+
+/* ---------- GridFusion ---------- */
+html.ui-refined.rf-page-gridfusion .logo-text { background: none !important; -webkit-text-fill-color: var(--rf-text) !important; color: var(--rf-text) !important; font-size: 17px !important; font-weight: 600 !important; }
+html.ui-refined.rf-page-gridfusion #server-stats { background: var(--rf-surface) !important; border-color: var(--rf-border) !important; font-family: var(--rf-font) !important; font-weight: 500 !important; font-size: 12px !important; color: var(--rf-text-2) !important; font-variant-numeric: tabular-nums; }
+html.ui-refined.rf-page-gridfusion #server-stats i { color: var(--rf-text-3) !important; }
+html.ui-refined.rf-page-gridfusion :is(.sidebar, .toolbar, .props-panel) { border-radius: 8px !important; box-shadow: none !important; border-color: var(--rf-border) !important; }
+html.ui-refined.rf-page-gridfusion .sidebar-header { background: transparent !important; }
+html.ui-refined.rf-page-gridfusion .sidebar-title { color: var(--rf-text-2) !important; text-transform: none !important; letter-spacing: 0 !important; font-size: 13px !important; font-weight: 600 !important; }
+html.ui-refined.rf-page-gridfusion #side-layout-name { color: var(--rf-text) !important; font-weight: 600; }
+html.ui-refined.rf-page-gridfusion :is(.btn-xs, .btn-xs-primary, .btn-xs-danger) {
+  background: var(--rf-surface-2) !important;
+  border: 1px solid var(--rf-border-strong) !important;
+  color: var(--rf-text) !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+html.ui-refined.rf-page-gridfusion :is(.btn-xs, .btn-xs-primary, .btn-xs-danger):hover { background: var(--rf-surface-3) !important; }
+html.ui-refined.rf-page-gridfusion .btn-xs-danger { color: var(--rf-red) !important; }
+html.ui-refined.rf-page-gridfusion .camera-item { background: var(--rf-surface-2) !important; border: 1px solid var(--rf-border) !important; border-radius: 6px !important; transform: none !important; }
+html.ui-refined.rf-page-gridfusion .camera-item:hover { border-color: var(--rf-border-strong) !important; background: var(--rf-surface-3) !important; }
+html.ui-refined.rf-page-gridfusion .camera-item .camera-name { color: var(--rf-text) !important; font-weight: 500 !important; }
+html.ui-refined.rf-page-gridfusion .camera-preview-small { border-radius: 3px !important; }
+html.ui-refined.rf-page-gridfusion .add-cam-btn { background: transparent !important; color: var(--rf-text-2) !important; border: 1px solid var(--rf-border-strong); border-radius: 4px !important; font-size: 16px !important; transform: none !important; }
+html.ui-refined.rf-page-gridfusion .add-cam-btn:hover { color: var(--rf-text) !important; background: var(--rf-hover) !important; }
+html.ui-refined.rf-page-gridfusion .toolbar-label { text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; font-size: 12.5px !important; color: var(--rf-text-2) !important; }
+html.ui-refined.rf-page-gridfusion .canvas-container { border-radius: 8px !important; }
+html.ui-refined.rf-page-gridfusion .placed-camera { background: #151618 !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; border-radius: 2px !important; }
+html.ui-refined.rf-page-gridfusion .placed-camera.selected { border-color: var(--rf-accent) !important; box-shadow: 0 0 0 1px var(--rf-accent) !important; }
+html.ui-refined.rf-page-gridfusion .placed-overlay { background: rgba(0, 0, 0, 0.6) !important; }
+html.ui-refined.rf-page-gridfusion .info-icon { background: rgba(0, 0, 0, 0.55) !important; font-family: var(--rf-font) !important; transform: none !important; }
+html.ui-refined.rf-page-gridfusion .remove-btn { background: rgba(0, 0, 0, 0.55) !important; color: #fff !important; border-radius: 3px !important; }
+html.ui-refined.rf-page-gridfusion .remove-btn:hover { background: var(--rf-red) !important; }
+html.ui-refined.rf-page-gridfusion :is(.camera-switcher, .stream-switcher) { border-radius: 3px !important; font-family: var(--rf-font) !important; }
+html.ui-refined.rf-page-gridfusion #rtsp-url-display { color: var(--rf-text-2) !important; font-family: var(--rf-mono) !important; }
+html.ui-refined.rf-page-gridfusion .kbd-key { background: var(--rf-surface-2) !important; color: var(--rf-text-2) !important; border-color: var(--rf-border-strong) !important; box-shadow: none !important; }
+
+/* ---------- Standalone pages: headings, sections, cards, tags ---------- */
+html.ui-refined.rf-standalone :is(.header h1, header:not(#rf-topbar) h1, .page-title) { color: var(--rf-text) !important; font-size: 17px !important; font-weight: 600 !important; }
+html.ui-refined.rf-standalone :is(.header h1, header:not(#rf-topbar) h1) i { display: none; }
+html.ui-refined.rf-standalone .section-title { color: var(--rf-text) !important; text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; font-weight: 600 !important; }
+html.ui-refined.rf-standalone .section-title i { color: var(--rf-text-3) !important; }
+html.ui-refined.rf-standalone .card { border-radius: 8px !important; box-shadow: none !important; }
+html.ui-refined.rf-standalone :is(.back-btn) { border-radius: 5px !important; border-color: var(--rf-border-strong) !important; color: var(--rf-text) !important; background: var(--rf-surface) !important; }
+html.ui-refined.rf-standalone :is(.back-btn):hover { background: var(--rf-surface-2) !important; }
+html.ui-refined.rf-standalone .ip-cell { color: var(--rf-text) !important; font-family: var(--rf-mono) !important; font-weight: 500 !important; }
+html.ui-refined.rf-standalone .cidr-badge { background: transparent !important; border: 0 !important; color: var(--rf-text-2) !important; padding: 0 !important; font-size: 12.5px !important; }
+html.ui-refined.rf-standalone .session-item { background: var(--rf-surface) !important; border: 1px solid var(--rf-border) !important; border-radius: 6px !important; }
+html.ui-refined.rf-standalone .session-ip { color: var(--rf-text) !important; font-weight: 600 !important; }
+html.ui-refined.rf-standalone .session-path { color: var(--rf-text-2) !important; }
+html.ui-refined.rf-standalone .session-badge { border: 0 !important; padding: 0 !important; font-size: 11.5px !important; font-weight: 500 !important; color: var(--rf-text-3) !important; }
+html.ui-refined.rf-standalone .session-badge.whitelisted { color: var(--rf-green) !important; }
+html.ui-refined.rf-standalone table th { text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; }
+html.ui-refined.rf-standalone :is(thead, thead tr, th) { background: transparent !important; }
+html.ui-refined.rf-standalone .action-btn { border-radius: 4px !important; background: transparent !important; }
+
+/* Light theme: the dark live-video chips stay dark (they sit on video) */
+html.ui-refined.rf-standalone th { color: var(--rf-text-3) !important; font-size: 12px !important; border-bottom-width: 1px !important; }
+html.ui-refined.rf-standalone .tool-title { color: var(--rf-text) !important; text-transform: none !important; letter-spacing: 0 !important; font-weight: 600 !important; }
+html.ui-refined.rf-standalone .input-group label { color: var(--rf-text-2) !important; text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; }
+html.ui-refined.rf-standalone .tab-btn.active { color: var(--rf-text) !important; }
+html.ui-refined.rf-page-gridfusion .switch input:checked + .slider { background-color: var(--rf-accent) !important; }
+html.ui-refined.rf-page-gridfusion .toolbar-group > div[style*="RTSP"], html.ui-refined.rf-page-gridfusion .toolbar-group > div:has(#rtsp-url-display) { background: var(--rf-surface-2) !important; border-color: var(--rf-border) !important; }
+html.ui-refined.rf-page-gridfusion :is(.grid-select-trigger, .select-input, .text-input) { background: var(--rf-input) !important; color: var(--rf-text) !important; border: 1px solid var(--rf-border-strong) !important; border-radius: 5px !important; }
+
+/* AI/ONVIF log opens inside the app frame (beside the rail), not full screen */
+html.ui-refined.rf-shell #onvif-overlay {
+  left: var(--rf-rail-w) !important;
+  width: auto !important;
+  right: 0 !important;
+  z-index: 850 !important;
+  padding: 18px 24px 20px !important;
+}
+html.ui-refined.rf-shell #onvif-overlay.active { flex-direction: column !important; }
+html.ui-refined.rf-shell #onvif-overlay .matrix-controls { margin-bottom: 16px !important; padding: 12px 14px !important; }
+@media (max-width: 760px) {
+  html.ui-refined.rf-shell #onvif-overlay { left: 0 !important; bottom: 64px !important; height: auto !important; padding: 10px !important; }
+}
+
+/* =====================================================================
+   v5: Server and Settings as pages inside the frame (not popups)
+   ===================================================================== */
+/* Server popup no longer opens on hover; the rail item opens the page. */
+html.ui-refined #rf-rail .dropdown-content.rf-emptied,
+html.ui-refined #rf-rail .dropdown:hover .dropdown-content.rf-emptied { display: none !important; }
+
+html.ui-refined #rf-server-panel { display: none; }
+html.ui-refined.rf-server-open #rf-server-panel {
+  display: block; position: fixed; top: 0; bottom: 0; right: 0; left: var(--rf-rail-w);
+  z-index: 850; overflow-y: auto; background: var(--rf-bg); padding: 22px 28px 32px;
+}
+html.ui-refined .rf-panel-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 0 0 18px; }
+html.ui-refined .rf-panel-head h2 { margin: 0; font-size: 20px; font-weight: 600; color: var(--rf-text); letter-spacing: 0; }
+html.ui-refined .rf-panel-head p, html.ui-refined .rf-page-sub { margin: 3px 0 0; font-size: 13px; color: var(--rf-text-3); font-weight: 400; }
+html.ui-refined .rf-server-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; max-width: 1180px; }
+html.ui-refined .rf-card { background: var(--rf-surface); border: 1px solid var(--rf-border); border-radius: 8px; padding: 18px 20px; }
+html.ui-refined .rf-card > h3 { margin: 0 0 14px; font-size: 14px; font-weight: 600; color: var(--rf-text); text-transform: none; letter-spacing: 0; }
+
+/* The moved popup content, laid out full width */
+html.ui-refined #rf-server-panel .dropdown-sysinfo {
+  display: flex !important; flex-direction: column; gap: 12px; width: auto !important; min-width: 0 !important; max-width: none !important;
+  background: transparent !important; border: 0 !important; border-radius: 0; padding: 0 !important; margin: 0 !important; box-shadow: none !important;
+}
+html.ui-refined #rf-server-panel .dropdown-sysinfo > :first-child:is(h1,h2,h3,h4,div):not([id]):not(:has([id])) { display: none !important; }
+html.ui-refined #rf-server-panel .dropdown-sysinfo *:not(i):not([class*="fa-"]) { font-family: var(--rf-font) !important; letter-spacing: 0 !important; text-transform: none !important; }
+html.ui-refined #rf-server-panel .dropdown-sysinfo :is([id^="sys-"]):not([id$="-bar"]) { color: var(--rf-text) !important; font-size: 13.5px !important; }
+html.ui-refined #rf-server-panel [id$="-bar"] { background: var(--rf-accent) !important; box-shadow: none !important; }
+html.ui-refined #rf-server-panel #sys-ai-stats, html.ui-refined #rf-server-panel #sys-ai-stats * {
+  color: var(--rf-text-2) !important; font-size: 13px !important; background: transparent !important;
+}
+html.ui-refined #rf-server-panel .dropdown-content-inner {
+  display: flex !important; flex-direction: column; gap: 4px; width: auto !important; min-width: 0 !important;
+  background: transparent !important; border: 0 !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important;
+}
+html.ui-refined #rf-server-panel .dropdown-group-header {
+  color: var(--rf-text-3) !important; font-size: 12px !important; font-weight: 500 !important; padding: 12px 0 4px !important; margin: 0 !important; border: 0 !important; background: none !important;
+}
+html.ui-refined #rf-server-panel .dropdown-group-header:first-child { padding-top: 0 !important; }
+html.ui-refined #rf-server-panel .dropdown-content-inner :is(button, .btn) {
+  display: flex !important; align-items: center; gap: 10px; width: 100% !important; justify-content: flex-start !important;
+  padding: 9px 12px !important; border: 1px solid var(--rf-border) !important; border-radius: 6px !important;
+  background: var(--rf-surface-2) !important; color: var(--rf-text) !important; font-size: 13.5px !important; font-weight: 400 !important; text-align: left;
+}
+html.ui-refined #rf-server-panel .dropdown-content-inner :is(button, .btn):hover { background: var(--rf-hover) !important; }
+html.ui-refined #rf-server-panel .dropdown-content-inner :is(button, .btn) i { color: var(--rf-text-3) !important; width: 16px; text-align: center; }
+html.ui-refined #rf-server-panel .dropdown-content-inner :is(.reboot-host, .btn-reboot) { color: var(--rf-red) !important; }
+html.ui-refined #rf-server-panel .dropdown-content-inner :is(.reboot-host, .btn-reboot) i { color: var(--rf-red) !important; }
+html.ui-refined.rf-server-open .rf-pagehead, html.ui-refined.rf-server-open #camera-list { visibility: hidden; }
+
+/* Settings page */
+html.ui-refined.rf-shell .modal.rf-modal-page.active {
+  left: var(--rf-rail-w) !important; width: auto !important; right: 0 !important; top: 0 !important; bottom: 0 !important; height: auto !important;
+  z-index: 850 !important; background: var(--rf-bg) !important; backdrop-filter: none !important;
+  display: block !important; overflow-y: auto !important; padding: 22px 28px 32px !important;
+}
+html.ui-refined.rf-shell .modal.rf-modal-page > .modal-content {
+  max-width: 1180px !important; width: auto !important; max-height: none !important; overflow: visible !important;
+  margin: 0 !important; padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important;
+  border-radius: 0 !important; animation: none !important; transform: none !important;
+}
+html.ui-refined.rf-shell .modal.rf-modal-page .modal-header { display: block !important; position: relative; margin: 0 0 16px !important; padding: 0 !important; border: 0 !important; background: none !important; }
+html.ui-refined.rf-shell .modal.rf-modal-page .modal-title { font-size: 20px !important; font-weight: 600 !important; color: var(--rf-text) !important; }
+html.ui-refined.rf-shell .modal.rf-modal-page .modal-header .close-btn { position: absolute; top: 0; right: 0; width: 32px; height: 32px; display: flex !important; align-items: center; justify-content: center; border-radius: 6px; font-size: 22px !important; color: var(--rf-text-3) !important; }
+html.ui-refined.rf-shell .modal.rf-modal-page .modal-header .close-btn:hover { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+html.ui-refined.rf-shell .modal.rf-modal-page .settings-tabs { margin-bottom: 16px !important; }
+html.ui-refined.rf-shell #settings-modal.rf-modal-page form {
+  background: var(--rf-surface); border: 1px solid var(--rf-border); border-radius: 8px; padding: 20px 22px;
+}
+
+@media (max-width: 1000px) {
+  html.ui-refined .rf-server-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  html.ui-refined.rf-server-open #rf-server-panel, html.ui-refined.rf-shell .modal.rf-modal-page.active {
+    left: 0 !important; bottom: var(--rf-rail-h, 64px) !important; padding: 16px !important;
+  }
+}
+
+html.ui-refined #rf-server-panel .sysinfo-content { padding: 0 !important; gap: 10px; }
+html.ui-refined #rf-server-panel .sysinfo-row { padding: 2px 0 !important; }
+html.ui-refined #rf-server-panel .sysinfo-label { color: var(--rf-text-3) !important; font-size: 13.5px !important; }
+html.ui-refined #rf-server-panel .sysinfo-metric i { color: var(--rf-text-3) !important; font-size: 12px !important; opacity: 1 !important; margin-right: 4px; }
+html.ui-refined #rf-server-panel .metric-info span:first-child { font-weight: 500 !important; color: var(--rf-text) !important; font-size: 13.5px !important; }
+html.ui-refined #rf-server-panel .metric-progress-bg { height: 6px !important; border-radius: 3px !important; background: var(--rf-surface-2) !important; margin-top: 6px; }
+html.ui-refined #rf-server-panel .sysinfo-divider { border: 0 !important; border-top: 1px solid var(--rf-border) !important; margin: 8px 0 !important; }
+
+/* About page: let the content use the page instead of its own scroll box */
+html.ui-refined.rf-shell #about-modal > .modal-content { display: block !important; }
+html.ui-refined.rf-shell #about-modal > .modal-content > div:not(.modal-header) {
+  overflow: visible !important; padding: 20px 22px !important; background: var(--rf-surface); border: 1px solid var(--rf-border); border-radius: 8px;
+}
+html.ui-refined.rf-shell #about-modal > .modal-content > div:not(.modal-header) > div { font-size: 13.5px; }
+html.ui-refined.rf-shell #about-modal [style*="font-size: 12.5px"] { font-size: 13.5px !important; }
+html.ui-refined #about-modal [style*="rgba(102, 126, 234"] { background: transparent !important; border-color: var(--rf-border) !important; }
+html.ui-refined #about-modal [style*="rgba(0,0,0,0.2)"] {
+  background: transparent !important; border-radius: 0 !important; border-bottom: 1px solid var(--rf-border); padding: 9px 2px !important; font-size: 13.5px;
+}
+html.ui-refined #about-modal [id^="about-"][style*="monospace"] { font-family: var(--rf-font) !important; font-weight: 500 !important; font-size: 13.5px !important; }
+html.ui-refined #about-modal [style*="text-transform: uppercase"] { text-transform: none !important; letter-spacing: 0 !important; font-size: 12.5px !important; font-weight: 600 !important; margin-top: 10px !important; }
+html.ui-refined #rf-rail .rf-rail-bottom .btn.rf-active { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+
+/* =====================================================================
+   v6: Cameras page polish (video-first cards, quiet details, tidy links)
+   CSS only: the card markup is re-rendered by the page every few seconds.
+   ===================================================================== */
+html.ui-refined .camera-grid { gap: 20px !important; }
+html.ui-refined .camera-card {
+  display: flex !important; flex-direction: column;
+  padding: 0 !important; overflow: hidden;
+  border-radius: 10px !important; border: 1px solid var(--rf-border) !important;
+  background: var(--rf-surface) !important;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04) !important;
+}
+html.ui-refined .camera-card:hover { border-color: var(--rf-border-strong) !important; box-shadow: 0 4px 14px rgba(16, 24, 40, 0.07) !important; }
+
+/* Video sits edge to edge at the top of the card */
+html.ui-refined .camera-card > .video-preview {
+  order: -1; margin: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+  aspect-ratio: 16 / 9; height: auto !important; background: #0b0c0e !important;
+}
+html.ui-refined .camera-card > .video-preview video { object-fit: cover; }
+html.ui-refined .camera-card:not(.running) > .video-preview { opacity: 0.92; }
+html.ui-refined .video-placeholder { background: #15161a !important; color: #8b9098 !important; }
+
+/* Resolution chips: one quiet line, shown on hover */
+html.ui-refined .stream-info-overlay { bottom: 8px !important; right: 8px !important; gap: 3px !important; opacity: 0; transition: opacity 0.15s; }
+html.ui-refined .video-preview:hover .stream-info-overlay { opacity: 1; }
+html.ui-refined .stream-info-overlay > * {
+  background: rgba(0, 0, 0, 0.55) !important; border: 0 !important; color: #e8eaed !important;
+  font-family: var(--rf-font) !important; font-size: 11px !important; font-weight: 500 !important;
+  padding: 2px 7px !important; border-radius: 4px !important; backdrop-filter: none !important; box-shadow: none !important;
+}
+html.ui-refined .stream-info-overlay > * :is(strong, b, span) { color: #fff !important; font-weight: 600 !important; }
+html.ui-refined .fullscreen-btn { top: 8px !important; right: 8px !important; bottom: auto !important; left: auto !important; }
+
+/* Name row + details */
+html.ui-refined .camera-card .camera-header { margin: 0 !important; padding: 12px 12px 10px 16px !important; gap: 4px !important; }
+html.ui-refined .camera-card .camera-name { font-size: 15px !important; font-weight: 600 !important; }
+html.ui-refined .camera-card .camera-title { gap: 8px !important; }
+html.ui-refined .camera-card .icon-btn { width: 30px; height: 30px; color: var(--rf-text-3) !important; }
+html.ui-refined .camera-card .icon-btn i { font-size: 13px !important; }
+html.ui-refined .camera-card .camera-actions { opacity: 0.85; }
+html.ui-refined .camera-card:hover .camera-actions { opacity: 1; }
+
+html.ui-refined .camera-info-badges { padding-left: 16px !important; gap: 0 !important; row-gap: 2px !important; }
+html.ui-refined .camera-info-badges .info-badge {
+  border: 0 !important; background: none !important; padding: 0 !important; border-radius: 0 !important;
+  font-size: 12px !important; font-weight: 400 !important; color: var(--rf-text-3) !important;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+html.ui-refined .camera-info-badges .info-badge + .info-badge::before {
+  content: "·"; display: inline-block; margin: 0 7px; color: var(--rf-text-3); opacity: 0.7;
+}
+html.ui-refined .camera-info-badges .info-badge:hover { color: var(--rf-text) !important; }
+html.ui-refined .camera-info-badges :is(.info-badge-green, .info-badge-yellow) { color: var(--rf-text-2) !important; }
+html.ui-refined .camera-info-badges .info-badge-red { color: var(--rf-red) !important; }
+
+/* Stream links: compact label | address | copy rows in a quiet footer */
+html.ui-refined .camera-card .info-section {
+  display: grid !important; grid-template-columns: 52px minmax(0, 1fr); align-items: center; column-gap: 10px; row-gap: 2px;
+  margin: 0 !important; padding: 8px 12px 10px 16px !important;
+  border-top: 1px solid var(--rf-border) !important; background: transparent !important; border-radius: 0 !important;
+}
+html.ui-refined .camera-card .info-section > [id^="codec-warning-"] { grid-column: 1 / -1; }
+html.ui-refined .camera-card .info-section > [id^="codec-warning-"]:empty { display: none; }
+html.ui-refined .camera-card .info-label {
+  margin: 0 !important; font-size: 0 !important; line-height: 1; color: var(--rf-text-3) !important; white-space: nowrap;
+}
+html.ui-refined .camera-card .info-label::before { font-size: 12px; font-weight: 500; letter-spacing: 0; }
+html.ui-refined .camera-card .info-section > .info-label:nth-child(2)::before { content: "Main"; }
+html.ui-refined .camera-card .info-section > .info-label:nth-child(4)::before { content: "Sub"; }
+html.ui-refined .camera-card .info-section > .info-label:nth-child(6)::before { content: "ONVIF"; }
+html.ui-refined .camera-card .info-label > span { margin-left: 6px !important; vertical-align: middle; }
+html.ui-refined .camera-card .info-value {
+  position: relative; display: block !important; min-width: 0; margin: 0 !important;
+  background: transparent !important; border: 0 !important; border-radius: 0 !important;
+  padding: 6px 54px 6px 0 !important; min-height: 0 !important;
+  font-family: var(--rf-font) !important; font-size: 12.5px !important; color: var(--rf-text-2) !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
+}
+html.ui-refined .camera-card .info-value + .info-label,
+html.ui-refined .camera-card .info-value + .info-label + .info-value { border-top: 1px solid color-mix(in srgb, var(--rf-border) 60%, transparent); }
+html.ui-refined .camera-card .info-value + .info-label { align-self: stretch; display: flex; align-items: center; }
+html.ui-refined .camera-card .info-value > .copy-btn,
+html.ui-refined .camera-card .info-value > div .copy-btn {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%) !important; margin: 0 !important;
+  height: 24px; padding: 0 9px !important; font-size: 11.5px !important; font-weight: 500 !important;
+  border: 1px solid var(--rf-border) !important; border-radius: 5px !important; background: var(--rf-surface) !important; color: var(--rf-text-2) !important;
+}
+html.ui-refined .camera-card .info-value .copy-btn:hover { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+html.ui-refined .camera-card .info-value > div { display: block !important; width: auto !important; }
+html.ui-refined .camera-card .info-value > div > span { font-variant-numeric: tabular-nums; }
+html.ui-refined .camera-card .info-value > div > div { display: inline !important; }
+html.ui-refined .camera-card .info-value > div > div > div {
+  display: inline !important; background: none !important; border: 0 !important; padding: 0 !important;
+  margin-left: 8px; font-size: 12px !important; color: var(--rf-text-3) !important; font-family: var(--rf-font) !important;
+}
+html.ui-refined .camera-card .info-value > div > div > div::before { content: "·"; margin-right: 8px; }
+html.ui-refined .camera-info-badges { column-gap: 14px !important; }
+html.ui-refined .camera-info-badges .info-badge + .info-badge::before { content: none !important; }
+html.ui-refined .camera-card .camera-actions .icon-btn-autostart i.fa-toggle-on { color: var(--rf-accent) !important; }
+html.ui-refined .camera-card .camera-actions .icon-btn-autostart i.fa-toggle-off { color: var(--rf-text-3) !important; opacity: 0.8; }
+html.ui-refined body.hide-links .camera-card .info-section { display: none !important; }
+
+/* v7: camera editor as a page */
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #camera-form,
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #onvif-probe-form {
+  background: var(--rf-surface); border: 1px solid var(--rf-border); border-radius: 8px; padding: 18px 22px 0;
+}
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #onvif-probe-form { padding-bottom: 20px; }
+html.ui-refined.rf-shell #camera-modal.rf-modal-page .tabs { margin-bottom: 16px !important; }
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #camera-form > button[type="submit"] {
+  position: sticky; bottom: 0; z-index: 5; display: block; width: calc(100% + 44px) !important;
+  margin: 20px -22px 0 !important; height: 44px; border-radius: 0 0 8px 8px !important;
+}
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #camera-form::after { content: ""; display: block; clear: both; }
+html.ui-refined #camera-modal hr { border-top-color: var(--rf-border) !important; }
+html.ui-refined #camera-modal #copy-from-group[style*="none"] + hr { display: none !important; }
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #camera-form > button[type="submit"] { bottom: -32px; }
+html.ui-refined.rf-shell #camera-modal.rf-modal-page.active { padding-bottom: 32px !important; }
+html.ui-refined #camera-modal [style*="solid #e2e8f0"] { border-color: var(--rf-border) !important; }
+html.ui-refined #camera-modal .alert.alert-info {
+  background: var(--rf-surface-2) !important; border: 1px solid var(--rf-border) !important; border-radius: 6px !important;
+  color: var(--rf-text-2) !important; font-size: 12.5px !important; line-height: 1.6; padding: 10px 14px !important;
+}
+html.ui-refined #camera-modal .alert.alert-info strong { color: var(--rf-text) !important; font-weight: 600; }
+
+/* v7: AI Alerts page follows the light/dark theme */
+html.ui-refined.rf-page-alerts body { --bg-color: var(--rf-bg); --accent: var(--rf-accent); --accent-red: var(--rf-red); --accent-green: var(--rf-green); }
+html.ui-refined.rf-page-alerts .btn:not(.btn-primary) { background: var(--rf-surface) !important; border-color: var(--rf-border-strong) !important; color: var(--rf-text) !important; }
+html.ui-refined.rf-page-alerts .btn:not(.btn-primary):hover { background: var(--rf-hover) !important; }
+html.ui-refined.rf-page-alerts .btn.btn-danger:not(.btn-primary) { color: var(--rf-red) !important; }
+html.ui-refined.rf-page-alerts .pill.active { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+html.ui-refined.rf-page-alerts .pill.active[data-tag] { color: var(--rf-text) !important; }
+html.ui-refined.rf-page-alerts .thumb:hover { border-color: var(--rf-border-strong) !important; }
+html.ui-refined.rf-page-alerts .toolbar label { text-transform: none !important; letter-spacing: 0 !important; font-size: 12px !important; font-weight: 500 !important; }
+
+/* v8: Server page memory + top processes */
+html.ui-refined .rf-server-grid2 { grid-template-columns: minmax(0, 1fr) 320px; margin-top: 16px; }
+html.ui-refined .rf-muted { color: var(--rf-text-3); font-weight: 400; }
+html.ui-refined .rf-card > h3 .rf-muted { font-size: 12.5px; margin-left: 4px; }
+html.ui-refined .rf-membar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--rf-surface-2); margin: 2px 0 14px; }
+html.ui-refined .rf-membar > #rf-mem-used { background: var(--rf-accent); transition: width .4s; }
+html.ui-refined .rf-membar > #rf-mem-cache { background: color-mix(in srgb, var(--rf-accent) 30%, transparent); transition: width .4s; }
+html.ui-refined .rf-kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; margin: 0; font-size: 13.5px; }
+html.ui-refined .rf-kv dt { color: var(--rf-text-3); }
+html.ui-refined .rf-kv dd { margin: 0; text-align: right; color: var(--rf-text); font-variant-numeric: tabular-nums; }
+html.ui-refined .rf-table-wrap { overflow-x: auto; margin: 0 -4px; }
+html.ui-refined .rf-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+html.ui-refined .rf-table th { text-align: left; font-weight: 500; color: var(--rf-text-3); font-size: 12px; padding: 6px 4px; border-bottom: 1px solid var(--rf-border); text-transform: none; letter-spacing: 0; background: none; }
+html.ui-refined .rf-table td { padding: 7px 4px; border-bottom: 1px solid color-mix(in srgb, var(--rf-border) 60%, transparent); color: var(--rf-text); vertical-align: middle; }
+html.ui-refined .rf-table tr:last-child td { border-bottom: 0; }
+html.ui-refined .rf-table .num { text-align: right; font-variant-numeric: tabular-nums; width: 86px; }
+html.ui-refined .rf-table th:nth-child(2), html.ui-refined .rf-table td:nth-child(2) { width: 70px; }
+html.ui-refined .rf-pname { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.ui-refined .rf-pcmd { font-size: 11.5px; color: var(--rf-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+@media (max-width: 1000px) { html.ui-refined .rf-server-grid2 { grid-template-columns: 1fr; } }
+
+/* v8: light theme frame: white top bar to match the white menu, cool grey canvas */
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) #rf-topbar { background: var(--rf-surface); }
+
+/* v9: no grey panels anywhere in the light theme (Tony: near-white only) */
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) .sidebar > div[style*="background"],
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) #addonActivity {
+  background: var(--rf-surface) !important;
+}
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) .sidebar { background: var(--rf-surface) !important; }
+/* theme toggle on standalone pages: centre like the other rail items */
+html.ui-refined #rf-rail .rf-rail-bottom > .theme-select-container { width: 100%; }
+html.ui-refined #rf-rail .theme-select-container > div { display: flex !important; align-items: center; justify-content: center; cursor: pointer; }
+
+/* =====================================================================
+   v9: camera editor tabs laid out for the full page
+   ===================================================================== */
+html.ui-refined.rf-shell #camera-modal.rf-modal-page .form-section .form-group { margin-bottom: 20px !important; }
+html.ui-refined.rf-shell #camera-modal.rf-modal-page .form-section .form-row { gap: 20px !important; }
+html.ui-refined.rf-shell #camera-modal.rf-modal-page .form-tabs { margin-bottom: 22px !important; }
+
+/* AI tab */
+html.ui-refined #camera-modal .ai-card {
+  background: var(--rf-surface) !important; border: 1px solid var(--rf-border) !important; border-radius: 8px !important; padding: 20px 22px !important;
+}
+html.ui-refined #camera-modal .ai-card-title {
+  text-transform: none !important; letter-spacing: 0 !important; font-size: 14px !important; font-weight: 600 !important;
+  color: var(--rf-text) !important; margin-bottom: 18px !important;
+}
+html.ui-refined #camera-modal .ai-field-label { font-size: 13px !important; font-weight: 500 !important; color: var(--rf-text) !important; margin-bottom: 8px !important; }
+html.ui-refined #camera-modal .ai-hint { font-size: 12.5px !important; color: var(--rf-text-3) !important; }
+html.ui-refined #camera-modal #form-sec-ai > .ai-card:first-child { margin-bottom: 20px !important; }
+html.ui-refined #camera-modal #aiModeAndModelConfig { gap: 20px !important; margin-bottom: 20px !important; }
+html.ui-refined #camera-modal #aiModeAndModelConfig > .ai-card { gap: 22px !important; }
+html.ui-refined #camera-modal #aiTwoColumnWrapper { gap: 20px !important; margin-bottom: 20px !important; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) !important; }
+html.ui-refined #camera-modal #aiTwoColumnWrapper > .ai-card > div:not(.ai-card-title) { gap: 26px !important; }
+html.ui-refined #camera-modal #aiTwoColumnWrapper > div:not(.ai-card) { gap: 16px !important; }
+html.ui-refined #camera-modal #aiBottomActionsWrapper { gap: 20px !important; }
+
+/* Hardware / model info: neutral card instead of a blue box */
+html.ui-refined #camera-modal #aiSettingsInfoBox {
+  background: var(--rf-surface) !important; color: var(--rf-text-2) !important; border: 1px solid var(--rf-border) !important;
+  border-radius: 8px !important; padding: 20px 22px !important; font-size: 13px !important; line-height: 1.6 !important;
+}
+html.ui-refined #camera-modal #aiSettingsInfoBox :is(strong, b, h4, [style*="font-weight: 600"], [style*="font-weight: 700"]) { color: var(--rf-text) !important; }
+html.ui-refined #camera-modal #aiSettingsInfoBox *:not(strong):not(b) { color: var(--rf-text-2) !important; }
+html.ui-refined #camera-modal #aiHardwareInfoGroup > div:first-child {
+  background: var(--rf-surface-2) !important; border: 1px solid var(--rf-border) !important; color: var(--rf-text-2) !important;
+}
+html.ui-refined #camera-modal #aiHardwareInfoGroup > div span:first-child { box-shadow: none !important; background: var(--rf-green) !important; }
+html.ui-refined #camera-modal #aiHardwareInfoGroup > div :is(span, b, strong) { color: var(--rf-text) !important; }
+html.ui-refined #camera-modal #aiInfoBoxDivider { border-top-color: var(--rf-border) !important; }
+html.ui-refined #camera-modal #aiSettingsInfoBox code, html.ui-refined #camera-modal #aiModelFilename { font-family: var(--rf-font) !important; }
+
+/* Target objects as selectable chips */
+html.ui-refined #camera-modal #aiTargetClassesGroup > div:not(.ai-field-label) { gap: 10px !important; }
+html.ui-refined #camera-modal #aiTargetClassesGroup label {
+  border: 1px solid var(--rf-border-strong); border-radius: 6px; padding: 8px 14px 8px 12px; gap: 8px !important; background: var(--rf-surface);
+}
+html.ui-refined #camera-modal #aiTargetClassesGroup label:has(input:checked) { border-color: var(--rf-accent); background: var(--rf-accent-soft); }
+html.ui-refined #camera-modal #aiTargetClassesGroup label span { font-size: 13px !important; color: var(--rf-text) !important; }
+
+/* Sliders + values */
+html.ui-refined #camera-modal input[type="range"] { accent-color: var(--rf-accent) !important; }
+html.ui-refined #camera-modal :is(#aiSensitivityValue, #aiConfidenceValue) { color: var(--rf-text) !important; font-weight: 600 !important; }
+html.ui-refined #camera-modal #aiSensitivityStatus { background: none !important; border: 0 !important; color: var(--rf-text-3) !important; font-weight: 500 !important; font-size: 12px !important; }
+
+/* Zones / notification rules: neutral link cards */
+html.ui-refined #camera-modal :is(#aiZoneGroup, #aiNotificationsGroup) > button {
+  background: var(--rf-surface) !important; border: 1px solid var(--rf-border) !important; border-radius: 8px !important; padding: 18px 20px !important;
+  position: relative;
+}
+html.ui-refined #camera-modal :is(#aiZoneGroup, #aiNotificationsGroup) > button:hover { background: var(--rf-hover) !important; }
+html.ui-refined #camera-modal :is(#aiZoneGroup, #aiNotificationsGroup) > button > div:first-child { color: var(--rf-text) !important; font-size: 14px !important; }
+html.ui-refined #camera-modal :is(#aiZoneGroup, #aiNotificationsGroup) > button::after {
+  content: "\203A"; position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 22px; color: var(--rf-text-3);
+}
+html.ui-refined #camera-modal #aiNotificationsGroup { margin-top: 0; }
+html.ui-refined #camera-modal [style*="background: #d69e2e"], html.ui-refined #camera-modal [style*="background-color: #d69e2e"] {
+  background: transparent !important; color: var(--rf-amber) !important; border: 1px solid currentColor !important;
+}
+html.ui-refined #camera-modal #aiSettingsInfoBox :is(strong, b) { color: var(--rf-text) !important; }
+/* Grey panels inside the camera editor -> plain bordered cards */
+html.ui-refined #camera-modal [style*="background: rgba(0,0,0,0.03)"],
+html.ui-refined #camera-modal [style*="background: rgba(255,255,255,0.05)"],
+html.ui-refined #camera-modal [style*="background: rgba(255, 255, 255, 0.03)"] {
+  background: var(--rf-surface) !important; border: 1px solid var(--rf-border) !important; border-radius: 8px !important;
+}
+html.ui-refined #camera-modal .auto-start-row { background: var(--rf-surface-2) !important; border: 1px solid var(--rf-border) !important; }
+
+/* =====================================================================
+   v10 (1.6.0): pure white light theme + AI tab reorganised
+   ===================================================================== */
+/* AI tab: every row uses the same 60/40 split so the columns line up */
+html.ui-refined #camera-modal #form-sec-ai > * { margin-bottom: 20px !important; }
+html.ui-refined #camera-modal #form-sec-ai > .ai-card:first-child { margin-bottom: 20px !important; }
+html.ui-refined #camera-modal #aiModeAndModelConfig { gap: 20px !important; align-items: stretch !important; }
+html.ui-refined #camera-modal #aiModeAndModelConfig > .ai-card { flex: 0 0 calc((100% - 20px) * 0.6) !important; box-sizing: border-box; min-width: 0; gap: 20px !important; }
+html.ui-refined #camera-modal #aiModeAndModelConfig > #aiSettingsInfoBox { flex: 0 0 calc((100% - 20px) * 0.4) !important; box-sizing: border-box; min-width: 0; justify-content: flex-start !important; gap: 14px !important; }
+html.ui-refined #camera-modal #aiTwoColumnWrapper { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) !important; gap: 20px !important; }
+html.ui-refined #camera-modal #aiBottomActionsWrapper { grid-template-columns: minmax(0, 1fr) !important; }
+html.ui-refined #camera-modal #aiBottomActionsWrapper > .ai-card { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) !important; column-gap: 44px !important; row-gap: 14px !important; }
+html.ui-refined #camera-modal #aiBottomActionsWrapper > * { min-width: 0; }
+/* section titles for the cards that had none */
+html.ui-refined #camera-modal #aiModeAndModelConfig > .ai-card::before,
+html.ui-refined #camera-modal #aiSettingsInfoBox::before {
+  display: block; font-size: 14px; font-weight: 600; color: var(--rf-text); margin-bottom: 0;
+}
+html.ui-refined #camera-modal #aiModeAndModelConfig > .ai-card::before { content: "Source and model"; }
+html.ui-refined #camera-modal #aiSettingsInfoBox::before { content: "Hardware and model info"; }
+html.ui-refined #camera-modal #aiModeAndModelConfig .form-group { margin-bottom: 0 !important; }
+/* Detection card: sliders side by side, chips and options full width */
+html.ui-refined #camera-modal #aiTwoColumnWrapper > .ai-card > div:not(.ai-card-title) {
+  display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; row-gap: 24px !important;
+}
+html.ui-refined #camera-modal #aiTwoColumnWrapper > .ai-card > div:not(.ai-card-title) > :not(#aiSensitivityGroup):not(#aiConfidenceGroup) { grid-column: 1 / -1; }
+/* right column: zones + rules stacked, aligned to the top */
+html.ui-refined #camera-modal #aiTwoColumnWrapper > div:not(.ai-card) { align-self: start; }
+/* keep the last row clear of the sticky Save bar */
+html.ui-refined.rf-shell #camera-modal.rf-modal-page #camera-form > button[type="submit"] { margin-top: 28px !important; }
+
+/* v10.1: white theme contrast (Tony: "all white and hard to distinguish") */
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) :is(.camera-card, .card, .ai-card, .rf-card, .setup-card, .ad-card, #aiSettingsInfoBox, #camera-form, #onvif-probe-form),
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) #camera-modal :is(#aiZoneGroup, #aiNotificationsGroup) > button,
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) #camera-modal [style*="background: rgba(0,0,0,0.03)"] {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.05) !important;
+}
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) :is(label, .form-label, .ai-field-label) { color: var(--rf-text) !important; }
+html.ui-refined body:is(.theme-ui, .theme-protect-light, .theme-solar-light, .theme-sunset, .theme-light) :is(.form-input, input[type=text], input[type=password], input[type=number], select, textarea):not(.rf-keep):hover { border-color: rgba(15, 23, 42, 0.38) !important; }
+
+/* v11 (1.7.0): whole site at 140% (Tony's pick, like Firefox zoom 140%). Wide screens only,
+   so phones and small windows stay at 100%. refined.js keeps scripts in step with the zoom. */
+@media (min-width: 1100px) {
+  html.ui-refined:not(.rf-nozoom):not(.rf-page-gridfusion) { zoom: 1.4; --rf-z: 1.4; }
+  /* the left menu stays close to its normal size so every item fits on screen */
+  html.ui-refined:not(.rf-nozoom):not(.rf-page-gridfusion) body { --rf-rail-w: 72px; }
+  html.ui-refined:not(.rf-nozoom):not(.rf-page-gridfusion) #rf-rail { zoom: 0.82; width: 88px !important; }
+}
+/* GridFusion and Live View stay at 100% (Tony) */
+html.ui-refined:is(.rf-nozoom, .rf-page-gridfusion) { zoom: 1; --rf-z: 1; }
+
+/* =====================================================================
+   v12 (1.8.0): livelier side menu (Tony: buttons small, grey boring).
+   Each section gets its own coloured icon tile; the current page's tile is filled.
+   ===================================================================== */
+html.ui-refined body { --rf-rail-w: 88px; }
+html.ui-refined #rf-rail { width: var(--rf-rail-w); padding: 12px 8px 10px; }
+html.ui-refined #rf-rail .rf-nav { gap: 2px; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) { min-height: 0 !important; padding: 4px 2px 5px !important; gap: 4px !important; border-radius: 10px !important; font-size: 11.5px !important; font-weight: 500 !important; color: var(--rf-text-2) !important; background: transparent !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) > i {
+  --c: var(--rf-accent);
+  display: flex !important; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 9px; font-size: 15px !important;
+  color: var(--c) !important; background: color-mix(in srgb, var(--c) 15%, transparent);
+  transition: background .15s, color .15s, transform .15s;
+}
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item):hover > i, html.ui-refined #rf-rail .rf-nav > .dropdown:hover > .btn > i { background: color-mix(in srgb, var(--c) 26%, transparent); }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item):hover { color: var(--rf-text) !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item).rf-active { color: var(--rf-text) !important; font-weight: 600 !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item).rf-active > i { background: var(--c) !important; color: #fff !important; box-shadow: 0 4px 12px color-mix(in srgb, var(--c) 40%, transparent); }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item).rf-active::before { display: none !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="cameras"] > i:not(.fa-chevron-down) { --c: #3b82f6; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="gridfusion"] > i:not(.fa-chevron-down) { --c: #8b5cf6; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="matrix"] > i:not(.fa-chevron-down) { --c: #06b6d4; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="onvif"] > i:not(.fa-chevron-down) { --c: #ec4899; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="alerts"] > i:not(.fa-chevron-down) { --c: #f59e0b; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="ip"] > i:not(.fa-chevron-down) { --c: #10b981; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="diagnostics"] > i:not(.fa-chevron-down) { --c: #ef4444; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="addons"] > i:not(.fa-chevron-down) { --c: #f97316; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="settings"] > i:not(.fa-chevron-down) { --c: #6366f1; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf="server"] > i:not(.fa-chevron-down) { --c: #14b8a6; }
+html.ui-refined #rf-rail .rf-label { max-width: 80px; }
+/* bottom: theme, About, Logout stay quiet but a bit larger */
+html.ui-refined #rf-rail .rf-rail-bottom .btn, html.ui-refined #rf-rail .rf-rail-bottom .rf-item { min-height: 0 !important; padding: 6px 2px !important; font-size: 11px !important; }
+html.ui-refined #rf-rail .rf-rail-bottom :is(.btn, .rf-item, .rf-nav > .dropdown > .btn) > i, html.ui-refined #rf-rail .rf-rail-bottom :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) > i { --c: var(--rf-text-3); background: transparent !important; width: 30px; height: 30px; font-size: 16px !important; color: var(--rf-text-2) !important; box-shadow: none !important; }
+html.ui-refined #rf-rail .rf-rail-bottom :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item):hover > i, html.ui-refined #rf-rail .rf-rail-bottom .btn:hover > i { background: var(--rf-hover) !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) > i.fa-chevron-down { display: none !important; }
+html.ui-refined #rf-rail .rf-brand { margin-bottom: 8px !important; }
+
+/* v12.1 (1.8.1): Tony: coloured tiles "look too AI", prefers the darker look.
+   Same bigger buttons, monochrome: no tile colours, the current page gets a solid neutral tile. */
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) > i:not(.fa-chevron-down),
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf] > i:not(.fa-chevron-down) { --c: var(--rf-text-2); color: var(--rf-text-2) !important; background: transparent !important; box-shadow: none !important; font-size: 17px !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item):hover > i:not(.fa-chevron-down) { background: var(--rf-hover) !important; color: var(--rf-text) !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item).rf-active > i:not(.fa-chevron-down),
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item)[data-rf].rf-active > i:not(.fa-chevron-down) { background: var(--rf-active) !important; color: var(--rf-text) !important; box-shadow: inset 0 0 0 1px var(--rf-border-strong) !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item).rf-active::before { display: block !important; left: -8px; top: 8px; bottom: auto; height: 32px; width: 3px; border-radius: 0 3px 3px 0; background: var(--rf-accent); }
+
+/* 1.8.2: dashboard title, bold name + lighter product name */
+html.ui-refined .header-title-area h1 .rf-title-name { font-weight: 700; color: var(--rf-text); }
+html.ui-refined .header-title-area h1 .rf-title-product { font-weight: 400; color: var(--rf-text-2); }
+
+/* 1.8.3: Addons flyout wide enough that every addon name stays on one line (Tony) */
+html.ui-refined #rf-rail .dropdown-content { width: max-content !important; min-width: 240px !important; max-width: none !important; }
+html.ui-refined #rf-rail .dropdown-content :is(button, .btn, a) { white-space: nowrap !important; width: 100% !important; display: flex !important; align-items: center; }
+html.ui-refined #rf-rail .dropdown-content #dynamic-nav-buttons { display: flex; flex-direction: column; width: 100%; }
+
+/* 1.9.0 (app 10.0): GitHub icon bigger + stars badge; toggles without a frame; smaller gap above Cameras (Tony) */
+html.ui-refined .header-title-area h1 a.rf-gh-link { font-size: 27px !important; margin-left: 12px !important; opacity: 0.85 !important; }
+html.ui-refined .header-title-area h1 a.rf-gh-link:hover { opacity: 1 !important; }
+html.ui-refined .rf-gh-stars {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; height: 26px; padding: 0 10px;
+  border: 1px solid var(--rf-border-strong); border-radius: 6px; background: var(--rf-surface);
+  color: var(--rf-text-2) !important; font-size: 12.5px; font-weight: 500; text-decoration: none !important; vertical-align: middle;
+}
+html.ui-refined .rf-gh-stars:hover { border-color: var(--rf-text-3); color: var(--rf-text) !important; }
+html.ui-refined .rf-gh-stars i { color: #e3b341; font-size: 12px; }
+html.ui-refined .rf-gh-stars b { font-weight: 600; color: var(--rf-text); padding-left: 6px; border-left: 1px solid var(--rf-border-strong); }
+html.ui-refined .rf-pagehead .control-toggles { border: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+
+/* 1.9.1: quieter, more elegant stars count (Tony) */
+html.ui-refined .rf-gh-stars {
+  border: 0 !important; background: transparent !important; height: auto !important; padding: 2px 4px !important; margin-left: 6px !important;
+  gap: 5px !important; font-size: 13px !important; color: var(--rf-text-3) !important; border-radius: 4px !important;
+}
+html.ui-refined .rf-gh-stars i { color: var(--rf-text-3) !important; font-size: 13px !important; transition: color .15s; }
+html.ui-refined .rf-gh-stars b { border: 0 !important; padding: 0 !important; font-weight: 500 !important; color: var(--rf-text-2) !important; font-variant-numeric: tabular-nums; }
+html.ui-refined .rf-gh-stars:hover i { color: #d4a72c !important; }
+html.ui-refined .rf-gh-stars:hover b { color: var(--rf-text) !important; }
+html.ui-refined .header-title-area h1 a.rf-gh-link i { font-size: 22px !important; }
+
+/* 1.9.3: icon sits right on top of its label, more room between buttons (Tony) */
+html.ui-refined #rf-rail .rf-nav { gap: 10px !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) { gap: 1px !important; padding: 3px 2px 4px !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item) > i:not(.fa-chevron-down) { width: 44px !important; height: 26px !important; border-radius: 8px !important; }
+html.ui-refined #rf-rail .rf-label { line-height: 1.1 !important; }
+html.ui-refined #rf-rail .rf-rail-bottom { gap: 8px !important; }
+html.ui-refined #rf-rail .rf-rail-bottom :is(.btn, .rf-item) { gap: 1px !important; padding: 3px 2px 4px !important; }
+html.ui-refined #rf-rail .rf-rail-bottom :is(.btn, .rf-item) > i { height: 26px !important; }
+
+/* 1.9.4: menu labels bolder and a little bigger (Tony) */
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item, .rf-rail-bottom .btn) { font-size: 12.5px !important; font-weight: 600 !important; letter-spacing: 0 !important; }
+html.ui-refined #rf-rail :is(.rf-nav > .btn, .rf-nav > .dropdown > .btn, .rf-item).rf-active { font-weight: 700 !important; }
+html.ui-refined #rf-rail .rf-label { font-family: 'Segoe UI Semibold', 'Segoe UI', var(--rf-font); }
+
+/* 1.9.5: side menu is the same size on every page (GridFusion / Live View run at 100%, so scale the menu up to match) */
+@media (min-width: 1100px) {
+  html.ui-refined:is(.rf-nozoom, .rf-page-gridfusion) body { --rf-rail-w: 101px; }
+  html.ui-refined:is(.rf-nozoom, .rf-page-gridfusion) #rf-rail { zoom: 1.148; width: 88px !important; }
+}
+
+/* 1.9.6: Add Camera moved from the top bar into the Cameras heading row, left of the view toggles */
+html.ui-refined .rf-pagehead-r { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+html.ui-refined .rf-pagehead .rf-add-btn { padding: 0 8px 0 7px !important; height: 20px; min-height: 0 !important; line-height: 1 !important; font-size: 10px !important; white-space: nowrap; border-radius: 4px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; margin: 0 !important; }
+html.ui-refined .rf-pagehead .rf-add-btn i { font-size: 9px !important; }
+@media (max-width: 760px) { html.ui-refined .rf-pagehead-r { width: 100%; } }
+/* 1.9.7: no frame around the CPU / MEM / NET readout in the top bar */
+html.ui-refined #rf-topbar .stats-badge, html.ui-refined #rf-topbar .stats-container:hover .stats-badge { border: 0 !important; box-shadow: none !important; background: transparent !important; }
+
+/* 2.0.0: the same top bar on every page (Tony, 2026-11-03).
+   In-frame pages and overlays start below it instead of covering it. */
+html.ui-refined.rf-shell .modal.rf-modal-page.active,
+html.ui-refined.rf-server-open #rf-server-panel,
+html.ui-refined.rf-shell #onvif-overlay { top: var(--rf-top-h) !important; height: auto !important; bottom: 0 !important; }
+/* Live View stays full screen on its own (Tony, 2026-11-03) */
+/* Standalone pages (GridFusion, AI Alerts, IP Management, Diagnostics) */
+html.ui-refined.rf-standalone body { padding-top: var(--rf-top-h) !important; }
+html.ui-refined.rf-standalone #rf-topbar .stats-container { position: relative; }
+html.ui-refined.rf-standalone #rf-topbar .stats-badge i { opacity: .75; color: var(--rf-text-3) !important; }
+/* GridFusion has its own CPU/MEM pill; the top bar now shows it, so hide the copy */
+html.ui-refined.rf-page-gridfusion #server-stats { display: none !important; }
+/* GridFusion and Live View run at 100% zoom; scale the top bar so it matches every other page */
+@media (min-width: 1100px) {
+  html.ui-refined.rf-page-gridfusion #rf-topbar { zoom: 1.4; left: calc(var(--rf-rail-w) / 1.4); }
+  html.ui-refined.rf-page-gridfusion.rf-standalone body { padding-top: calc(var(--rf-top-h) * 1.4) !important; }
+}
+html.ui-refined.rf-standalone #rf-topbar .stats-badge { font-weight: 600 !important; }

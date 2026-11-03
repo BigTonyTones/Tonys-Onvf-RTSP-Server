@@ -4,7 +4,7 @@ import platform
 from .version import CURRENT_VERSION
 
 # HTML for Web UI (generated dynamically with timezone data)
-def get_web_ui_html(current_settings=None, boot_id='', is_linux=False):
+def get_web_ui_html(current_settings=None, boot_id='', is_linux=False, nvr_pro_enabled=False, addon_html=None):
     """Generate Web UI HTML"""
 
     return f"""
@@ -19,9 +19,12 @@ def get_web_ui_html(current_settings=None, boot_id='', is_linux=False):
         // waits until a DIFFERENT boot id answers before reloading (Linux full restart).
         window.SERVER_BOOT_ID = "{boot_id}";
         window.SERVER_IS_LINUX = {'true' if is_linux else 'false'};
+        window.NVR_PRO_ENABLED = {'true' if nvr_pro_enabled else 'false'};
     </script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style id="dynamic-module-styles"></style>
     <style>
         :root {{
             --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1638,6 +1641,31 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             opacity: 1;
         }}
         
+        /* Modules Tab (Pink) */
+        #settings-tab-modules {{
+            color: var(--text-title);
+            opacity: 0.75;
+        }}
+        #settings-tab-modules i {{
+            color: #ed64a6;
+            opacity: 1;
+        }}
+        #settings-tab-modules:hover {{
+            color: var(--text-title);
+            opacity: 1;
+            background: rgba(237, 100, 166, 0.05);
+        }}
+        #settings-tab-modules.active {{
+            color: var(--text-title) !important;
+            opacity: 1;
+            background: rgba(237, 100, 166, 0.08) !important;
+            border-bottom: 2px solid #d53f8c !important;
+        }}
+        #settings-tab-modules.active i {{
+            color: #d53f8c;
+            opacity: 1;
+        }}
+
         /* Maintenance Tab (Teal) */
         #settings-tab-maintenance {{
             color: var(--text-title);
@@ -2632,6 +2660,13 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <button class="btn btn-amber" onclick="window.location.href='/diagnostics'">
                         <i class="fa-solid fa-gauge"></i> Diagnostics
                     </button>
+                    <div class="dropdown">
+                        <button class="btn btn-purple" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-puzzle-piece"></i> <span>Addons</span> <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i>
+                        </button>
+                        <div class="dropdown-content" id="dynamic-nav-buttons" style="min-width: 200px; padding: 8px; flex-direction: column; gap: 4px;">
+                        </div>
+                    </div>
                     <button class="btn btn-grey" onclick="openSettingsModal()">
                         <i class="fa-solid fa-gear"></i> Settings
                     </button>
@@ -2774,6 +2809,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             </div>
         </div>
         
+        {f'''
+        <div id="camera-list" style="display: none;"></div>
+        {addon_html}
+        ''' if addon_html else '''
         <div id="camera-list" class="camera-grid"></div>
         
         <div id="empty-state" class="empty-state" style="display:none;">
@@ -2782,6 +2821,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             <div class="empty-text">Add your first virtual ONVIF camera to get started</div>
             <button class="btn btn-success" onclick="openAddModal()">Add Your First Camera</button>
         </div>
+        '''}
         <div class="footer">
             <p>© 2026 <a href="https://github.com/BigTonyTones/Tonys-Onvf-RTSP-Server" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tonys Onvif-RTSP-AI Server</a> • Created by <a href="https://github.com/BigTonyTones" target="_blank" style="color: inherit; text-decoration: none; font-weight: 600;">Tony</a></p>
             <a href="https://buymeacoffee.com/tonytones" target="_blank" class="coffee-link-small">
@@ -3280,6 +3320,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     <div class="form-tab" onclick="switchFormTab('audio')" id="form-tab-audio"><i class="fas fa-volume-up"></i> Audio</div>
                     <div class="form-tab" onclick="switchFormTab('ai')" id="form-tab-ai"><i class="fas fa-brain"></i> AI Settings</div>
                     <div class="form-tab" onclick="switchFormTab('networking')" id="form-tab-networking"><i class="fas fa-network-wired"></i> Networking</div>
+                    <span id="dynamic-form-tabs"></span>
                 </div>
 
                 <!-- CAMERA SECTION -->
@@ -3338,6 +3379,37 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 </label>
                                 <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">Efficient: Source sub-stream from server's main stream</small>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Camera RTSP lookup. Camera database by ch-bas: https://github.com/ch-bas/cctv-camera-database -->
+                    <style>
+                        .rtsp-lookup {{ margin-top: 24px; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); }}
+                        .rtsp-lookup-hint {{ display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--text-body); font-size: 13px; }}
+                        .rtsp-lookup-hint > i {{ color: var(--btn-primary); font-size: 16px; }}
+                        .rtsp-lookup-hint > span {{ flex: 1; min-width: 220px; }}
+                        .rtsp-lookup-panel {{ margin-top: 12px; }}
+                        .rtsp-lookup-results {{ margin-top: 8px; max-height: 300px; overflow-y: auto; font-size: 13px; color: var(--text-muted); }}
+                        .rtsp-lookup-row {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--border-color); }}
+                        .rtsp-lookup-row:last-child {{ border-bottom: none; }}
+                        .rtsp-lookup-title {{ color: var(--text-title); font-weight: 600; }}
+                        .rtsp-lookup-meta {{ color: var(--text-muted); font-size: 12px; text-transform: capitalize; }}
+                        .rtsp-lookup-row code {{ display: block; margin-top: 3px; font-size: 12px; color: var(--text-body); word-break: break-all; }}
+                        .rtsp-lookup-row .btn {{ white-space: nowrap; padding: 6px 12px; font-size: 12px; }}
+                        .rtsp-lookup-none {{ font-size: 12px; color: var(--text-muted); white-space: nowrap; }}
+                        .rtsp-lookup-credit {{ display: block; margin-top: 10px; color: var(--text-muted); font-size: 12px; }}
+                        .rtsp-lookup-credit a {{ color: var(--btn-primary); }}
+                    </style>
+                    <div id="rtsp-lookup" class="rtsp-lookup">
+                        <div class="rtsp-lookup-hint">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Don't know your camera's RTSP paths? Look up your camera model and the RTSP port and stream paths below get filled in for you.</span>
+                            <button type="button" class="btn btn-secondary" onclick="toggleRtspLookup()"><i class="fas fa-search"></i> Look up my camera</button>
+                        </div>
+                        <div id="rtsp-lookup-panel" class="rtsp-lookup-panel" style="display: none;">
+                            <input type="text" class="form-input" id="rtspLookupQuery" placeholder="Brand and model, e.g. Hikvision DS-2CD2143" oninput="rtspLookupSearch()" autocomplete="off">
+                            <div id="rtspLookupResults" class="rtsp-lookup-results"></div>
+                            <small class="rtsp-lookup-credit">Camera database by <a href="https://github.com/ch-bas" target="_blank" rel="noopener">ch-bas</a> (<a href="https://github.com/ch-bas/cctv-camera-database" target="_blank" rel="noopener">cctv-camera-database</a> on GitHub). Paths are community sourced. If one doesn't work, try Scan Camera (ONVIF).</small>
                         </div>
                     </div>
 
@@ -3909,7 +3981,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                     <input type="checkbox" id="vnicKeepalive" style="width: auto; cursor: pointer;">
-                                    <span class="form-label" style="margin: 0; font-weight: normal;">Enable Switch Keepalive (Pings gateway/broadcast every 60s)</span>
+                                    <span class="form-label" style="margin: 0; font-weight: normal;">Enable Switch Keepalive (every 60s, sends a small packet from this virtual NIC to the gateway and to connected NVRs/clients)</span>
                                 </label>
                                 <div style="font-size: 11px; color: var(--text-muted); margin-left: 22px; margin-top: 4px; line-height: 1.4;">
                                     Highly recommended if using UniFi or switches that drop inactive MAC addresses, preventing streams from timing out.
@@ -3977,14 +4049,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </div>
                     </div>
                 </div>
-                
+                <!-- DYNAMIC MODULE SECTIONS -->
+                <div id="dynamic-form-sections"></div>
+
                 <button type="submit" class="btn btn-success" style="width:100%">Save Camera</button>
             </form>
         </div>
     </div>
     
     <div id="settings-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 1050px;">
             <div class="modal-header">
                 <div class="modal-title">Server Settings</div>
                 <button class="close-btn" onclick="closeSettingsModal()">×</button>
@@ -4003,12 +4077,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-engine')" id="settings-tab-engine">
                     <i class="fas fa-sliders-h"></i> Engine
                 </button>
+                <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-modules')" id="settings-tab-modules">
+                    <i class="fas fa-puzzle-piece"></i> Addons
+                </button>
                 <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-notifications')" id="settings-tab-notifications">
                     <i class="fas fa-bell"></i> Notifications
                 </button>
                 <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('settings-maintenance')" id="settings-tab-maintenance">
                     <i class="fas fa-wrench"></i> Maintenance
                 </button>
+                <span id="dynamic-settings-tabs" style="display:contents"></span>
             </div>
 
             <form onsubmit="saveSettings(event)">
@@ -4205,12 +4283,34 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 <!-- Tab 3: Engine & Advanced -->
                 <div id="settings-engine" class="settings-tab-content">
                     <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="ffmpeg_hardwareEncoding" style="width: auto; cursor: pointer;">
-                            <span class="form-label" style="margin: 0; color: var(--yellow-text, #f6ad55); font-weight: 700;">Enable Hardware Encoding (Experimental)</span>
+                        <label class="form-label" for="ffmpeg_hardwareEncoder" style="color: var(--yellow-text, #f6ad55); font-weight: 700;">GridFusion Hardware Encoding (Experimental)</label>
+                        <select id="ffmpeg_hardwareEncoder" class="form-input" onchange="updateHwEncoderFields()">
+                            <option value="software">Off (software / CPU)</option>
+                            <option value="auto">Auto (test and use the first one that works)</option>
+                            <option value="vaapi">VAAPI (Intel / AMD on Linux and Docker)</option>
+                            <option value="qsv">Intel QSV</option>
+                            <option value="nvenc">NVIDIA NVENC</option>
+                            <option value="amf">AMD AMF (Windows)</option>
+                            <option value="videotoolbox">Apple VideoToolbox (macOS)</option>
+                        </select>
+                        <input type="checkbox" id="ffmpeg_hardwareEncoding" style="display: none;">
+                        <div id="hwVaapiFields" style="margin-top: 10px; display: none;">
+                            <label class="form-label" for="ffmpeg_vaapiDevice">VAAPI render device</label>
+                            <input type="text" class="form-input" id="ffmpeg_vaapiDevice" placeholder="/dev/dri/renderD128">
+                        </div>
+                        <label id="hwDecodeRow" style="display: none; align-items: center; gap: 8px; cursor: pointer; margin-top: 10px;">
+                            <input type="checkbox" id="ffmpeg_hwDecode" style="width: auto; cursor: pointer;">
+                            <span style="font-size: 13px;">Also decode camera streams on the GPU</span>
                         </label>
-                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block; margin-left: 24px;">
-                            Attempts to use NVIDIA NVENC, Intel QSV, or AMD AMF for GridFusion encoding. Disables if not found.
+                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-secondary" onclick="testHwEncoders()" id="hwTestBtn">Test encoders</button>
+                            <small style="color: var(--text-muted); font-size: 11px;">Runs a 1-second test encode for each encoder on this machine.</small>
+                        </div>
+                        <div id="hwTestResult" style="margin-top: 8px; font-size: 12px; line-height: 1.6;"></div>
+                        <div id="hwDiagBox" style="display: none; margin-top: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.5; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg, transparent);"></div>
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 6px; display: block;">
+                            Used for GridFusion layouts. Every hardware encoder is test-encoded first; if it fails, GridFusion falls back to software.
+                            Docker: pass the GPU in with <code>devices: - /dev/dri:/dev/dri</code> to use VAAPI.
                         </small>
                     </div>
 
@@ -4305,7 +4405,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             <input type="text" class="form-input" id="ffmpeg_processArgs" style="font-size: 13px; padding: 10px; font-family: 'Consolas', monospace; background: var(--input-bg); color: var(--input-text); border: 1px solid var(--input-border);">
                         </div>
 
-                        <div style="background: var(--alert-warning-bg); border-left: 3px solid var(--alert-warning-text); padding: 10px; margin-top: 15px; border-radius: 4px;">
+                        <div style="background: var(--alert-warning-bg); border: 1px solid var(--alert-warning-border, rgba(242, 178, 76, 0.3)); padding: 10px; margin-top: 15px; border-radius: 4px;">
                             <small style="color: var(--alert-warning-text); font-size: 11px; font-weight: 600; display: block;">
                                 <i class="fas fa-exclamation-triangle"></i> Note: MediaMTX will restart automatically to apply these changes. Incorrect FFmpeg arguments may cause camera streams to fail.
                             </small>
@@ -4346,6 +4446,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </label>
                                 </div>
                             </div>
+                            <div id="test-status-pushover" class="provider-test-status" style="display: none; font-size: 11px; text-align: right; margin: -2px 0 6px;"></div>
                             <div id="fields_pushover" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
                                 <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">To use Pushover, create an application in your Pushover dashboard to get an API Token, and find your User Key on your main dashboard.</p>
                                 <div class="form-group" style="margin-bottom: 8px;">
@@ -4373,6 +4474,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </label>
                                 </div>
                             </div>
+                            <div id="test-status-ntfy" class="provider-test-status" style="display: none; font-size: 11px; text-align: right; margin: -2px 0 6px;"></div>
                             <div id="fields_ntfy" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
                                 <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your ntfy server URL and a unique topic name to subscribe to. Leave Username and Password blank if your server does not require authentication.</p>
                                 <div class="form-group" style="margin-bottom: 8px;">
@@ -4410,6 +4512,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </label>
                                 </div>
                             </div>
+                            <div id="test-status-gotify" class="provider-test-status" style="display: none; font-size: 11px; text-align: right; margin: -2px 0 6px;"></div>
                             <div id="fields_gotify" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
                                 <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your Gotify Server URL and an App Token generated from your Gotify UI.</p>
                                 <div class="form-group" style="margin-bottom: 8px;">
@@ -4437,6 +4540,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </label>
                                 </div>
                             </div>
+                            <div id="test-status-bark" class="provider-test-status" style="display: none; font-size: 11px; text-align: right; margin: -2px 0 6px;"></div>
                             <div id="fields_bark" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
                                 <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your Bark URL, making sure it includes your unique device key at the end (e.g. https://api.day.app/YOUR_DEVICE_KEY).</p>
                                 <div class="form-group" style="margin-bottom: 4px;">
@@ -4460,6 +4564,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </label>
                                 </div>
                             </div>
+                            <div id="test-status-apprise" class="provider-test-status" style="display: none; font-size: 11px; text-align: right; margin: -2px 0 6px;"></div>
                             <div id="fields_apprise" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
                                 <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Provide an Apprise connection URL to utilize over 80+ supported notification platforms. Ensure the python "apprise" package is installed.</p>
                                 <div class="form-group" style="margin-bottom: 4px;">
@@ -4493,6 +4598,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     </label>
                                 </div>
                             </div>
+                            <div id="test-status-smtp" class="provider-test-status" style="display: none; font-size: 11px; text-align: right; margin: -2px 0 6px;"></div>
                             <div id="fields_smtp" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
                                 <p style="font-size: 11px; color: var(--text-body); margin-bottom: 10px; font-style: italic;">Enter your SMTP server configuration. Ensure you use an App Password if required by your email provider (like Gmail).</p>
                                 <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-bottom: 8px;">
@@ -4544,17 +4650,22 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         </div>
                     </div>
 
-                    <!-- Global Test Button & Status -->
-                    <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
-                        <button type="button" class="btn btn-secondary" onclick="testAllProviders()" style="background: rgba(72, 187, 120, 0.15); border: 1px solid rgba(72, 187, 120, 0.3); color: #48bb78; font-weight: 600;">
-                            <i class="fas fa-bell"></i> Send Test to All Enabled Providers
-                        </button>
-                        <div id="test-notifications-status" style="font-size: 11px; text-align: center; min-height: 15px;"></div>
-                    </div>
                 </div>
                 
+                <!-- Tab 6: Addon Modules -->
+                <div id="settings-modules" class="settings-tab-content">
+                    <div id="module-settings-container" style="min-height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px;">
+                        Loading modules...
+                    </div>
+                    <div style="margin-bottom: 24px;"></div>
+                </div>
+
+                <div id="dynamic-settings-sections"></div>
+
                 <button id="settings-save-btn" type="submit" class="btn btn-success" style="width:100%">Save Settings</button>
             </form>
+
+
 
             <!-- Tab 4: Maintenance -->
             <div id="settings-maintenance" class="settings-tab-content">
@@ -5818,6 +5929,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                 if (e && e.mismatch) {{
                                     let detail = (k === 'main' ? 'Main' : 'Sub') + ': configured ' + e.configuredWidth + 'x' + e.configuredHeight + ' but source is ' + e.width + 'x' + e.height;
                                     if (e.codec && e.codec !== 'h264') detail += ' ' + e.codec.toUpperCase();
+                                    if (e.framerate && e.configuredFramerate && Math.abs(e.framerate - e.configuredFramerate) > 1) detail += ' (' + e.configuredFramerate + ' fps configured, source is ' + e.framerate + ' fps)';
                                     parts.push(detail);
                                 }}
                             }});
@@ -6134,8 +6246,19 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
             
             if (useLowLatency) {{
-                initWebRTCPlayer(videoId, cameraId, pathName, serverIp, videoElement);
-                return;
+                // Issue #68: WebRTC can't carry AAC audio (it arrives as silent
+                // PCMU), so cameras whose stream has AAC audio use HLS instead.
+                let rtcWhich = 'sub';
+                if (videoId.startsWith('matrix-player-')) {{
+                    rtcWhich = (settings.matrixForceHighStream === true) ? 'main' : (matrixStreamProfiles[cameraId] || 'sub');
+                }}
+                const rtcCam = (typeof cameras !== 'undefined' ? cameras : []).find(c => String(c.id) === String(cameraId));
+                if (rtcCam && rtcCam.webrtcAacAudio && rtcCam.webrtcAacAudio[rtcWhich]) {{
+                    console.log(`AAC audio on ${{videoId}}: using HLS instead of WebRTC`);
+                }} else {{
+                    initWebRTCPlayer(videoId, cameraId, pathName, serverIp, videoElement);
+                    return;
+                }}
             }}
 
             // Get credentials if RTSP auth is enabled
@@ -6468,10 +6591,20 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
 
         async function openAddModal() {{
+            window.editingCameraId = null;
             switchFormTab('camera');
             document.getElementById('modal-title').textContent = 'Add New Camera';
             document.getElementById('camera-id').value = '';
             document.getElementById('camera-form').reset();
+            
+            // Dynamic reset
+            if (window.moduleCameraTabs) {{
+                window.moduleCameraTabs.forEach(tab => {{
+                    if (tab.on_reset && typeof window[tab.on_reset] === "function") {{
+                        window[tab.on_reset]();
+                    }}
+                }});
+            }}
             
             document.getElementById('enableEventForwarding').checked = false;
             document.getElementById('physicalOnvifPort').value = '80';
@@ -6561,6 +6694,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
         
         async function openEditModal(id) {{
+            window.editingCameraId = id;
             switchFormTab('camera');
             document.getElementById('copy-from-group').style.display = 'none';
             const camera = cameras.find(c => c.id === id);
@@ -6699,6 +6833,15 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             
             toggleNetworkFields();
             toggleSubStreamFields();
+            
+            // Dynamic populate
+            if (window.moduleCameraTabs) {{
+                window.moduleCameraTabs.forEach(tab => {{
+                    if (tab.on_populate && typeof window[tab.on_populate] === "function") {{
+                        window[tab.on_populate](camera);
+                    }}
+                }});
+            }}
             
             document.getElementById('camera-modal').classList.add('active');
         }}
@@ -7180,6 +7323,93 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
             const feedback = document.getElementById('aiTestEventFeedback');
             if (feedback) feedback.textContent = '';
+        }}
+
+        // ---- Camera RTSP lookup (camera database by ch-bas, github.com/ch-bas/cctv-camera-database) ----
+        let _rtspLookupTimer = null;
+        function toggleRtspLookup() {{
+            const panel = document.getElementById('rtsp-lookup-panel');
+            const show = panel.style.display === 'none';
+            panel.style.display = show ? 'block' : 'none';
+            if (show) document.getElementById('rtspLookupQuery').focus();
+        }}
+        function _rtspParts(t) {{
+            if (!t || t.indexOf('rtsp://') !== 0) return null;
+            const rest = t.slice(7);
+            let slash = rest.indexOf('/');
+            if (slash === -1) slash = rest.length;
+            let hostport = rest.slice(0, slash);
+            const path = rest.slice(slash) || '/';
+            const at = hostport.lastIndexOf('@');
+            if (at !== -1) hostport = hostport.slice(at + 1);
+            const colon = hostport.lastIndexOf(':');
+            const port = colon !== -1 ? hostport.slice(colon + 1) : '554';
+            return {{ port: /^[0-9]+$/.test(port) ? port : '554', path: path }};
+        }}
+        function rtspLookupSearch() {{
+            clearTimeout(_rtspLookupTimer);
+            _rtspLookupTimer = setTimeout(async () => {{
+                const q = document.getElementById('rtspLookupQuery').value.trim();
+                const box = document.getElementById('rtspLookupResults');
+                if (q.length < 2) {{ box.innerHTML = ''; return; }}
+                box.textContent = 'Searching...';
+                try {{
+                    const res = await fetch('/api/cameras_db/search?q=' + encodeURIComponent(q));
+                    const list = await res.json();
+                    if (document.getElementById('rtspLookupQuery').value.trim() !== q) return;
+                    box.innerHTML = '';
+                    if (!Array.isArray(list) || !list.length) {{
+                        box.textContent = 'No cameras found. Try just the brand, or part of the model number.';
+                        return;
+                    }}
+                    list.forEach(cam => box.appendChild(_rtspLookupRow(cam)));
+                }} catch (e) {{
+                    box.textContent = 'Could not search the camera database.';
+                }}
+            }}, 250);
+        }}
+        function _rtspLookupRow(cam) {{
+            const row = document.createElement('div');
+            row.className = 'rtsp-lookup-row';
+            const info = document.createElement('div');
+            const title = document.createElement('div');
+            title.className = 'rtsp-lookup-title';
+            title.textContent = (cam.brand || '') + ' ' + (cam.model || '');
+            const meta = document.createElement('div');
+            meta.className = 'rtsp-lookup-meta';
+            meta.textContent = [cam.type, cam.res, cam.verified ? 'verified' : ''].filter(Boolean).join(' · ');
+            info.append(title, meta);
+            const main = _rtspParts(cam.rtsp_main);
+            const sub = _rtspParts(cam.rtsp_sub);
+            if (main) {{
+                const code = document.createElement('code');
+                code.textContent = 'Main: ' + main.path + (sub ? '    Sub: ' + sub.path : '');
+                info.appendChild(code);
+            }}
+            row.appendChild(info);
+            if (main) {{
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-primary';
+                btn.textContent = 'Use these paths';
+                btn.onclick = () => applyRtspLookup(cam, main, sub);
+                row.appendChild(btn);
+            }} else {{
+                const none = document.createElement('span');
+                none.className = 'rtsp-lookup-none';
+                none.textContent = 'No RTSP path on file';
+                row.appendChild(none);
+            }}
+            return row;
+        }}
+        function applyRtspLookup(cam, main, sub) {{
+            document.getElementById('rtspPort').value = main.port;
+            document.getElementById('mainPath').value = main.path;
+            if (sub) document.getElementById('subPath').value = sub.path;
+            document.getElementById('rtsp-lookup-panel').style.display = 'none';
+            let msg = 'Filled in the RTSP paths for ' + cam.brand + ' ' + cam.model + '. Check the username and password, then save.';
+            if ((main.path + (sub ? sub.path : '')).indexOf('{{') !== -1) msg += ' Replace the part in curly brackets with your own value.';
+            if (typeof showToast === 'function') showToast(msg, 'success', 6000);
         }}
 
         function switchFormTab(tabName) {{
@@ -8460,6 +8690,18 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 data.onvifPort = parseInt(onvifPort);
             }}
             
+            // Dynamic collect
+            if (window.moduleCameraTabs) {{
+                window.moduleCameraTabs.forEach(tab => {{
+                    if (tab.on_collect && typeof window[tab.on_collect] === "function") {{
+                        const result = window[tab.on_collect](data);
+                        if (result) {{
+                            Object.assign(data, result);
+                        }}
+                    }}
+                }});
+            }}
+            
             const url = isEdit ? `/api/cameras/${{cameraId}}` : '/api/cameras';
             const method = isEdit ? 'PUT' : 'POST';
 
@@ -8480,6 +8722,16 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     // Reset button state immediately after closing modal so it's ready for next time
                     btn.disabled = false;
                     btn.innerHTML = originalText;
+                    
+                    // Show a toast to notify that a restart is required
+                    markRestartRequired();
+                    const toastHtml = `
+                        <div style="font-size: 14px; margin-bottom: 12px;">Changes saved. Restart required.</div>
+                        <button onclick="localStorage.removeItem('restartRequired'); restartServer(); this.parentElement.remove()" style="background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                            <i class="fas fa-sync"></i> Restart Now
+                        </button>
+                    `;
+                    showToast(toastHtml, "restart", 0);
                     
                     // Now reload data in the background (no need to await it for the UI to be responsive)
                     loadData(); 
@@ -8551,6 +8803,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
         
         function switchSettingsTab(tabId) {{
+            if (tabId === 'settings-modules') {{
+                loadModuleSettings();
+            }}
             // Hide all tab content
             document.querySelectorAll('.settings-tab-content').forEach(el => {{
                 el.classList.remove('active');
@@ -8724,9 +8979,36 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             setTimeout(poll, initialDelay);
         }}
 
+        // Restart-required flag: stores the boot ID of the server instance that was
+        // running when the change was saved. Any restart (toast button, manual reboot,
+        // service restart) produces a new boot ID, so the stale reminder clears itself.
+        function markRestartRequired() {{
+            try {{ localStorage.setItem('restartRequired', window.SERVER_BOOT_ID || 'unknown'); }} catch (e) {{}}
+            // The page may predate a restart; record the boot ID of the instance that actually took the save.
+            fetch('/api/health', {{cache: 'no-store'}})
+                .then(r => r.ok ? r.json() : null)
+                .then(d => {{
+                    if (d && d.boot_id && localStorage.getItem('restartRequired')) {{
+                        try {{ localStorage.setItem('restartRequired', d.boot_id); }} catch (e) {{}}
+                    }}
+                }})
+                .catch(() => {{}});
+        }}
+
+        function isRestartStillRequired() {{
+            let v = null;
+            try {{ v = localStorage.getItem('restartRequired'); }} catch (e) {{ return false; }}
+            if (!v) return false;
+            if (window.SERVER_BOOT_ID && v === window.SERVER_BOOT_ID) return true;
+            // Server has restarted since the change (or old-format flag): clear it.
+            try {{ localStorage.removeItem('restartRequired'); }} catch (e) {{}}
+            return false;
+        }}
+
         async function restartServer() {{
             if (!confirm('Are you sure you want to restart the server application?')) return;
             try {{
+                localStorage.removeItem('restartRequired');
                 const response = await fetch('/api/server/restart', {{method: 'POST'}});
                 if (response.ok) {{
                     waitForServerReady({{message: 'Server is restarting…'}});
@@ -8857,6 +9139,127 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
         
+        function updateHwEncoderFields() {{
+            const v = document.getElementById('ffmpeg_hardwareEncoder').value;
+            document.getElementById('hwVaapiFields').style.display = (v === 'vaapi' || v === 'auto') ? 'block' : 'none';
+            document.getElementById('hwDecodeRow').style.display = (v === 'vaapi' || v === 'nvenc' || v === 'auto') ? 'flex' : 'none';
+        }}
+
+        function renderHwDiagnosis(dg) {{
+            const box = document.getElementById('hwDiagBox');
+            box.innerHTML = '';
+            const notes = dg.notes || [];
+            const missing = dg.missing || [];
+            if (!notes.length && !missing.length) {{ box.style.display = 'none'; return; }}
+            box.style.display = 'block';
+            if (dg.gpus && dg.gpus.length) {{
+                const g = document.createElement('div');
+                g.textContent = 'GPU found: ' + dg.gpus.join(', ');
+                box.appendChild(g);
+            }}
+            notes.forEach(n => {{
+                const el = document.createElement('div');
+                el.textContent = n;
+                el.style.marginTop = '4px';
+                box.appendChild(el);
+            }});
+            if (missing.length) {{
+                const el = document.createElement('div');
+                el.style.marginTop = '6px';
+                const b = document.createElement('strong');
+                b.textContent = 'Missing driver packages: ';
+                el.appendChild(b);
+                el.appendChild(document.createTextNode(missing.join(', ')));
+                box.appendChild(el);
+                if (dg.install_note) {{
+                    const nt = document.createElement('div');
+                    nt.textContent = dg.install_note;
+                    nt.style.marginTop = '4px';
+                    nt.style.color = 'var(--text-muted)';
+                    box.appendChild(nt);
+                }}
+                if (dg.can_install) {{
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-primary';
+                    btn.style.marginTop = '8px';
+                    btn.textContent = 'Install missing drivers';
+                    btn.onclick = () => installHwDrivers(missing, btn);
+                    box.appendChild(btn);
+                }}
+            }}
+        }}
+
+        async function installHwDrivers(packages, btn) {{
+            if (!confirm('Install these packages on the server with apt-get?\\n\\n' + packages.join('\\n') + '\\n\\nThis can take a few minutes.')) return;
+            const out = document.getElementById('hwTestResult');
+            btn.disabled = true;
+            btn.textContent = 'Installing...';
+            try {{
+                const r = await fetch('/api/hwaccel/install', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ packages }})
+                }});
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Install could not start');
+                let st = null;
+                for (let i = 0; i < 300; i++) {{
+                    await new Promise(res => setTimeout(res, 2000));
+                    st = await (await fetch('/api/hwaccel/install-status')).json();
+                    if (st.done) break;
+                }}
+                if (!st || !st.done) throw new Error('Install is still running. Check again in a minute.');
+                if (!st.ok) {{
+                    const pre = document.createElement('pre');
+                    pre.style.cssText = 'white-space: pre-wrap; max-height: 200px; overflow: auto; font-size: 11px; margin-top: 6px;';
+                    pre.textContent = st.log || '';
+                    out.textContent = 'Driver install failed:';
+                    out.appendChild(pre);
+                    return;
+                }}
+                showToast('Drivers installed. Re-testing encoders...');
+                await testHwEncoders();
+            }} catch (e) {{
+                out.textContent = 'Install failed: ' + e.message;
+            }} finally {{
+                btn.disabled = false;
+                btn.textContent = 'Install missing drivers';
+            }}
+        }}
+
+        async function testHwEncoders() {{
+            const btn = document.getElementById('hwTestBtn');
+            const out = document.getElementById('hwTestResult');
+            btn.disabled = true;
+            out.textContent = 'Testing encoders...';
+            document.getElementById('hwDiagBox').style.display = 'none';
+            try {{
+                const r = await fetch('/api/hwaccel/test', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ vaapiDevice: document.getElementById('ffmpeg_vaapiDevice').value.trim() }})
+                }});
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Test failed');
+                out.innerHTML = '';
+                d.results.forEach(res => {{
+                    const row = document.createElement('div');
+                    const mark = document.createElement('strong');
+                    mark.textContent = res.ok ? 'Works: ' : 'Not available: ';
+                    mark.style.color = res.ok ? 'var(--green, #16a34a)' : 'var(--text-muted)';
+                    row.appendChild(mark);
+                    row.appendChild(document.createTextNode(res.name + (res.ok ? '' : ' (' + res.message + ')')));
+                    out.appendChild(row);
+                }});
+                renderHwDiagnosis(d.diagnosis || {{}});
+            }} catch (e) {{
+                out.textContent = 'Test failed: ' + e.message;
+            }} finally {{
+                btn.disabled = false;
+            }}
+        }}
+
         function resetAdvancedSettings() {{
             if (confirm('Are you sure you want to reset all MediaMTX and FFmpeg settings to their factory defaults?')) {{
                 document.getElementById('mediamtx_id').value = 4096;
@@ -8873,6 +9276,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
                 document.getElementById('ffmpeg_processArgs').value = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
                 document.getElementById('ffmpeg_hardwareEncoding').checked = false;
+                document.getElementById('ffmpeg_hardwareEncoder').value = 'software';
+                document.getElementById('ffmpeg_vaapiDevice').value = '/dev/dri/renderD128';
+                document.getElementById('ffmpeg_hwDecode').checked = false;
+                updateHwEncoderFields();
                 
                 showToast('Settings reset to defaults. Click "Save Settings" to apply.');
             }}
@@ -8947,6 +9354,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                             document.getElementById('ffmpeg_inputArgs').value = adv.ffmpeg.inputArgs || '-rtsp_transport tcp -timeout 10000000';
                             document.getElementById('ffmpeg_processArgs').value = adv.ffmpeg.processArgs || '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
                             document.getElementById('ffmpeg_hardwareEncoding').checked = adv.ffmpeg.hardwareEncoding === true;
+                            document.getElementById('ffmpeg_hardwareEncoder').value = adv.ffmpeg.hardwareEncoder || (adv.ffmpeg.hardwareEncoding === true ? 'auto' : 'software');
+                            document.getElementById('ffmpeg_vaapiDevice').value = adv.ffmpeg.vaapiDevice || '/dev/dri/renderD128';
+                            document.getElementById('ffmpeg_hwDecode').checked = adv.ffmpeg.hwDecode === true;
+                            updateHwEncoderFields();
                         }}
                     }}
                     
@@ -9192,7 +9603,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         globalArgs: document.getElementById('ffmpeg_globalArgs').value || '-hide_banner -loglevel error',
                         inputArgs: document.getElementById('ffmpeg_inputArgs').value || '-rtsp_transport tcp -timeout 10000000',
                         processArgs: document.getElementById('ffmpeg_processArgs').value || '-c:v libx264 -preset ultrafast -tune zerolatency -g 30',
-                        hardwareEncoding: document.getElementById('ffmpeg_hardwareEncoding').checked
+                        hardwareEncoding: document.getElementById('ffmpeg_hardwareEncoder').value !== 'software',
+                        hardwareEncoder: document.getElementById('ffmpeg_hardwareEncoder').value,
+                        vaapiDevice: document.getElementById('ffmpeg_vaapiDevice').value.trim() || '/dev/dri/renderD128',
+                        hwDecode: document.getElementById('ffmpeg_hwDecode').checked
                     }}
                 }},
                 authEnabled: document.getElementById('authEnabled').checked,
@@ -9272,6 +9686,17 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     }}
                     
                     closeSettingsModal();
+                    
+                    // Show a toast to notify that a restart is required
+                    markRestartRequired();
+                    const toastHtml = `
+                        <div style="font-size: 14px; margin-bottom: 12px;">Settings saved. Restart required.</div>
+                        <button onclick="localStorage.removeItem('restartRequired'); restartServer(); this.parentElement.remove()" style="background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                            <i class="fas fa-sync"></i> Restart Now
+                        </button>
+                    `;
+                    showToast(toastHtml, "restart", 0);
+                    
                     await loadData(); // Reload everything
                 }} else {{
                     const error = await response.json();
@@ -9636,9 +10061,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         }}
 
         async function testSingleProvider(provider) {{
-            const statusEl = document.getElementById('test-notifications-status');
+            const statusEl = document.getElementById(`test-status-${{provider}}`);
             if (statusEl) {{
-                statusEl.textContent = `Testing ${{provider}}...`;
+                statusEl.style.display = 'block';
+                statusEl.textContent = 'Sending test...';
                 statusEl.style.color = 'var(--text-body)';
             }}
             try {{
@@ -9707,26 +10133,26 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     const status = result.results[provider];
                     if (status === 'ok') {{
                         if (statusEl) {{
-                            statusEl.textContent = `Test message successfully sent to ${{provider}}!`;
+                            statusEl.textContent = '✓ Test sent';
                             statusEl.style.color = '#48bb78';
                         }}
                     }} else {{
                         if (statusEl) {{
-                            statusEl.textContent = `Test failed for ${{provider}}: ${{status}}`;
+                            statusEl.textContent = `Failed: ${{status}}`;
                             statusEl.style.color = '#f56565';
                         }}
                     }}
                 }} else {{
                     const err = await response.json();
                     if (statusEl) {{
-                        statusEl.textContent = `HTTP Error: ${{err.error || 'Unknown error'}}`;
+                        statusEl.textContent = `Failed: ${{err.error || 'Unknown error'}}`;
                         statusEl.style.color = '#f56565';
                     }}
                 }}
             }} catch (error) {{
                 console.error(`Error testing provider ${{provider}}:`, error);
                 if (statusEl) {{
-                    statusEl.textContent = `Error testing provider: ${{error.message}}`;
+                    statusEl.textContent = `Failed: ${{error.message}}`;
                     statusEl.style.color = '#f56565';
                 }}
             }}
@@ -10365,7 +10791,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }}
         
-        function showToast(message, type = 'info') {{
+        function showToast(message, type = 'info', duration = 3000) {{
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             
@@ -10373,17 +10799,29 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             else if (type === 'success') toast.style.background = '#48bb78';
             else if (type === 'warning') toast.style.background = '#ed8936';
             else if (type === 'error') toast.style.background = '#f56565';
+            else if (type === 'restart') {{
+                toast.style.background = '#2d3748';
+                toast.style.width = '200px';
+                toast.style.textAlign = 'center';
+                toast.style.display = 'flex';
+                toast.style.flexDirection = 'column';
+                toast.style.alignItems = 'center';
+                toast.style.justifyContent = 'center';
+                toast.style.pointerEvents = 'auto'; // allow clicking button
+            }}
             else toast.style.background = '#2d3748';
             
-            toast.textContent = message;
+            toast.innerHTML = message;
             document.body.appendChild(toast);
             
-            setTimeout(() => {{
-                if (toast) {{
-                    toast.style.animation = 'slideOut 0.3s ease-in forwards';
-                    setTimeout(() => toast.remove(), 300);
-                }}
-            }}, 3000);
+            if (duration > 0) {{
+                setTimeout(() => {{
+                    if (toast) {{
+                        toast.style.animation = 'slideOut 0.3s ease-in forwards';
+                        setTimeout(() => toast.remove(), 300);
+                    }}
+                }}, duration);
+            }}
         }}
 
         async function rebootServer() {{
@@ -11376,6 +11814,190 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 tooltip.style.left = left + 'px';
             }}
         }})();
+
+
+        // =====================================================================
+        // Addon Module Loader
+        // =====================================================================
+        async function loadAddonModules() {{
+            try {{
+                // 1. Fetch nav buttons
+                const navRes = await fetch('/api/modules/nav-items');
+                if (navRes.ok) {{
+                    const navItems = await navRes.json();
+                    const container = document.getElementById('dynamic-nav-buttons');
+                    if (container) {{
+                        navItems.forEach(item => {{
+                            // Only show enabled addons
+                            if (item.requires_active && item.module_status !== 'active' && item.module_status !== 'trial') {{
+                                return;
+                            }}
+                            const btn = document.createElement('button');
+                            btn.className = item.btn_class || 'btn btn-grey';
+                            btn.style.width = '100%';
+                            btn.style.textAlign = 'left';
+                            if (item.onclick) {{
+                                btn.setAttribute('onclick', item.onclick);
+                            }} else if (item.href) {{
+                                btn.onclick = () => window.location.href = item.href;
+                            }}
+                            btn.innerHTML = `<i class="${{item.icon}}" style="width: 20px; text-align: center; margin-right: 8px;"></i> ${{item.label}}`;
+                            container.appendChild(btn);
+                        }});
+                    }}
+                }}
+
+            }} catch (e) {{
+                console.error("Failed to load addon modules", e);
+            }}
+        }}
+        
+        function openModuleLicensePrompt(moduleId) {{
+            const key = prompt("Enter your license key:");
+            if (key) {{
+                fetch(`/api/modules/${{moduleId}}/activate`, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ license_key: key }})
+                }})
+                .then(r => r.json())
+                .then(data => {{
+                    alert(data.message);
+                    if (data.success) window.location.reload();
+                }});
+            }}
+        }}
+        
+        function startModuleTrial(moduleId) {{
+            if (confirm("Start the free trial of this addon? Each addon's trial can only be used once.")) {{
+                fetch(`/api/modules/${{moduleId}}/activate-trial`, {{ method: 'POST' }})
+                .then(r => r.json())
+                .then(data => {{
+                    alert(data.message);
+                    if (data.success) window.location.reload();
+                }});
+            }}
+        }}
+
+        function toggleModuleEnabled(moduleId) {{
+            fetch(`/api/modules/${{moduleId}}/toggle`, {{ method: 'POST' }})
+            .then(r => r.json())
+            .then(data => {{
+                if (data.success) window.location.reload();
+            }});
+        }}
+
+        function loadModuleSettings() {{
+            const container = document.getElementById('module-settings-container');
+            if (!container) return;
+            
+            fetch('/api/modules')
+                .then(r => r.json())
+                .then(modules => {{
+                    if (modules.length === 0) {{
+                        container.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fas fa-puzzle-piece" style="font-size:32px; color:var(--text-muted); opacity:0.5; margin-bottom:10px;"></i><div>No addon modules installed.</div><div style="font-size:12px; margin-top:8px;">Drop module folders into app/modules/ to install.</div></div>';
+                        return;
+                    }}
+                    
+                    let html = '<div style="display:grid; grid-template-columns: 1fr; gap: 15px; width: 100%;">';
+                    modules.forEach(m => {{
+                        let statusBadge = '';
+                        let actionBtns = '';
+                        
+                        if (m.status === 'active') {{
+                            statusBadge = `<span style="font-size: 10px; background: #38a169; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">ACTIVE</span>`;
+                            const toggleText = m.enabled ? 'Disable' : 'Enable';
+                            const toggleColor = m.enabled ? '#e53e3e' : '#38a169';
+                            if (!m.enabled) {{
+                                statusBadge += ' <span style="font-size: 10px; background: #718096; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px; margin-left: 5px;">DISABLED</span>';
+                            }}
+                            actionBtns = `
+                                <button type="button" class="btn" style="background:transparent; border:1px solid ${{toggleColor}}; color:${{toggleColor}}; padding:5px 10px; font-size:12px;" onclick="toggleModuleEnabled('${{m.id}}')">${{toggleText}}</button>
+                                <button type="button" class="btn" style="background:transparent; border:1px solid #718096; color:#718096; padding:5px 10px; font-size:12px;" onclick="deactivateModule('${{m.id}}')">Remove License</button>
+                            `;
+                        }} else if (m.status === 'trial') {{
+                            const rem = m.trial_remaining;
+                            const tTxt = rem ? `${{rem.days}}d ${{rem.hours}}h` : 'Active';
+                            statusBadge = `<span style="font-size: 10px; background: #d69e2e; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">TRIAL (${{tTxt}})</span>`;
+                            const toggleText = m.enabled ? 'Disable' : 'Enable';
+                            const toggleColor = m.enabled ? '#e53e3e' : '#38a169';
+                            if (!m.enabled) {{
+                                statusBadge += ' <span style="font-size: 10px; background: #718096; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px; margin-left: 5px;">DISABLED</span>';
+                            }}
+                            actionBtns = `
+                                <button type="button" class="btn" style="background:transparent; border:1px solid ${{toggleColor}}; color:${{toggleColor}}; padding:5px 10px; font-size:12px;" onclick="toggleModuleEnabled('${{m.id}}')">${{toggleText}}</button>
+                                <button type="button" class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="openModuleLicensePrompt('${{m.id}}')">Enter License</button>
+                            `;
+                        }} else if (m.status === 'expired') {{
+                            statusBadge = `<span style="font-size: 10px; background: #e53e3e; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">EXPIRED</span>`;
+                            actionBtns = `<button type="button" class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="openModuleLicensePrompt('${{m.id}}')">Enter License</button>`;
+                        }} else if (m.status === 'error') {{
+                            statusBadge = `<span style="font-size: 10px; background: #e53e3e; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">FAILED TO LOAD</span>`;
+                            actionBtns = `<span style="font-size: 12px; color: #e53e3e;">This addon could not be loaded. Check the server log for details.</span>`;
+                        }} else {{
+                            statusBadge = `<span style="font-size: 10px; background: #2b6cb0; color: #ebf8ff; padding: 2px 6px; border-radius: 4px; font-weight: 700; letter-spacing: 0.5px;">INACTIVE</span>`;
+                            actionBtns = `
+                                ${{m.trial_used ? '' : `<button type="button" class="btn" style="background:transparent; border:1px solid var(--btn-primary); color:var(--btn-primary); padding:5px 10px; font-size:12px;" onclick="startModuleTrial('${{m.id}}')">Start ${{m.trial_days || ''}}-Day Trial</button>`}}
+                                <button type="button" class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="openModuleLicensePrompt('${{m.id}}')">Enter License</button>
+                            `;
+                        }}
+                        
+                        if (m.page_url && m.enabled !== false && (m.status === 'active' || m.status === 'trial')) {{
+                            actionBtns = `<button type="button" class="btn btn-primary" style="padding:5px 10px; font-size:12px;" onclick="window.location.href='${{m.page_url}}'"><i class="fas fa-up-right-from-square"></i> Open</button>` + actionBtns;
+                        }}
+                        if (m.missing_requirements && m.missing_requirements.length && m.status !== 'error') {{
+                            actionBtns += `<span style="font-size: 11.5px; color: #d69e2e; align-self: center;"><i class="fas fa-triangle-exclamation"></i> Needs: ${{m.missing_requirements.join(', ')}}</span>`;
+                        }}
+                        html += `
+                            <div style="background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; align-items: flex-start; gap: 15px;">
+                                <div style="width: 40px; height: 40px; border-radius: 8px; background: ${{m.color}}20; color: ${{m.color}}; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+                                    <i class="${{m.icon}}"></i>
+                                </div>
+                                <div style="flex: 1; text-align: left;">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                        <span style="font-weight: 600; font-size: 14px; color: var(--text-title);">${{m.name}}</span>
+                                        ${{statusBadge}}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Version ${{m.version}} &bull; By ${{m.author}} &bull; ${{m.price}}</div>
+                                    <div style="font-size: 12px; color: var(--text-body); line-height: 1.4; margin-bottom: 12px;">${{m.description}}</div>
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                        ${{actionBtns}}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }});
+                    html += '</div>';
+                    container.innerHTML = html;
+                }});
+        }}
+        
+        function deactivateModule(moduleId) {{
+            if (confirm("Deactivate this module? You will need your license key to reactivate it.")) {{
+                fetch(`/api/modules/${{moduleId}}/deactivate`, {{ method: 'POST' }})
+                .then(r => r.json())
+                .then(data => {{
+                    alert(data.message);
+                    if (data.success) window.location.reload();
+                }});
+            }}
+        }}
+
+        document.addEventListener('DOMContentLoaded', () => {{
+            loadAddonModules();
+            
+            // Check if a restart is required from a previous save
+            if (isRestartStillRequired()) {{
+                const toastHtml = `
+                    <div style="font-size: 14px; margin-bottom: 12px;">Changes saved. Restart required.</div>
+                    <button onclick="localStorage.removeItem('restartRequired'); restartServer(); this.parentElement.remove()" style="background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                        <i class="fas fa-sync"></i> Restart Now
+                    </button>
+                `;
+                // Slight delay to ensure showToast is ready and animations run smoothly
+                setTimeout(() => showToast(toastHtml, "restart", 0), 500);
+            }}
+        }});
 
     </script>
 </body>

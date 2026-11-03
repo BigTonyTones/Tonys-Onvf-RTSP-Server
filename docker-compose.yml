@@ -15,6 +15,10 @@ services:
       # this value). Because this uses host networking, the app binds this port
       # directly on the host — no port mapping is required.
       - WEB_UI_PORT=5552
+    # Optional: GPU for GridFusion hardware encoding (VAAPI, Intel / AMD).
+    # Uncomment, then pick "VAAPI" under Settings > Engine.
+    # devices:
+    #   - /dev/dri:/dev/dri
     volumes:
       - ./data:/app/data
     restart: unless-stopped

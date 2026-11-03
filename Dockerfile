@@ -10,11 +10,21 @@ RUN apt-get update && apt-get install -y \
     sudo \
     curl \
     libgomp1 \
+    avahi-daemon \
     && rm -rf /var/lib/apt/lists/*
+
+# VAAPI hardware video drivers for GridFusion encoding (issue #73): Intel (iHD for
+# Broadwell and newer, i965 for older) and AMD (Mesa). vainfo is for troubleshooting.
+# These are only used when the GPU is passed in (see docker-compose.yml "devices").
+# Installed best-effort so ARM builds without these packages still succeed.
+RUN apt-get update && \
+    (apt-get install -y --no-install-recommends vainfo mesa-va-drivers || true) && \
+    (apt-get install -y --no-install-recommends intel-media-va-driver i965-va-driver || true) && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Detect host architecture at build time and download the correct MediaMTX v1.18.2.
+# Detect host architecture at build time and download the correct MediaMTX v1.21.3.
 # This places it directly in the working directory so MediaMTXManager skips downloading it at runtime.
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
@@ -26,7 +36,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
     else \
         MEDIAMTX_ARCH="amd64"; \
     fi && \
-    curl -L -o mediamtx.tar.gz "https://github.com/bluenviron/mediamtx/releases/download/v1.18.2/mediamtx_v1.18.2_linux_${MEDIAMTX_ARCH}.tar.gz" && \
+    curl -L -o mediamtx.tar.gz "https://github.com/bluenviron/mediamtx/releases/download/v1.21.3/mediamtx_v1.21.3_linux_${MEDIAMTX_ARCH}.tar.gz" && \
     tar -xzf mediamtx.tar.gz mediamtx && \
     rm mediamtx.tar.gz && \
     chmod +x mediamtx
@@ -41,7 +51,9 @@ RUN pip install --no-cache-dir \
     onvif-zeep \
     apprise \
     paramiko \
-    cryptography
+    cryptography \
+    "HAP-python[Camera]" \
+    qrcode
 
 # Install CPU-only PyTorch first (keeps the image small, ~200MB vs ~2GB for GPU)
 RUN pip install --no-cache-dir \

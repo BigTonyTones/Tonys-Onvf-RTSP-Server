@@ -99,7 +99,9 @@ class CameraManager:
         # Start watchdog only if enabled in settings
         if getattr(self, 'watchdog_enabled', False):
             self.start_watchdog()
-        
+            
+        # NVR Pro loading is now handled by the module system.
+            
     def load_config(self):
         """Load camera configuration"""
         if Path(self.config_file).exists():
@@ -128,7 +130,7 @@ class CameraManager:
             # Load settings
             self.server_ip = config.get('settings', {}).get('serverIp', 'localhost')
             self.open_browser = config.get('settings', {}).get('openBrowser', False)
-            self.theme = config.get('settings', {}).get('theme', 'dracula')
+            self.theme = config.get('settings', {}).get('theme', 'protect-dark')
             self.grid_columns = config.get('settings', {}).get('gridColumns', 3)
             self.rtsp_port = config.get('settings', {}).get('rtspPort', 8554)
             self.web_port = config.get('settings', {}).get('webPort', 5552)
@@ -189,7 +191,20 @@ class CameraManager:
             self.grid_fusion_looks = grid_fusion.get('looks', [])
             
             # Load advanced settings
-            self.advanced_settings = config.get('advancedSettings', self.advanced_settings)
+            # Merge saved values over the defaults so a partial section
+            # (e.g. older config without 'ffmpeg') still gets every key.
+            saved_adv = config.get('advancedSettings') or {}
+            merged_adv = {}
+            for section in set(self.advanced_settings) | set(saved_adv):
+                default_val = self.advanced_settings.get(section)
+                saved_val = saved_adv.get(section)
+                if isinstance(default_val, dict) and isinstance(saved_val, dict):
+                    merged_adv[section] = {**default_val, **saved_val}
+                elif saved_val is not None:
+                    merged_adv[section] = saved_val
+                else:
+                    merged_adv[section] = default_val
+            self.advanced_settings = merged_adv
             
             # Load auth settings
             auth = config.get('auth', {})
@@ -310,7 +325,7 @@ class CameraManager:
                 'webPort': getattr(self, 'web_port', 5552),
                 'autoBoot': getattr(self, 'auto_boot', False),
                 'openBrowser': getattr(self, 'open_browser', False),
-                'theme': getattr(self, 'theme', 'classic'),
+                'theme': getattr(self, 'theme', 'protect-dark'),
                 'gridColumns': getattr(self, 'grid_columns', 3),
                 'watchdogEnabled': getattr(self, 'watchdog_enabled', False),
                 'matrixStretchFill': getattr(self, 'matrix_stretch_fill', False),
@@ -393,7 +408,7 @@ class CameraManager:
                 # Update attributes from settings
                 self.server_ip = settings.get('serverIp', 'localhost')
                 self.open_browser = settings.get('openBrowser', False)
-                self.theme = settings.get('theme', 'dracula')
+                self.theme = settings.get('theme', 'protect-dark')
                 self.grid_columns = settings.get('gridColumns', 3)
                 self.rtsp_port = settings.get('rtspPort', 8554)
                 self.web_port = settings.get('webPort', 5552)
@@ -432,6 +447,12 @@ class CameraManager:
                 # under 'settings'. Surface it here so the web UI checkbox
                 # reflects the real login state instead of always showing unchecked.
                 settings['authEnabled'] = config.get('auth', {}).get('enabled', False)
+
+                # Engine (advanced) settings are stored top-level, not under
+                # 'settings'. Surface them so startup and the UI use the saved
+                # values instead of defaults (GitHub issue #74). These are
+                # loaded and merged with defaults in load_config().
+                settings['advancedSettings'] = self.advanced_settings
 
                 return settings
         except Exception as e:
@@ -513,8 +534,7 @@ class CameraManager:
         self.save_config()
 
         if restart_needed:
-            print("Settings changed, triggering background MediaMTX restart...")
-            self.restart_mediamtx()
+            print("Settings changed, UI will prompt user for restart.")
         
         return self.load_settings()
 
@@ -699,6 +719,7 @@ class CameraManager:
                    enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
                     use_virtual_nic=False, vnic_keepalive=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                     static_ip='', netmask='24', gateway='', uuid=None,
+                    enable_homekit=False,
                     enable_event_forwarding=False, physical_onvif_port=80,
                     onvif_forwarding_username='', onvif_forwarding_password='',
                     event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True):
@@ -791,6 +812,7 @@ class CameraManager:
             'gateway': gateway,
             'uuid': uuid,
             'debugMode': getattr(self, 'debug_mode', False),
+            'enableHomekit': enable_homekit,
             'enableEventForwarding': enable_event_forwarding,
             'physicalOnvifPort': physical_onvif_port,
             'onvifForwardingUsername': onvif_forwarding_username,
@@ -841,6 +863,7 @@ class CameraManager:
                       enable_audio=False, transcode_main_audio=False, transcode_sub_audio=False,
                       use_virtual_nic=False, vnic_keepalive=False, parent_interface='', nic_mac='', ip_mode='dhcp', 
                       static_ip='', netmask='24', gateway='', uuid=None,
+                      enable_homekit=False,
                       enable_event_forwarding=False, physical_onvif_port=80,
                       onvif_forwarding_username='', onvif_forwarding_password='',
                       event_source='onvif', ai_targets=None, ai_model=AI_DEFAULT_MODEL, send_smart_onvif_topics=True):
@@ -851,11 +874,6 @@ class CameraManager:
         
         # Check if camera is running
         was_running = camera.status == "running"
-        
-        # Stop camera if running
-        if was_running:
-            camera.stop()
-        
         # Validate ONVIF port if provided
         if onvif_port is not None:
             onvif_port = int(onvif_port)
@@ -936,6 +954,7 @@ class CameraManager:
         camera.static_ip = static_ip
         camera.netmask = netmask
         camera.gateway = gateway
+        camera.enable_homekit = enable_homekit
         camera.enable_event_forwarding = enable_event_forwarding
         camera.physical_onvif_port = physical_onvif_port
         camera.onvif_forwarding_username = onvif_forwarding_username
@@ -956,16 +975,7 @@ class CameraManager:
         # Save config
         self.save_config()
         
-        # Restart camera if it was running (non-blocking)
-        if was_running:
-            def _async_restart():
-                try:
-                    camera.start()
-                    self.restart_mediamtx()
-                except Exception as e:
-                    print(f"Error restarting camera in background: {e}")
-            threading.Thread(target=_async_restart, daemon=True).start()
-        
+
         return camera
     
     def delete_camera(self, camera_id):
@@ -975,7 +985,6 @@ class CameraManager:
             camera.stop()
             self.cameras = [c for c in self.cameras if c.id != camera_id]
             self.save_config()
-            self.restart_mediamtx()
             return True
         return False
     

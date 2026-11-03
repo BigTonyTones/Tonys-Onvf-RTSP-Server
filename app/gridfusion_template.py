@@ -400,6 +400,71 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             pointer-events: none;
         }}
 
+        .crop-view {{
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+        }}
+        .crop-view img {{
+            position: absolute;
+            max-width: none;
+            opacity: 0.8;
+            pointer-events: none;
+        }}
+        .crop-badge.active {{
+            background: #f59e0b;
+            border-color: #f59e0b;
+            color: #111;
+        }}
+        #crop-modal {{
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }}
+        #crop-modal.open {{ display: flex; }}
+        #crop-modal .crop-dialog {{
+            background: var(--bg-secondary, #1e293b);
+            color: var(--text-primary, #e2e8f0);
+            border: 1px solid var(--border, #334155);
+            border-radius: 10px;
+            width: min(920px, 94vw);
+            max-height: 94vh;
+            overflow: auto;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+        }}
+        #crop-stage {{
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #111;
+            border-radius: 6px;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }}
+        #crop-stage img {{ position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }}
+        #crop-box {{
+            position: absolute;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+            cursor: move;
+            box-sizing: border-box;
+        }}
+        #crop-box .ch {{
+            position: absolute;
+            width: 14px; height: 14px;
+            background: #fff;
+            border-radius: 3px;
+        }}
+        .crop-row {{ display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0; font-size: 0.8rem; }}
+        .crop-row select {{ padding: 4px 8px; }}
+
         .placed-overlay {{
             position: absolute;
             bottom: 0;
@@ -876,6 +941,12 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                             <option value="main">Main (High Res)</option>
                             <option value="sub">Sub (Low Res)</option>
                         </select>
+                    </div>
+                    <div class="prop-item" style="grid-column: span 2; flex-direction: row; align-items: center; gap: 6px; margin-top: 5px;">
+                        <span class="prop-label" style="margin-bottom: 0;">Crop:</span>
+                        <span id="prop-crop-label" style="font-size: 0.7rem; flex: 1;">Off</span>
+                        <button type="button" class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.7rem;" onclick="openCropEditor(selectedIdx, event)">Edit</button>
+                        <button type="button" class="btn btn-secondary" id="prop-crop-clear" style="padding: 2px 8px; font-size: 0.7rem;" onclick="removeCrop(selectedIdx)">Clear</button>
                     </div>
                     <div class="prop-item" style="grid-column: span 2; flex-direction: row; align-items: center; gap: 10px; margin-top: 5px;">
                         <span class="prop-label" style="margin-bottom: 0;">Always on Top</span>
@@ -1593,7 +1664,11 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                 el.style.zIndex = zIndex;
                 
                 let inner = '';
-                if (showSnaps && snapshots[cam.id]) {{
+                if (showSnaps && snapshots[cam.id] && gfCam.crop) {{
+                    const c = gfCam.crop;
+                    const st = `left:${{-c.x / c.w * 100}}%; top:${{-c.y / c.h * 100}}%; width:${{100 / c.w}}%; height:${{100 / c.h}}%;`;
+                    inner += `<div class="camera-content"><div class="crop-view"><img src="${{snapshots[cam.id]}}" style="${{st}}"></div>`;
+                }} else if (showSnaps && snapshots[cam.id]) {{
                     inner += `\u003cdiv class=\"camera-content\"\u003e\u003cimg src=\"${{snapshots[cam.id]}}\" class=\"placed-snapshot\"\u003e`;
                 }} else {{
                     inner += `\u003cdiv class=\"camera-content\"\u003e\u003cdiv style=\"flex:1; background:#0f172a; display:flex; align-items:center; justify-content:center; color:#334155; font-size:2rem; font-weight:800;\"\u003eCAM\u003c/div\u003e`;
@@ -1647,6 +1722,7 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
                             \u003coption value=\"main\" ${{gfCam.stream_type === 'main' ? 'selected' : ''}}\u003eMain\u003c/option\u003e\r
                             \u003coption value=\"sub\" ${{gfCam.stream_type !== 'main' ? 'selected' : ''}}\u003eSub\u003c/option\u003e\r
                         \u003c/select\u003e\r
+                        <div class="ontop-badge crop-badge ${{gfCam.crop ? 'active' : ''}}" onpointerdown="event.stopPropagation()" onclick="openCropEditor(${{idx}}, event)" title="Crop / zoom this tile">CROP</div>
                         \u003cdiv class=\"ontop-badge ${{gfCam.always_on_top ? 'active' : ''}}\" \r
                              onpointerdown=\"event.stopPropagation()\" \r
                              onclick=\"toggleOnTop(${{idx}}, event)\" \r
@@ -1850,6 +1926,9 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
             if (document.activeElement.id !== 'prop-h') document.getElementById('prop-h').value = Math.round(cam.h);
             document.getElementById('prop-stream').value = cam.stream_type || 'sub';
             document.getElementById('prop-on-top').checked = !!cam.always_on_top;
+            const _c = cam.crop;
+            document.getElementById('prop-crop-label').textContent = _c ? `${{Math.round(_c.w * 100)}}% x ${{Math.round(_c.h * 100)}}%` : 'Off';
+            document.getElementById('prop-crop-clear').style.display = _c ? '' : 'none';
         }}
 
         function manualPropUpdate() {{
@@ -2177,6 +2256,209 @@ def get_gridfusion_html(current_settings=None, grid_fusion_config=None):
         }};
 
         init();
+    </script>
+    <!-- GridFusion tile crop / zoom editor -->
+    <div id="crop-modal" onpointerdown="if (event.target === this) closeCropEditor()">
+        <div class="crop-dialog">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+                <div>
+                    <div style="font-weight:700; font-size:1rem;">Crop / Zoom Tile</div>
+                    <div id="crop-cam-name" style="font-size:0.75rem; color: var(--text-secondary);"></div>
+                </div>
+                <button class="btn btn-secondary" onclick="closeCropEditor()">Cancel</button>
+            </div>
+            <div class="crop-row">
+                <span>Shape</span>
+                <select id="crop-aspect" onchange="cropApplyAspect()">
+                    <option value="tile">Match tile</option>
+                    <option value="1.7778">16:9</option>
+                    <option value="1.3333">4:3</option>
+                    <option value="1">1:1</option>
+                    <option value="0.5625">9:16</option>
+                    <option value="free">Free</option>
+                </select>
+                <button class="btn btn-secondary" onclick="cropResetBox()">Reset</button>
+                <span id="crop-info" style="margin-left:auto; color: var(--text-secondary);"></span>
+            </div>
+            <div id="crop-stage">
+                <img id="crop-img" alt="">
+                <div id="crop-empty" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:0.85rem; pointer-events:none;">Loading snapshot...</div>
+                <div id="crop-box" data-mode="move">
+                    <div class="ch" data-mode="nw" style="left:-7px; top:-7px; cursor:nwse-resize;"></div>
+                    <div class="ch" data-mode="ne" style="right:-7px; top:-7px; cursor:nesw-resize;"></div>
+                    <div class="ch" data-mode="sw" style="left:-7px; bottom:-7px; cursor:nesw-resize;"></div>
+                    <div class="ch" data-mode="se" style="right:-7px; bottom:-7px; cursor:nwse-resize;"></div>
+                </div>
+            </div>
+            <div class="crop-row">
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="crop-use-main" checked> Use the Main (high-res) stream for this tile (sharper zoom)</label>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="crop-fit-tile" checked> Reshape tile to match the crop</label>
+            </div>
+            <div style="display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.4rem;">
+                <button class="btn btn-secondary" id="crop-remove-btn" onclick="removeCrop()">Remove Crop</button>
+                <button class="btn btn-primary" onclick="applyCrop()">Apply Crop</button>
+            </div>
+            <div style="font-size:0.72rem; color: var(--text-secondary); margin-top:0.6rem;">Drag the box over the area to zoom in on. Remember to click Save in the toolbar to update the stream. Cropping a Main 4K stream keeps detail; cropping a Sub stream gets blurry fast.</div>
+        </div>
+    </div>
+    <script>
+    (function () {{
+        const DEF = {{ x: 0.25, y: 0.25, w: 0.5, h: 0.5 }};
+        let rect = Object.assign({{}}, DEF);
+        let srcAspect = 16 / 9;
+        let editIdx = -1;
+        let drag = null;
+        const $ = id => document.getElementById(id);
+        const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+
+        function tileAspect() {{
+            const t = gfConfig.cameras[editIdx];
+            return (t && t.w > 0 && t.h > 0) ? t.w / t.h : 16 / 9;
+        }}
+        function targetAspect() {{
+            const v = $('crop-aspect').value;
+            if (v === 'free') return null;
+            if (v === 'tile') return tileAspect();
+            return parseFloat(v);
+        }}
+        const hFor = (w, a) => w * srcAspect / a;
+        const wFor = (h, a) => h * a / srcAspect;
+
+        function fit(r) {{
+            const a = targetAspect();
+            let {{ x, y, w, h }} = r;
+            const cx = x + w / 2, cy = y + h / 2;
+            w = clamp(w, 0.03, 1); h = clamp(h, 0.03, 1);
+            if (a) {{
+                h = hFor(w, a);
+                if (h > 1) {{ h = 1; w = wFor(h, a); }}
+                if (w > 1) {{ w = 1; h = hFor(w, a); }}
+                x = cx - w / 2; y = cy - h / 2;
+            }}
+            x = clamp(x, 0, 1 - w); y = clamp(y, 0, 1 - h);
+            return {{ x, y, w, h }};
+        }}
+        function render() {{
+            const b = $('crop-box');
+            b.style.left = (rect.x * 100) + '%';
+            b.style.top = (rect.y * 100) + '%';
+            b.style.width = (rect.w * 100) + '%';
+            b.style.height = (rect.h * 100) + '%';
+            const pw = Math.round(rect.w * 3840), ph = Math.round(rect.h * 2160);
+            $('crop-info').textContent = `${{Math.round(rect.w * 100)}}% x ${{Math.round(rect.h * 100)}}% of the picture (about ${{pw}}x${{ph}} px from a 4K main stream)`;
+        }}
+
+        window.openCropEditor = async function (idx, e) {{
+            if (e) {{ e.stopPropagation(); e.preventDefault(); }}
+            const tile = gfConfig.cameras[idx];
+            if (!tile) return;
+            editIdx = idx;
+            const cam = cameras.find(c => c.id === tile.id);
+            $('crop-cam-name').textContent = cam ? cam.name : '';
+            $('crop-remove-btn').style.display = tile.crop ? '' : 'none';
+            $('crop-use-main').checked = tile.crop ? tile.stream_type === 'main' : true;
+            $('crop-fit-tile').checked = true;
+            const c = tile.crop;
+            rect = (c && c.w > 0 && c.h > 0) ? {{ x: +c.x, y: +c.y, w: +c.w, h: +c.h }} : Object.assign({{}}, DEF);
+            $('crop-aspect').value = c ? 'free' : 'tile';
+            const img = $('crop-img');
+            img.style.display = 'none';
+            $('crop-empty').style.display = 'flex';
+            $('crop-empty').textContent = 'Loading snapshot...';
+            $('crop-modal').classList.add('open');
+            render();
+            try {{
+                let url = cam && snapshots[cam.id];
+                if (!url && cam) {{
+                    const resp = await fetch(`/api/gridfusion/snapshot/${{cam.id}}`);
+                    if (resp.ok) {{ url = URL.createObjectURL(await resp.blob()); snapshots[cam.id] = url; }}
+                }}
+                if (!url) throw new Error('no snapshot');
+                img.onload = () => {{
+                    if (img.naturalWidth && img.naturalHeight) {{
+                        srcAspect = img.naturalWidth / img.naturalHeight;
+                        $('crop-stage').style.aspectRatio = `${{img.naturalWidth}} / ${{img.naturalHeight}}`;
+                    }}
+                    img.style.display = 'block';
+                    $('crop-empty').style.display = 'none';
+                    if (!tile.crop) rect = fit(rect);
+                    render();
+                }};
+                img.src = url;
+            }} catch (err) {{
+                $('crop-empty').textContent = 'No snapshot available. Is the camera running? You can still place the box.';
+            }}
+        }};
+        window.closeCropEditor = function () {{ $('crop-modal').classList.remove('open'); editIdx = -1; drag = null; }};
+        window.cropApplyAspect = function () {{ rect = fit(rect); render(); }};
+        window.cropResetBox = function () {{ rect = fit(Object.assign({{}}, DEF)); render(); }};
+
+        function round5(v) {{ return Math.round(v * 100000) / 100000; }}
+        window.applyCrop = function () {{
+            const tile = gfConfig.cameras[editIdx];
+            if (!tile) return closeCropEditor();
+            const r = $('crop-aspect').value === 'free' ? rect : fit(rect);
+            tile.crop = {{ x: round5(r.x), y: round5(r.y), w: round5(r.w), h: round5(r.h) }};
+            if ($('crop-use-main').checked) tile.stream_type = 'main';
+            if ($('crop-fit-tile').checked) {{
+                // keep the tile's width, change its height so the zoomed picture isn't stretched
+                const canvas = document.getElementById('canvas');
+                const maxH = parseInt(canvas.getAttribute('data-h')) || 1080;
+                const cropAspect = (r.w * srcAspect) / r.h;
+                let nh = Math.round(tile.w / cropAspect);
+                if (nh > maxH - tile.y) {{ nh = maxH - tile.y; tile.w = Math.round(nh * cropAspect); }}
+                tile.h = Math.max(56, nh);
+            }}
+            closeCropEditor();
+            renderGrid();
+            if (typeof updatePropsPanel === 'function') updatePropsPanel();
+        }};
+        window.removeCrop = function (idx) {{
+            const i = (typeof idx === 'number') ? idx : editIdx;
+            const tile = gfConfig.cameras[i];
+            if (tile) delete tile.crop;
+            if (typeof idx !== 'number') closeCropEditor();
+            renderGrid();
+            if (typeof updatePropsPanel === 'function') updatePropsPanel();
+        }};
+
+        function pt(e) {{
+            const r = $('crop-stage').getBoundingClientRect();
+            return {{ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }};
+        }}
+        function onDown(e) {{
+            const mode = e.target && e.target.dataset ? e.target.dataset.mode : null;
+            if (!mode) return;
+            e.preventDefault(); e.stopPropagation();
+            drag = {{ mode, start: pt(e), orig: Object.assign({{}}, rect) }};
+        }}
+        function onMove(e) {{
+            if (!drag) return;
+            const p = pt(e), o = drag.orig, a = targetAspect();
+            if (drag.mode === 'move') {{
+                rect = {{ x: clamp(o.x + p.x - drag.start.x, 0, 1 - o.w), y: clamp(o.y + p.y - drag.start.y, 0, 1 - o.h), w: o.w, h: o.h }};
+            }} else {{
+                const ax = drag.mode.includes('w') ? o.x + o.w : o.x;
+                const ay = drag.mode.includes('n') ? o.y + o.h : o.y;
+                const px = clamp(p.x, 0, 1), py = clamp(p.y, 0, 1);
+                const maxW = drag.mode.includes('w') ? ax : 1 - ax;
+                const maxH = drag.mode.includes('n') ? ay : 1 - ay;
+                let w = Math.min(Math.max(Math.abs(px - ax), 0.03), maxW);
+                let h = Math.min(Math.max(Math.abs(py - ay), 0.03), maxH);
+                if (a) {{
+                    if (hFor(w, a) >= h) h = hFor(w, a); else w = wFor(h, a);
+                    if (h > maxH) {{ h = maxH; w = wFor(h, a); }}
+                    if (w > maxW) {{ w = maxW; h = hFor(w, a); }}
+                }}
+                rect = {{ x: drag.mode.includes('w') ? ax - w : ax, y: drag.mode.includes('n') ? ay - h : ay, w, h }};
+            }}
+            render();
+        }}
+        $('crop-box').addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', () => {{ drag = null; }});
+        document.addEventListener('keydown', e => {{ if (e.key === 'Escape' && $('crop-modal').classList.contains('open')) closeCropEditor(); }}, true);
+    }})();
     </script>
 </body>
 </html>

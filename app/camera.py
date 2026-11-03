@@ -12,7 +12,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from werkzeug.serving import make_server, ThreadedWSGIServer
 from .config import (
-    MEDIAMTX_PORT, AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY, 
+    MEDIAMTX_PORT, MEDIAMTX_API_PORT, AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY, 
     GRABBER_RECONNECT_BASE, GRABBER_RECONNECT_MAX, WSGI_MAX_WORKERS,
     AI_INFERENCE_FRAME_WIDTH, AI_COOLDOWN_SECONDS, AI_TARGET_INTERVAL
 )
@@ -167,6 +167,9 @@ class VirtualONVIFCamera:
         self._sub_framerate = config.get('subFramerate', 15)
         # Runtime-only: actual source stream attributes probed at start (issue #42)
         self.stream_probe = {}
+        # Issue #68: real profile/bitrate/audio of the source streams, used by
+        # the ONVIF service instead of hardcoded values. Filled by _probe_source_streams.
+        self.probed_media = {}
         
         # ONVIF authentication credentials
         self.onvif_username = config.get('onvifUsername', 'admin')
@@ -183,6 +186,9 @@ class VirtualONVIFCamera:
         self.audio_encoding_main = config.get('audioEncodingMain', 'aac')
         self.audio_sample_rate_main = config.get('audioSampleRateMain', '44100')
         self.audio_bitrate_main = config.get('audioBitrateMain', '128k')
+        
+        self.enable_homekit = config.get('enableHomekit', False)
+        self.enable_homekit_audio = config.get('enableHomekitAudio', False)
         
         self.audio_encoding_sub = config.get('audioEncodingSub', 'aac')
         self.audio_sample_rate_sub = config.get('audioSampleRateSub', '44100')
@@ -319,7 +325,7 @@ class VirtualONVIFCamera:
                 )
             # Give the system and router a moment to stabilize
             time.sleep(0.5)
-            if self.assigned_ip:
+            if self.assigned_ip and getattr(self, 'vnic_keepalive', False):
                 self._start_keepalive(vnic_name)
         
         self._start_onvif_service()
@@ -338,7 +344,29 @@ class VirtualONVIFCamera:
         else:
             self.onvif_subscription_active = False
             self.onvif_subscription_error = "Event forwarding is disabled in settings."
+            
+        # Notify addon modules that this camera has started (e.g. HomeKit)
+        if self.manager and hasattr(self.manager, 'module_manager') and self.manager.module_manager:
+            try:
+                self.manager.module_manager.on_camera_start(self)
+            except Exception as e:
+                print(f"  [Modules] Error in on_camera_start for {self.name}: {e}")
         
+    def webrtc_audio_unsupported(self, which):
+        """True when this stream's audio can't play over WebRTC (issue #68).
+
+        WebRTC only carries Opus/G.711/G.722, so an AAC track arrives silent and
+        the dashboard should use HLS instead. Unknown codecs count as playable.
+        """
+        if not self.enable_audio:
+            return False
+        if getattr(self, f'transcode_{which}_audio', False):
+            enc = str(getattr(self, f'audio_encoding_{which}', 'aac') or '').lower()
+            return enc not in ('opus', 'g711', 'pcmu', 'pcma', 'g711ulaw', 'g711alaw', 'g722')
+        audio = ((self.probed_media or {}).get(which) or {}).get('audio') or {}
+        codec = str(audio.get('codec') or '').lower()
+        return bool(codec) and codec not in ('opus', 'pcm_mulaw', 'pcm_alaw', 'g722')
+
     def _probe_source_streams(self):
         """Probe the real source streams and flag mismatches vs configured values.
 
@@ -352,18 +380,42 @@ class VirtualONVIFCamera:
             ffmpeg_mgr = FFmpegManager()
             probe = {}
 
+            def _fps_mismatch(probed, configured):
+                # Issue #69: an advertised framerate that differs from the real
+                # stream causes recording gaps in UniFi Protect. Allow +/-1 fps.
+                try:
+                    return bool(probed) and abs(int(probed) - int(configured)) > 1
+                except (TypeError, ValueError):
+                    return False
+
             if not self.transcode_main:
                 info = ffmpeg_mgr.probe_stream(self.main_stream_url)
                 if info and info.get('width'):
                     entry = dict(info)
                     entry['configuredWidth'] = self.main_width
                     entry['configuredHeight'] = self.main_height
+                    entry['configuredFramerate'] = self.main_framerate
                     entry['mismatch'] = (
                         info['width'] != self.main_width or
                         info['height'] != self.main_height or
-                        info['codec'] not in ('h264', '')
+                        info['codec'] not in ('h264', '') or
+                        _fps_mismatch(info.get('framerate'), self.main_framerate)
                     )
                     probe['main'] = entry
+
+            # Issue #68: measure bitrate and read the audio track so ONVIF can
+            # advertise what the stream really carries. Needed whenever video or
+            # audio is passed through untouched.
+            media = {}
+            if not self.transcode_main or (self.enable_audio and not self.transcode_main_audio):
+                extra = ffmpeg_mgr.probe_stream_media(self.main_stream_url)
+                if extra:
+                    media['main'] = extra
+                    if 'main' in probe:
+                        probe['main']['bitrate'] = extra.get('bitrate')
+                        probe['main']['audio'] = extra.get('audio')
+                if 'main' in probe:
+                    media.setdefault('main', {})['profile'] = probe['main'].get('profile')
 
             sub_url = self.main_stream_url if self.use_main_as_substream else self.sub_stream_url
             if sub_url and not self.disable_substream and not self.transcode_sub:
@@ -372,12 +424,29 @@ class VirtualONVIFCamera:
                     entry = dict(info)
                     entry['configuredWidth'] = self.sub_width
                     entry['configuredHeight'] = self.sub_height
+                    entry['configuredFramerate'] = self.sub_framerate
                     entry['mismatch'] = (
                         info['width'] != self.sub_width or
                         info['height'] != self.sub_height or
-                        info['codec'] not in ('h264', '')
+                        info['codec'] not in ('h264', '') or
+                        _fps_mismatch(info.get('framerate'), self.sub_framerate)
                     )
                     probe['sub'] = entry
+
+            if sub_url and not self.disable_substream and (
+                    not self.transcode_sub or (self.enable_audio and not self.transcode_sub_audio)):
+                if sub_url == self.main_stream_url and 'main' in media:
+                    extra = media['main']
+                else:
+                    extra = ffmpeg_mgr.probe_stream_media(sub_url)
+                if extra:
+                    media['sub'] = {k: v for k, v in extra.items() if k != 'profile'}
+                    if 'sub' in probe:
+                        probe['sub']['bitrate'] = extra.get('bitrate')
+                        probe['sub']['audio'] = extra.get('audio')
+                if 'sub' in probe:
+                    media.setdefault('sub', {})['profile'] = probe['sub'].get('profile')
+            self.probed_media = media
 
             if probe:
                 probe['mismatch'] = any(e.get('mismatch') for e in probe.values() if isinstance(e, dict))
@@ -388,8 +457,8 @@ class VirtualONVIFCamera:
                         e = probe.get(which)
                         if e and e.get('mismatch'):
                             print(f"  [Stream Check] {self.name} {which}: configured "
-                                  f"{e['configuredWidth']}x{e['configuredHeight']} H264 but source is "
-                                  f"{e['width']}x{e['height']} {e['codec'].upper()} — "
+                                  f"{e['configuredWidth']}x{e['configuredHeight']}@{e.get('configuredFramerate')}fps H264 but source is "
+                                  f"{e['width']}x{e['height']}@{e.get('framerate')}fps {e['codec'].upper()} — "
                                   f"NVRs may flap this camera's resolution")
         except Exception as e:
             print(f"  [Stream Check] Probe failed for {self.name}: {e}")
@@ -400,6 +469,13 @@ class VirtualONVIFCamera:
         if self.enable_event_forwarding:
             self.stop_event_forwarding()
             self.stop_ai_detection()
+            
+        # Notify addon modules that this camera is stopping (e.g. HomeKit)
+        if self.manager and hasattr(self.manager, 'module_manager') and self.manager.module_manager:
+            try:
+                self.manager.module_manager.on_camera_stop(self)
+            except Exception as e:
+                print(f"  [Modules] Error in on_camera_stop for {self.name}: {e}")
         
         # Stop the ONVIF WSGI server safely
         if hasattr(self, 'server') and self.server:
@@ -530,7 +606,10 @@ class VirtualONVIFCamera:
             'pathName': self.path_name,
             'username': self.username,
             'password': self.password,
-            'autoStart': self.auto_start,
+            'autoStart': getattr(self, 'auto_start', False),
+            'enableHomekit': getattr(self, 'enable_homekit', False),
+            'enableHomekitAudio': getattr(self, 'enable_homekit_audio', False),
+            'enableEventForwarding': getattr(self, 'enable_event_forwarding', False),
             'status': self.status,
             'mainWidth': self.main_width,
             'mainHeight': self.main_height,
@@ -601,7 +680,8 @@ class VirtualONVIFCamera:
             'aiQueueTime': self.ai_queue_time,
             'aiFpsMeasurement': self.ai_fps_measurement,
             'aiLastDetection': self.ai_last_detection,
-            'streamProbe': self.stream_probe
+            'streamProbe': self.stream_probe,
+            'webrtcAacAudio': {w: self.webrtc_audio_unsupported(w) for w in ('main', 'sub')}
         }
     
     def to_config_dict(self):
@@ -649,6 +729,8 @@ class VirtualONVIFCamera:
             'onvifForwardingUsername': self.onvif_forwarding_username,
             'onvifForwardingPassword': self.onvif_forwarding_password,
             'eventSource': self.event_source,
+            'enableHomekit': self.enable_homekit,
+            'enableHomekitAudio': getattr(self, 'enable_homekit_audio', False),
             'aiTargets': self.ai_targets,
             'aiModel': self.ai_model,
             'aiMotionDetectionEnabled': self.ai_motion_detection_enabled,
@@ -690,42 +772,77 @@ class VirtualONVIFCamera:
         self._keepalive_thread = None
 
     def _keepalive_loop(self, vnic_name):
-        """Periodically sends a dummy UDP packet to keep switch/gateway MAC tables warm"""
-        # 1. Determine target IP: check manual gateway -> read routing table -> fallback to broadcast
-        target_ip = self.gateway
-        if not target_ip or target_ip == '0.0.0.0':
+        """Periodically sends small packets out of the Virtual NIC so switches keep its MAC
+        in their tables (GitHub issue #63). Targets: gateway (or broadcast) plus every client
+        currently reading this camera's streams (e.g. the NVR)."""
+        # 1. Determine base target IP: manual gateway -> routing table -> broadcast
+        base_target = self.gateway
+        if not base_target or base_target == '0.0.0.0':
             if self.network_mgr:
-                target_ip = self.network_mgr.get_interface_gateway(vnic_name)
-        if not target_ip:
-            target_ip = '255.255.255.255'
-            
+                base_target = self.network_mgr.get_interface_gateway(vnic_name)
+        if not base_target:
+            base_target = '255.255.255.255'
+
         if getattr(self, 'debug_mode', False):
-            print(f"  [Keepalive ({self.name})] Starting keepalive loop targeting {target_ip} every 60s")
-        
+            print(f"  [Keepalive ({self.name})] Starting keepalive loop on {vnic_name}: {base_target} + active stream clients every 60s")
+
         while self._keepalive_running and self.status == "running":
-            try:
-                # Create UDP socket
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                if target_ip == '255.255.255.255':
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                
-                # Bind to the virtual camera IP to force outbound routing through the VNIC
-                sock.bind((self.assigned_ip, 0))
-                
-                # Send 1-byte dummy payload to Discard port (9)
-                sock.sendto(b'\x00', (target_ip, 9))
-                sock.close()
-                
-                if getattr(self, 'debug_mode', False):
-                    print(f"  [Keepalive ({self.name})] Sent keepalive packet to {target_ip} via {vnic_name}")
-            except Exception as e:
-                print(f"  [Keepalive ({self.name})] Error sending keepalive: {e}")
-                
+            targets = [base_target] + [ip for ip in self._get_stream_client_ips() if ip != base_target]
+            for target_ip in targets:
+                try:
+                    self._send_keepalive_packet(vnic_name, target_ip)
+                    if getattr(self, 'debug_mode', False):
+                        print(f"  [Keepalive ({self.name})] Sent keepalive packet to {target_ip} via {vnic_name}")
+                except Exception as e:
+                    print(f"  [Keepalive ({self.name})] Error sending keepalive to {target_ip}: {e}")
+
             # Intermittent sleep to allow fast shutdown reaction
             for _ in range(60):
                 if not self._keepalive_running or self.status != "running":
                     break
                 time.sleep(1.0)
+
+    def _send_keepalive_packet(self, vnic_name, target_ip):
+        """Send a 1-byte UDP packet to the Discard port, forced out of the Virtual NIC.
+        Binding only to the IP is not enough on Linux: the routing table may still pick the
+        parent interface, so the frame would carry the parent's MAC and never refresh the
+        switch's entry for the virtual MAC. SO_BINDTODEVICE pins the egress interface."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            if target_ip == '255.255.255.255':
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            so_bindtodevice = getattr(socket, 'SO_BINDTODEVICE', 25)
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, so_bindtodevice, vnic_name.encode() + b'\0')
+            except OSError as e:
+                if not getattr(self, '_keepalive_bind_warned', False):
+                    self._keepalive_bind_warned = True
+                    print(f"  [Keepalive ({self.name})] Could not bind to {vnic_name} ({e}); packets may leave via the parent interface")
+            sock.bind((self.assigned_ip, 0))
+            sock.sendto(b'\x00', (target_ip, 9))
+        finally:
+            sock.close()
+
+    def _get_stream_client_ips(self):
+        """IPs of clients (NVRs, VMS, players) currently reading this camera's main/sub streams"""
+        ips = set()
+        paths = {self.path_name, f"{self.path_name}_sub"}
+        for ep in ('rtspsessions', 'rtspssessions'):
+            try:
+                resp = requests.get(f"http://127.0.0.1:{MEDIAMTX_API_PORT}/v3/{ep}/list", timeout=2)
+                if resp.status_code != 200:
+                    continue
+                for item in resp.json().get('items', []):
+                    if item.get('path') not in paths:
+                        continue
+                    addr = item.get('remoteAddr') or ''
+                    ip = addr.rsplit(':', 1)[0].strip('[]') if ':' in addr else addr
+                    if not ip or ':' in ip or ip.startswith('127.') or ip == self.assigned_ip:
+                        continue  # skip empty, IPv6, loopback and ourselves
+                    ips.add(ip)
+            except Exception:
+                pass
+        return sorted(ips)
 
     def start_event_forwarding(self):
         """Start ONVIF Event Forwarder background thread"""
@@ -914,15 +1031,7 @@ class VirtualONVIFCamera:
                                         
                                     # Broadcast to virtual clients
                                     if self.onvif_service:
-                                        for sub in list(self.onvif_service.subscriptions.values()):
-                                            try:
-                                                sub.queue.put_nowait(evt)
-                                            except queue.Full:
-                                                try:
-                                                    sub.queue.get_nowait()
-                                                    sub.queue.put_nowait(evt)
-                                                except:
-                                                    pass
+                                        self.onvif_service.broadcast_event(evt)
                                                     
                                     # Log globally (limit to 200)
                                     if self.manager:
@@ -1192,6 +1301,7 @@ class VirtualONVIFCamera:
                             
                             detected_plate = None
                             plate_draw_boxes = []
+                            _addon_dets = []  # detections handed to addon modules (PTZ tracking, faces, ...)
                             
                             for result in results:
                                 for box in result.boxes:
@@ -1219,6 +1329,12 @@ class VirtualONVIFCamera:
                                     if tag:
                                         detected_tags.add(tag)
                                         tag_confidences[tag] = max(tag_confidences.get(tag, 0.0), conf)
+                                        try:
+                                            _bx1, _by1, _bx2, _by2 = box.xyxy[0].tolist()
+                                            _addon_dets.append({'tag': tag, 'class_id': cls_id, 'confidence': conf,
+                                                                'box': [_bx1 / w, _by1 / h, _bx2 / w, _by2 / h]})
+                                        except Exception:
+                                            pass
                                         
                                         # If it's a vehicle and we target license plates, run LPR
                                         if tag == 'vehicle' and has_license_plate_target:
@@ -1285,6 +1401,13 @@ class VirtualONVIFCamera:
                                                 print(f"  [AI LPR Error] License plate detection failed: {lpr_err}")
                                         
                             self.ai_last_detection = list(detected_tags)
+                            # Addon hook: per-frame detections (PTZ auto-tracking, face recognition, ...)
+                            _mm = getattr(self.manager, 'module_manager', None) if self.manager else None
+                            if _mm is not None and _addon_dets and _mm.has_frame_listeners():
+                                try:
+                                    _mm.dispatch_ai_frame(self, frame, _addon_dets, detected_plate)
+                                except Exception as _addon_err:
+                                    print(f"  [AI Camera ({self.name})] Addon frame hook error: {_addon_err}")
                             if detected_tags:
                                 last_detected_time = time.time()
                                 is_new_event = (not motion_state) or (self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags))
@@ -1314,9 +1437,9 @@ class VirtualONVIFCamera:
                                 _notify_bytes = _snapshot_bytes if getattr(self, 'notify_ai_attach_image', False) else None
                                 if not motion_state:
                                     motion_state = True
-                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes, license_plate=detected_plate)
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes, license_plate=detected_plate, snapshot_bytes=_snapshot_bytes)
                                 elif self.send_smart_onvif_topics and (set(detected_tags) != self._active_smart_tags):
-                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes, license_plate=detected_plate)
+                                    self._trigger_ai_motion(True, list(detected_tags), tag_confidences, image_bytes=_notify_bytes, license_plate=detected_plate, snapshot_bytes=_snapshot_bytes)
                             else:
                                 if motion_state and (time.time() - last_detected_time > cooldown_period):
                                     motion_state = False
@@ -1375,10 +1498,27 @@ class VirtualONVIFCamera:
         threading.Thread(target=_clear_after_delay, daemon=True).start()
         return True
 
-    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None, image_bytes=None, license_plate=None):
+    def _trigger_ai_motion(self, is_active, tags, tag_confidences=None, image_bytes=None, license_plate=None, snapshot_bytes=None):
         """Broadcast motion state from local AI engine to subscribers"""
         from datetime import datetime
         import queue
+
+        # Addon hook: AI event bus (MQTT, NVR Pro event clips, plate watchlists, ...)
+        _prev_motion = getattr(self, '_motion_state', False)
+        _mm = getattr(self.manager, 'module_manager', None) if self.manager else None
+        if _mm is not None:
+            try:
+                _mm.dispatch_ai_event(self, {
+                    'state': ('start' if not _prev_motion else 'update') if is_active else 'end',
+                    'tags': list(tags or []),
+                    'confidences': dict(tag_confidences or {}),
+                    'license_plate': license_plate,
+                    'snapshot': snapshot_bytes or image_bytes,
+                    'timestamp': time.time(),
+                    'is_test': 'test' in (tags or []),
+                })
+            except Exception as _addon_err:
+                print(f"  [AI Camera ({self.name})] Addon event hook error: {_addon_err}")
 
         def send_evt(topic, data_name, val, event_tags, confidences=None):
             evt = {
@@ -1410,15 +1550,7 @@ class VirtualONVIFCamera:
             
             # Broadcast to virtual clients
             if self.onvif_service:
-                for sub in list(self.onvif_service.subscriptions.values()):
-                    try:
-                        sub.queue.put_nowait(evt)
-                    except queue.Full:
-                        try:
-                            sub.queue.get_nowait()
-                            sub.queue.put_nowait(evt)
-                        except:
-                            pass
+                self.onvif_service.broadcast_event(evt)
 
         # 1. Send generic motion event if state has changed
         if not hasattr(self, '_motion_state'):
