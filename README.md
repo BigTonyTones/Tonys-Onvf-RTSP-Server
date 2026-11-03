@@ -1,8 +1,20 @@
-# Tonys Onvif-RTSP-AI Proxy Server
+# Tony’s ONVIF · RTSP · AI Server
 
 Bridge generic RTSP cameras into NVRs like UniFi Protect. This tool acts as a proxy, giving each of your cameras a unique identity (IP/MAC) so they work correctly with Protect's requirements.
 
-![Dashboard Screenshot](assets/Main_Page_v9.png)
+![Dashboard Screenshot](assets/Main_Page_v10.png)
+
+## What's New in 10.0
+
+- **Refined Interface**: A clean new dashboard with a side menu, light and dark themes, and the same header on every page.
+- **Live View**: A full-screen multi-camera wall for watching all your feeds at once.
+- **AI Alerts**: Browse, filter and search every AI detection snapshot in one place.
+- **IP Management**: See and manage the IP and MAC address of every virtual camera.
+- **Diagnostics**: Check stream health, logs and system details when something isn't working.
+- **Camera RTSP Lookup**: Search a built-in database of camera models to find the right RTSP path when adding a camera.
+- **GridFusion Upgrades**: Crop and zoom each tile, plus GPU hardware encoding (VAAPI on Intel/AMD).
+- **Addons**: Optional addons such as NVR Pro, Apple HomeKit, MQTT smart home bridge, PTZ auto-tracking, time-lapse, cloud backup and more.
+- **Docker Install**: The one-line installer can now set the server up in Docker.
 
 ## ONVIF Event Forwarding & Local AI Object Detection (YOLO)
 
@@ -10,7 +22,7 @@ Turn standard RTSP feeds into intelligent, AI-capable cameras inside your NVR:
 
 ![AI Detection Alerts](assets/AI_Detections.jpg)
 - **ONVIF Event Forwarding:** Automatically relays real-time camera motion events to UniFi Protect as native motion alarms.
-- **Local YOLOv8/11 Integration:** Run local AI inference to detect **People, Vehicles, and Animals**, and create native Smart Detection events in Protect.
+- **Local YOLO11 / YOLOv8 Integration:** Run local AI inference to detect **People, Vehicles, and Animals**, and create native Smart Detection events in Protect.
 - **Ultra-Efficient Two-Stage Pipeline:** Keeps system CPU usage low. A lightweight OpenCV pixel-difference detector monitors the video stream and only fires the YOLO model when actual motion is detected.
 - **Easy Installation:** The automated installer can set up the required AI packages (PyTorch, Ultralytics, and OpenCV-headless) with one click, or they can be installed later via the Web UI.
 
@@ -19,7 +31,7 @@ Turn standard RTSP feeds into intelligent, AI-capable cameras inside your NVR:
 
 **GridFusion** lets you combine multiple camera feeds into a single, customizable RTSP stream. Perfect for creating security monitoring walls, multi-angle views, or consolidated feeds for your NVR.
 
-![GridFusion Editor](assets/Gridfusion2.png)
+![GridFusion Editor](assets/Gridfusion_v10.png)
 
 ### Key Features:
 - **Visual Drag-and-Drop Editor**: Position cameras anywhere on the canvas with pixel-perfect control
@@ -31,7 +43,7 @@ Turn standard RTSP feeds into intelligent, AI-capable cameras inside your NVR:
 
 ## Quick Install (Recommended)
 
-**One-line automated installer** - automatically installs and configures everything needed to run the server:
+**One-line automated installer** (native or Docker) - automatically installs and configures everything needed to run the server:
 - **Git** - for cloning the repository
 - **Python 3** - runtime environment
 - **Python packages** - Flask, Flask-CORS, Requests, PyYAML, psutil, onvif-zeep, paramiko, cryptography
@@ -51,6 +63,13 @@ curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server
 ```powershell
 irm https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.ps1 | iex
 ```
+
+### Docker (Linux):
+Prefer containers? The same installer can set everything up in Docker for you (it installs Docker and the Compose plugin if needed):
+```bash
+curl -fsSL https://raw.githubusercontent.com/BigTonyTones/Tonys-Onvf-RTSP-Server/main/install.sh | sudo bash -s -- --docker
+```
+See [Docker Installation](#docker-installation-alternative-setup) below for GPU passthrough, manual setup and updates.
 
 After installation, access the web interface at **http://localhost:5552**
 
@@ -118,7 +137,7 @@ This server is optimized for Ubuntu 25.04 but is compatible with most modern Lin
 ---
 
 ### Windows
-1. Install Python 3.7+.
+1. Install Python 3.10 or newer (3.12 recommended). If Python is missing, `start_onvif_server.bat` offers to install 3.12 for you.
 2. Run `start_onvif_server.bat`.
    *Note: Virtual NICs (unique IP/MAC per camera) are not supported on Windows. All cameras will share the host IP.*
 
@@ -131,7 +150,7 @@ This server is optimized for Ubuntu 25.04 but is compatible with most modern Lin
 - **Transcoding**: Only enable this if your camera's native codec isn't compatible. It is CPU intensive.
 - **VMs**: If running in a VM (Proxmox, ESXi), you **must** enable **Promiscuous Mode** on the network interface for Virtual NICs to work.
 - **Auto-Boot**: You can enable the systemd service in the Web UI settings to start the server on boot.
-- **H.264 vs H.265**: High awareness is required regarding video codecs! See below.
+- **H.264 vs H.265**: Your camera's video codec matters a lot. See below.
 
 ## 💡 Important: Video Codecs (H.264 vs H.265)
 For the best experience and lowest latency:
