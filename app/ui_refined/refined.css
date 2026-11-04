@@ -1064,6 +1064,12 @@ html.ui-refined.rf-page-gridfusion .info-icon { background: rgba(0, 0, 0, 0.55) 
 html.ui-refined.rf-page-gridfusion .remove-btn { background: rgba(0, 0, 0, 0.55) !important; color: #fff !important; border-radius: 3px !important; }
 html.ui-refined.rf-page-gridfusion .remove-btn:hover { background: var(--rf-red) !important; }
 html.ui-refined.rf-page-gridfusion :is(.camera-switcher, .stream-switcher) { border-radius: 3px !important; font-family: var(--rf-font) !important; }
+/* 2026-11-04: CROP / LAY tile badges were near invisible on the light theme; style them like the camera / SUB dropdowns next to them */
+html.ui-refined.rf-page-gridfusion .ontop-badge { background: var(--rf-input) !important; color: var(--rf-text) !important; border: 1px solid var(--rf-border-strong) !important; border-radius: 3px !important; font-family: var(--rf-font) !important; font-size: 11px !important; font-weight: 700 !important; padding: 3px 7px !important; line-height: 1.2 !important; opacity: 1 !important; }
+html.ui-refined.rf-page-gridfusion .ontop-badge:hover { border-color: var(--rf-accent) !important; color: var(--rf-accent) !important; }
+html.ui-refined.rf-page-gridfusion .ontop-badge.active { background: var(--rf-accent) !important; border-color: var(--rf-accent) !important; color: #fff !important; }
+html.ui-refined.rf-page-gridfusion .ontop-badge.crop-badge.active { background: #f59e0b !important; border-color: #f59e0b !important; color: #111 !important; }
+html.ui-refined.rf-page-gridfusion .ontop-badge.active:hover { filter: brightness(1.1); }
 html.ui-refined.rf-page-gridfusion #rtsp-url-display { color: var(--rf-text-2) !important; font-family: var(--rf-mono) !important; }
 html.ui-refined.rf-page-gridfusion .kbd-key { background: var(--rf-surface-2) !important; color: var(--rf-text-2) !important; border-color: var(--rf-border-strong) !important; box-shadow: none !important; }
 
@@ -1677,3 +1683,16 @@ html.ui-refined body #matrix-overlay .matrix-controls > span:first-child { color
 html.ui-refined .rf-power:hover .rf-power-menu { display: block; }
 html.ui-refined .rf-power:hover .rf-power-btn { color: var(--rf-text); border-color: var(--rf-border-strong); background: var(--rf-hover); }
 html.ui-refined .rf-power-menu::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
+/* 2.1.2: the Server / Settings / About / AI-ONVIF pages (z 850) were covering the power menu.
+   Those pages start below the bar, so lifting the bar above them hides nothing. */
+html.ui-refined body #rf-topbar { z-index: 880; }
+
+/* 2.1.5: Settings > Maintenance. That tab lives outside the settings <form>, so the form's
+   card showed up empty above it. Hide the form card when none of its tabs is open, and give
+   the Maintenance tab the same white card so it matches the other tabs. */
+html.ui-refined.rf-shell #settings-modal.rf-modal-page form:not(:has(.settings-tab-content.active)) { display: none !important; }
+html.ui-refined.rf-shell #settings-modal.rf-modal-page #settings-maintenance.active {
+  background: var(--rf-surface); border: 1px solid var(--rf-border); border-radius: 8px; padding: 20px 22px;
+}
+html.ui-refined #settings-maintenance .btn-danger { background: var(--rf-surface-2); border-color: color-mix(in srgb, var(--rf-red) 45%, transparent); }
+html.ui-refined #settings-maintenance .rf-maint-reboot:hover { filter: brightness(0.92); }

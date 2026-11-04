@@ -3026,34 +3026,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         </div>
     </div>
 
-    <div id="logs-modal" class="modal">
-        <div class="modal-content" style="max-width: 1200px; width: 95%;">
-            <div class="modal-header">
-                <div class="modal-title">Terminal Logs</div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 12px; color: var(--text-muted); margin-right: 10px;">
-                        <input type="checkbox" id="autoScrollLogs" style="width: auto; cursor: pointer; transform: scale(1.05);">
-                        <span>Auto-scroll to bottom</span>
-                    </label>
-                    <div style="display: flex; align-items: center; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-right: 10px;">
-                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-right: 8px;">Font Size</span>
-                        <button class="btn" style="padding: 2px 8px; font-size: 12px; min-width: 30px;" onclick="adjustLogFontSize(-1)">−</button>
-                        <span id="logFontSizeDisplay" style="padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--text-title); min-width: 40px; text-align: center;">16px</span>
-                        <button class="btn" style="padding: 2px 8px; font-size: 12px; min-width: 30px;" onclick="adjustLogFontSize(1)">+</button>
-                    </div>
-                    <button class="btn" onclick="refreshLogs()">Refresh</button>
-                    <button class="close-btn" onclick="closeLogsModal()">×</button>
-                </div>
-            </div>
-            <div id="logs-container" style="background: #0d1117; color: #e6f1ff; padding: 25px; border-radius: 10px; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 16px; line-height: 1.6; max-height: 700px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #30363d;">
-                Loading logs...
-            </div>
-            <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                <span>Total 2,000 lines captured in memory</span>
-            </div>
-        </div>
-    </div>
-    
     <!-- Notification Rules Editor Modal -->
     <div id="notify-editor-modal" class="modal" style="z-index: 1200;">
         <div class="modal-content" style="max-width: 1020px; width: 96%; padding: 25px;">
@@ -4325,6 +4297,15 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label" for="logMaxLines">System Logs lines kept in memory</label>
+                        <input type="number" class="form-input" id="logMaxLines" min="500" max="100000" step="500" placeholder="10000" style="max-width: 180px;">
+                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                            How many of the newest log lines the System Logs page can show (500 to 100,000, default 10,000).
+                            10,000 lines use only a few MB of memory. Applies right away, no restart needed.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input type="checkbox" id="watchdogEnabled" style="width: auto; cursor: pointer;">
                             <span class="form-label" style="margin: 0; color: var(--yellow-text, #f6ad55); font-weight: 700;">
@@ -4675,10 +4656,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                         <i class="fas fa-tools"></i> <span>Maintenance & Safety</span>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <button type="button" class="btn" style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); border: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.3)); color: var(--yellow-text, #f6ad55); font-size: 13.5px; padding: 10px; font-weight: 600;" onclick="resetAllUUIDs()">
+                        <button type="button" class="btn btn-danger" style="font-size: 13.5px; padding: 10px; font-weight: 600;" onclick="resetAllUUIDs()">
                             <i class="fas fa-id-card"></i> Reset All UUIDs
                         </button>
-                        <button type="button" class="btn" style="background: var(--alert-warning-bg, rgba(246, 173, 85, 0.1)); border: 1px solid var(--alert-warning-border, rgba(246, 173, 85, 0.3)); color: var(--yellow-text, #f6ad55); font-size: 13.5px; padding: 10px; font-weight: 600;" onclick="resetAllMACs()">
+                        <button type="button" class="btn btn-danger" style="font-size: 13.5px; padding: 10px; font-weight: 600;" onclick="resetAllMACs()">
                             <i class="fas fa-network-wired"></i> Reset All MACs
                         </button>
                     </div>
@@ -4690,10 +4671,10 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
                     <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">Configuration Backup</div>
                     <div style="display: flex; gap: 10px;">
-                        <button type="button" class="btn btn-secondary" onclick="downloadBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                        <button type="button" class="btn" onclick="downloadBackup()" style="flex: 1; font-weight: 600;">
                             <i class="fas fa-download"></i> Backup Config
                         </button>
-                        <button type="button" id="restoreBtn" class="btn btn-secondary" onclick="restoreBackup()" style="flex: 1; background: var(--toggle-bg); border-color: var(--border-color); color: var(--text-body);">
+                        <button type="button" id="restoreBtn" class="btn" onclick="restoreBackup()" style="flex: 1; font-weight: 600;">
                             <i class="fas fa-upload"></i> Restore Config
                         </button>
                     </div>
@@ -4701,11 +4682,15 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 
                 <div style="margin: 20px 0; padding-top: 15px; border-top: 1px solid var(--border-color);">
                     <div style="font-size: 14px; font-weight: 600; color: var(--text-title); margin-bottom: 10px;">System Updates</div>
-                    <button type="button" class="btn btn-secondary" onclick="checkForUpdates()" style="width:100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; color: white; font-weight: 600;">
+                    <button type="button" class="btn btn-primary" onclick="checkForUpdates()" style="display: inline-flex; align-items: center; gap: 6px; width: auto; font-weight: 600;">
                         <i class="fas fa-sync-alt"></i> Check for Updates
                     </button>
-                    <button type="button" class="btn btn-primary" id="settingsUpdateAiBtn" onclick="startAiUpdate('settings')" style="width:100%; margin-top: 10px; font-weight: 600;">
+                    <button type="button" class="btn btn-primary" id="settingsUpdateAiBtn" onclick="startAiUpdate('settings')" style="display: inline-flex; align-items: center; gap: 6px; width: auto; margin-left: 8px; font-weight: 600;">
                         <i class="fas fa-sync-alt"></i> Check AI Updates
+                    </button>
+                    <!-- Reboot Server Button (Linux Only) -->
+                    <button type="button" class="btn reboot-host rf-maint-reboot" onclick="rebootServer()" style="display: inline-flex; align-items: center; gap: 6px; width: auto; margin-left: 8px; background: var(--rf-red, #e53e3e); border-color: var(--rf-red, #e53e3e); color: white; font-weight: 600;">
+                        <i class="fas fa-power-off"></i> Reboot Server
                     </button>
                     <div id="aiSettingsProgressContainer" style="display: none; margin-top: 12px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
@@ -4716,10 +4701,6 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     </div>
                 </div>
                 
-                <!-- Reboot Server Button (Linux Only) -->
-                <button type="button" class="btn reboot-host" onclick="rebootServer()" style="width:100%; margin-top: 15px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); border-color: #c53030; color: white; font-weight: 600;">
-                    <i class="fas fa-power-off"></i> Reboot Server
-                </button>
             </div>
         </div>
     </div>
@@ -4953,93 +4934,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
             }}
         }});
 
-        let logInterval = null;
-
-        let logFontSize = parseInt(localStorage.getItem('logFontSize')) || 16;
-
-        function adjustLogFontSize(direction) {{
-            logFontSize += direction;
-            if (logFontSize < 10) logFontSize = 10;
-            if (logFontSize > 32) logFontSize = 32;
-            
-            localStorage.setItem('logFontSize', logFontSize);
-            applyLogFontSize();
-        }}
-
-        function applyLogFontSize() {{
-            const container = document.getElementById('logs-container');
-            const display = document.getElementById('logFontSizeDisplay');
-            if (container) container.style.fontSize = logFontSize + 'px';
-            if (display) display.textContent = logFontSize + 'px';
-        }}
-
+        // System Logs is its own page now (/logs)
         function openLogsModal() {{
-            document.getElementById('logs-modal').classList.add('active');
-            applyLogFontSize();
-            refreshLogs();
-            // Auto-refresh logs every 3 seconds while open
-            if (logInterval) clearInterval(logInterval);
-            logInterval = setInterval(refreshLogs, 3000);
-        }}
-
-        function closeLogsModal() {{
-            document.getElementById('logs-modal').classList.remove('active');
-            if (logInterval) {{
-                clearInterval(logInterval);
-                logInterval = null;
-            }}
-        }}
-
-        async function refreshLogs() {{
-            try {{
-                const response = await fetch('/api/logs');
-                if (response.ok) {{
-                    const data = await response.json();
-                    const container = document.getElementById('logs-container');
-                    
-                    // Simple ANSI escape code stripping (common in terminal output)
-                    const cleanLogs = data.logs.replace(/\\u001b\\[[0-9;]*[a-zA-Z]/g, '');
-                    
-                    function formatLogText(text) {{
-                        if (!text) return "No logs available.";
-                        let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        
-                        // Phrases
-                        const cyanPhrases = ['Starting Web UI', 'SERVER RUNNING', 'Web Interface:', 'RTSP Server:', '\\\\\\* Serving Flask app'];
-                        cyanPhrases.forEach(phrase => {{
-                            html = html.replace(new RegExp('(' + phrase + ')', 'g'), '<span style="color: #8be9fd;">$1</span>');
-                        }});
-                        
-                        // Words
-                        html = html.replace(/\\b(successfully)\\b/gi, '<span style="color: #50fa7b;">$&</span>');
-                        html = html.replace(/\\b(Shutdown|stopped|Warning)\\b/gi, '<span style="color: #f1fa8c;">$&</span>');
-                        html = html.replace(/\\b(failed|Error|Exception|faile)\\b/gi, '<span style="color: #ff5555;">$&</span>');
-                        
-                        // rtsp tags
-                        html = html.replace(/(\\[rtsp @ 0x[0-9a-f]+\\])/gi, '<span style="color: #ff79c6;">$1</span>');
-                        
-                        // General brackets
-                        html = html.replace(/(\\[([^\\]]+)\\])/g, function(match) {{
-                            if (match.includes('rtsp @')) return match;
-                            if (match.includes('<span')) return match;
-                            return '<span style="color: #8be9fd;">' + match + '</span>';
-                        }});
-                        
-                        // IP addresses
-                        html = html.replace(/\\b(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})\\b/g, '<span style="color: #ff79c6;">$1</span>');
-                        
-                        return html;
-                    }}
-                    
-                    container.innerHTML = formatLogText(cleanLogs);
-                    
-                    if (document.getElementById('autoScrollLogs').checked) {{
-                        container.scrollTop = container.scrollHeight;
-                    }}
-                }}
-            }} catch (error) {{
-                console.error('Error fetching logs:', error);
-            }}
+            location.href = '/logs';
         }}
 
         function updateAiSensitivityDisplay(val) {{
@@ -9334,6 +9231,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                     const debugModeField = document.getElementById('debugMode');
                     if (debugModeField) debugModeField.checked = settings.debugMode === true;
 
+                    const logMaxLinesField = document.getElementById('logMaxLines');
+                    if (logMaxLinesField) logMaxLinesField.value = settings.logMaxLines || 10000;
+
                     const watchdogField = document.getElementById('watchdogEnabled');
                     if (watchdogField) watchdogField.checked = settings.watchdogEnabled === true;
 
@@ -9581,6 +9481,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 globalPassword: document.getElementById('globalPassword').value,
                 rtspAuthEnabled: document.getElementById('rtspAuthEnabled').checked,
                 debugMode: document.getElementById('debugMode').checked,
+                logMaxLines: Math.max(500, Math.min(100000, parseInt(document.getElementById('logMaxLines').value) || 10000)),
                 watchdogEnabled: document.getElementById('watchdogEnabled') ? document.getElementById('watchdogEnabled').checked : false,
                 matrixStretchFill: settings.matrixStretchFill === true,
                 matrixHideNames: settings.matrixHideNames === true,

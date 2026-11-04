@@ -139,6 +139,7 @@ class CameraManager:
             self.global_password = config.get('settings', {}).get('globalPassword', 'admin')
             self.rtsp_auth_enabled = config.get('settings', {}).get('rtspAuthEnabled', False)
             self.debug_mode = config.get('settings', {}).get('debugMode', False)
+            self._apply_log_max_lines(config.get('settings', {}).get('logMaxLines'))
             self.watchdog_enabled = config.get('settings', {}).get('watchdogEnabled', False)
             self.matrix_stretch_fill = config.get('settings', {}).get('matrixStretchFill', False)
             self.matrix_hide_names = config.get('settings', {}).get('matrixHideNames', False)
@@ -339,7 +340,8 @@ class CameraManager:
                 'matrixCamsPerPage': getattr(self, 'matrix_cams_per_page', 'All'),
                 'alertsThumbSize': getattr(self, 'alerts_thumb_size', 220),
                 'ipWhitelist': getattr(self, 'ip_whitelist', []),
-                'debugMode': self.debug_mode
+                'debugMode': self.debug_mode,
+                'logMaxLines': getattr(self, 'log_max_lines', 10000)
             },
             'gridFusion': {
                 'layouts': getattr(self, 'grid_fusion_layouts', []),
@@ -395,6 +397,12 @@ class CameraManager:
             return False
 
 
+    def _apply_log_max_lines(self, value):
+        """How many lines the System Logs page keeps in memory (Settings)."""
+        from .utils import clamp_log_lines, set_log_max_lines, DEFAULT_LOG_LINES
+        self.log_max_lines = clamp_log_lines(DEFAULT_LOG_LINES if value in (None, '') else value)
+        set_log_max_lines(self.log_max_lines)
+
     def load_settings(self):
         """Load settings from config with error safety"""
         try:
@@ -417,6 +425,8 @@ class CameraManager:
                 self.global_password = settings.get('globalPassword', 'admin')
                 self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', False)
                 self.debug_mode = settings.get('debugMode', False)
+                self._apply_log_max_lines(settings.get('logMaxLines'))
+                settings['logMaxLines'] = self.log_max_lines
                 self.watchdog_enabled = settings.get('watchdogEnabled', False)
                 self.matrix_stretch_fill = settings.get('matrixStretchFill', False)
                 self.matrix_hide_names = settings.get('matrixHideNames', False)
@@ -486,6 +496,8 @@ class CameraManager:
         self.global_password = settings.get('globalPassword', self.global_password)
         self.rtsp_auth_enabled = settings.get('rtspAuthEnabled', self.rtsp_auth_enabled)
         self.debug_mode = settings.get('debugMode', self.debug_mode)
+        if 'logMaxLines' in settings:
+            self._apply_log_max_lines(settings.get('logMaxLines'))
         self.matrix_stretch_fill = settings.get('matrixStretchFill', self.matrix_stretch_fill)
         self.matrix_hide_names = settings.get('matrixHideNames', self.matrix_hide_names)
         self.matrix_ai_flash = settings.get('matrixAiFlash', self.matrix_ai_flash)

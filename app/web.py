@@ -14,6 +14,7 @@ from flask_cors import CORS
 
 from .web_template import get_web_ui_html
 from .diagnostics_template import get_diagnostics_html
+from .logs_template import get_logs_html
 from .ip_management_template import get_ip_management_html
 from .addon_template import get_addon_html
 from .config import AI_DEFAULT_MODEL, AI_CONFIDENCE_THRESHOLD, AI_MOTION_SENSITIVITY
@@ -1463,6 +1464,13 @@ def create_web_app(manager):
                 return jsonify({'success': True, 'message': 'Configuration restored. Server restarting...'})
             except Exception as e:
                  return jsonify({'error': f'Failed to restore config: {str(e)}'}), 500
+
+    @app.route('/logs')
+    @login_required
+    def logs_page():
+        """Serve the System Logs page"""
+        theme = (manager.load_settings() or {}).get('theme', '')
+        return get_logs_html(theme)
 
     @app.route('/api/logs', methods=['GET'])
     @login_required

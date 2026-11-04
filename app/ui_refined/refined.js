@@ -178,6 +178,7 @@
     if (p === '/alerts') return 'alerts';
     if (p === '/ip-management') return 'ip';
     if (p === '/diagnostics') return 'diagnostics';
+    if (p === '/logs') return 'logs';
     if (p === '/server') return 'server';
     if (p === '/settings') return 'settings';
     if (p === '/about') return 'about';
@@ -689,7 +690,7 @@
         }, 1500);
       }).catch(function () { alert('Error stopping server'); });
     },
-    openLogsModal: function () { location.href = '/?rf-logs=1'; },
+    openLogsModal: function () { location.href = '/logs'; },
     rebootServer: function () {
       if (!confirm('This will reboot the entire server. The system will be unavailable for a few minutes. Continue?')) return;
       post('/api/server/reboot').then(function (r) {
@@ -700,7 +701,8 @@
   };
   function run(name) {
     var fn = window[name];
-    if (typeof fn === 'function' && !(name === 'openLogsModal' && !document.getElementById('logs-modal'))) fn();
+    if (name === 'openLogsModal') { location.href = '/logs'; return; }
+    if (typeof fn === 'function') fn();
     else fallback[name]();
   }
 
@@ -723,7 +725,7 @@
     var wrap = document.createElement('div');
     wrap.className = 'rf-power';
     var btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'rf-power-btn'; btn.title = 'Power & server actions';
+    btn.type = 'button'; btn.className = 'rf-power-btn'; btn.setAttribute('aria-label', 'Power & server actions');
     btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = '<i class="fa-solid fa-power-off"></i>';
     var menu = document.createElement('div');
@@ -753,11 +755,8 @@
 
   function init() {
     if (!build()) { var n = 0, iv = setInterval(function () { if (build() || ++n > 40) clearInterval(iv); }, 250); }
-    // "System Logs" from another page lands on the dashboard and opens the log viewer.
-    if (/[?&]rf-logs=1\b/.test(location.search) && typeof window.openLogsModal === 'function') {
-      try { history.replaceState(null, '', location.pathname); } catch (_) {}
-      setTimeout(function () { window.openLogsModal(); }, 300);
-    }
+    // System Logs has its own page now; send old ?rf-logs=1 links there.
+    if (/[?&]rf-logs=1\b/.test(location.search)) { location.replace('/logs'); return; }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

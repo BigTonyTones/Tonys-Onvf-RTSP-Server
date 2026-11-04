@@ -22,9 +22,25 @@ def get_local_ip():
         s.close()
     return IP
 
+DEFAULT_LOG_LINES = 10000
+MIN_LOG_LINES = 500
+MAX_LOG_LINES = 100000
+
+
+def clamp_log_lines(value):
+    """Keep the System Logs size setting in a sane range."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_LOG_LINES
+    return max(MIN_LOG_LINES, min(MAX_LOG_LINES, n))
+
+
 class Logger:
-    def __init__(self, max_lines=2000):
+    def __init__(self, max_lines=DEFAULT_LOG_LINES):
+        # One entry per finished line; _partial holds text written without a newline yet
         self._buffer = collections.deque(maxlen=max_lines)
+        self._partial = ''
         self._lock = threading.Lock()
         self._stdout = sys.stdout
         self._stderr = sys.stderr
@@ -46,7 +62,11 @@ class Logger:
                 message = str(message)
                 
         with self._lock:
-            self._buffer.append(message)
+            text = self._partial + message
+            parts = text.split('\n')
+            self._partial = parts.pop()
+            for line in parts:
+                self._buffer.append(line + '\n')
         self._stdout.write(message)
 
     def flush(self):
@@ -54,7 +74,13 @@ class Logger:
 
     def get_logs(self):
         with self._lock:
-            return "".join(self._buffer)
+            return "".join(self._buffer) + self._partial
+
+    def set_max_lines(self, max_lines):
+        max_lines = clamp_log_lines(max_lines)
+        with self._lock:
+            if self._buffer.maxlen != max_lines:
+                self._buffer = collections.deque(self._buffer, maxlen=max_lines)
 
 _logger_instance = None
 
@@ -65,6 +91,11 @@ def init_logger():
         sys.stdout = _logger_instance
         sys.stderr = _logger_instance
     return _logger_instance
+
+def set_log_max_lines(max_lines):
+    """Change how many lines System Logs keeps in memory (Settings)."""
+    if _logger_instance:
+        _logger_instance.set_max_lines(max_lines)
 
 def get_captured_logs():
     if _logger_instance:
