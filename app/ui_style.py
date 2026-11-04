@@ -28,7 +28,7 @@ STYLES = ('refined', 'classic')
 DEFAULT_STYLE = 'refined'
 UI_STYLE_FILE = os.path.join(DATA_DIR, 'ui_style.json')
 ASSET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ui_refined')
-ASSET_VERSION = '2.0.2'
+ASSET_VERSION = '2.1.1'
 
 # Pages that must never be touched (the separate Next.js build).
 _SKIP_PREFIXES = ('/protect', '/ui/')

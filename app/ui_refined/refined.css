@@ -1634,3 +1634,46 @@ html.ui-refined.rf-page-gridfusion #server-stats { display: none !important; }
   html.ui-refined.rf-page-gridfusion.rf-standalone body { padding-top: calc(var(--rf-top-h) * 1.4) !important; }
 }
 html.ui-refined.rf-standalone #rf-topbar .stats-badge { font-weight: 600 !important; }
+
+/* 2.1.0: small power button + quick-actions menu, far right of the top bar (Tony, 2026-11-04) */
+html.ui-refined .rf-power { position: relative; display: flex; align-items: center; }
+html.ui-refined .rf-power-btn {
+  width: 26px; height: 26px; padding: 0; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--rf-border); border-radius: 6px;
+  background: var(--rf-surface); color: var(--rf-text-3); cursor: pointer;
+  font-size: 12px; line-height: 1; transition: color .15s, border-color .15s, background .15s;
+}
+html.ui-refined .rf-power-btn:hover, html.ui-refined .rf-power.open .rf-power-btn { color: var(--rf-text); border-color: var(--rf-border-strong); background: var(--rf-hover); }
+html.ui-refined .rf-power-menu {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 10050;
+  min-width: 210px; padding: 6px;
+  background: var(--rf-surface); border: 1px solid var(--rf-border-strong); border-radius: 10px;
+  box-shadow: var(--rf-shadow-pop);
+}
+html.ui-refined .rf-power.open .rf-power-menu { display: block; }
+html.ui-refined .rf-pm-head { font-size: 11px; font-weight: 500; color: var(--rf-text-3); padding: 8px 8px 4px; }
+html.ui-refined .rf-pm-head:first-child { padding-top: 2px; }
+html.ui-refined .rf-power-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 8px; margin: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--rf-text); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+html.ui-refined .rf-power-menu button:hover { background: var(--rf-hover); }
+html.ui-refined .rf-power-menu button i { width: 16px; text-align: center; font-size: 12px; color: var(--rf-text-3); }
+html.ui-refined .rf-power-menu button.rf-pm-danger, html.ui-refined .rf-power-menu button.rf-pm-danger i { color: var(--rf-red); }
+html.ui-refined .rf-power-menu button.rf-pm-danger:hover { background: color-mix(in srgb, var(--rf-red) 10%, transparent); }
+html.ui-refined .rf-power-toast {
+  position: fixed; right: 18px; bottom: 18px; z-index: 10060; padding: 10px 14px; border-radius: 8px;
+  background: var(--rf-surface); color: var(--rf-text); border: 1px solid var(--rf-border-strong); box-shadow: var(--rf-shadow-pop); font-size: 13px;
+}
+html.ui-refined .rf-power-wait { position: fixed; inset: 0; z-index: 10070; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--rf-bg) 85%, transparent); color: var(--rf-text); text-align: center; font-size: 15px; }
+html.ui-refined .rf-power-wait i { font-size: 28px; color: var(--rf-text-3); }
+
+/* Live View bottom bar: light themes turned the toggle labels dark on the dark bar (Tony: "can't read") */
+html.ui-refined body #matrix-overlay .matrix-controls :is(label, span) { color: #e4e6ea !important; }
+html.ui-refined body #matrix-overlay .matrix-controls > span:first-child { color: #9aa0a8 !important; }
+/* 2.1.1: the power menu opens on hover too, no click needed (Tony, 2026-11-04) */
+html.ui-refined .rf-power:hover .rf-power-menu { display: block; }
+html.ui-refined .rf-power:hover .rf-power-btn { color: var(--rf-text); border-color: var(--rf-border-strong); background: var(--rf-hover); }
+html.ui-refined .rf-power-menu::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }

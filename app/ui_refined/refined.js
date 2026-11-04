@@ -638,3 +638,126 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply); else apply();
 })();
+/* 2.1.0: small power button at the far right of the top bar with quick server actions (Tony, 2026-11-04).
+   Uses the dashboard's own handlers (same confirmations); on standalone pages it calls the same APIs. */
+(function () {
+  'use strict';
+  var H = document.documentElement;
+  if (!H.classList.contains('ui-refined') || window.__rfPowerDone) return;
+  window.__rfPowerDone = true;
+
+  function toast(msg) {
+    if (typeof window.showToast === 'function') { try { window.showToast(msg, 'info'); return; } catch (_) {} }
+    var t = document.createElement('div');
+    t.className = 'rf-power-toast'; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2600);
+  }
+  function post(url) { return fetch(url, { method: 'POST', credentials: 'same-origin' }); }
+  function waitAndReload(msg) {
+    var o = document.createElement('div');
+    o.className = 'rf-power-wait';
+    o.innerHTML = '<div><i class="fa-solid fa-rotate fa-spin"></i><p></p></div>';
+    o.querySelector('p').textContent = msg;
+    document.body.appendChild(o);
+    var start = Date.now();
+    setTimeout(function poll() {
+      fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' })
+        .then(function (r) { if (r.ok) location.reload(); else throw 0; })
+        .catch(function () { if (Date.now() - start < 180000) setTimeout(poll, 2000); });
+    }, 3000);
+  }
+
+  var fallback = {
+    startAll: function () { post('/api/cameras/start-all').then(function () { toast('Starting all cameras…'); }).catch(function () { alert('Error starting all cameras'); }); },
+    stopAll: function () { post('/api/cameras/stop-all').then(function () { toast('Stopping all cameras…'); }).catch(function () { alert('Error stopping all cameras'); }); },
+    restartServer: function () {
+      if (!confirm('Are you sure you want to restart the server application?')) return;
+      try { localStorage.removeItem('restartRequired'); } catch (_) {}
+      post('/api/server/restart').then(function (r) { if (r.ok) waitAndReload('Server is restarting…'); else alert('Failed to restart server'); })
+        .catch(function () { alert('Error restarting server'); });
+    },
+    stopServer: function () {
+      if (!confirm('Are you sure you want to stop the server? This will shut down all camera streams and the web interface.')) return;
+      post('/api/server/stop').then(function (r) {
+        if (!r.ok) { alert('Failed to stop server'); return; }
+        setTimeout(function () {
+          document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;background:#1a202c;color:#fff;text-align:center;padding:20px;">' +
+            '<i class="fas fa-power-off" style="font-size:64px;color:#f56565;margin-bottom:20px;"></i><h1>Server Stopped</h1>' +
+            '<p style="font-size:18px;color:#a0aec0;">The ONVIF server has been shut down successfully.</p>' +
+            '<p style="color:#a0aec0;margin-top:30px;font-size:14px;">You can safely close this browser tab.</p></div>';
+        }, 1500);
+      }).catch(function () { alert('Error stopping server'); });
+    },
+    openLogsModal: function () { location.href = '/?rf-logs=1'; },
+    rebootServer: function () {
+      if (!confirm('This will reboot the entire server. The system will be unavailable for a few minutes. Continue?')) return;
+      post('/api/server/reboot').then(function (r) {
+        if (r.ok) alert('Server is rebooting... The system will be back online in a few minutes.');
+        else alert('Failed to reboot server. This feature only works on Linux.');
+      }).catch(function () { alert('Error rebooting server'); });
+    }
+  };
+  function run(name) {
+    var fn = window[name];
+    if (typeof fn === 'function' && !(name === 'openLogsModal' && !document.getElementById('logs-modal'))) fn();
+    else fallback[name]();
+  }
+
+  var items = [
+    ['Cameras'],
+    ['startAll', 'fa-solid fa-play', 'Start All Cameras'],
+    ['stopAll', 'fa-solid fa-stop', 'Stop All Cameras'],
+    ['Server'],
+    ['restartServer', 'fa-solid fa-rotate', 'Restart Server'],
+    ['stopServer', 'fa-solid fa-circle-stop', 'Stop Server'],
+    ['System'],
+    ['openLogsModal', 'fa-solid fa-rectangle-list', 'System Logs'],
+    ['rebootServer', 'fa-solid fa-power-off', 'Reboot Host', 'rf-pm-danger']
+  ];
+
+  function build() {
+    var bar = document.getElementById('rf-topbar');
+    var tools = bar && bar.querySelector('.rf-top-tools');
+    if (!tools || tools.querySelector('.rf-power')) return !!tools;
+    var wrap = document.createElement('div');
+    wrap.className = 'rf-power';
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'rf-power-btn'; btn.title = 'Power & server actions';
+    btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<i class="fa-solid fa-power-off"></i>';
+    var menu = document.createElement('div');
+    menu.className = 'rf-power-menu'; menu.setAttribute('role', 'menu');
+    items.forEach(function (it) {
+      if (it.length === 1) { var h = document.createElement('div'); h.className = 'rf-pm-head'; h.textContent = it[0]; menu.appendChild(h); return; }
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role', 'menuitem');
+      if (it[3]) b.className = it[3];
+      b.innerHTML = '<i class="' + it[1] + '"></i><span></span>';
+      b.querySelector('span').textContent = it[2];
+      b.addEventListener('click', function () { close(); run(it[0]); });
+      menu.appendChild(b);
+    });
+    function close() { wrap.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var on = !wrap.classList.contains('open');
+      wrap.classList.toggle('open', on); btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    wrap.appendChild(btn); wrap.appendChild(menu);
+    tools.appendChild(wrap);
+    return true;
+  }
+
+  function init() {
+    if (!build()) { var n = 0, iv = setInterval(function () { if (build() || ++n > 40) clearInterval(iv); }, 250); }
+    // "System Logs" from another page lands on the dashboard and opens the log viewer.
+    if (/[?&]rf-logs=1\b/.test(location.search) && typeof window.openLogsModal === 'function') {
+      try { history.replaceState(null, '', location.pathname); } catch (_) {}
+      setTimeout(function () { window.openLogsModal(); }, 300);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
