@@ -15,11 +15,15 @@ RUN apt-get update && apt-get install -y \
 
 # VAAPI hardware video drivers for GridFusion encoding (issue #73): Intel (iHD for
 # Broadwell and newer, i965 for older) and AMD (Mesa). vainfo is for troubleshooting.
+# Enable non-free so intel-media-va-driver-non-free (full hardware encode/decode shaders
+# on Gen8+ Intel GPUs) is installed when available, falling back to the free package.
 # These are only used when the GPU is passed in (see docker-compose.yml "devices").
 # Installed best-effort so ARM builds without these packages still succeed.
-RUN apt-get update && \
+RUN sed -i 's/Components: main/Components: main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true && \
+    apt-get update && \
     (apt-get install -y --no-install-recommends vainfo mesa-va-drivers || true) && \
-    (apt-get install -y --no-install-recommends intel-media-va-driver i965-va-driver || true) && \
+    (apt-get install -y --no-install-recommends intel-media-va-driver-non-free || apt-get install -y --no-install-recommends intel-media-va-driver || true) && \
+    (apt-get install -y --no-install-recommends i965-va-driver-shaders || apt-get install -y --no-install-recommends i965-va-driver || true) && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

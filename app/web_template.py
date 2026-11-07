@@ -9039,7 +9039,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         function updateHwEncoderFields() {{
             const v = document.getElementById('ffmpeg_hardwareEncoder').value;
             document.getElementById('hwVaapiFields').style.display = (v === 'vaapi' || v === 'auto') ? 'block' : 'none';
-            document.getElementById('hwDecodeRow').style.display = (v === 'vaapi' || v === 'nvenc' || v === 'auto') ? 'flex' : 'none';
+            document.getElementById('hwDecodeRow').style.display = (v !== 'software') ? 'flex' : 'none';
         }}
 
         function renderHwDiagnosis(dg) {{

@@ -183,6 +183,7 @@ def resolve(ffmpeg_exe, ff_advanced, log=print):
         'kind': 'software', 'name': 'Software (libx264)',
         'encoder_args': '-c:v libx264 -preset ultrafast -tune zerolatency',
         'global_args': '', 'input_args': '', 'upload_filter': '',
+        'hw_decode': False,
     }
     if choice == 'software':
         return software
@@ -198,6 +199,7 @@ def resolve(ffmpeg_exe, ff_advanced, log=print):
             'kind': kind, 'name': info['name'],
             'encoder_args': f"-c:v {info['encoder']} {info['params']}",
             'global_args': '', 'input_args': '', 'upload_filter': '',
+            'hw_decode': False,
         }
         if kind == 'vaapi':
             dev = find_vaapi_device(vaapi_pref)
@@ -209,11 +211,23 @@ def resolve(ffmpeg_exe, ff_advanced, log=print):
             if hw_decode:
                 # Decode on the GPU; frames are downloaded automatically so the
                 # existing CPU crop/scale/stack filters keep working.
-                out['input_args'] = f'-hwaccel vaapi -hwaccel_device {dev}'
+                # -err_detect ignore_err + -skip_frame nokey_at_start tolerate
+                # mid-GOP RTSP connections (missing POC reference frames before
+                # the first IDR keyframe) that otherwise cause VAAPI HEVC
+                # decoding to fail with VA_STATUS_ERROR_DECODING_ERROR (23) / EIO.
+                out['input_args'] = f'-hwaccel vaapi -hwaccel_device {dev} -err_detect ignore_err'
+                out['hw_decode'] = True
         elif kind == 'qsv':
             out['upload_filter'] = 'format=nv12'
+            if hw_decode:
+                out['input_args'] = '-hwaccel qsv -err_detect ignore_err'
+                out['hw_decode'] = True
         elif kind == 'nvenc' and hw_decode:
-            out['input_args'] = '-hwaccel cuda'
+            out['input_args'] = '-hwaccel cuda -err_detect ignore_err'
+            out['hw_decode'] = True
+        elif kind == 'videotoolbox' and hw_decode:
+            out['input_args'] = '-hwaccel videotoolbox'
+            out['hw_decode'] = True
         return out
 
     if choice != 'auto':
@@ -235,7 +249,8 @@ _VENDOR_NAMES = {'intel': 'Intel', 'amd': 'AMD', 'nvidia': 'NVIDIA', 'virtual': 
 
 # Only these packages can ever be installed from the web UI.
 INSTALLABLE = {
-    'vainfo', 'intel-media-va-driver', 'i965-va-driver', 'mesa-va-drivers',
+    'vainfo', 'intel-media-va-driver', 'intel-media-va-driver-non-free',
+    'i965-va-driver', 'i965-va-driver-shaders', 'mesa-va-drivers',
     'libvpl2', 'libmfx-gen1.2', 'libmfx-gen1',
 }
 

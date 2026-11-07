@@ -21,12 +21,35 @@ from .config import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
-# License keys are Ed25519-signed by the separate keygen app (not in this
-# repository); license_keys.py only holds the public key used to check them.
-from .license_keys import validate_license_key, decode_license_key  # noqa: E402
+# Legacy Ed25519 license keys are signed by the separate keygen app (not in
+# this repository); license_keys.py only holds the public key used to check them.
+from .license_keys import validate_license_key, decode_license_key, PUBLIC_KEY_HEX  # noqa: E402
+
+# New licensing: Lemon Squeezy online activation + offline machine-bound tokens.
+from .licensing import machine_id, ls_client, license_store, offline_token  # noqa: E402
+
+import re  # noqa: E402
 
 MODULES_STATE_FILE = os.path.join(DATA_DIR, 'modules.json')
 MODULES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'modules')
+
+# A Lemon Squeezy license key looks like 8-4-4-4-12 hex (UUID shape).
+_LS_KEY_RE = re.compile(r'^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-'
+                        r'[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$')
+
+_MACHINE_FP = None
+
+
+def machine_fingerprint():
+    """This machine's stable fingerprint (computed once)."""
+    global _MACHINE_FP
+    if _MACHINE_FP is None:
+        try:
+            _MACHINE_FP = machine_id.fingerprint()
+        except Exception as e:
+            logger.error(f"Could not compute machine fingerprint: {e}")
+            _MACHINE_FP = 'unknown'
+    return _MACHINE_FP
 
 
 def _requirement_installed(req):
@@ -161,9 +184,17 @@ class ModuleManager:
             raw_status = state.get('status', 'inactive')
 
             if raw_status == 'active':
-                # Re-validate the stored key so a hand-edited modules.json can't unlock it
-                if validate_license_key(module_id, state.get('license_key') or ''):
-                    return 'active'
+                # Re-validate on every check so a hand-edited modules.json can't
+                # unlock an addon, and a copied install fails the machine binding.
+                ltype = state.get('license_type')
+                if ltype in ('lemonsqueezy', 'offline_token'):
+                    if license_store.is_active(DATA_DIR, module_id,
+                                               machine_fingerprint(), PUBLIC_KEY_HEX):
+                        return 'active'
+                else:
+                    # Legacy Ed25519 key path.
+                    if validate_license_key(module_id, state.get('license_key') or ''):
+                        return 'active'
                 state['status'] = 'expired' if state.get('trial_started') else 'inactive'
                 self._save_state()
                 return state['status']
@@ -243,32 +274,106 @@ class ModuleManager:
     def activate_license(self, module_id, license_key):
         if module_id not in self.modules:
             return False, "Module not found"
-        if not validate_license_key(module_id, license_key):
-            return False, "Invalid license key"
+        key = (license_key or '').strip()
+        if not key:
+            return False, "License key is required"
+        fp = machine_fingerprint()
 
+        # 1) Lemon Squeezy online activation (UUID-shaped key).
+        if _LS_KEY_RE.match(key):
+            return self._activate_lemonsqueezy(module_id, key, fp)
+
+        # 2) Offline machine-bound token (air-gapped): "<MODULEID>.xxxxx".
+        if '.' in key and key.split('.', 1)[0].strip().lower() == module_id.lower():
+            rec = license_store.save_offline_token(DATA_DIR, module_id, fp, key, PUBLIC_KEY_HEX)
+            if not rec:
+                return False, "This offline token isn't valid for this addon or this machine."
+            self._mark_licensed(module_id, 'offline_token')
+            logger.info(f"Offline token accepted for module '{module_id}'")
+            self.sync_lifecycle()
+            return True, "License activated (offline token)"
+
+        # 3) Legacy Ed25519 key.
+        if validate_license_key(module_id, key):
+            self._mark_licensed(module_id, 'legacy', license_key=key.upper())
+            logger.info(f"Legacy license activated for module '{module_id}'")
+            self.sync_lifecycle()
+            return True, "License activated successfully"
+
+        return False, "Invalid license key"
+
+    def _activate_lemonsqueezy(self, module_id, key, fp):
+        try:
+            resp = ls_client.activate(key, f"{module_id}@{fp}")
+        except ls_client.LSError:
+            return False, ("Couldn't reach the activation server. Connect to the "
+                           "internet once to activate this license.")
+        lk = resp.get('license_key') or {}
+        if resp.get('error') or not resp.get('activated'):
+            err = resp.get('error') or ''
+            limit = lk.get('activation_limit')
+            used = lk.get('activation_usage', 0)
+            if 'activation limit' in err.lower() or (limit and used >= limit):
+                return False, ("This key is already activated on another computer. "
+                               "Deactivate it there first, then activate here.")
+            return False, (err or "Activation failed.")
+        # The key must belong to THIS addon, not a different one.
+        mapped = ls_client.module_for(resp)
+        if mapped and mapped != module_id:
+            inst = (resp.get('instance') or {}).get('id')
+            if inst:
+                try:
+                    ls_client.deactivate(key, inst)
+                except ls_client.LSError:
+                    pass
+            return False, f"That key is for a different addon ({mapped.replace('_', ' ')})."
+        license_store.save_online_activation(DATA_DIR, module_id, fp, key, resp)
+        self._mark_licensed(module_id, 'lemonsqueezy', license_key=key.upper(),
+                            instance_id=(resp.get('instance') or {}).get('id'))
+        logger.info(f"Lemon Squeezy license activated for module '{module_id}'")
+        self.sync_lifecycle()
+        return True, "License activated successfully"
+
+    def _mark_licensed(self, module_id, license_type, license_key=None, instance_id=None):
         with self._state_lock:
             prev = self._state.get(module_id, {})
             self._state[module_id] = {
-                'license_key': license_key.strip().upper(),
+                'license_key': license_key,
+                'license_type': license_type,
+                'instance_id': instance_id,
                 'trial_started': prev.get('trial_started'),
                 'trial_days': prev.get('trial_days', 14),
                 'status': 'active',
-                'enabled': True
+                'enabled': True,
             }
             self._save_state()
-        logger.info(f"License activated for module '{module_id}'")
-        self.sync_lifecycle()
-        return True, "License activated successfully"
 
     def deactivate_module(self, module_id):
         with self._state_lock:
             if module_id not in self._state:
                 return False, "Module not found"
-            prev = self._state[module_id]
+            prev = dict(self._state[module_id])
+
+        # Free the Lemon Squeezy activation slot so the key can move to another
+        # PC (best-effort — needs internet; the state is cleared regardless).
+        note = ""
+        if (prev.get('license_type') == 'lemonsqueezy'
+                and prev.get('instance_id') and prev.get('license_key')):
+            try:
+                ls_client.deactivate(prev['license_key'], prev['instance_id'])
+            except ls_client.LSError:
+                note = (" — note: couldn't reach the activation server to free the "
+                        "online slot; release it from your Lemon Squeezy account if needed")
+        license_store.clear(DATA_DIR, module_id)
+
+        with self._state_lock:
+            prev = self._state.get(module_id, prev)
             trial_still_valid = (prev.get('trial_started') and self._trial_expires_at(prev)
                                  and datetime.now(timezone.utc) < self._trial_expires_at(prev))
             self._state[module_id] = {
                 'license_key': None,
+                'license_type': None,
+                'instance_id': None,
                 'trial_started': prev.get('trial_started'),
                 'trial_days': prev.get('trial_days', 14),
                 # Removing a license falls back to the remaining trial, if any
@@ -278,7 +383,7 @@ class ModuleManager:
             self._save_state()
         logger.info(f"Module '{module_id}' license removed")
         self.sync_lifecycle()
-        return True, "License removed"
+        return True, "License removed" + note
 
     def toggle_module(self, module_id):
         with self._state_lock:
@@ -434,6 +539,12 @@ class ModuleManager:
             except Exception:
                 has_page = False
             reqs = self.get_requirements_status(module_id)['requirements']
+            rec = license_store.load(DATA_DIR, module_id) or {}
+            licensee = ''
+            if status == 'active':
+                licensee = (rec.get('licensee')
+                            or (decode_license_key(state.get('license_key')) or {}).get('licensee')
+                            or '')
             result.append({
                 'id': module_id,
                 'name': manifest.get('name', module_id),
@@ -445,8 +556,10 @@ class ModuleManager:
                 'price': manifest.get('price', ''),
                 'trial_days': manifest.get('trial_days', 14),
                 'status': status,
-                'has_license': bool(state.get('license_key')),
-                'licensee': ((decode_license_key(state.get('license_key')) or {}).get('licensee') or '') if status == 'active' else '',
+                'has_license': bool(state.get('license_type') or state.get('license_key')),
+                'license_type': state.get('license_type'),
+                'machine_code': machine_id.short_code(machine_fingerprint()),
+                'licensee': licensee,
                 'trial_used': bool(state.get('trial_started')),
                 'trial_remaining': self.get_trial_remaining(module_id),
                 'enabled': state.get('enabled', True),
@@ -462,7 +575,8 @@ class ModuleManager:
                     'version': '?', 'icon': 'fas fa-triangle-exclamation', 'color': '#e53e3e',
                     'author': '', 'price': '', 'trial_days': 0, 'status': 'error',
                     'load_error': err, 'enabled': False, 'running': False,
-                    'has_license': False, 'trial_used': False, 'trial_remaining': None,
+                    'has_license': False, 'license_type': None, 'machine_code': '',
+                    'trial_used': False, 'trial_remaining': None,
                     'has_page': False, 'page_url': None, 'missing_requirements': [],
                 })
         return result

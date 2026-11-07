@@ -191,7 +191,7 @@ _PAGE_JS = r"""
     const d = await r.json(); alert(d.message); if (d.success) location.reload();
   };
   window.addonEnterLicense = async function () {
-    const key = prompt('Enter your license key:'); if (!key) return;
+    const key = prompt('Enter the license key from your purchase email (or an offline activation token):'); if (!key) return;
     const r = await fetch(`/api/modules/${ADDON.id}/activate`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ license_key: key })
     });
@@ -320,6 +320,12 @@ _PAGE_JS = r"""
 def _gate_html(module, module_manager):
     status = module_manager.get_module_status(module.module_id)
     enabled = module_manager._state.get(module.module_id, {}).get('enabled', True)
+    try:
+        from .module_manager import machine_fingerprint
+        from .licensing import machine_id
+        machine_code = machine_id.short_code(machine_fingerprint())
+    except Exception:
+        machine_code = ''
     if status in ('active', 'trial') and not enabled:
         msg = 'This addon is disabled. Enable it from Settings → Addons to use it.'
         actions = ''
@@ -330,11 +336,17 @@ def _gate_html(module, module_manager):
         msg = f'This is a premium addon ({html.escape(str(module.price))}). Start a free {module.trial_days}-day trial or enter a license key to unlock it.'
         actions = (f'<button class="btn btn-primary" onclick="addonStartTrial()"><i class="fas fa-clock"></i> Start {module.trial_days}-Day Trial</button> '
                    '<button class="btn btn-grey" onclick="addonEnterLicense()"><i class="fas fa-key"></i> Enter License Key</button>')
+    code_html = ''
+    if machine_code and status != 'active':
+        code_html = (f'<div class="ad-muted" style="margin-top:16px; font-size:12px;">'
+                     f'No internet on this machine? Use offline activation with this computer code:'
+                     f'<br><code style="font-size:13px; letter-spacing:1px;">{html.escape(machine_code)}</code></div>')
     return f'''
     <div class="ad-card"><div class="ad-card-b" style="text-align:center; padding: 34px 20px;">
         <i class="fas fa-lock" style="font-size: 34px; color: var(--text-muted); margin-bottom: 12px;"></i>
         <div style="font-size: 15px; color: var(--text-title); font-weight: 600; margin-bottom: 14px;">{msg}</div>
         <div class="ad-row" style="justify-content:center;">{actions}</div>
+        {code_html}
     </div></div>'''
 
 

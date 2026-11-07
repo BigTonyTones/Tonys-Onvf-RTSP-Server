@@ -377,6 +377,18 @@ class MediaMTXManager:
             return enc_args
         
         
+        # Resolve hardware acceleration once so camera transcoding and GridFusion
+        # can both use the configured GPU encoder / decoder (Issue #73).
+        from . import hw_encoders
+        hw_cfg = hw_encoders.resolve(ffmpeg_exe, ff_advanced)
+        default_process_args = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30'
+        use_hw_for_cam = (
+            hw_cfg['kind'] != 'software'
+            and ff_process.strip() == default_process_args
+        )
+        cam_global_hw = f' {hw_cfg["global_args"]}' if (use_hw_for_cam or hw_cfg.get('hw_decode')) and hw_cfg.get('global_args') else ''
+        cam_input_hw = f' {hw_cfg["input_args"]}' if hw_cfg.get('hw_decode') and hw_cfg.get('input_args') else ''
+
         # Auth handling is now external via the Python web app
         enable_global_auth = bool(rtsp_username and rtsp_password)
         sys_user = rtsp_username
@@ -442,20 +454,28 @@ class MediaMTXManager:
                         audio_args = '-an'
                     
                     if transcode_main:
+                        if use_hw_for_cam:
+                            up_vf = f',{hw_cfg["upload_filter"]}' if hw_cfg.get('upload_filter') else ',format=yuv420p'
+                            cam_enc_args = hw_cfg['encoder_args']
+                            sc_flag = ''
+                        else:
+                            up_vf = ',format=yuv420p'
+                            cam_enc_args = _single_slice(ff_process)
+                            sc_flag = '-sc_threshold 0 '
                         video_args = (
-                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                            f'{_single_slice(ff_process)} '
+                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2{up_vf}" '
+                            f'{cam_enc_args} '
                             f'-profile:v high -level 4.2 '
                             f'-b:v 2500k -maxrate 2500k -bufsize 5000k '
-                            f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
+                            f'-threads 2 -g {tgt_fps} {sc_flag}'
                             f'-r {tgt_fps} '
                         )
                     else:
                         video_args = '-c:v copy'
                     
                     cmd = (
-                        f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                        f'{ff_input} -use_wallclock_as_timestamps 1 '
+                        f'"{ffmpeg_exe}" {ff_global}{cam_global_hw} -nostdin '
+                        f'{ff_input} -use_wallclock_as_timestamps 1{cam_input_hw if transcode_main else ""} '
                         f'-i {safe_source} '
                         f'{video_args} '
                         f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
@@ -560,20 +580,32 @@ class MediaMTXManager:
                         audio_args = '-an'
                     
                     if transcode_sub_video:
+                        if use_hw_for_cam:
+                            up_vf = f',{hw_cfg["upload_filter"]}' if hw_cfg.get('upload_filter') else ',format=yuv420p'
+                            cam_enc_args = hw_cfg['encoder_args']
+                            # VAAPI/QSV often do not support Constrained Baseline on newer Intel GPUs;
+                            # Main profile is universally supported by VAAPI/QSV and browsers (WebRTC/HLS).
+                            sub_profile = 'main' if hw_cfg['kind'] in ('vaapi', 'qsv') else 'baseline'
+                            sc_flag = ''
+                        else:
+                            up_vf = ',format=yuv420p'
+                            cam_enc_args = _single_slice(ff_process)
+                            sub_profile = 'baseline'
+                            sc_flag = '-sc_threshold 0 '
                         video_args = (
-                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2,format=yuv420p" '
-                            f'{_single_slice(ff_process)} '
-                            f'-profile:v baseline -level 4.1 '
+                            f'-vf "scale={tgt_w}:{tgt_h}:force_original_aspect_ratio=decrease,pad={tgt_w}:{tgt_h}:(ow-iw)/2:(oh-ih)/2{up_vf}" '
+                            f'{cam_enc_args} '
+                            f'-profile:v {sub_profile} -level 4.1 '
                             f'-b:v 800k -maxrate 800k -bufsize 1600k '
-                            f'-threads 2 -g {tgt_fps} -sc_threshold 0 '
+                            f'-threads 2 -g {tgt_fps} {sc_flag}'
                             f'-r {tgt_fps} '
                         )
                     else:
                         video_args = '-c:v copy'
                     
                     cmd = (
-                        f'"{ffmpeg_exe}" {ff_global} -nostdin '
-                        f'{ff_input} -use_wallclock_as_timestamps 1 '
+                        f'"{ffmpeg_exe}" {ff_global}{cam_global_hw} -nostdin '
+                        f'{ff_input} -use_wallclock_as_timestamps 1{cam_input_hw if transcode_sub_video else ""} '
                         f'-i {safe_source} '
                         f'{video_args} '
                         f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
@@ -682,7 +714,15 @@ class MediaMTXManager:
                         # probesize 500k keeps enough byte budget to reliably find the
                         # H.264 SPS/PPS headers (going lower, e.g. 32, causes intermittent
                         # "could not find codec parameters" failures on RTSP substreams).
-                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -flags low_delay -rtsp_transport tcp -timeout 5000000 -analyzeduration 0 -probesize 500k -thread_queue_size 16 -use_wallclock_as_timestamps 1 {gf_hw["input_args"]} -i {safe_src}')
+                        # When GPU hardware decoding is active (Issue #73), give FFmpeg
+                        # enough probe budget (2s / 5MB) and drop -flags low_delay so it
+                        # catches the first IDR keyframe instead of feeding mid-GOP P/B
+                        # frames (missing POC references) into the VAAPI/NVDEC decoder.
+                        if gf_hw.get("hw_decode"):
+                            probe_flags = "-analyzeduration 2000000 -probesize 5000000"
+                        else:
+                            probe_flags = "-flags low_delay -analyzeduration 0 -probesize 500k"
+                        inputs.append(f'-fflags nobuffer+genpts+discardcorrupt -rtsp_transport tcp -timeout 5000000 {probe_flags} -thread_queue_size 16 -use_wallclock_as_timestamps 1 {gf_hw["input_args"]} -i {safe_src}')
                         
                         # Scale and normalize timestamps only. 
                         # Removing the per-input 'fps' filter as it adds unnecessary CPU overhead and latency.
