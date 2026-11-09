@@ -760,3 +760,52 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+/* 2.1.6: automatic update check. The server asks GitHub for the latest release (cached,
+   re-checked every 6 hours); when it's newer, a small "Update" pill appears in the top bar.
+   Clicking it opens the existing updater (Tony, 2026-11-09). */
+(function () {
+  'use strict';
+  var H = document.documentElement;
+  if (!H.classList.contains('ui-refined') || window.__rfUpdDone) return;
+  window.__rfUpdDone = true;
+
+  function openUpdater() {
+    if (typeof window.checkForUpdates === 'function') window.checkForUpdates();
+    else location.href = '/?rf-update=1';
+  }
+
+  function addPill(info) {
+    var n = 0;
+    (function tryAdd() {
+      // Sits right after the version number in the header (Tony's pick); falls back to the right-hand tools.
+      var ver = document.querySelector('#rf-topbar .version-badge');
+      var tools = document.querySelector('#rf-topbar .rf-top-tools');
+      if (!ver && !tools) { if (++n < 40) setTimeout(tryAdd, 250); return; }
+      if (document.querySelector('.rf-update-pill')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'rf-update-pill';
+      b.title = 'Version ' + info.latest_version + ' is available (you have ' + info.current_version + '). Click to see what’s new and install.';
+      b.innerHTML = '<i class="fa-solid fa-circle-arrow-up"></i><span></span>';
+      b.querySelector('span').textContent = 'Update v' + info.latest_version;
+      b.addEventListener('click', openUpdater);
+      if (ver) ver.insertAdjacentElement('afterend', b);
+      else tools.insertBefore(b, tools.querySelector('.rf-power'));
+    })();
+  }
+
+  function init() {
+    // Arriving from another page's pill: open the updater on the dashboard.
+    if (/[?&]rf-update=1\b/.test(location.search) && typeof window.checkForUpdates === 'function') {
+      try { history.replaceState(null, '', location.pathname); } catch (_) {}
+      setTimeout(window.checkForUpdates, 300);
+    }
+    fetch('/api/updates/status', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) {
+        var ct = r.headers.get('content-type') || '';
+        return r.ok && ct.indexOf('json') !== -1 ? r.json() : null;
+      })
+      .then(function (d) { if (d && d.update_available && d.latest_version) addPill(d); })
+      .catch(function () {});
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();

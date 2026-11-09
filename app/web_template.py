@@ -5830,6 +5830,8 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                                     parts.push(detail);
                                 }}
                             }});
+                            const unchecked = (sp.unchecked || []).map(k => k === 'main' ? 'Main' : 'Sub');
+                            if (unchecked.length) parts.push(unchecked.join(' and ') + ' stream could not be checked');
                             const tip = 'Stream mismatch detected — ' + parts.join(' | ') + '. NVRs like UniFi Protect may flap this camera between resolution classes. Click to update this camera\\'s settings to match the actual stream.';
                             return '<div class="info-badge info-badge-red" style="cursor: pointer;" onclick="event.stopPropagation(); syncStreamProbe(' + cam.id + ');" title="' + tip.replace(/"/g, '&quot;') + '">Resolution Mismatch</div>';
                         }})()}}
@@ -5895,7 +5897,9 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
         async function syncStreamProbe(camId) {{
             const cam = cameras.find(c => c.id === camId);
             const name = cam ? cam.name : 'this camera';
-            if (!confirm(`Update ${{name}}'s configured resolution and framerate to match the actual source stream? If the camera is already adopted in an NVR, restart the camera afterwards so the new values are reported.`)) return;
+            const unchecked = ((cam && cam.streamProbe && cam.streamProbe.unchecked) || []).map(k => k === 'main' ? 'Main' : 'Sub');
+            const note = unchecked.length ? `\n\nNote: the ${{unchecked.join(' and ')}} stream could not be checked, so it will not be updated. Restart the server to check it again.` : '';
+            if (!confirm(`Update ${{name}}'s configured resolution and framerate to match the actual source stream?${{note}}`)) return;
             try {{
                 const res = await fetch(`/api/cameras/${{camId}}/sync-stream-info`, {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }} }});
                 const data = await res.json();
@@ -5906,7 +5910,14 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 const parts = [];
                 if (data.applied && data.applied.main) parts.push('Main: ' + data.applied.main);
                 if (data.applied && data.applied.sub) parts.push('Sub: ' + data.applied.sub);
-                alert('Camera settings updated to match the source stream. ' + parts.join(', '));
+                markRestartRequired();
+                const toastHtml = `
+                    <div style="font-size: 14px; margin-bottom: 12px;">Stream settings updated (${{parts.join(', ')}}). Restart required.</div>
+                    <button onclick="localStorage.removeItem('restartRequired'); restartServer(); this.parentElement.remove()" style="background: #3182ce; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">
+                        <i class="fas fa-sync"></i> Restart Now
+                    </button>
+                `;
+                showToast(toastHtml, "restart", 0);
                 loadData();
             }} catch (e) {{
                 alert('Sync failed: ' + e);

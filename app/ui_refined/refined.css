@@ -1696,3 +1696,16 @@ html.ui-refined.rf-shell #settings-modal.rf-modal-page #settings-maintenance.act
 }
 html.ui-refined #settings-maintenance .btn-danger { background: var(--rf-surface-2); border-color: color-mix(in srgb, var(--rf-red) 45%, transparent); }
 html.ui-refined #settings-maintenance .rf-maint-reboot:hover { filter: brightness(0.92); }
+
+/* 2.1.6: "Update vX.Y.Z" pill in the top bar when a newer GitHub release exists (Tony, 2026-11-09) */
+html.ui-refined .rf-update-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; margin: 0;
+  border: 1px solid color-mix(in srgb, var(--rf-accent, #2f6fed) 45%, transparent); border-radius: 13px;
+  background: color-mix(in srgb, var(--rf-accent, #2f6fed) 10%, var(--rf-surface)); color: var(--rf-accent, #2f6fed);
+  font: inherit; font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+html.ui-refined .rf-update-pill:hover { background: color-mix(in srgb, var(--rf-accent, #2f6fed) 18%, var(--rf-surface)); border-color: var(--rf-accent, #2f6fed); }
+html.ui-refined .rf-update-pill i { font-size: 12px; }
+html.ui-refined .version-badge + .rf-update-pill { height: 22px; margin-left: 8px; vertical-align: middle; letter-spacing: 0; }
+@media (max-width: 640px) { html.ui-refined .rf-update-pill span { display: none; } html.ui-refined .rf-update-pill { padding: 0 8px; } }

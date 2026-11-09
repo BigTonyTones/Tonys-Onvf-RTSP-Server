@@ -23,7 +23,7 @@ from .ffmpeg_manager import FFmpegManager
 from .onvif_client import ONVIFProber
 from .linux_network import LinuxNetworkManager
 from .utils import get_captured_logs
-from .updater import UpdateChecker, check_for_updates, download_and_apply_update, is_trusted_update_url
+from .updater import UpdateChecker, check_for_updates, get_cached_update_info, download_and_apply_update, is_trusted_update_url
 import subprocess
 import threading
 import tempfile
@@ -1608,6 +1608,20 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
+    @app.route('/api/updates/status', methods=['GET'])
+    @login_required
+    def update_status():
+        """Automatic update check for the header badge (cached, re-checked every few hours)"""
+        try:
+            info = get_cached_update_info() or {}
+        except Exception:
+            info = {}
+        return jsonify({
+            'update_available': bool(info.get('update_available')),
+            'current_version': info.get('current_version'),
+            'latest_version': info.get('latest_version'),
+        })
+
     @app.route('/api/updates/apply', methods=['POST'])
     @login_required
     def apply_update():

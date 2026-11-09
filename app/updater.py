@@ -10,6 +10,8 @@ import shutil
 import zipfile
 import tempfile
 import requests
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Callable
@@ -370,10 +372,34 @@ class UpdateChecker:
 
 
 # Convenience functions
+_update_cache = {'checked_at': 0.0, 'info': None}
+_update_cache_lock = threading.Lock()
+UPDATE_RECHECK_SECONDS = 6 * 3600   # re-check GitHub at most every 6 hours
+UPDATE_RETRY_SECONDS = 30 * 60      # after a failed check (offline etc.), wait 30 min
+
+
 def check_for_updates() -> Optional[Dict]:
-    """Check for available updates"""
+    """Check for available updates (always asks GitHub; refreshes the cache)"""
     checker = UpdateChecker()
-    return checker.check_for_updates()
+    info = checker.check_for_updates()
+    with _update_cache_lock:
+        _update_cache['checked_at'] = time.time()
+        _update_cache['info'] = info
+    return info
+
+
+def get_cached_update_info() -> Optional[Dict]:
+    """Update info for the automatic check in the web UI.
+
+    Uses the last result if it is recent, so opening pages never hammers the
+    GitHub API (its anonymous limit is 60 requests per hour).
+    """
+    with _update_cache_lock:
+        info = _update_cache['info']
+        age = time.time() - _update_cache['checked_at']
+    if age < (UPDATE_RECHECK_SECONDS if info else UPDATE_RETRY_SECONDS):
+        return info
+    return check_for_updates()
 
 def download_and_apply_update(download_url: str, progress_callback: Optional[Callable] = None) -> bool:
     """Download and apply an update"""

@@ -388,9 +388,26 @@ class VirtualONVIFCamera:
                 except (TypeError, ValueError):
                     return False
 
+            def _probe_with_retry(url, which):
+                # A probe can fail while the camera is busy with other RTSP
+                # sessions (e.g. MediaMTX connecting). Retry once so both
+                # streams get checked and fixed together.
+                info = ffmpeg_mgr.probe_stream(url)
+                if not (info and info.get('width')):
+                    time.sleep(5)
+                    info = ffmpeg_mgr.probe_stream(url)
+                if not (info and info.get('width')):
+                    unchecked.append(which)
+                    print(f"  [Stream Check] {self.name} {which}: could not probe the source stream; "
+                          f"resolution not verified for this stream")
+                    return None
+                return info
+
+            unchecked = []
+
             if not self.transcode_main:
-                info = ffmpeg_mgr.probe_stream(self.main_stream_url)
-                if info and info.get('width'):
+                info = _probe_with_retry(self.main_stream_url, 'main')
+                if info:
                     entry = dict(info)
                     entry['configuredWidth'] = self.main_width
                     entry['configuredHeight'] = self.main_height
@@ -419,8 +436,8 @@ class VirtualONVIFCamera:
 
             sub_url = self.main_stream_url if self.use_main_as_substream else self.sub_stream_url
             if sub_url and not self.disable_substream and not self.transcode_sub:
-                info = ffmpeg_mgr.probe_stream(sub_url)
-                if info and info.get('width'):
+                info = _probe_with_retry(sub_url, 'sub')
+                if info:
                     entry = dict(info)
                     entry['configuredWidth'] = self.sub_width
                     entry['configuredHeight'] = self.sub_height
@@ -448,7 +465,8 @@ class VirtualONVIFCamera:
                     media.setdefault('sub', {})['profile'] = probe['sub'].get('profile')
             self.probed_media = media
 
-            if probe:
+            if probe or unchecked:
+                probe['unchecked'] = unchecked
                 probe['mismatch'] = any(e.get('mismatch') for e in probe.values() if isinstance(e, dict))
                 probe['checkedAt'] = time.time()
                 self.stream_probe = probe
