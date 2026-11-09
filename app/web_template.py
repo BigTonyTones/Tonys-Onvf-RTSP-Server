@@ -9159,8 +9159,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
 
         function resetAdvancedSettings() {{
             if (confirm('Are you sure you want to reset all MediaMTX and FFmpeg settings to their factory defaults?')) {{
-                document.getElementById('mediamtx_id').value = 4096;
-                document.getElementById('mediamtx_writeQueueSize').value = 16384;
+                document.getElementById('mediamtx_writeQueueSize').value = 32768;
                 document.getElementById('mediamtx_readTimeout').value = '30s';
                 document.getElementById('mediamtx_writeTimeout').value = '30s';
                 document.getElementById('mediamtx_udpMaxPayloadSize').value = 1472;
@@ -9170,7 +9169,7 @@ body.theme-dark, body.theme-nord, body.theme-dracula, body.theme-midnight, body.
                 
                 // FFmpeg Defaults
                 document.getElementById('ffmpeg_globalArgs').value = '-hide_banner -loglevel error';
-                document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 2';
+                document.getElementById('ffmpeg_inputArgs').value = '-rtsp_transport tcp -timeout 10000000';
                 document.getElementById('ffmpeg_processArgs').value = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30';
                 document.getElementById('ffmpeg_hardwareEncoding').checked = false;
                 document.getElementById('ffmpeg_hardwareEncoder').value = 'software';

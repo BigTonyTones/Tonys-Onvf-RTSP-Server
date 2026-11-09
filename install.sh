@@ -387,6 +387,9 @@ setup_ai_engine() {
         print_info "Installing 'opencv-python-headless'..."
         pip install --no-cache-dir opencv-python-headless
         
+        print_info "Installing 'easyocr' (License Plate character recognition)..."
+        pip install --no-cache-dir easyocr
+        
         # Clean up local tmp directory
         rm -rf "$local_tmp"
         unset TMPDIR

@@ -65,13 +65,18 @@ RUN pip install --no-cache-dir \
     torchvision \
     --index-url https://download.pytorch.org/whl/cpu
 
-# Install AI dependencies (ultralytics / YOLO + headless OpenCV)
+# Install AI dependencies (ultralytics / YOLO + headless OpenCV + EasyOCR for license plates)
 RUN pip install --no-cache-dir \
     ultralytics \
-    opencv-python-headless
+    opencv-python-headless \
+    easyocr
 
 # Pre-download the default YOLO model so it's available immediately at runtime
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+
+# Pre-download the EasyOCR English models so license plate reading works offline
+# and does not re-download them every time the container is recreated
+RUN python -c "import easyocr; easyocr.Reader(['en'], gpu=False, verbose=False)"
 
 # Copy the rest of the application
 COPY . .
