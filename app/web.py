@@ -1608,9 +1608,9 @@ def create_web_app(manager):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
-    @app.route('/api/updates/status', methods=['GET'])
+    @app.route('/api/updates/available', methods=['GET'])
     @login_required
-    def update_status():
+    def update_available_status():
         """Automatic update check for the header badge (cached, re-checked every few hours)"""
         try:
             info = get_cached_update_info() or {}

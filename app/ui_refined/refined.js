@@ -799,7 +799,7 @@
       try { history.replaceState(null, '', location.pathname); } catch (_) {}
       setTimeout(window.checkForUpdates, 300);
     }
-    fetch('/api/updates/status', { credentials: 'same-origin', cache: 'no-store' })
+    fetch('/api/updates/available', { credentials: 'same-origin', cache: 'no-store' })
       .then(function (r) {
         var ct = r.headers.get('content-type') || '';
         return r.ok && ct.indexOf('json') !== -1 ? r.json() : null;
