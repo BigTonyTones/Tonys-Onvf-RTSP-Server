@@ -168,6 +168,79 @@ def probe_all(ffmpeg_exe, vaapi_device=None):
     return results
 
 
+# Drop video packets until the first keyframe (issue #73). FFmpeg joins an RTSP
+# stream wherever it happens to be. Its H.264 decoder waits for a keyframe by
+# itself, but the HEVC decoder starts on the first packet, and a GPU decoder
+# (VAAPI error 23 "internal decoding error") aborts on pictures whose reference
+# frames were never received. After 300 packets the gate opens regardless, so a
+# stream that never flags keyframes still plays.
+KEYFRAME_GATE = "-bsf:v \"noise=drop='if(ld(1),0,if(key+gt(n,300),st(1,1)*0,1))'\""
+
+
+def supports_input_bsf(ffmpeg_exe):
+    """Input-side bitstream filters need FFmpeg 7.0 or newer. Checked by running one."""
+    key = (ffmpeg_exe, 'input_bsf')
+    with _cache_lock:
+        if key in _cache:
+            return _cache[key]
+    ok = False
+    try:
+        p = subprocess.run(
+            [ffmpeg_exe, '-hide_banner', '-loglevel', 'error', '-nostdin',
+             '-bsf:v', "noise=drop='if(ld(1),0,if(key+gt(n,300),st(1,1)*0,1))'",
+             '-f', 'lavfi', '-i', 'testsrc2=size=64x64:rate=5', '-frames:v', '2', '-f', 'null', '-'],
+            capture_output=True, text=True, timeout=20)
+        ok = p.returncode == 0
+    except Exception:
+        ok = False
+    with _cache_lock:
+        _cache[key] = ok
+    return ok
+
+
+# --- GPU-decode safety net: see hw_decode_guard.py -------------------------
+_guard_entries = {}
+
+
+def guard_reset():
+    """Call at the start of each MediaMTX config build."""
+    _guard_entries.clear()
+
+
+def guard_command(key, name, primary_cmd, hw_input_args, data_dir):
+    """
+    Wrap a GPU-decoding FFmpeg command so it falls back to CPU decoding if the
+    GPU decoder fails. Returns the command MediaMTX should run. On Windows, or
+    if anything goes wrong, the original command is returned unchanged.
+    """
+    import json
+    import shlex
+    import sys
+    hw_input_args = (hw_input_args or '').strip()
+    if platform.system().lower() == 'windows' or not hw_input_args or hw_input_args not in primary_cmd:
+        return primary_cmd
+    try:
+        guard = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hw_decode_guard.py')
+        if not os.path.exists(guard):
+            return primary_cmd
+        # CPU decoding: drop the -hwaccel options but keep the keyframe gate.
+        fallback = primary_cmd.replace(hw_input_args, KEYFRAME_GATE if KEYFRAME_GATE in hw_input_args else '')
+        _guard_entries[key] = {'name': name, 'primary': primary_cmd, 'fallback': fallback}
+        path = os.path.join(data_dir, 'hw_decode_guard.json')
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(_guard_entries, f)
+        try:
+            os.chmod(tmp, 0o600)  # commands can contain RTSP passwords
+        except Exception:
+            pass
+        os.replace(tmp, path)
+        return f'{shlex.quote(sys.executable)} {shlex.quote(guard)} {shlex.quote(path)} {shlex.quote(key)}'
+    except Exception as e:
+        print(f"      GPU-decode safety net unavailable for {name}: {e}")
+        return primary_cmd
+
+
 def resolve(ffmpeg_exe, ff_advanced, log=print):
     """
     Decide which encoder GridFusion uses. Returns a dict:
@@ -228,6 +301,8 @@ def resolve(ffmpeg_exe, ff_advanced, log=print):
         elif kind == 'videotoolbox' and hw_decode:
             out['input_args'] = '-hwaccel videotoolbox'
             out['hw_decode'] = True
+        if out['hw_decode'] and supports_input_bsf(ffmpeg_exe):
+            out['input_args'] += ' ' + KEYFRAME_GATE
         return out
 
     if choice != 'auto':

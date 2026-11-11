@@ -381,6 +381,7 @@ class MediaMTXManager:
         # can both use the configured GPU encoder / decoder (Issue #73).
         from . import hw_encoders
         hw_cfg = hw_encoders.resolve(ffmpeg_exe, ff_advanced)
+        hw_encoders.guard_reset()
         default_process_args = '-c:v libx264 -preset ultrafast -tune zerolatency -g 30'
         use_hw_for_cam = (
             hw_cfg['kind'] != 'software'
@@ -481,6 +482,10 @@ class MediaMTXManager:
                         f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
+                    if transcode_main and cam_input_hw:
+                        # Fall back to CPU decoding if the GPU decoder fails (issue #73).
+                        cmd = hw_encoders.guard_command(f'{camera.path_name}_main', f'{camera.name} (main)', cmd, cam_input_hw, DATA_DIR)
+
                     main_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
@@ -611,6 +616,9 @@ class MediaMTXManager:
                         f'{audio_args} -f rtsp -rtsp_transport tcp {safe_dest}'
                     )
                     
+                    if transcode_sub_video and cam_input_hw:
+                        cmd = hw_encoders.guard_command(f'{camera.path_name}_sub', f'{camera.name} (sub)', cmd, cam_input_hw, DATA_DIR)
+
                     sub_path_cfg = {
                         'source': 'publisher',
                         'runOnInit': cmd,
@@ -864,6 +872,10 @@ class MediaMTXManager:
                             f'-r {fps} -vsync cfr -max_delay 500000 -f rtsp -rtsp_transport tcp {safe_dest}'
                         )
                         
+                        if gf_hw.get('hw_decode') and gf_hw.get('input_args'):
+                            # Fall back to CPU decoding if the GPU decoder fails (issue #73).
+                            gf_cmd = hw_encoders.guard_command(f'gf_{layout_id}', f'GridFusion {layout_name}', gf_cmd, gf_hw['input_args'], DATA_DIR)
+
                         config['paths'][layout_id] = {
                             'source': 'publisher',
                             'runOnInit': gf_cmd,
